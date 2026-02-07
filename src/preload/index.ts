@@ -1,74 +1,92 @@
-import { contextBridge, ipcRenderer } from 'electron';
-import { IPC_EVENTS } from '@shared/constants/app-constants';
-
 /**
  * Preload Script - Secure IPC Bridge
  * 
- * This script runs in the renderer process but has access to Node.js APIs.
- * It uses contextBridge to expose a controlled API to the renderer.
+ * This script runs in a privileged context with access to both:
+ * - Node.js APIs (ipcRenderer)
+ * - Renderer process (via contextBridge)
  * 
- * Security:
+ * SECURITY MODEL:
  * - contextIsolation: true (renderer cannot access this script's scope)
- * - Only exposes specific, validated IPC channels
- * - No direct Node.js access to renderer
+ * - nodeIntegration: false (renderer has no Node.js access)
+ * - Only exposes a single, validated invoke() method
+ * - All channels validated against IPC registry
+ * - No raw ipcRenderer exposure
+ * 
+ * USAGE IN RENDERER:
+ * ```typescript
+ * const response = await window.api.invoke('product:list');
+ * ```
  */
+
+import { contextBridge, ipcRenderer } from 'electron';
+import { IPC_CHANNELS, isValidChannel, type IPCChannel } from '@shared/ipc/channels';
+import type { IPCResponse } from '@shared/types/ipc';
 
 /**
- * Exposed API for renderer process
+ * Secure IPC API
+ * 
+ * Exposes a single invoke() method that validates channels
+ * against the IPC registry before forwarding to ipcRenderer.
  */
-const electronAPI = {
-  // Generic IPC invoke (for flexibility)
-  invoke: (channel: string, ...args: any[]) => {
-    // Whitelist allowed channels for security
-    const validChannels = Object.values(IPC_EVENTS) as string[];
-    
-    if (!validChannels.includes(channel)) {
-      throw new Error(`Invalid IPC channel: ${channel}`);
+const api = {
+  /**
+   * Invoke an IPC handler in the main process
+   * 
+   * @param channel - IPC channel name (must be registered in IPC_CHANNELS)
+   * @param payload - Request payload (optional)
+   * @returns Promise resolving to IPCResponse<T>
+   * 
+   * @throws Error if channel is not registered
+   * 
+   * @example
+   * ```typescript
+   * // List all products
+   * const response = await window.api.invoke('product:list');
+   * 
+   * // Get product by ID
+   * const response = await window.api.invoke('product:get', 123);
+   * 
+   * // Create product
+   * const response = await window.api.invoke('product:create', {
+   *   name: "New Product",
+   *   price: 100,
+   *   stock: 50
+   * });
+   * ```
+   */
+  invoke: <T = unknown>(channel: string, payload?: unknown): Promise<IPCResponse<T>> => {
+    // SECURITY: Validate channel against registry
+    if (!isValidChannel(channel)) {
+      console.error(`[Preload] Invalid IPC channel: ${channel}`);
+      console.error(`[Preload] Allowed channels:`, Object.values(IPC_CHANNELS));
+      
+      // Return error response instead of throwing
+      // This prevents the renderer from crashing
+      return Promise.resolve({
+        success: false,
+        error: `Invalid IPC channel: ${channel}`,
+      } as IPCResponse<T>);
     }
-    
-    return ipcRenderer.invoke(channel as any, ...args);
-  },
 
-  // Products API
-  products: {
-    getAll: () => ipcRenderer.invoke(IPC_EVENTS.PRODUCTS_GET_ALL),
-    getById: (id: number) => ipcRenderer.invoke(IPC_EVENTS.PRODUCTS_GET_BY_ID, id),
-    create: (product: any) => ipcRenderer.invoke(IPC_EVENTS.PRODUCTS_CREATE, product),
-    update: (id: number, product: any) => ipcRenderer.invoke(IPC_EVENTS.PRODUCTS_UPDATE, id, product),
-    delete: (id: number) => ipcRenderer.invoke(IPC_EVENTS.PRODUCTS_DELETE, id),
-    search: (query: string) => ipcRenderer.invoke(IPC_EVENTS.PRODUCTS_SEARCH, query),
-  },
-
-  // Sales API
-  sales: {
-    create: (sale: any) => ipcRenderer.invoke(IPC_EVENTS.SALES_CREATE, sale),
-    getAll: () => ipcRenderer.invoke(IPC_EVENTS.SALES_GET_ALL),
-    getById: (id: number) => ipcRenderer.invoke(IPC_EVENTS.SALES_GET_BY_ID, id),
-    getByDateRange: (startDate: string, endDate: string) => 
-      ipcRenderer.invoke(IPC_EVENTS.SALES_GET_BY_DATE_RANGE, startDate, endDate),
-  },
-
-  // Customers API
-  customers: {
-    getAll: () => ipcRenderer.invoke(IPC_EVENTS.CUSTOMERS_GET_ALL),
-    create: (customer: any) => ipcRenderer.invoke(IPC_EVENTS.CUSTOMERS_CREATE, customer),
-    update: (id: number, customer: any) => ipcRenderer.invoke(IPC_EVENTS.CUSTOMERS_UPDATE, id, customer),
-  },
-
-  // Printing API
-  print: {
-    invoice: (saleId: number) => ipcRenderer.invoke(IPC_EVENTS.PRINT_INVOICE, saleId),
-  },
-
-  // App API
-  app: {
-    getVersion: () => ipcRenderer.invoke(IPC_EVENTS.APP_GET_VERSION),
-    getConfig: () => ipcRenderer.invoke(IPC_EVENTS.APP_GET_CONFIG),
+    // Channel is valid, forward to main process
+    return ipcRenderer.invoke(channel, payload);
   },
 };
 
-// Expose the API to the renderer process
-contextBridge.exposeInMainWorld('electron', electronAPI);
+/**
+ * Expose API to renderer via contextBridge
+ * 
+ * The renderer will access this via window.api
+ */
+contextBridge.exposeInMainWorld('api', api);
 
-// Type safety: Ensure the exposed API matches the type definition
-// The renderer will access this via window.electron
+/**
+ * Log successful preload initialization
+ */
+console.log('[Preload] IPC bridge initialized');
+console.log('[Preload] Registered channels:', Object.keys(IPC_CHANNELS).length);
+
+/**
+ * Export type for renderer TypeScript definitions
+ */
+export type PreloadAPI = typeof api;

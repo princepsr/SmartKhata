@@ -1,7 +1,8 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import GlobalMessages from './GlobalMessages';
 import './Layout.css';
+import { IPC_CHANNELS } from '@shared/ipc/channels';
 
 /**
  * Layout Component
@@ -13,13 +14,57 @@ import './Layout.css';
 function Layout() {
   const [appVersion, setAppVersion] = useState<string>('');
 
+
+
+  const navigate = useNavigate();
+
   useEffect(() => {
-    if (window.electron) {
-      window.electron.app.getVersion()
-        .then(setAppVersion)
-        .catch(console.error);
-    }
+    const fetchVersion = async () => {
+      try {
+        const response = await window.api.invoke<string>(IPC_CHANNELS.APP_VERSION);
+        if (response.success && response.data) {
+          setAppVersion(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to get app version:', error);
+      }
+    };
+    
+    fetchVersion();
   }, []);
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'F2':
+          e.preventDefault();
+          navigate('/billing');
+          break;
+        case 'F3':
+          e.preventDefault();
+          navigate('/products');
+          break;
+        case 'F4':
+          e.preventDefault();
+          navigate('/customers');
+          break;
+        case 'F5':
+          e.preventDefault();
+          navigate('/reports');
+          break;
+        case 'F6':
+          e.preventDefault();
+          navigate('/settings');
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
 
   return (
     <>

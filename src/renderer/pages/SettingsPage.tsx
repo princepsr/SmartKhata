@@ -1,4 +1,5 @@
 import { useAppSettingsStore } from '../store';
+import { IPCPoc } from '../components/Debug/IPCPoc';
 import './SettingsPage.css';
 
 /**
@@ -103,6 +104,9 @@ function SettingsPage() {
               </button>
             </div>
           </form>
+          <div className="settings-card">
+            <IPCPoc />
+          </div>
         </div>
       </div>
     </div>

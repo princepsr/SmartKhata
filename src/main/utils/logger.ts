@@ -102,8 +102,8 @@ class Logger {
   private log(level: LogLevel, message: string, data?: any): void {
     const formattedMessage = this.formatMessage(level, message, data);
 
-    // Always write to file in production
-    if (!this.isDevelopment) {
+    // Always write to file in production (except DEBUG)
+    if (!this.isDevelopment && level !== LogLevel.DEBUG) {
       this.writeToFile(formattedMessage);
     }
 

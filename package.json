@@ -4,10 +4,10 @@
   "description": "Local-first Kirana POS application for Windows",
   "main": "dist/main/src/main/index.js",
   "scripts": {
-    "dev": "concurrently -k \"pnpm dev:renderer\" \"pnpm dev:main\" \"pnpm dev:electron\"",
+    "dev": "concurrently -k \"pnpm dev:renderer\" \"pnpm dev:main\"",
     "dev:renderer": "vite",
-    "dev:main": "tsc --project tsconfig.main.json --watch --preserveWatchOutput && tsc-alias -p tsconfig.main.json --watch",
-    "dev:electron": "wait-on http://localhost:5173 && electron .",
+    "dev:main": "rimraf dist/main && tsc-watch --project tsconfig.main.json --onSuccess \"pnpm start:electron\"",
+    "start:electron": "tsc-alias -p tsconfig.main.json && electron .",
     "build": "pnpm build:renderer && pnpm build:main",
     "build:renderer": "tsc --project tsconfig.renderer.json && vite build",
     "build:main": "tsc --project tsconfig.main.json && tsc-alias -p tsconfig.main.json",
@@ -48,6 +48,7 @@
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
     "tsc-alias": "^1.8.16",
+    "tsc-watch": "^7.2.0",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.19.1",
     "vite": "^6.0.5",
@@ -57,6 +58,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.13.0",
+    "zod": "^4.3.6",
     "zustand": "^5.0.11"
   },
   "build": {

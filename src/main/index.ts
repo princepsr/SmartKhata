@@ -5,6 +5,7 @@ import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import { logger } from './utils/logger';
 import { shutdownManager, registerShutdownHooks } from './utils/shutdown-manager';
 import { registerGlobalErrorHandlers } from './utils/error-handler';
+import { registerIPCHandlers } from './ipc';
 
 /**
  * Main Electron Process Entry Point
@@ -54,7 +55,7 @@ function createWindow(): void {
       preload: path.join(__dirname, '../preload/index.js'),
       nodeIntegration: false,        // Disable Node.js in renderer
       contextIsolation: true,        // Isolate preload context
-      sandbox: true,                 // Enable OS-level sandboxing
+      sandbox: false,                // Disable sandbox to allow require('../shared/...')
       webSecurity: true,             // Enable web security (default, but explicit)
       allowRunningInsecureContent: false,  // Block mixed content
       experimentalFeatures: false,   // Disable experimental features
@@ -100,6 +101,9 @@ app.whenReady().then(() => {
 
   // Register shutdown hooks
   registerShutdownHooks();
+
+  // Register IPC handlers
+  registerIPCHandlers();
 
   createWindow();
 
