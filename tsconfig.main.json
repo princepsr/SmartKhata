@@ -1,0 +1,28 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "composite": true,
+        /* Environment */
+        "target": "ES2020",
+        "lib": [
+            "ES2020"
+        ],
+        "module": "CommonJS",
+        "moduleResolution": "node",
+        /* Node.js specific */
+        "types": [
+            "node"
+        ],
+        /* Emit */
+        "outDir": "./dist/main"
+    },
+    "include": [
+        "src/main/**/*",
+        "src/shared/**/*",
+        "src/preload/**/*"
+    ],
+    "exclude": [
+        "src/renderer/**/*",
+        "node_modules"
+    ]
+}

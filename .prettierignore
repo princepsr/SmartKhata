@@ -1,0 +1,20 @@
+# Build outputs
+dist
+build
+out
+release
+
+# Dependencies
+node_modules
+.pnpm-store
+
+# Database files
+*.db
+*.sqlite
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

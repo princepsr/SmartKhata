@@ -1,0 +1,32 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "composite": true,
+        /* Environment */
+        "target": "ES2020",
+        "lib": [
+            "ES2020",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        "jsx": "react-jsx",
+        /* Module Resolution */
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        /* React specific */
+        "types": [
+            "vite/client"
+        ],
+        /* Emit */
+        "outDir": "./dist/renderer"
+    },
+    "include": [
+        "src/renderer/**/*",
+        "src/shared/**/*"
+    ],
+    "exclude": [
+        "src/main/**/*",
+        "src/preload/**/*",
+        "node_modules"
+    ]
+}

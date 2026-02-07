@@ -1,0 +1,17 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "outDir": "./dist"
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "references": [
+        {
+            "path": "./tsconfig.main.json"
+        },
+        {
+            "path": "./tsconfig.renderer.json"
+        }
+    ]
+}
