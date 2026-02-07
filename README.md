@@ -1,25 +1,8 @@
-```markdown
-# SmartKhata - Local-First Billing App (Windows)
-
-SmartKhata is a lightweight, local-first billing app designed for small businesses (e.g., kiranas) with a focus on simplicity, scalability, and performance. It is designed to run **offline** with **zero server cost** initially and **seamlessly** expand to cloud capabilities in the future.
-
-### 🖥️ Platforms Supported:
-- **Windows (Desktop)**
-
-### ⚡ Key Features:
-- **Offline-first** with a local SQLite database.
-- **Future-ready** for cloud synchronization (optional).
-- **No server cost** initially, making it cost-effective for small businesses.
-- **Easy to scale** for multi-device, multi-store use.
-
 ---
 
-## 🏗️ Architecture Overview
+🏗️ FULL ARCHITECTURE (LOCAL-FIRST → CLOUD-READY)
 
-The application follows a **local-first** approach, and has been designed to **easily scale to the cloud** later.
-
-### High-Level Architecture
-```
+1️⃣ High-Level Architecture
 
 ┌──────────────────────────────┐
 │        Electron App          │
@@ -29,9 +12,9 @@ The application follows a **local-first** approach, and has been designed to **e
 │  │   Billing / Inventory   │ │
 │  └──────────┬─────────────┘ │
 │             │ IPC             │
-│  ┌──────────▼─────────────┐ │ │
-│  │     Main Process        │ │ │
-│  │      (Node.js)          │ │ │
+│  ┌──────────▼──────────────┐ │
+│  │     Main Process        │ │
+│  │      (Node.js)          │ │
 │  │                         │ │
 │  │  ┌──── Service Layer ─┐ │ │
 │  │  │ BillingService     │ │ │
@@ -44,212 +27,236 @@ The application follows a **local-first** approach, and has been designed to **e
 │  │  ┌──── Repository ────┐ │ │
 │  │  │ SQLite Repos       │ │ │
 │  │  │ (Local DB)         │ │ │
-│  │  └───────────────────┘ │ │
+│  │  └────────────────────┘ │ │
 │  │                         │ │
 │  │  (Future) Cloud Sync    │ │
+│  └─────────────────────────┘ │
 └──────────────────────────────┘
 
-```
+Golden rule
+👉 UI never touches DB
+👉 DB access only via services
 
-### Golden Rule:
-- **UI never touches DB** – DB access is done exclusively via services.
-- **Separation of Concerns** – No hacks, no shortcuts. Everything has its dedicated layer.
 
 ---
 
-## 📁 Folder Structure
-
-This project is organized into the following structure for maintainability and scalability:
-
-```
+2️⃣ Folder Structure (Scalable)
 
 /app
-├─ /renderer        (React UI)
-│   ├─ /screens
-│   │   ├─ Billing
-│   │   ├─ Products
-│   │   ├─ Customers
-│   │   └─ Reports
-│   ├─ /components
-│   ├─ /hooks
-│   └─ ipc.ts
-│
-├─ /main            (Electron Main - Node)
-│   ├─ index.ts
-│   ├─ ipc-handlers.ts
-│   ├─ /services
-│   │   ├─ billing.service.ts
-│   │   ├─ inventory.service.ts
-│   │   ├─ printer.service.ts
-│   │   ├─ backup.service.ts
-│   │   └─ license.service.ts
-│   ├─ /repositories
-│   │   ├─ interfaces
-│   │   │   └─ bill.repo.ts
-│   │   ├─ sqlite
-│   │   │   └─ bill.repo.sqlite.ts
-│   │   └─ cloud        (future)
-│   │       └─ bill.repo.cloud.ts
-│   ├─ /db
-│   │   ├─ sqlite.ts
-│   │   └─ migrations
-│   ├─ /sync            (future)
-│   │   └─ sync.engine.ts
-│   └─ /utils
-│       ├─ logger.ts
-│       ├─ encryption.ts
-│       └─ constants.ts
-│
-├─ /shared
-│   ├─ models
-│   ├─ dto
-│   └─ validators
-└─ electron-builder.json
+ ├─ /renderer        (React UI)
+ │   ├─ /screens
+ │   │   ├─ Billing
+ │   │   ├─ Products
+ │   │   ├─ Customers
+ │   │   └─ Reports
+ │   ├─ /components
+ │   ├─ /hooks
+ │   └─ ipc.ts
+ │
+ ├─ /main            (Electron Main - Node)
+ │   ├─ index.ts
+ │   ├─ ipc-handlers.ts
+ │   │
+ │   ├─ /services
+ │   │   ├─ billing.service.ts
+ │   │   ├─ inventory.service.ts
+ │   │   ├─ printer.service.ts
+ │   │   ├─ backup.service.ts
+ │   │   └─ license.service.ts
+ │   │
+ │   ├─ /repositories
+ │   │   ├─ interfaces
+ │   │   │   └─ bill.repo.ts
+ │   │   ├─ sqlite
+ │   │   │   └─ bill.repo.sqlite.ts
+ │   │   └─ cloud        (future)
+ │   │       └─ bill.repo.cloud.ts
+ │   │
+ │   ├─ /db
+ │   │   ├─ sqlite.ts
+ │   │   └─ migrations
+ │   │
+ │   ├─ /sync            (future)
+ │   │   └─ sync.engine.ts
+ │   │
+ │   └─ /utils
+ │       ├─ logger.ts
+ │       ├─ encryption.ts
+ │       └─ constants.ts
+ │
+ ├─ /shared
+ │   ├─ models
+ │   ├─ dto
+ │   └─ validators
+ │
+ └─ electron-builder.json
 
-````
-
-### 🧱 Clean Separation of Concerns:
-- **UI Layer** (React UI)
-- **Main Process** (Node.js)
-  - Services: Business logic (Billing, Inventory, Printer, etc.)
-  - Repositories: Data access layer (SQLite, Cloud)
-  - DB: SQLite for local storage (future cloud sync)
-- **Shared Models**: Common models, DTOs, and validation logic.
+This structure is enterprise-level, but lightweight.
 
 ---
 
-## 📊 Data Flow
+3️⃣ Data Flow (Clean & Safe)
 
-The data flow in the system follows a clean, robust pattern to ensure stability and security:
+Billing Flow
 
-1. **Billing Flow**:
-   - React UI → IPC: `createBill`
-   - **BillingService** → **InventoryService** (reduce stock)
-   - **BillRepository** (SQLite)
-   - **PrinterService** (for printing the bill)
+React UI
+ → IPC: createBill
+ → BillingService
+ → InventoryService (reduce stock)
+ → BillRepository (SQLite)
+ → PrinterService
 
-### Key Concepts:
-- **IPC (Inter-Process Communication)**: The Renderer (React UI) cannot directly access Node.js APIs. It communicates via IPC channels like `bill:create`.
-
----
-
-## 🛠️ Services and Repositories
-
-### Services:
-- **BillingService**: Handles creating and managing bills.
-- **InventoryService**: Manages product inventory.
-- **ReportService**: Generates reports.
-- **PrinterService**: Manages printing of bills.
-- **BackupService**: Handles backups (auto & manual).
-- **LicenseService**: Manages licensing (local and future cloud integration).
-
-### Repositories:
-- **SQLite Repositories**: Used for local storage (SQLite DB).
-- **Cloud Repositories (Future)**: Cloud-based repositories to support cloud syncing.
+No shortcuts. No hacks.
 
 ---
 
-## 🗂️ Database (SQLite)
+4️⃣ Database Layer (SQLite)
 
-- **SQLite** is used for local storage to ensure the app works **offline**.
-- **Database Tables**:
-  - `products`
-  - `bills`
-  - `bill_items`
-  - `customers`
-  - `inventory_logs`
-  - `settings`
-  - `licenses`
+Tables (Minimal MVP)
 
-**SQLite DB** is a single file, making it easy to back up, restore, and manage.
+products
+bills
+bill_items
+customers
+inventory_logs
+settings
+licenses
 
----
-
-## 🔄 Scalability Roadmap
-
-### **Phase 1 (Now)**
-- **Windows-only** app
-- Local DB (SQLite)
-- Single device support
-
-### **Phase 2**
-- Cloud sync (optional)
-- Multi-device support
-- Web dashboard
-
-### **Phase 3**
-- Android companion app
-- Multi-store support
-- Analytics and reporting
-
-The core architecture will not require any changes, ensuring future scalability without a full rewrite.
+SQLite DB = single file
+Easy backup
+Easy restore
+Fast
 
 ---
 
-## 🚀 Team Structure
+5️⃣ Repository Pattern (Cloud-Ready)
 
-### Developer Responsibilities:
+Interface
 
-- **Dev 1**: Electron + IPC + Printing
-- **Dev 2**: React UI + UX
-- **Dev 3**: DB + Services + Licensing
+interface BillRepository {
+  create(bill: Bill): Promise<void>;
+  list(): Promise<Bill[]>;
+}
 
----
+Today
 
-## 📅 Next Steps
+SQLiteBillRepository
 
-### Choose one of the following to dive deeper into:
-1. **SQLite Schema**: Tables and indexes
-2. **IPC Contracts**: API specifications for communication between the Renderer and Main process
-3. **Printing Layout & Thermal Printer Quirks**: Design and optimization for thermal printing
-4. **Licensing & Anti-piracy Strategy**: Approach for licensing, both offline and online
-5. **MVP Milestone Plan**: Week-wise milestones for MVP development
+Tomorrow
 
----
+CloudBillRepository
+CompositeBillRepository (local + cloud)
 
-## ⚙️ Development Setup
+☁️ Cloud becomes a paid plugin, not a rewrite.
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/smartkhata.git
-   cd smartkhata
-````
-
-2. **Install dependencies:**
-
-   ```bash
-   npm install
-   ```
-
-3. **Run the app:**
-
-   ```bash
-   npm start
-   ```
-
-4. **Build the app for Windows:**
-
-   ```bash
-   npm run build
-   ```
 
 ---
 
-## 📋 License
+6️⃣ IPC Layer (Security + Stability)
 
-Distributed under the MIT License. See LICENSE for more information.
+Renderer cannot access Node APIs
+
+Only predefined IPC calls allowed
+
+Prevents data corruption
+
+
+Example:
+
+ipcMain.handle("bill:create", ...)
+
 
 ---
 
-### 📣 Stay Connected!
+7️⃣ Printing Architecture
 
-Feel free to contribute, submit issues, or ask questions by opening a GitHub issue.
+BillingService
+ → PrinterService
+   → Template Engine (HTML / PDF)
+   → Windows Printer
 
-```
+Supports:
 
-### Notes:
-1. Replace `your-username` with the actual GitHub username or the repository URL where it is hosted.
-2. Adjust the sections based on your project's specific needs (e.g., additional dependencies or build steps).
+58mm / 80mm
 
-This README provides a clear overview of the app's architecture, next steps, and setup instructions for developers. Let me know if you need more adjustments or help with any specific part!
-```
+USB / Network printers
+
+Silent printing
+
+---
+
+8️⃣ Backup & Restore (Offline-Friendly)
+
+Auto backup every day
+
+Manual export (ZIP)
+
+Import on new PC
+
+Optional encryption
+
+This builds trust with shop owners.
+
+
+---
+
+9️⃣ Licensing (Local → Online Later)
+
+Phase 1
+
+Offline license key
+
+Device bound
+
+Stored locally
+
+
+Phase 2
+
+Online activation
+
+Subscription unlocks cloud sync
+
+---
+
+🔮 Scalability Roadmap
+
+Phase 1 (Now)
+
+Windows only
+
+Local DB
+
+One device
+
+
+Phase 2
+
+Cloud sync (optional)
+
+Multi-device
+
+Web dashboard
+
+
+Phase 3
+
+Android companion app
+
+Multi-store
+
+Analytics
+
+
+All without changing core architecture.
+
+---
+
+👥 Team Split (2–3 Devs)
+
+Dev	Responsibility
+
+Dev 1	Electron + IPC + Printing
+Dev 2	React UI + UX
+Dev 3	DB + Services + Licensing
+
