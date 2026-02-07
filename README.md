@@ -103,8 +103,7 @@ pnpm dev              # Vite + TypeScript watch + Electron
 
 # Individual dev processes
 pnpm dev:renderer     # Vite dev server only
-pnpm dev:main         # TypeScript watch (main process)
-pnpm dev:electron     # Electron only
+pnpm dev:main         # TypeScript watch + Auto-restart Electron
 
 # Code Quality
 pnpm lint             # Check linting errors

@@ -41,8 +41,7 @@ concurrently -k "pnpm dev:renderer" "pnpm dev:main" "pnpm dev:electron"
 | Script | Command | Purpose |
 |--------|---------|---------|
 | `dev:renderer` | `vite` | Start Vite dev server on `http://localhost:5173` |
-| `dev:main` | `tsc --watch` | Compile main process TypeScript in watch mode |
-| `dev:electron` | `wait-on http://localhost:5173 && electron .` | Wait for Vite, then launch Electron |
+| `dev:main` | `tsc-watch` | Compile main process & auto-restart Electron |
 
 **Flags:**
 - `-k` - Kill all processes when one exits
