@@ -7,6 +7,7 @@ import { shutdownManager, registerShutdownHooks } from './utils/shutdown-manager
 import { registerGlobalErrorHandlers } from './utils/error-handler';
 import { registerIPCHandlers } from './ipc';
 import { databaseManager } from './database';
+import { migrationRunner } from './database/migrations';
 
 /**
  * Main Electron Process Entry Point
@@ -90,7 +91,7 @@ function createWindow(): void {
 }
 
 // App lifecycle
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   const config = configManager.getConfig();
 
   logger.info('=== SmartKhata Starting ===');
@@ -115,6 +116,22 @@ app.whenReady().then(() => {
     dialog.showErrorBox(
       'Database Initialization Failed',
       `SmartKhata could not initialize the database.\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nThe application will now close.`
+    );
+    app.quit();
+    return;
+  }
+
+  // Run database migrations
+  try {
+    logger.info('Running database migrations...');
+    await migrationRunner.runPendingMigrations();
+    logger.info('Database migrations completed');
+  } catch (error) {
+    logger.error('Failed to run migrations', { error });
+    const { dialog } = require('electron');
+    dialog.showErrorBox(
+      'Database Migration Failed',
+      `SmartKhata could not apply database migrations.\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nThe application will now close.`
     );
     app.quit();
     return;
