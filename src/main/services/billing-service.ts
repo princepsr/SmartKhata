@@ -56,7 +56,7 @@ export interface CalculatedLineItem {
  * Finalize Bill Input
  */
 export interface FinalizeBillInput {
-  billNumber: string;
+  billNumber?: string;
   customerId?: number;
   items: BillItemInput[];
   discountAmount?: number;
@@ -176,7 +176,12 @@ export class BillingService extends BaseService {
    * 6. Updates customer balance
    */
   public finalizeBill(input: FinalizeBillInput): any {
-    // 1. Validate bill number
+    // 1. Generate bill number if not provided
+    if (!input.billNumber) {
+        input.billNumber = this.generateBillNumber();
+    }
+
+    // Validate bill number format (sanity check)
     this._validateBillNumber(input.billNumber);
 
     // 2. Validate items
@@ -276,18 +281,35 @@ export class BillingService extends BaseService {
    * 
    * Format: BILL-YYYYMMDD-NNNN
    * Example: BILL-20260208-0001
+   * 
+   * Uses database to find the last number to ensure no collisions.
    */
   public generateBillNumber(): string {
     const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+    // Use local time for bill number to avoid UTC issues
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${year}${month}${day}`;
+    const prefix = `BILL-${dateStr}-`;
 
-    // Get today's bills to find next sequence number
-    const todayBills = this.billRepo.findToday();
-    const nextSequence = todayBills.length + 1;
+    // Get last bill number from DB
+    const lastBillNumber = this.billRepo.findLastBillNumberByPrefix(prefix);
+    
+    let nextSequence = 1;
 
-    const billNumber = `BILL-${dateStr}-${String(nextSequence).padStart(4, '0')}`;
+    if (lastBillNumber) {
+      // Extract sequence part (last 4 digits)
+      const parts = lastBillNumber.split('-');
+      if (parts.length >= 3) {
+        const lastSeq = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(lastSeq)) {
+          nextSequence = lastSeq + 1;
+        }
+      }
+    }
 
-    return billNumber;
+    return `${prefix}${String(nextSequence).padStart(4, '0')}`;
   }
 
   /**

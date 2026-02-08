@@ -41,6 +41,8 @@ export const IPC_CHANNELS = {
   BILL_LIST_BY_DATE_RANGE: 'bill:listByDateRange',
   BILL_TODAY: 'bill:today',
   BILL_SALES_SUMMARY: 'bill:salesSummary',
+  BILL_PRINT: 'bill:print',
+  PRINTER_LIST: 'printer:list',
 
   // ============================================
   // SALE MODULE
@@ -152,6 +154,8 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.BILL_LIST_BY_DATE_RANGE,
     IPC_CHANNELS.BILL_TODAY,
     IPC_CHANNELS.BILL_SALES_SUMMARY,
+    IPC_CHANNELS.BILL_PRINT,
+    IPC_CHANNELS.PRINTER_LIST,
   ],
   CUSTOMER: [
     IPC_CHANNELS.CUSTOMER_LIST,

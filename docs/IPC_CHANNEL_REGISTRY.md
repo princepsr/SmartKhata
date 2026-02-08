@@ -35,7 +35,13 @@ export const IPC_CHANNELS = {
   SALE_CREATE: 'sale:create',
   SALE_LIST: 'sale:list',
   
-  // ... more channels
+  // Bill module
+  BILL_CREATE: 'bill:create',
+  BILL_PRINT: 'bill:print',
+  PRINTER_LIST: 'printer:list',
+
+  // Customer module
+  CUSTOMER_SEARCH: 'customer:search',
 } as const;
 ```
 

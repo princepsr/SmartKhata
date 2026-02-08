@@ -6,6 +6,16 @@ The initial schema (`001_initial_schema.sql`) defines 5 core tables for the Smar
 
 ---
 
+## Money Storage Convention
+
+> [!IMPORTANT]
+> All monetary values (Prices, Totals, Discounts, Balances) are stored as **Integers in Paisa** (e.g., ₹1.00 is stored as `100`).
+> - **Why:** To prevent floating-point rounding errors during calculation.
+> - **Precision:** 100% precision for all financial transactions.
+> - **Formatting:** The renderer is responsible for converting Paisa to Rupees (`value / 100`) for display using the `formatCurrency` utility.
+
+---
+
 ## Entity Relationship Diagram
 
 ```mermaid
@@ -18,8 +28,8 @@ erDiagram
         int id PK
         text name
         text barcode UK
-        real price
-        real cost
+        int price       /* Stored in Paisa (Integer) */
+        int cost        /* Stored in Paisa (Integer) */
         int stock
         text unit
         text category
@@ -35,8 +45,8 @@ erDiagram
         text phone UK
         text email
         text address
-        real credit_limit
-        real outstanding_balance
+        int credit_limit        /* Stored in Paisa (Integer) */
+        int outstanding_balance   /* Stored in Paisa (Integer) */
         int is_active
         text created_at
         text updated_at
@@ -45,10 +55,10 @@ erDiagram
     SALES {
         int id PK
         int customer_id FK
-        real subtotal
-        real tax
-        real discount
-        real total
+        int subtotal    /* Stored in Paisa (Integer) */
+        int tax         /* Stored in Paisa (Integer) */
+        int discount    /* Stored in Paisa (Integer) */
+        int total       /* Stored in Paisa (Integer) */
         text payment_method
         text payment_status
         text notes
@@ -63,8 +73,8 @@ erDiagram
         int product_id FK
         text product_name
         real quantity
-        real unit_price
-        real subtotal
+        int unit_price  /* Stored in Paisa (Integer) */
+        int subtotal    /* Stored in Paisa (Integer) */
         text created_at
     }
     

@@ -196,6 +196,23 @@ export class BillRepository extends BaseRepository {
   }
 
   /**
+   * Find bill with items by ID
+   */
+  public findByIdWithItems(id: number): BillWithItems | null {
+    const bill = this.findById(id);
+    if (!bill) {
+      return null;
+    }
+
+    const items = this.findItemsByBillId(bill.id);
+
+    return {
+      bill,
+      items
+    };
+  }
+
+  /**
    * List bills by date range
    */
   public findByDateRange(fromDate: Date, toDate: Date): Bill[] {
@@ -298,6 +315,26 @@ export class BillRepository extends BaseRepository {
       totalGst: (result?.total_gst || 0) / 100,
       totalDiscount: (result?.total_discount || 0) / 100
     };
+  }
+
+  /**
+   * Find last bill number by prefix
+   * Used for generating sequential bill numbers
+   * @param prefix e.g 'BILL-20230101-'
+   */
+  public findLastBillNumberByPrefix(prefix: string): string | null {
+    // We search for bill numbers starting with the prefix
+    // We order by length desc, then value desc to handle varying sequence lengths correctly
+    const sql = `
+      SELECT bill_number 
+      FROM bills 
+      WHERE bill_number LIKE ? 
+      ORDER BY length(bill_number) DESC, bill_number DESC
+      LIMIT 1
+    `;
+    
+    const row = this.queryOne<{ bill_number: string }>(sql, [`${prefix}%`]);
+    return row ? row.bill_number : null;
   }
 
   /**

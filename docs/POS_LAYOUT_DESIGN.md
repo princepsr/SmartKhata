@@ -157,6 +157,24 @@ Layout
 
 ---
 
+## Billing Page Specifics
+
+### 1. Search Results Grid
+**Decision:** Use CSS Grid for search dropdown results to ensure vertical alignment of product name, stock, and price.
+
+**Structure:**
+- **Product Name:** `1fr` (Flexible space, left-aligned)
+- **Stock / SKU:** `1fr` (Flexible space, left-aligned in center)
+- **Price:** `100px` (Fixed space, right-aligned)
+
+### 2. Cart Quantity Controls
+**Decision:** Horizontal alignment of `-`, `Input`, and `+` buttons for better ergonomics.
+
+- **Non-destructive Input:** Local state allows clearing the input without immediate item removal.
+- **Circular Buttons:** Large targets optimized for quick interaction.
+
+---
+
 ## Layout Implementation
 
 ### HTML Structure

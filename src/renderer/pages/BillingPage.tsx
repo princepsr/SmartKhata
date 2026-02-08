@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import type { Product } from '@shared/types/ipc';
+import { BillItemList } from '../components/billing/BillItemList';
+import { PaymentModeSelector, type PaymentMode } from '../components/billing/PaymentModeSelector';
+import { BillHistoryModal } from '../components/billing/BillHistoryModal';
+import { calculateBillPreview, formatCurrency, type BillCalculation } from '../utils/billing-math';
 import './BillingPage.css';
 
 /**
@@ -10,8 +14,11 @@ import './BillingPage.css';
  * Main POS billing interface with:
  * - Product search and selection
  * - Cart management
- * - Real-time bill calculation
+ * - Real-time bill calculation (via local preview)
  * - Transaction completion
+ * - Optional Customer Selection
+ * - Payment Mode Selection
+ * - Thermal Printing Integration
  * 
  * Keyboard shortcut: F2
  */
@@ -22,27 +29,8 @@ interface BillItemInput {
   quantity: number;
 }
 
-interface CalculatedLineItem {
-  productId: number;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  gstPercent: number;
-  lineSubtotal: number;
-  lineGst: number;
-  lineTotal: number;
-}
-
-interface BillCalculation {
-  items: CalculatedLineItem[];
-  subtotal: number;
-  gstTotal: number;
-  discountAmount: number;
-  grandTotal: number;
-}
-
 interface FinalizeBillInput {
-  billNumber: string;
+  billNumber?: string;
   customerId?: number;
   items: BillItemInput[];
   discountAmount?: number;
@@ -56,14 +44,54 @@ interface CartItem {
   quantity: number;
 }
 
+// Customer Type
+interface Customer {
+  id: number;
+  name: string;
+  phone: string;
+  balanceDue: number;
+}
+
 function BillingPage() {
   // State
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [discountAmount, setDiscountAmount] = useState(0);
-  const [paymentMode, setPaymentMode] = useState<'cash' | 'upi' | 'mixed'>('cash');
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('cash');
   const [calculation, setCalculation] = useState<BillCalculation | null>(null);
+  
+  // Customer State
+  const [customerQuery, setCustomerQuery] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
+  // Keyboard Navigation State
+  const [selectedResultIndex, setSelectedResultIndex] = useState(-1);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const checkoutBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Printer State
+  const [selectedPrinter, setSelectedPrinter] = useState<string>('');
+  
+  // Click Outside Handler for Product Search
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const [showProductSearch, setShowProductSearch] = useState(false);
+  const [showResetConfirmation, setShowResetConfirmation] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowProductSearch(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
   // IPC Hooks
   const { 
     data: searchResults, 
@@ -72,45 +100,192 @@ function BillingPage() {
   } = useIPC<Product[]>(IPC_CHANNELS.PRODUCT_SEARCH);
 
   const {
-    loading: calculating,
-    execute: calculateBill
-  } = useIPCMutation<{ items: BillItemInput[]; discountAmount: number }, BillCalculation>(
-    IPC_CHANNELS.BILL_CALCULATE
-  );
+    data: customerResults,
+    loading: searchingCustomers,
+    execute: searchCustomers
+  } = useIPC<Customer[]>(IPC_CHANNELS.CUSTOMER_SEARCH);
+
+  const {
+    data: printers,
+    execute: fetchPrinters
+  } = useIPC<Electron.PrinterInfo[]>(IPC_CHANNELS.PRINTER_LIST);
 
   const {
     loading: finalizing,
+    error: finalizingError,
     execute: finalizeBill
   } = useIPCMutation<FinalizeBillInput, any>(IPC_CHANNELS.BILL_CREATE);
 
   const {
-    execute: generateBillNumber
-  } = useIPC<string>(IPC_CHANNELS.BILL_GENERATE_NUMBER);
+    loading: printing,
+    execute: printBill
+  } = useIPCMutation<{ billId: number; printerName: string }, boolean>(IPC_CHANNELS.BILL_PRINT);
 
-  // Search products
+  // Focus search input on mount and whenever returning to the page
+  // Initial Load (Printers & Focus)
   useEffect(() => {
-    if (searchQuery.length >= 2) {
-      searchProducts(searchQuery);
+    // Load Printers
+    fetchPrinters();
+    const savedPrinter = localStorage.getItem('settings:printer');
+    if (savedPrinter) {
+      setSelectedPrinter(savedPrinter);
     }
+
+    // Focus Search (Small delay to ensure DOM is ready)
+    const timer = setTimeout(() => {
+        if (searchInputRef.current) {
+            searchInputRef.current.focus();
+        }
+    }, 300); // Increased delay to 300ms to be safe against page transitions
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Discount State
+  const [discountType, setDiscountType] = useState<'amount' | 'percent'>('amount');
+  const [discountValue, setDiscountValue] = useState<string>(''); // Store as string to handle empty input
+  
+  // Update calculation when discount changes
+  useEffect(() => {
+    let amt = 0;
+    const val = parseFloat(discountValue) || 0;
+    
+    if (discountType === 'percent') {
+        // Calculate percentage of Subtotal + GST
+        // Note: calculation object might be null initially
+        if (calculation) {
+             const baseTotal = calculation.subtotal + calculation.gstTotal;
+             amt = Math.round((baseTotal * val) / 100);
+        }
+    } else {
+        amt = val * 100; // Convert to paise
+    }
+    
+    setDiscountAmount(amt);
+  }, [discountValue, discountType, calculation?.subtotal, calculation?.gstTotal]);
+
+
+  // Persist Printer Selection
+  const handlePrinterChange = (printerName: string) => {
+    setSelectedPrinter(printerName);
+    localStorage.setItem('settings:printer', printerName);
+  };
+
+  // Search products with Debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.length >= 2) {
+        searchProducts(searchQuery);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
   }, [searchQuery, searchProducts]);
 
-  // Recalculate bill when cart or discount changes
+  // Search customers with Debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (customerQuery.length >= 2) {
+        searchCustomers(customerQuery);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [customerQuery, searchCustomers]);
+
+  // Auto-select first result when results change
+  useEffect(() => {
+    if (searchResults && searchResults.length > 0) {
+      setSelectedResultIndex(0);
+    } else {
+      setSelectedResultIndex(-1);
+    }
+  }, [searchResults]);
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // If History or Reset Modal is open, handle appropriately
+      if (showHistory || showResetConfirmation) {
+         if (e.key === 'Escape') {
+            setShowHistory(false);
+            setShowResetConfirmation(false);
+         }
+         return; 
+      }
+
+      // Global Shortcuts
+      switch(e.key) {
+        case 'F2':
+          e.preventDefault();
+          searchInputRef.current?.focus();
+          break;
+        case 'F4':
+          e.preventDefault();
+          setShowHistory(true);
+          break;
+        case 'F9':
+          e.preventDefault();
+          if (calculation && !finalizing && cart.length > 0) {
+             handleCheckout();
+          }
+          break;
+        case 'Escape':
+           e.preventDefault();
+           // Hierarchy: 
+           // 1. Clear Search Query
+           // 2. Clear Selected Customer
+           // 3. Clear Cart (with confirmation)
+           
+           if (searchQuery) {
+             setSearchQuery('');
+             setSelectedResultIndex(-1);
+             searchInputRef.current?.focus(); 
+           } else if (selectedCustomer) {
+             setSelectedCustomer(null);
+           } else if (cart.length > 0) {
+             setShowResetConfirmation(true);
+           }
+           break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [calculation, finalizing, searchQuery, selectedCustomer, cart, showHistory, showCustomerSearch, showResetConfirmation]);
+
+
+
+
+  // Search Input Navigation
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (!searchResults || searchResults.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedResultIndex(prev => 
+        prev < searchResults.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedResultIndex(prev => prev > 0 ? prev - 1 : 0);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      
+      // If we have a selected result, add it
+      if (selectedResultIndex !== -1 && searchResults && searchResults[selectedResultIndex]) {
+        addToCart(searchResults[selectedResultIndex]);
+        return;
+      }
+    }
+  };
+
+  // Recalculate bill PREVIEW instantly when cart or discount changes
   useEffect(() => {
     if (cart.length > 0) {
-      const items: BillItemInput[] = cart.map(item => ({
-        productId: item.product.id,
-        quantity: item.quantity
-      }));
-
-      calculateBill({ items, discountAmount }).then(result => {
-        if (result) {
-          setCalculation(result);
-        }
-      });
+      const preview = calculateBillPreview(cart, discountAmount);
+      setCalculation(preview);
     } else {
       setCalculation(null);
     }
-  }, [cart, discountAmount, calculateBill]);
+  }, [cart, discountAmount]);
 
   // Add product to cart
   const addToCart = (product: Product) => {
@@ -128,8 +303,10 @@ function BillingPage() {
       setCart([...cart, { product, quantity: 1 }]);
     }
     
-    // Clear search
+    // Clear search and refocus for next item relative to current input
     setSearchQuery('');
+    setSelectedResultIndex(-1);
+    searchInputRef.current?.focus();
   };
 
   // Update cart item quantity
@@ -150,21 +327,35 @@ function BillingPage() {
     setCart(cart.filter(item => item.product.id !== productId));
   };
 
+  // Reset Bill State (Next Sale)
+  const resetBill = () => {
+    setCart([]);
+    setDiscountAmount(0);
+    setDiscountValue('');
+    setDiscountType('amount');
+    setCalculation(null);
+    setSelectedCustomer(null);
+    setPaymentMode('cash');
+    setSearchQuery('');
+    setSelectedResultIndex(-1);
+    
+    // Simple focus is enough now since we are not leaving the window context
+    // But we keep a tiny delay just to be safe with React state updates
+    setTimeout(() => {
+        searchInputRef.current?.focus();
+    }, 10);
+  };
+
   // Complete transaction
   const handleCheckout = async () => {
-    if (!calculation || cart.length === 0) return;
+    if (!calculation || cart.length === 0 || finalizing) return;
 
-    // Generate bill number
-    const billNumberResult = await generateBillNumber();
-    if (!billNumberResult) {
-      alert('Failed to generate bill number');
-      return;
-    }
-
-    const billNumber = billNumberResult as unknown as string;
+    // We no longer generate bill number here on the client side.
+    // The server handles it safely to avoid collisions.
 
     const input: FinalizeBillInput = {
-      billNumber,
+      // billNumber is now optional and generated by server if omitted
+      customerId: selectedCustomer?.id,
       items: cart.map(item => ({
         productId: item.product.id,
         quantity: item.quantity
@@ -176,179 +367,334 @@ function BillingPage() {
     const result = await finalizeBill(input);
     
     if (result) {
-      alert(`Bill created successfully!\nBill Number: ${billNumber}\nTotal: ₹${(calculation.grandTotal / 100).toFixed(2)}`);
+      // 1. Trigger Print (Silent) - Fire and forget
+      printBill({ 
+        billId: result.bill.id, 
+        printerName: selectedPrinter 
+      }).catch(err => {
+         console.error('Print failed', err);
+         alert('Bill saved, but printing failed. Please reprint from dashboard.');
+      });
+
+      // 2. Show Success (Blocking or Token?)
+      // For now, simple alert, then reset.
+      alert(`Bill created successfully!\nBill Number: ${result.bill.billNumber}\nTotal: ₹${formatCurrency(calculation.grandTotal)}`);
       
-      // Clear cart
-      setCart([]);
-      setDiscountAmount(0);
-      setCalculation(null);
-    } else {
-      alert('Failed to create bill');
+      // 3. Reset UI for next sale
+      resetBill();
     }
   };
 
   return (
     <div className="page billing-page">
       <header className="page-header">
-        <h1 className="page-title">Billing</h1>
-        <p className="page-subtitle">Create new sale</p>
-      </header>
+        <h1 className="page-title">Billing - New Sale</h1>
+        
+        {/* Customer Section in Header */}
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+           {/* Printer Selector */}
+           <div className="printer-selector">
+              <select 
+                value={selectedPrinter}
+                onChange={(e) => handlePrinterChange(e.target.value)}
+                style={{
+                  padding: '0.4rem',
+                  fontSize: '0.9rem',
+                  borderRadius: '0.375rem',
+                  border: '1px solid #d1d5db',
+                  maxWidth: '150px'
+                }}
+              >
+                <option value="">Default Printer</option>
+                {printers?.map(p => (
+                  <option key={p.name} value={p.name}>
+                    {p.name} {p.isDefault ? '(Default)' : ''}
+                  </option>
+                ))}
+              </select>
+           </div>
 
-      <div className="page-content billing-content">
-        {/* Left Panel: Product Search */}
-        <div className="billing-panel search-panel">
-          <h2>Products</h2>
-          
+           {selectedCustomer ? (
+             <div className="selected-customer-badge" style={{ 
+                background: '#e0f2fe', 
+                padding: '0.25rem 0.75rem', 
+                borderRadius: '999px',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                border: '1px solid #bae6fd'
+             }}>
+                <span style={{ fontWeight: 600, color: '#0369a1' }}>{selectedCustomer.name}</span>
+                <span style={{ fontSize: '0.85rem', color: '#0c4a6e' }}>({selectedCustomer.phone})</span>
+                <button 
+                  onClick={() => setSelectedCustomer(null)}
+                  style={{ 
+                    border: 'none', background: 'transparent', cursor: 'pointer', 
+                    color: '#0369a1', fontWeight: 'bold', padding: '0 0.25rem' 
+                  }}
+                >×</button>
+             </div>
+           ) : (
+             <div className="customer-search" style={{ position: 'relative' }}>
+                <input 
+                  type="text" 
+                  placeholder="Customer (Optional)"
+                  className="customer-search-input"
+                  value={customerQuery}
+                  onChange={(e) => {
+                    setCustomerQuery(e.target.value);
+                    setShowCustomerSearch(true);
+                  }}
+                  onFocus={() => setShowCustomerSearch(true)}
+                  onBlur={() => setTimeout(() => setShowCustomerSearch(false), 200)} // Delay to allow click
+                  style={{ 
+                    padding: '0.4rem 0.8rem', 
+                    borderRadius: '0.375rem', 
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.9rem',
+                    width: '200px'
+                  }}
+                />
+                
+                {/* Customer Search Results Dropdown */}
+                {showCustomerSearch && customerQuery.length >= 2 && customerResults && (
+                  <div className="customer-results-dropdown" style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    width: '300px',
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '0.5rem',
+                    boxShadow: '0 4px 6px -1px update(0, 0, 0, 0.1)',
+                    zIndex: 20,
+                    marginTop: '0.25rem',
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                  }}>
+                    {searchingCustomers ? (
+                      <div style={{ padding: '0.5rem', color: '#6b7280' }}>Searching...</div>
+                    ) : customerResults.length > 0 ? (
+                      customerResults.map(c => (
+                        <div 
+                          key={c.id}
+                          onClick={() => {
+                            setSelectedCustomer(c);
+                            setCustomerQuery('');
+                            setShowCustomerSearch(false);
+                          }}
+                          style={{
+                            padding: '0.5rem 0.75rem',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #f3f4f6',
+                            display: 'flex',
+                            justifyContent: 'space-between'
+                          }}
+                          className="hover:bg-gray-50"
+                        >
+                          <span style={{ fontWeight: 500 }}>{c.name}</span>
+                          <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>{c.phone}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '0.5rem', color: '#6b7280' }}>No customer found</div>
+                    )}
+                  </div>
+                )}
+             </div>
+           )}
+        </div>
+      </header>
+      
+      <div className="billing-content">
+        {/* 1. Search Section (Full Width Top) */}
+        <div className="search-panel" ref={searchContainerRef}>
           <input
+            ref={searchInputRef}
             type="text"
             className="search-input"
-            placeholder="Search products (name, SKU, barcode)..."
+            placeholder="Search Item (F2) - Name / SKU / Barcode"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowProductSearch(true);
+            }}
+            onFocus={() => setShowProductSearch(true)}
+            onKeyDown={handleSearchKeyDown}
             autoFocus
           />
-
-          {searching && <div className="loading">Searching...</div>}
-
-          {searchResults && searchResults.length > 0 && (
-            <div className="search-results">
-              {searchResults.map(product => (
-                <div
-                  key={product.id}
-                  className="product-item"
-                  onClick={() => addToCart(product)}
-                >
-                  <div className="product-info">
-                    <h3>{product.name}</h3>
-                    {product.sku && <p className="product-sku">SKU: {product.sku}</p>}
-                  </div>
-                  <div className="product-price">
-                    ₹{(product.salePrice / 100).toFixed(2)}
-                  </div>
-                  <div className="product-stock">
-                    Stock: {product.stockQty}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {searchQuery.length >= 2 && !searching && (!searchResults || searchResults.length === 0) && (
-            <div className="no-results">No products found</div>
-          )}
+          
+          {/* Absolute dropdown for results */}
+          <div className="search-results-container">
+             {searching && <div className="loading">Searching...</div>}
+             
+             {showProductSearch && searchQuery.length >= 2 && searchResults && searchResults.length > 0 && (
+               <div className="search-results">
+                 {searchResults.map((product, index) => (
+                   <div
+                     key={product.id}
+                     className={`product-item ${index === selectedResultIndex ? 'selected' : ''}`}
+                     onClick={() => addToCart(product)}
+                   >
+                     <span className="product-name">{product.name}</span>
+                     <span className="product-meta">Stock: {product.stockQty} • SKU: {product.sku}</span>
+                     <span className="product-price">₹{formatCurrency(product.salePrice)}</span>
+                   </div>
+                 ))}
+               </div>
+             )}
+          </div>
         </div>
 
-        {/* Right Panel: Cart & Checkout */}
-        <div className="billing-panel cart-panel">
-          <h2>Cart ({cart.length} items)</h2>
+        {/* 2. Bill Items List (Left Column) */}
+        <div className="cart-panel">
+          <BillItemList 
+            cart={cart}
+            onUpdateQuantity={updateQuantity}
+            onRemove={removeFromCart}
+          />
+        </div>
 
-          {cart.length === 0 ? (
-            <div className="empty-cart">
-              <div className="placeholder-icon">🛒</div>
-              <p>Cart is empty</p>
-              <p className="hint">Search and add products to start billing</p>
-            </div>
-          ) : (
-            <>
-              {/* Cart Items */}
-              <div className="cart-items">
-                {cart.map(item => (
-                  <div key={item.product.id} className="cart-item">
-                    <div className="cart-item-info">
-                      <h3>{item.product.name}</h3>
-                      <p className="cart-item-price">
-                        ₹{(item.product.salePrice / 100).toFixed(2)} × {item.quantity}
-                      </p>
-                    </div>
-                    
-                    <div className="cart-item-controls">
-                      <button
-                        className="btn btn-sm"
-                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                      >
-                        −
-                      </button>
-                      <input
-                        type="number"
-                        className="quantity-input"
-                        value={item.quantity}
-                        onChange={(e) => updateQuantity(item.product.id, parseInt(e.target.value) || 0)}
-                        min="1"
-                      />
-                      <button
-                        className="btn btn-sm"
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                      >
-                        +
-                      </button>
-                      <button
-                        className="btn btn-sm btn-danger"
-                        onClick={() => removeFromCart(item.product.id)}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Bill Summary */}
-              {calculation && (
-                <div className="bill-summary">
-                  <div className="summary-row">
-                    <span>Subtotal:</span>
-                    <span>₹{(calculation.subtotal / 100).toFixed(2)}</span>
-                  </div>
-                  <div className="summary-row">
-                    <span>GST:</span>
-                    <span>₹{(calculation.gstTotal / 100).toFixed(2)}</span>
-                  </div>
-                  
-                  <div className="summary-row discount-row">
-                    <span>Discount:</span>
-                    <input
-                      type="number"
-                      className="discount-input"
-                      value={discountAmount / 100}
-                      onChange={(e) => setDiscountAmount(Math.max(0, parseFloat(e.target.value) || 0) * 100)}
-                      placeholder="0.00"
-                      step="0.01"
-                    />
-                  </div>
-
-                  <div className="summary-row total-row">
-                    <span>Grand Total:</span>
-                    <span className="total-amount">₹{(calculation.grandTotal / 100).toFixed(2)}</span>
-                  </div>
+        {/* 3. Totals & Actions (Right Column) */}
+        <div className="totals-panel">
+            <div className="totals-area">
+                <div className="summary-row">
+                    <span>Subtotal</span>
+                    <span>₹{calculation ? formatCurrency(calculation.subtotal) : '0.00'}</span>
                 </div>
-              )}
+                <div className="summary-row">
+                    <span>GST</span>
+                    <span>₹{calculation ? formatCurrency(calculation.gstTotal) : '0.00'}</span>
+                </div>
+                <div className="summary-row">
+                    <span>Discount</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                        <div className="toggle-switch" style={{ display: 'flex', border: '1px solid #d1d5db', borderRadius: '0.25rem', overflow: 'hidden' }}>
+                            <button 
+                                onClick={() => setDiscountType('amount')}
+                                style={{ 
+                                    padding: '0.1rem 0.4rem', 
+                                    background: discountType === 'amount' ? '#e0f2fe' : 'white',
+                                    color: discountType === 'amount' ? '#0369a1' : '#64748b',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '0.8rem',
+                                    fontWeight: discountType === 'amount' ? 600 : 400
+                                }}
+                            >₹</button>
+                            <button 
+                                onClick={() => setDiscountType('percent')}
+                                style={{ 
+                                    padding: '0.1rem 0.4rem', 
+                                    background: discountType === 'percent' ? '#e0f2fe' : 'white',
+                                    color: discountType === 'percent' ? '#0369a1' : '#64748b',
+                                    border: 'none',
+                                    borderLeft: '1px solid #d1d5db',
+                                    cursor: 'pointer',
+                                    fontSize: '0.8rem',
+                                    fontWeight: discountType === 'percent' ? 600 : 400
+                                }}
+                            >%</button>
+                        </div>
+                        <input 
+                           type="number" 
+                           value={discountValue} 
+                           onChange={(e) => setDiscountValue(e.target.value)}
+                           placeholder="0"
+                           style={{ width: '80px', textAlign: 'right', fontSize: '1.2rem' }}
+                        />
+                    </div>
+                </div>
+                
+                <div className="summary-row grand-total">
+                    <span>₹{calculation ? formatCurrency(calculation.grandTotal) : '0.00'}</span>
+                </div>
+            </div>
 
-              {/* Payment Mode */}
-              <div className="payment-mode">
-                <label>Payment Mode:</label>
-                <select
-                  value={paymentMode}
-                  onChange={(e) => setPaymentMode(e.target.value as 'cash' | 'upi' | 'mixed')}
-                  className="payment-select"
+            <div className="actions-area">
+                <PaymentModeSelector 
+                  currentMode={paymentMode}
+                  onModeChange={setPaymentMode}
+                  disabled={finalizing}
+                />
+                
+                {finalizingError && (
+                  <div className="error-message" style={{ color: '#ef4444', marginBottom: '0.5rem', textAlign: 'right', fontSize: '0.9rem' }}>
+                    Error: {finalizingError}
+                  </div>
+                )}
+                
+                <button 
+                    ref={checkoutBtnRef}
+                    className="btn-pay"
+                    disabled={finalizing || cart.length === 0}
+                    onClick={handleCheckout}
                 >
-                  <option value="cash">Cash</option>
-                  <option value="upi">UPI</option>
-                  <option value="mixed">Mixed</option>
-                </select>
-              </div>
-
-              {/* Checkout Button */}
-              <button
-                className="btn btn-primary btn-checkout"
-                onClick={handleCheckout}
-                disabled={finalizing || calculating || !calculation}
-              >
-                {finalizing ? 'Processing...' : `Complete Sale - ₹${calculation ? (calculation.grandTotal / 100).toFixed(2) : '0.00'}`}
-              </button>
-            </>
-          )}
+                    {finalizing ? 'Processing...' : `PAY (F9)`}
+                </button>
+            </div>
+            
+            {/* Shortcuts Legend */}
+            <div className="shortcuts-legend" style={{ 
+                marginTop: '1rem', 
+                padding: '0.75rem', 
+                background: '#f8fafc', 
+                borderRadius: '0.5rem', 
+                fontSize: '0.75rem', 
+                color: '#64748b',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.5rem'
+            }}>
+                <div><strong style={{color: '#475569'}}>F2</strong> Focus Search</div>
+                <div><strong style={{color: '#475569'}}>Enter</strong> Add Item</div>
+                <div><strong style={{color: '#475569'}}>F9</strong> Pay & Print</div>
+                <div><strong style={{color: '#475569'}}>Esc</strong> Clear / Reset</div>
+            </div>
         </div>
       </div>
+      
+      {showHistory && (
+        <BillHistoryModal 
+          onClose={() => setShowHistory(false)} 
+          printerName={selectedPrinter}
+        />
+      )}
+
+      {/* Custom Reset Confirmation Modal */}
+      {showResetConfirmation && (
+        <div className="modal-overlay" style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000,
+            display: 'flex', justifyContent: 'center', alignItems: 'center'
+        }}>
+            <div className="modal-content" style={{
+                background: 'white', padding: '2rem', borderRadius: '0.5rem',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.2)', width: '350px', textAlign: 'center'
+            }}>
+                <h3 style={{ marginTop: 0 }}>Clear Bill?</h3>
+                <p>Are you sure you want to discard the current sale?</p>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1.5rem' }}>
+                    <button 
+                        onClick={() => setShowResetConfirmation(false)}
+                        style={{ padding: '0.5rem 1.5rem', borderRadius: '0.25rem', border: '1px solid #d1d5db', background: 'white', cursor: 'pointer' }}
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={() => {
+                            setShowResetConfirmation(false);
+                            resetBill();
+                        }}
+                        autoFocus
+                        style={{ padding: '0.5rem 1.5rem', borderRadius: '0.25rem', border: 'none', background: '#ef4444', color: 'white', cursor: 'pointer' }}
+                    >
+                        Clear Bill
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 }

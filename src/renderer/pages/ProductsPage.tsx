@@ -3,6 +3,7 @@ import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import type { Product } from '@shared/types/ipc';
 import type { CreateProductRequest } from '@shared/validation/schemas';
+import { formatCurrency } from '../utils/billing-math';
 import './ProductsPage.css';
 
 /**
@@ -40,7 +41,7 @@ function ProductsPage() {
     // Demo product data
     const newProduct = {
       name: 'New Product ' + Math.floor(Math.random() * 1000),
-      salePrice: 100,
+      salePrice: 10000, // 100.00 Rupees (in Paisa)
       stockQty: 10,
     };
 
@@ -88,7 +89,7 @@ function ProductsPage() {
               {products?.map((product) => (
                 <div key={product.id} className="product-card">
                   <h3>{product.name}</h3>
-                  <p className="product-price">₹{product.salePrice}</p>
+                  <p className="product-price">₹{formatCurrency(product.salePrice)}</p>
                   <p className="product-stock">Stock: {product.stockQty}</p>
                 </div>
               ))}

@@ -8,6 +8,7 @@
 import { IPCHandler } from '../ipc-handler';
 import { BillingService, FinalizeBillInput, BillItemInput } from '../../services/billing-service';
 import { BillRepository } from '../../repositories/bill-repository';
+import { PrintService } from '../../services/print-service'; // Import
 import { 
   getUserFriendlyMessage
 } from '../../services/errors/service-errors';
@@ -18,12 +19,14 @@ import {
 export function registerBillHandlers(): void {
   const billingService = new BillingService();
   const billRepo = new BillRepository();
+  const printService = new PrintService(); // Instantiate
 
   // ============================================
   // CALCULATE BILL (PREVIEW)
   // ============================================
   IPCHandler.handle<{ items: BillItemInput[]; discountAmount?: number }, any>(
     'bill:calculate',
+    // ... existing implementation ...
     async ({ items, discountAmount }) => {
       const calculation = billingService.calculateBill(items, discountAmount || 0);
 
@@ -54,6 +57,7 @@ export function registerBillHandlers(): void {
   // ============================================
   IPCHandler.handle<FinalizeBillInput, any>(
     'bill:create',
+    // ... existing implementation ...
     async (billInput) => {
       const result = billingService.finalizeBill(billInput);
 
@@ -80,6 +84,51 @@ export function registerBillHandlers(): void {
           lineTotal: item.lineTotal
         }))
       };
+    },
+    {
+        transformError: (err) => getUserFriendlyMessage(err)
+    }
+  );
+
+  // ============================================
+  // PRINT BILL
+  // ============================================
+  IPCHandler.handle<{ billId: number; printerName?: string }, boolean>(
+    'bill:print',
+    async (payload) => {
+      // Handle both number (legacy) and object payload
+      const billId = typeof payload === 'number' ? payload : payload.billId;
+      const printerName = typeof payload === 'number' ? '' : payload.printerName;
+
+      // 1. Fetch full bill details to ensure we print accurate data
+      const billData = billRepo.findByIdWithItems(billId);
+      
+      if (!billData) {
+        throw new Error('Bill not found for printing');
+      }
+
+      // 2. Send to print service
+      // We pass the raw DB objects, PrintService handles formatting
+      return await printService.printBill({
+        bill: {
+          ...billData.bill,
+          createdAt: billData.bill.createdAt // Date object is preserved in main process
+        },
+        items: billData.items
+      }, printerName);
+    },
+    {
+        transformError: (err) => getUserFriendlyMessage(err)
+    }
+  );
+
+  // ============================================
+  // GET PRINTERS
+  // ============================================
+  IPCHandler.handle<void, Electron.PrinterInfo[]>(
+    'printer:list',
+    async () => {
+      return await printService.getPrinters();
     },
     {
         transformError: (err) => getUserFriendlyMessage(err)
@@ -139,6 +188,8 @@ export function registerBillHandlers(): void {
         transformError: (err) => getUserFriendlyMessage(err)
     }
   );
+
+  // ... (rest of list handlers)
 
   // ============================================
   // LIST BILLS BY DATE RANGE
