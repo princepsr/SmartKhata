@@ -6,6 +6,7 @@ import { logger } from './utils/logger';
 import { shutdownManager, registerShutdownHooks } from './utils/shutdown-manager';
 import { registerGlobalErrorHandlers } from './utils/error-handler';
 import { registerIPCHandlers } from './ipc';
+import { databaseManager } from './database';
 
 /**
  * Main Electron Process Entry Point
@@ -102,6 +103,23 @@ app.whenReady().then(() => {
   // Register shutdown hooks
   registerShutdownHooks();
 
+  // Initialize database
+  try {
+    logger.info('Initializing database...');
+    databaseManager.initialize();
+    logger.info('Database initialized successfully');
+  } catch (error) {
+    logger.error('Failed to initialize database', { error });
+    // Show error dialog and quit
+    const { dialog } = require('electron');
+    dialog.showErrorBox(
+      'Database Initialization Failed',
+      `SmartKhata could not initialize the database.\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nThe application will now close.`
+    );
+    app.quit();
+    return;
+  }
+
   // Register IPC handlers
   registerIPCHandlers();
 
@@ -122,6 +140,15 @@ app.on('before-quit', async (event) => {
     event.preventDefault();
     
     logger.info('App quit requested, starting graceful shutdown');
+    
+    // Close database connection
+    try {
+      databaseManager.close();
+      logger.info('Database connection closed');
+    } catch (error) {
+      logger.error('Error closing database', { error });
+    }
+    
     await shutdownManager.shutdown();
     
     // Now allow the app to quit
