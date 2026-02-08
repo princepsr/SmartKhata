@@ -1,15 +1,23 @@
 /**
- * Bill IPC Handlers
+ * Bill IPC Handlers (Service-Based)
  * 
- * Wires billing operations from UI to BillingTransactionService.
- * No SQL logic here - only orchestration.
+ * Wires billing operations from UI to BillingService.
+ * No SQL logic, no repository calls - only service orchestration.
  */
 
 import { IPCHandler } from '../ipc-handler';
-import { BillingTransactionService, CreateSaleInput } from '../../services/billing-transaction-service';
+import { BillingService, FinalizeBillInput, BillItemInput } from '../../services/billing-service';
 import { BillRepository } from '../../repositories/bill-repository';
 import { Logger } from '../../utils/logger';
-import { DatabaseError } from '../../repositories/base-repository';
+import { 
+  ValidationError, 
+  NotFoundError, 
+  DuplicateEntryError,
+  InsufficientStockError,
+  InactiveEntityError,
+  getUserFriendlyMessage,
+  isServiceError
+} from '../../services/errors/service-errors';
 
 /**
  * Safe Response Format
@@ -18,27 +26,88 @@ interface IPCResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  errorCode?: string;
+  context?: Record<string, any>;
 }
 
 /**
  * Register All Bill Handlers
  */
 export function registerBillHandlers(): void {
-  const billingService = new BillingTransactionService();
+  const billingService = new BillingService();
   const billRepo = new BillRepository();
 
   // ============================================
-  // CREATE BILL (COMPLETE SALE TRANSACTION)
+  // CALCULATE BILL (PREVIEW)
   // ============================================
-  IPCHandler.handle<CreateSaleInput, IPCResponse<any>>(
-    'bill:create',
-    async (saleData) => {
+  IPCHandler.handle<{ items: BillItemInput[]; discountAmount?: number }, IPCResponse<any>>(
+    'bill:calculate',
+    async ({ items, discountAmount }) => {
       try {
-        // Validate before starting transaction
-        billingService.validateSale(saleData);
+        const calculation = billingService.calculateBill(items, discountAmount || 0);
 
-        // Create sale (atomic transaction)
-        const result = billingService.createSale(saleData);
+        return {
+          success: true,
+          data: {
+            items: calculation.items.map(item => ({
+              productId: item.productId,
+              productName: item.productName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              gstPercent: item.gstPercent,
+              lineSubtotal: item.lineSubtotal,
+              lineGst: item.lineGst,
+              lineTotal: item.lineTotal
+            })),
+            subtotal: calculation.subtotal,
+            gstTotal: calculation.gstTotal,
+            discountAmount: calculation.discountAmount,
+            grandTotal: calculation.grandTotal
+          }
+        };
+      } catch (error) {
+        Logger.error('Failed to calculate bill', error);
+        
+        if (error instanceof ValidationError) {
+          return {
+            success: false,
+            error: error.getUserMessage(),
+            errorCode: 'VALIDATION_ERROR'
+          };
+        }
+
+        if (error instanceof NotFoundError) {
+          return {
+            success: false,
+            error: error.getUserMessage(),
+            errorCode: 'NOT_FOUND'
+          };
+        }
+
+        if (error instanceof InactiveEntityError) {
+          return {
+            success: false,
+            error: error.getUserMessage(),
+            errorCode: 'INACTIVE_ENTITY'
+          };
+        }
+
+        return {
+          success: false,
+          error: getUserFriendlyMessage(error)
+        };
+      }
+    }
+  );
+
+  // ============================================
+  // CREATE BILL (FINALIZE SALE)
+  // ============================================
+  IPCHandler.handle<FinalizeBillInput, IPCResponse<any>>(
+    'bill:create',
+    async (billInput) => {
+      try {
+        const result = billingService.finalizeBill(billInput);
 
         return {
           success: true,
@@ -69,31 +138,79 @@ export function registerBillHandlers(): void {
       } catch (error) {
         Logger.error('Failed to create bill', error);
 
-        // Handle specific errors
-        if (error instanceof Error) {
-          if (error.message.includes('Insufficient stock')) {
-            return {
-              success: false,
-              error: error.message
-            };
-          }
-          if (error.message.includes('already exists')) {
-            return {
-              success: false,
-              error: 'Bill number already exists'
-            };
-          }
-          if (error.message.includes('not found')) {
-            return {
-              success: false,
-              error: error.message
-            };
-          }
+        // Handle specific service errors
+        if (error instanceof ValidationError) {
+          return {
+            success: false,
+            error: error.getUserMessage(),
+            errorCode: 'VALIDATION_ERROR'
+          };
+        }
+
+        if (error instanceof InsufficientStockError) {
+          return {
+            success: false,
+            error: error.getUserMessage(),
+            errorCode: 'INSUFFICIENT_STOCK',
+            context: {
+              productId: error.productId,
+              productName: error.productName,
+              available: error.available,
+              required: error.required
+            }
+          };
+        }
+
+        if (error instanceof DuplicateEntryError) {
+          return {
+            success: false,
+            error: 'Bill number already exists',
+            errorCode: 'DUPLICATE_ENTRY'
+          };
+        }
+
+        if (error instanceof NotFoundError) {
+          return {
+            success: false,
+            error: error.getUserMessage(),
+            errorCode: 'NOT_FOUND'
+          };
+        }
+
+        if (error instanceof InactiveEntityError) {
+          return {
+            success: false,
+            error: error.getUserMessage(),
+            errorCode: 'INACTIVE_ENTITY'
+          };
         }
 
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to create bill'
+          error: getUserFriendlyMessage(error)
+        };
+      }
+    }
+  );
+
+  // ============================================
+  // GENERATE BILL NUMBER
+  // ============================================
+  IPCHandler.handle<void, IPCResponse<string>>(
+    'bill:generateNumber',
+    async () => {
+      try {
+        const billNumber = billingService.generateBillNumber();
+
+        return {
+          success: true,
+          data: billNumber
+        };
+      } catch (error) {
+        Logger.error('Failed to generate bill number', error);
+        return {
+          success: false,
+          error: getUserFriendlyMessage(error)
         };
       }
     }
@@ -111,7 +228,8 @@ export function registerBillHandlers(): void {
         if (!result) {
           return {
             success: false,
-            error: 'Bill not found'
+            error: 'Bill not found',
+            errorCode: 'NOT_FOUND'
           };
         }
 
@@ -145,7 +263,7 @@ export function registerBillHandlers(): void {
         Logger.error('Failed to get bill', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get bill'
+          error: getUserFriendlyMessage(error)
         };
       }
     }
@@ -183,7 +301,7 @@ export function registerBillHandlers(): void {
         Logger.error('Failed to list bills', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to list bills'
+          error: getUserFriendlyMessage(error)
         };
       }
     }
@@ -215,7 +333,7 @@ export function registerBillHandlers(): void {
         Logger.error('Failed to get today bills', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get today bills'
+          error: getUserFriendlyMessage(error)
         };
       }
     }
@@ -241,7 +359,7 @@ export function registerBillHandlers(): void {
         Logger.error('Failed to get sales summary', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to get sales summary'
+          error: getUserFriendlyMessage(error)
         };
       }
     }
