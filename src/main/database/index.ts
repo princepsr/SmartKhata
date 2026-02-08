@@ -147,9 +147,11 @@ class DatabaseManager {
       this.db.pragma('busy_timeout = 5000');
       logger.debug('Busy timeout set to 5000ms');
 
-      // Synchronous mode: NORMAL (good balance of safety and speed)
-      this.db.pragma('synchronous = NORMAL');
-      logger.debug('Synchronous mode set to NORMAL');
+      // Synchronous mode: FULL (maximum safety, data loss prevention)
+      // Ensures data is written to disk before commit
+      // Priority: Data safety > raw speed
+      this.db.pragma('synchronous = FULL');
+      logger.debug('Synchronous mode set to FULL');
     } catch (error) {
       logger.error('Failed to configure database', { error });
       throw error;

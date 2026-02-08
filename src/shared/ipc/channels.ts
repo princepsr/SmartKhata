@@ -63,6 +63,7 @@ export const IPC_CHANNELS = {
   SYSTEM_IMPORT: 'system:import',
   SYSTEM_PING: 'system:ping',
   SYSTEM_GET_APP_INFO: 'system:get-app-info',
+  SYSTEM_DB_STATUS: 'system:dbStatus',
 
   // ============================================
   // SETTINGS MODULE

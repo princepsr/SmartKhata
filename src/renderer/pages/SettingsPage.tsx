@@ -1,5 +1,6 @@
 import { useAppSettingsStore } from '../store';
 import { IPCPoc } from '../components/Debug/IPCPoc';
+import { DatabaseStatus } from '../components/Debug/DatabaseStatus';
 import './SettingsPage.css';
 
 /**
@@ -106,6 +107,9 @@ function SettingsPage() {
           </form>
           <div className="settings-card">
             <IPCPoc />
+          </div>
+          <div className="settings-card">
+            <DatabaseStatus />
           </div>
         </div>
       </div>
