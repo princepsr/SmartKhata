@@ -21,7 +21,12 @@
     "type-check": "tsc --noEmit",
     "type-check:main": "tsc --project tsconfig.main.json --noEmit",
     "type-check:renderer": "tsc --project tsconfig.renderer.json --noEmit",
-    "clean": "rimraf dist build out release"
+    "clean": "rimraf dist build out release",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest --watch"
   },
   "keywords": [
     "electron",
@@ -54,6 +59,9 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.19.1",
     "vite": "^6.0.5",
+    "vitest": "^1.1.0",
+    "@vitest/ui": "^1.1.0",
+    "@vitest/coverage-v8": "^1.1.0",
     "wait-on": "^8.0.1"
   },
   "dependencies": {
