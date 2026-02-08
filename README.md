@@ -13,11 +13,12 @@ A fast, offline-first point-of-sale system built for Indian kirana shops. No clo
 | **Desktop Framework** | Electron 34 |
 | **UI** | React 18 + TypeScript |
 | **Build Tool** | Vite 6 |
-| **Database** | SQLite (local file) |
+| **Database** | SQLite (better-sqlite3) |
+| **Testing** | Vitest + In-memory SQLite |
 | **Package Manager** | pnpm |
 | **Linting** | ESLint + Prettier |
 
-**Architecture:** Clean separation (UI → IPC → Services → Repositories → SQLite)
+**Architecture:** Clean layered architecture (UI → IPC → Service → Repository → Database)
 
 ---
 
@@ -111,6 +112,12 @@ pnpm lint:fix         # Auto-fix linting errors
 pnpm format           # Format code with Prettier
 pnpm type-check       # TypeScript type checking
 
+# Testing
+pnpm test             # Run all tests
+pnpm test:watch       # Run tests in watch mode
+pnpm test:ui          # Run tests with UI
+pnpm test:coverage    # Generate coverage report
+
 # Build
 pnpm build            # Production build (main + renderer)
 pnpm build:win        # Windows installer (NSIS + portable)
@@ -126,9 +133,11 @@ pnpm clean            # Remove build directories
 
 ## Project Status
 
-**Current Phase:** T0.1 - Project Foundation & Architecture
+**Current Phase:** T1.4 - Service Layer ✅ COMPLETE
 
 ### Completed ✅
+
+**Foundation (T0.1)**
 - [x] Mono-repo structure with pnpm
 - [x] TypeScript configuration (main, renderer, shared)
 - [x] ESLint + Prettier (minimal rules)
@@ -136,17 +145,36 @@ pnpm clean            # Remove build directories
 - [x] Environment configuration (dev vs prod)
 - [x] File-based logging system
 - [x] Git workflow & branching strategy
+- [x] IPC communication layer (Handler, Registry, Validation, Secure Preload)
+
+**Database Layer (T1.1-T1.3)**
+- [x] SQLite integration (better-sqlite3)
+- [x] Database schema (8 tables)
+- [x] Migration system
+- [x] Repository pattern (BaseRepository + 6 repositories)
+- [x] Transaction support
+- [x] Error handling & recovery
+
+**Service Layer (T1.4)**
+- [x] Service layer architecture
+- [x] ProductService (CRUD, stock, validation)
+- [x] BillingService (calculations, finalization)
+- [x] CustomerService (balance, phone validation)
+- [x] InventoryService (stock rules, availability)
+- [x] SettingsService (config, caching)
+- [x] LicenseService (validation, expiry)
+- [x] Typed error system
+- [x] IPC to Service mapping
+- [x] Unit tests (52+ test cases, Vitest)
 
 ### In Progress 🚧
-- [ ] Project initialization (`pnpm install`)
-- [ ] SQLite database schema
-- [ ] IPC communication layer
-- [ ] Basic React UI components
+- [ ] UI components (React)
+- [ ] Billing screen
+- [ ] Product management screen
 
 ### Upcoming 📋
-- [ ] Billing screen
-- [ ] Product management
-- [ ] Inventory tracking
+- [ ] Customer management screen
+- [ ] Reports & analytics
 - [ ] Thermal printer support
 - [ ] Database backup/restore
 
@@ -168,19 +196,19 @@ pnpm clean            # Remove build directories
 React Component
   ↓ (uses hook)
 Custom Hook
-  ↓ (calls service)
-IPC Service (renderer)
-  ↓ (IPC call)
+  ↓ (calls IPC)
+IPC Client (renderer)
+  ↓ (IPC call via preload)
 IPC Handler (main)
   ↓ (calls service)
-Business Service
-  ↓ (calls repository)
-Repository
+Service Layer
+  ↓ (business logic, validation)
+Repository Layer
   ↓ (SQL query)
 SQLite Database
 ```
 
-**See [ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md) for details.**
+**See [CURRENT_ARCHITECTURE.md](docs/CURRENT_ARCHITECTURE.md) for complete architecture.**
 
 ---
 
@@ -192,14 +220,17 @@ SQLite Database
 - Dev: `SmartKhata/dev-data/smartkhata.db`
 - Prod: `C:\Users\<User>\AppData\Roaming\SmartKhata\data\smartkhata.db`
 
-**Tables (MVP):**
+**Tables:**
 - `products` - Product catalog
-- `sales` - Sales records
-- `sale_items` - Line items
 - `customers` - Customer info
-- `settings` - App settings
+- `bills` - Sales records
+- `bill_items` - Line items
+- `inventory_logs` - Stock change history
+- `settings` - App settings (key-value)
+- `license` - License information
+- `schema_migrations` - Migration tracking
 
-**See [database/schema.md](database/schema.md) for schema design.**
+**See [docs/schema/](docs/schema/) for complete schema documentation.**
 
 ---
 
@@ -284,10 +315,32 @@ pnpm build:win:portable
 
 ## Documentation
 
+### Core Architecture
 | Document | Purpose |
 |----------|---------|
-| [ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md) | Tech choices, mono-repo, package manager |
+| [CURRENT_ARCHITECTURE.md](docs/CURRENT_ARCHITECTURE.md) | **Complete architecture overview** |
+| [ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md) | Tech choices, service layer, patterns |
 | [FOLDER_STRUCTURE.md](docs/FOLDER_STRUCTURE.md) | Complete folder breakdown |
+
+### Service Layer
+| Document | Purpose |
+|----------|---------|
+| [SERVICE_LAYER_RULES.md](docs/SERVICE_LAYER_RULES.md) | Service layer responsibilities & rules |
+| [SERVICE_ERROR_FLOW.md](docs/SERVICE_ERROR_FLOW.md) | Error handling & typed errors |
+| [IPC_SERVICE_MAPPING.md](docs/IPC_SERVICE_MAPPING.md) | IPC to service communication |
+| [SERVICE_LAYER_TESTING.md](docs/SERVICE_LAYER_TESTING.md) | Testing strategy |
+| [TESTING_GUIDE.md](docs/TESTING_GUIDE.md) | How to run and write tests |
+
+### Database & Repository
+| Document | Purpose |
+|----------|---------|
+| [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | Complete schema documentation |
+| [REPOSITORY_RULES.md](docs/REPOSITORY_RULES.md) | Repository pattern & rules |
+| [DATABASE_TRANSACTIONS.md](docs/DATABASE_TRANSACTIONS.md) | Transaction handling |
+
+### Development
+| Document | Purpose |
+|----------|---------|
 | [TYPESCRIPT_SETUP.md](docs/TYPESCRIPT_SETUP.md) | TypeScript configs, path aliases |
 | [LINTING_FORMATTING.md](docs/LINTING_FORMATTING.md) | ESLint + Prettier setup |
 | [DEV_SCRIPTS.md](docs/DEV_SCRIPTS.md) | Development workflow, HMR, builds |

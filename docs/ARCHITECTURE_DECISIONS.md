@@ -92,12 +92,81 @@ src/
 
 ---
 
+---
+
+### 4. Service Layer Architecture ✅
+
+**Decision:** Three-layer architecture (UI → IPC → Service → Repository → Database)
+
+**Rationale:**
+- **Separation of concerns**: Business logic separated from data access
+- **Testability**: Services can be tested independently without UI or database
+- **Reusability**: Services can be called from multiple IPC handlers
+- **Maintainability**: Business rules centralized in one place
+- **Type safety**: Strongly typed errors and responses
+
+**Architecture:**
+```
+┌─────────────────────────────────────────┐
+│              UI (Renderer)              │
+│         React Components + State        │
+└─────────────────────────────────────────┘
+                    ↓
+            window.api.xxx()
+                    ↓
+┌─────────────────────────────────────────┐
+│          IPC Layer (Main)               │
+│      Handles IPC Communication          │
+└─────────────────────────────────────────┘
+                    ↓
+          Service Method Call
+                    ↓
+┌─────────────────────────────────────────┐
+│        Service Layer (Main)             │
+│      Business Logic + Validation        │
+└─────────────────────────────────────────┘
+                    ↓
+        Repository Method Calls
+                    ↓
+┌─────────────────────────────────────────┐
+│      Repository Layer (Main)            │
+│         SQL Queries + Mapping           │
+└─────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────┐
+│         SQLite Database                 │
+└─────────────────────────────────────────┘
+```
+
+**Layer Responsibilities:**
+- **IPC**: Orchestration, error handling, response formatting
+- **Service**: Business logic, validation, calculations, cross-entity operations
+- **Repository**: SQL queries, data mapping, transactions
+
+**Benefits:**
+- ✅ Business logic is testable (in-memory database)
+- ✅ IPC handlers are thin (no business logic)
+- ✅ Repositories are thin (no business logic)
+- ✅ Errors are typed and user-friendly
+- ✅ Easy to add new features
+
+**Alternative considered:** Direct IPC → Repository
+- ❌ Business logic scattered across IPC handlers
+- ❌ Difficult to test
+- ❌ Code duplication
+- ❌ Violates single responsibility principle
+
+**See:** [`SERVICE_LAYER_RULES.md`](./SERVICE_LAYER_RULES.md), [`IPC_SERVICE_MAPPING.md`](./IPC_SERVICE_MAPPING.md)
+
+---
+
 ## Summary
 
 | Decision | Choice | Why |
 |----------|--------|-----|
 | **Repo structure** | Mono-repo | Small team, tightly coupled, simpler |
 | **Package manager** | pnpm | Fast, efficient, Windows-friendly |
+| **Architecture** | Service Layer | Separation of concerns, testability |
 | **Folder naming** | kebab-case (PascalCase for React) | Consistent, readable, conventional |
 
 
