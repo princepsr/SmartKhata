@@ -15,8 +15,8 @@ describe('LicenseService - Trial License', () => {
   let db: Database.Database;
   let licenseService: LicenseService;
 
-  beforeEach(() => {
-    db = createTestDatabase();
+  beforeEach(async () => {
+    db = await createTestDatabase();
     licenseService = new LicenseService();
   });
 
@@ -71,8 +71,8 @@ describe('LicenseService - Validation', () => {
   let db: Database.Database;
   let licenseService: LicenseService;
 
-  beforeEach(() => {
-    db = createTestDatabase();
+  beforeEach(async () => {
+    db = await createTestDatabase();
     licenseService = new LicenseService();
   });
 
@@ -126,8 +126,8 @@ describe('LicenseService - Machine Fingerprint', () => {
   let db: Database.Database;
   let licenseService: LicenseService;
 
-  beforeEach(() => {
-    db = createTestDatabase();
+  beforeEach(async () => {
+    db = await createTestDatabase();
     licenseService = new LicenseService();
   });
 

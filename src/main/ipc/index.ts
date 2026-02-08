@@ -9,6 +9,8 @@ import { logger } from '../utils/logger';
 import { registerProductHandlers } from './handlers/product-handlers';
 import { registerSystemHandlers } from './handlers/system-handlers';
 // import { registerSaleHandlers } from './handlers/sale-handlers';
+import { registerAppHandlers } from './handlers/app-handlers';
+import { registerBillHandlers } from './handlers/bill-handlers';
 
 /**
  * Register all IPC handlers
@@ -22,9 +24,10 @@ export function registerIPCHandlers(): void {
     // Register all handler modules
     registerProductHandlers();
     registerSystemHandlers();
-    // registerAppHandlers();        // TODO: Implement
+    registerAppHandlers();
+    registerBillHandlers();
     // registerSaleHandlers();      // TODO: Implement
-  // registerCustomerHandlers(); // TODO: Implement
+    // registerCustomerHandlers(); // TODO: Implement
 
     logger.info('=== IPC Handlers Registered Successfully ===');
   } catch (error) {

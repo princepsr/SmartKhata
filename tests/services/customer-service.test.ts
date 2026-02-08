@@ -15,8 +15,8 @@ describe('CustomerService - Create Customer', () => {
   let db: Database.Database;
   let customerService: CustomerService;
 
-  beforeEach(() => {
-    db = createTestDatabase();
+  beforeEach(async () => {
+    db = await createTestDatabase();
     seedTestData(db);
     customerService = new CustomerService();
   });
@@ -70,8 +70,8 @@ describe('CustomerService - Balance Management', () => {
   let customerService: CustomerService;
   let customerRepo: CustomerRepository;
 
-  beforeEach(() => {
-    db = createTestDatabase();
+  beforeEach(async () => {
+    db = await createTestDatabase();
     seedTestData(db);
     customerService = new CustomerService();
     customerRepo = new CustomerRepository();
@@ -122,8 +122,8 @@ describe('CustomerService - Search and Query', () => {
   let db: Database.Database;
   let customerService: CustomerService;
 
-  beforeEach(() => {
-    db = createTestDatabase();
+  beforeEach(async () => {
+    db = await createTestDatabase();
     seedTestData(db);
     customerService = new CustomerService();
   });

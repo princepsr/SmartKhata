@@ -1,13 +1,15 @@
--- ============================================
--- SEED RUNNER
--- ============================================
--- Purpose: TypeScript module to run seed data
--- Version: 002
+/**
+ * ============================================
+ * SEED RUNNER
+ * ============================================
+ * Purpose: TypeScript module to run seed data
+ * Version: 002
+ */
 
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger } from '@/utils/logger';
+import { logger } from '../utils/logger';
 
 export class SeedRunner {
   private db: Database.Database;
@@ -21,7 +23,7 @@ export class SeedRunner {
    */
   public runSeed(seedFile: string): void {
     try {
-      Logger.info(`Running seed: ${seedFile}`);
+      logger.info(`Running seed: ${seedFile}`);
 
       const seedPath = path.join(__dirname, 'seed', seedFile);
       
@@ -34,9 +36,9 @@ export class SeedRunner {
       // Execute seed SQL in transaction
       this.db.exec(sql);
 
-      Logger.info(`Seed completed: ${seedFile}`);
+      logger.info(`Seed completed: ${seedFile}`);
     } catch (error) {
-      Logger.error(`Seed failed: ${seedFile}`, error);
+      logger.error(`Seed failed: ${seedFile}`, error);
       throw error;
     }
   }
@@ -48,7 +50,7 @@ export class SeedRunner {
     const seedDir = path.join(__dirname, 'seed');
     
     if (!fs.existsSync(seedDir)) {
-      Logger.warn('Seed directory not found, skipping seeds');
+      logger.warn('Seed directory not found, skipping seeds');
       return;
     }
 
@@ -57,7 +59,7 @@ export class SeedRunner {
       .filter(file => file.endsWith('.sql'))
       .sort();
 
-    Logger.info(`Found ${seedFiles.length} seed files`);
+    logger.info(`Found ${seedFiles.length} seed files`);
 
     for (const seedFile of seedFiles) {
       this.runSeed(seedFile);
@@ -68,7 +70,7 @@ export class SeedRunner {
    * Clear all data (for testing only)
    */
   public clearAllData(): void {
-    Logger.warn('Clearing all data...');
+    logger.warn('Clearing all data...');
 
     this.db.exec(`
       DELETE FROM inventory_logs;
@@ -80,6 +82,6 @@ export class SeedRunner {
       DELETE FROM license;
     `);
 
-    Logger.info('All data cleared');
+    logger.info('All data cleared');
   }
 }

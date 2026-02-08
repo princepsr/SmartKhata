@@ -26,7 +26,21 @@ export const IPC_CHANNELS = {
   PRODUCT_UPDATE: 'product:update',
   PRODUCT_DELETE: 'product:delete',
   PRODUCT_SEARCH: 'product:search',
+
   PRODUCT_COUNT: 'product:count',
+  PRODUCT_LOW_STOCK: 'product:lowStock',
+  PRODUCT_ADJUST_STOCK: 'product:adjustStock',
+
+  // ============================================
+  // BILL MODULE
+  // ============================================
+  BILL_CALCULATE: 'bill:calculate',
+  BILL_CREATE: 'bill:create',
+  BILL_GENERATE_NUMBER: 'bill:generateNumber',
+  BILL_GET: 'bill:get',
+  BILL_LIST_BY_DATE_RANGE: 'bill:listByDateRange',
+  BILL_TODAY: 'bill:today',
+  BILL_SALES_SUMMARY: 'bill:salesSummary',
 
   // ============================================
   // SALE MODULE
@@ -120,6 +134,8 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.PRODUCT_DELETE,
     IPC_CHANNELS.PRODUCT_SEARCH,
     IPC_CHANNELS.PRODUCT_COUNT,
+    IPC_CHANNELS.PRODUCT_LOW_STOCK,
+    IPC_CHANNELS.PRODUCT_ADJUST_STOCK,
   ],
   SALE: [
     IPC_CHANNELS.SALE_CREATE,
@@ -127,6 +143,15 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.SALE_GET,
     IPC_CHANNELS.SALE_VOID,
     IPC_CHANNELS.SALE_LIST_BY_DATE,
+  ],
+  BILL: [
+    IPC_CHANNELS.BILL_CALCULATE,
+    IPC_CHANNELS.BILL_CREATE,
+    IPC_CHANNELS.BILL_GENERATE_NUMBER,
+    IPC_CHANNELS.BILL_GET,
+    IPC_CHANNELS.BILL_LIST_BY_DATE_RANGE,
+    IPC_CHANNELS.BILL_TODAY,
+    IPC_CHANNELS.BILL_SALES_SUMMARY,
   ],
   CUSTOMER: [
     IPC_CHANNELS.CUSTOMER_LIST,

@@ -18,8 +18,8 @@ describe('BillingService - Calculations', () => {
   let billingService: BillingService;
   let productRepo: ProductRepository;
 
-  beforeEach(() => {
-    db = createTestDatabase();
+  beforeEach(async () => {
+    db = await createTestDatabase();
     seedTestData(db);
     billingService = new BillingService();
     productRepo = new ProductRepository();
@@ -101,8 +101,8 @@ describe('BillingService - Finalize Bill', () => {
   let productRepo: ProductRepository;
   let billRepo: BillRepository;
 
-  beforeEach(() => {
-    db = createTestDatabase();
+  beforeEach(async () => {
+    db = await createTestDatabase();
     seedTestData(db);
     billingService = new BillingService();
     productRepo = new ProductRepository();
@@ -124,7 +124,7 @@ describe('BillingService - Finalize Bill', () => {
     });
 
     expect(result.bill.billNumber).toBe('BILL-001');
-    expect(result.bill.grandTotal).toBe(114.4); // 94.4 + 20
+    expect(result.bill.grandTotal).toBe(116.8); // 80 + 14.4 (coke) + 20 + 2.4 (chips)
     expect(result.items).toHaveLength(2);
   });
 

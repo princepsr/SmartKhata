@@ -265,7 +265,17 @@ export class LicenseService extends BaseService {
   } {
     try {
       const decoded = Buffer.from(licenseKey, 'base64').toString('utf-8');
-      const [payload, signature] = decoded.split(':');
+      
+      // Find the last colon (separator between payload and signature)
+      // We can't use split(':') because the JSON payload contains colons in timestamps
+      const lastColonIndex = decoded.lastIndexOf(':');
+      
+      if (lastColonIndex === -1) {
+        throw new Error('Invalid license key format');
+      }
+      
+      const payload = decoded.substring(0, lastColonIndex);
+      const signature = decoded.substring(lastColonIndex + 1);
 
       if (!payload || !signature) {
         throw new Error('Invalid license key format');

@@ -5,7 +5,7 @@
  * loading state, error handling, and UI integration.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ipcClient, type IPCCallOptions } from '../utils/ipc';
 import type { IPCChannel } from '@shared/ipc/channels';
 
@@ -76,12 +76,20 @@ export function useIPC<T = unknown>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use ref to track options to avoid recreating execute function when options (object) changes identity
+  const optionsRef = useRef(options);
+  
+  // Update ref when options change
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
 
   const execute = useCallback(async (payload?: unknown) => {
     setLoading(true);
     setError(null);
 
-    const result = await ipcClient.call<T>(channel, payload, options);
+    const result = await ipcClient.call<T>(channel, payload, optionsRef.current);
 
     if (result.success) {
       setData(result.data);
@@ -92,7 +100,7 @@ export function useIPC<T = unknown>(
     }
 
     setLoading(false);
-  }, [channel, options]);
+  }, [channel]); // Removed options from dependency array
 
   const reset = useCallback(() => {
     setData(null);
@@ -142,11 +150,18 @@ export function useIPCMutation<TRequest = unknown, TResponse = unknown>(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Use ref for options here too
+  const optionsRef = useRef(options);
+  
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
+
   const execute = useCallback(async (payload: TRequest): Promise<TResponse | null> => {
     setLoading(true);
     setError(null);
 
-    const result = await ipcClient.call<TResponse>(channel, payload, options);
+    const result = await ipcClient.call<TResponse>(channel, payload, optionsRef.current);
 
     setLoading(false);
 
@@ -157,7 +172,7 @@ export function useIPCMutation<TRequest = unknown, TResponse = unknown>(
       setError(result.error);
       return null;
     }
-  }, [channel, options]);
+  }, [channel]); // Removed options from dependency array
 
   const reset = useCallback(() => {
     setLoading(false);
@@ -171,3 +186,4 @@ export function useIPCMutation<TRequest = unknown, TResponse = unknown>(
     reset,
   };
 }
+

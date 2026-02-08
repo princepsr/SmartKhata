@@ -1,5 +1,5 @@
 import { BaseRepository, DatabaseError } from './base-repository';
-import { Logger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * Bill Domain Object (application layer)
@@ -134,7 +134,7 @@ export class BillRepository extends BaseRepository {
         ]);
       });
 
-      Logger.info('Bill created with items', { 
+      logger.info('Bill created with items', { 
         billId, 
         billNumber: billData.billNumber, 
         itemCount: items.length 

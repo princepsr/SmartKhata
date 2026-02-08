@@ -17,8 +17,8 @@ describe('ProductService - Add Product', () => {
   let productService: ProductService;
   let productRepo: ProductRepository;
 
-  beforeEach(() => {
-    db = createTestDatabase();
+  beforeEach(async () => {
+    db = await createTestDatabase();
     seedTestData(db);
     productService = new ProductService();
     productRepo = new ProductRepository();
@@ -107,8 +107,8 @@ describe('ProductService - Stock Adjustment', () => {
   let productRepo: ProductRepository;
   let inventoryRepo: InventoryRepository;
 
-  beforeEach(() => {
-    db = createTestDatabase();
+  beforeEach(async () => {
+    db = await createTestDatabase();
     seedTestData(db);
     productService = new ProductService();
     productRepo = new ProductRepository();
@@ -206,8 +206,8 @@ describe('ProductService - Search and Query', () => {
   let db: Database.Database;
   let productService: ProductService;
 
-  beforeEach(() => {
-    db = createTestDatabase();
+  beforeEach(async () => {
+    db = await createTestDatabase();
     seedTestData(db);
     productService = new ProductService();
   });

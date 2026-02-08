@@ -5,7 +5,7 @@
  * Framework-agnostic, no Electron or IPC dependencies.
  */
 
-import { Logger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * Standard Service Response
@@ -24,10 +24,10 @@ export interface ServiceResponse<T> {
  * All service classes should extend this base class.
  */
 export abstract class BaseService {
-  protected logger: Logger;
+  protected logger: typeof logger;
 
   constructor() {
-    this.logger = Logger;
+    this.logger = logger;
   }
 
   /**
@@ -75,6 +75,10 @@ export abstract class BaseService {
    * Log error message
    */
   protected logError(message: string, error?: any, context?: Record<string, any>): void {
-    this.logger.error(message, error, context);
+    const errorData = {
+      error,
+      ...context
+    };
+    this.logger.error(message, errorData);
   }
 }

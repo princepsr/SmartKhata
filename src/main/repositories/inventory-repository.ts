@@ -1,5 +1,5 @@
 import { BaseRepository, DatabaseError } from './base-repository';
-import { Logger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * Inventory Log Domain Object (application layer)
@@ -57,7 +57,7 @@ export class InventoryRepository extends BaseRepository {
       data.notes || null
     ]);
 
-    Logger.info('Inventory change logged', {
+    logger.info('Inventory change logged', {
       id: result.lastInsertRowid,
       productId: data.productId,
       changeQty: data.changeQty,

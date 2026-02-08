@@ -3,7 +3,7 @@ import { ProductRepository } from '../repositories/product-repository';
 import { CustomerRepository } from '../repositories/customer-repository';
 import { BillRepository, CreateBillInput, CreateBillItemInput, BillWithItems } from '../repositories/bill-repository';
 import { InventoryRepository } from '../repositories/inventory-repository';
-import { Logger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * Sale Item Input (from UI/IPC layer)
@@ -67,7 +67,7 @@ export class BillingTransactionService extends BaseRepository {
    */
   public createSale(saleData: CreateSaleInput): BillWithItems {
     return this.transaction(() => {
-      Logger.info('Starting sale transaction', { billNumber: saleData.billNumber });
+      logger.info('Starting sale transaction', { billNumber: saleData.billNumber });
 
       // ============================================
       // STEP 1: Validate and prepare bill items
@@ -132,7 +132,7 @@ export class BillingTransactionService extends BaseRepository {
 
       const billWithItems = this.billRepo.createBillWithItems(billData, billItems);
 
-      Logger.info('Bill created', { 
+      logger.info('Bill created', { 
         billId: billWithItems.bill.id, 
         billNumber: billWithItems.bill.billNumber 
       });
@@ -150,7 +150,7 @@ export class BillingTransactionService extends BaseRepository {
         });
       });
 
-      Logger.info('Inventory changes logged', { itemCount: saleData.items.length });
+      logger.info('Inventory changes logged', { itemCount: saleData.items.length });
 
       // ============================================
       // STEP 5: Update customer balance (if applicable)
@@ -162,14 +162,14 @@ export class BillingTransactionService extends BaseRepository {
         if (balanceChange !== 0) {
           this.customerRepo.updateBalance(saleData.customerId, balanceChange);
           
-          Logger.info('Customer balance updated', { 
+          logger.info('Customer balance updated', { 
             customerId: saleData.customerId, 
             balanceChange 
           });
         }
       }
 
-      Logger.info('Sale transaction completed', { 
+      logger.info('Sale transaction completed', { 
         billNumber: saleData.billNumber,
         grandTotal 
       });

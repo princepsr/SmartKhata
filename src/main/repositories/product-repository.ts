@@ -1,5 +1,5 @@
 import { BaseRepository, DatabaseError } from './base-repository';
-import { Logger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * Product Domain Object (application layer)
@@ -78,7 +78,7 @@ export class ProductRepository extends BaseRepository {
       data.lowStockAlert || null
     ]);
 
-    Logger.info('Product created', { id: result.lastInsertRowid, name: data.name });
+    logger.info('Product created', { id: result.lastInsertRowid, name: data.name });
 
     const product = this.findById(Number(result.lastInsertRowid));
     if (!product) {
@@ -152,7 +152,7 @@ export class ProductRepository extends BaseRepository {
       throw new DatabaseError('Product not found', 'NOT_FOUND');
     }
 
-    Logger.info('Product updated', { id, changes: result.changes });
+    logger.info('Product updated', { id, changes: result.changes });
 
     const product = this.findById(id);
     if (!product) {
@@ -237,7 +237,7 @@ export class ProductRepository extends BaseRepository {
     const sql = `
       SELECT stock_qty FROM products
       WHERE id = ?
-      FOR UPDATE
+      
     `;
     const product = this.queryOne<{ stock_qty: number }>(sql, [productId]);
 
@@ -259,7 +259,7 @@ export class ProductRepository extends BaseRepository {
     `;
     this.execute(updateSql, [deltaQty, productId]);
 
-    Logger.info('Product stock updated', { productId, deltaQty, newStock });
+    logger.info('Product stock updated', { productId, deltaQty, newStock });
   }
 
   /**
@@ -293,7 +293,7 @@ export class ProductRepository extends BaseRepository {
       throw new DatabaseError('Product not found', 'NOT_FOUND');
     }
 
-    Logger.info('Product soft deleted', { id });
+    logger.info('Product soft deleted', { id });
   }
 
   /**

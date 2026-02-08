@@ -1,5 +1,5 @@
 import { BaseRepository, DatabaseError } from './base-repository';
-import { Logger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * License Domain Object (application layer)
@@ -69,7 +69,7 @@ export class LicenseRepository extends BaseRepository {
       data.machineFingerprint
     ]);
 
-    Logger.info('License saved');
+    logger.info('License saved');
 
     const license = this.get();
     if (!license) {
@@ -97,7 +97,7 @@ export class LicenseRepository extends BaseRepository {
    */
   public exists(): boolean {
     const sql = `SELECT COUNT(*) as count FROM license WHERE id = 1`;
-    return this.exists(sql);
+    return super.exists(sql);
   }
 
   /**
@@ -108,7 +108,7 @@ export class LicenseRepository extends BaseRepository {
     const result = this.execute(sql);
 
     if (result.changes > 0) {
-      Logger.info('License deleted');
+      logger.info('License deleted');
     }
   }
 

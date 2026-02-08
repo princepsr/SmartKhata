@@ -24,16 +24,36 @@ export const CreateProductSchema = z.object({
     .max(100, 'Product name must be less than 100 characters')
     .trim(),
   
-  price: z.number()
-    .positive('Price must be greater than 0')
-    .max(999999.99, 'Price is too high'),
-  
-  stock: z.number()
-    .int('Stock must be a whole number')
-    .nonnegative('Stock cannot be negative'),
-  
+  sku: z.string()
+    .max(50, 'SKU must be less than 50 characters')
+    .optional(),
+    
   barcode: z.string()
     .max(50, 'Barcode must be less than 50 characters')
+    .optional(),
+  
+  salePrice: z.number()
+    .nonnegative('Price cannot be negative')
+    .max(999999.99, 'Price is too high'),
+    
+  cost: z.number()
+    .nonnegative('Cost cannot be negative')
+    .max(999999.99, 'Cost is too high')
+    .optional(),
+    
+  gstPercent: z.number()
+    .nonnegative('GST cannot be negative')
+    .max(100, 'GST cannot exceed 100%')
+    .optional(),
+  
+  stockQty: z.number()
+    .int('Stock must be a whole number')
+    .nonnegative('Stock cannot be negative')
+    .optional(),
+    
+  lowStockAlert: z.number()
+    .int('Low stock alert must be a whole number')
+    .nonnegative('Low stock alert cannot be negative')
     .optional(),
 });
 
@@ -53,19 +73,40 @@ export const UpdateProductSchema = z.object({
       .trim()
       .optional(),
     
-    price: z.number()
-      .positive('Price must be greater than 0')
-      .max(999999.99, 'Price is too high')
+    sku: z.string()
+      .max(50, 'SKU must be less than 50 characters')
       .optional(),
-    
-    stock: z.number()
-      .int('Stock must be a whole number')
-      .nonnegative('Stock cannot be negative')
-      .optional(),
-    
+      
     barcode: z.string()
       .max(50, 'Barcode must be less than 50 characters')
       .optional(),
+      
+    salePrice: z.number()
+      .nonnegative('Price cannot be negative')
+      .max(999999.99, 'Price is too high')
+      .optional(),
+      
+    cost: z.number()
+      .nonnegative('Cost cannot be negative')
+      .max(999999.99, 'Cost is too high')
+      .optional(),
+      
+    gstPercent: z.number()
+      .nonnegative('GST cannot be negative')
+      .max(100, 'GST cannot exceed 100%')
+      .optional(),
+      
+    stockQty: z.number()
+      .int('Stock must be a whole number')
+      .nonnegative('Stock cannot be negative')
+      .optional(),
+      
+    lowStockAlert: z.number()
+      .int('Low stock alert must be a whole number')
+      .nonnegative('Low stock alert cannot be negative')
+      .optional(),
+      
+    isActive: z.boolean().optional(),
   }).refine(
     (data) => Object.keys(data).length > 0,
     { message: 'At least one field must be provided for update' }

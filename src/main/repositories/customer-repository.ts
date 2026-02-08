@@ -1,5 +1,5 @@
 import { BaseRepository, DatabaseError } from './base-repository';
-import { Logger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * Customer Domain Object (application layer)
@@ -56,7 +56,7 @@ export class CustomerRepository extends BaseRepository {
       Math.round((data.balanceDue || 0) * 100)  // Rupees → Paise
     ]);
 
-    Logger.info('Customer created', { id: result.lastInsertRowid, name: data.name });
+    logger.info('Customer created', { id: result.lastInsertRowid, name: data.name });
 
     const customer = this.findById(Number(result.lastInsertRowid));
     if (!customer) {
@@ -110,7 +110,7 @@ export class CustomerRepository extends BaseRepository {
       throw new DatabaseError('Customer not found', 'NOT_FOUND');
     }
 
-    Logger.info('Customer updated', { id, changes: result.changes });
+    logger.info('Customer updated', { id, changes: result.changes });
 
     const customer = this.findById(id);
     if (!customer) {
@@ -190,7 +190,7 @@ export class CustomerRepository extends BaseRepository {
       throw new DatabaseError('Customer not found', 'NOT_FOUND');
     }
 
-    Logger.info('Customer balance updated', { customerId, deltaAmount });
+    logger.info('Customer balance updated', { customerId, deltaAmount });
   }
 
   /**
@@ -235,7 +235,7 @@ export class CustomerRepository extends BaseRepository {
       throw new DatabaseError('Customer not found', 'NOT_FOUND');
     }
 
-    Logger.info('Customer soft deleted', { id });
+    logger.info('Customer soft deleted', { id });
   }
 
   /**

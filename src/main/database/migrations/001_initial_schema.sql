@@ -1,6 +1,6 @@
 -- Initial Schema Migration
 -- Version: 001
--- Description: Create core tables for products, sales, customers
+-- Description: Create core tables for products, bills, customers, inventory, license (Corrected for T1.4)
 
 -- ============================================
 -- PRODUCTS TABLE
@@ -8,21 +8,21 @@
 CREATE TABLE IF NOT EXISTS products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
+  sku TEXT UNIQUE,
   barcode TEXT UNIQUE,
-  price REAL NOT NULL CHECK(price >= 0),
-  cost REAL CHECK(cost >= 0),
-  stock INTEGER NOT NULL DEFAULT 0 CHECK(stock >= 0),
-  unit TEXT DEFAULT 'piece',
-  category TEXT,
-  description TEXT,
+  sale_price INTEGER NOT NULL CHECK(sale_price >= 0),        -- In Paise
+  purchase_price INTEGER CHECK(purchase_price >= 0),         -- In Paise
+  gst_percent INTEGER NOT NULL DEFAULT 1800 CHECK(gst_percent >= 0), -- Basis points (18.00% = 1800)
+  stock_qty INTEGER NOT NULL DEFAULT 0,
+  low_stock_alert INTEGER,
   is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
 CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);
-CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
+CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
 CREATE INDEX IF NOT EXISTS idx_products_is_active ON products(is_active);
 
 -- ============================================
@@ -32,10 +32,7 @@ CREATE TABLE IF NOT EXISTS customers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   phone TEXT UNIQUE,
-  email TEXT,
-  address TEXT,
-  credit_limit REAL DEFAULT 0 CHECK(credit_limit >= 0),
-  outstanding_balance REAL DEFAULT 0,
+  balance_due INTEGER DEFAULT 0, -- In Paise, Positive = they owe us, Negative = advance
   is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -46,47 +43,74 @@ CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);
 CREATE INDEX IF NOT EXISTS idx_customers_is_active ON customers(is_active);
 
 -- ============================================
--- SALES TABLE
+-- BILLS TABLE
 -- ============================================
-CREATE TABLE IF NOT EXISTS sales (
+CREATE TABLE IF NOT EXISTS bills (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  bill_number TEXT UNIQUE NOT NULL,
   customer_id INTEGER,
-  subtotal REAL NOT NULL CHECK(subtotal >= 0),
-  tax REAL NOT NULL DEFAULT 0 CHECK(tax >= 0),
-  discount REAL NOT NULL DEFAULT 0 CHECK(discount >= 0),
-  total REAL NOT NULL CHECK(total >= 0),
-  payment_method TEXT NOT NULL DEFAULT 'cash',
-  payment_status TEXT NOT NULL DEFAULT 'paid' CHECK(payment_status IN ('paid', 'pending', 'partial')),
-  notes TEXT,
-  is_void INTEGER NOT NULL DEFAULT 0 CHECK(is_void IN (0, 1)),
+  subtotal INTEGER NOT NULL CHECK(subtotal >= 0),          -- In Paise
+  gst_total INTEGER NOT NULL CHECK(gst_total >= 0),        -- In Paise
+  discount_amount INTEGER NOT NULL DEFAULT 0 CHECK(discount_amount >= 0), -- In Paise
+  grand_total INTEGER NOT NULL CHECK(grand_total >= 0),    -- In Paise
+  payment_mode TEXT NOT NULL CHECK(payment_mode IN ('cash', 'upi', 'mixed')),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_sales_customer_id ON sales(customer_id);
-CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
-CREATE INDEX IF NOT EXISTS idx_sales_payment_status ON sales(payment_status);
-CREATE INDEX IF NOT EXISTS idx_sales_is_void ON sales(is_void);
+CREATE INDEX IF NOT EXISTS idx_bills_bill_number ON bills(bill_number);
+CREATE INDEX IF NOT EXISTS idx_bills_customer_id ON bills(customer_id);
+CREATE INDEX IF NOT EXISTS idx_bills_created_at ON bills(created_at);
 
 -- ============================================
--- SALE ITEMS TABLE
+-- BILL ITEMS TABLE
 -- ============================================
-CREATE TABLE IF NOT EXISTS sale_items (
+CREATE TABLE IF NOT EXISTS bill_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  sale_id INTEGER NOT NULL,
+  bill_id INTEGER NOT NULL,
   product_id INTEGER NOT NULL,
-  product_name TEXT NOT NULL,
-  quantity REAL NOT NULL CHECK(quantity > 0),
-  unit_price REAL NOT NULL CHECK(unit_price >= 0),
-  subtotal REAL NOT NULL CHECK(subtotal >= 0),
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
+  product_name_snapshot TEXT NOT NULL,
+  quantity INTEGER NOT NULL CHECK(quantity > 0),
+  unit_price INTEGER NOT NULL CHECK(unit_price >= 0),      -- In Paise
+  gst_percent INTEGER NOT NULL CHECK(gst_percent >= 0),    -- Basis points
+  line_total INTEGER NOT NULL CHECK(line_total >= 0),      -- In Paise
+  FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE,
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
 );
 
-CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
-CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON sale_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_bill_items_bill_id ON bill_items(bill_id);
+CREATE INDEX IF NOT EXISTS idx_bill_items_product_id ON bill_items(product_id);
+
+-- ============================================
+-- INVENTORY LOGS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS inventory_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id INTEGER NOT NULL,
+  change_qty INTEGER NOT NULL,
+  reason TEXT NOT NULL CHECK(reason IN ('SALE', 'MANUAL', 'ADJUSTMENT')),
+  reference_id INTEGER, -- Bill ID or other reference
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_logs_product_id ON inventory_logs(product_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_logs_reason ON inventory_logs(reason);
+CREATE INDEX IF NOT EXISTS idx_inventory_logs_created_at ON inventory_logs(created_at);
+
+-- ============================================
+-- LICENSE TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS license (
+  id INTEGER PRIMARY KEY CHECK (id = 1), -- Singleton row
+  license_key TEXT NOT NULL,
+  activated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT NOT NULL,
+  machine_fingerprint TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 
 -- ============================================
 -- SETTINGS TABLE
@@ -99,7 +123,6 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- Insert default settings
 INSERT OR IGNORE INTO settings (key, value) VALUES
-  ('business_name', 'SmartKhata POS'),
-  ('tax_rate', '0'),
-  ('currency', 'INR'),
-  ('receipt_footer', 'Thank you for your business!');
+  ('shop_name', 'SmartKhata Shop'),
+  ('gst_enabled', 'true'),
+  ('default_gst_rate', '18');

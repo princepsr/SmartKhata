@@ -67,8 +67,9 @@ function createWindow(): void {
 
   // Show window when ready (prevents white flash)
   mainWindow.once('ready-to-show', () => {
+    mainWindow?.maximize();
     mainWindow?.show();
-    logger.info('Main window shown');
+    logger.info('Main window shown (maximized)');
   });
 
   // Load the app

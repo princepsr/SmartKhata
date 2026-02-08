@@ -26,7 +26,14 @@ export interface IPCRequestMeta {
 export interface Product {
   id: number;
   name: string;
-  price: number;
-  stock: number;
-  barcode?: string;
+  sku: string | null;
+  barcode: string | null;
+  salePrice: number;
+  purchasePrice: number | null;
+  gstPercent: number;
+  stockQty: number;
+  lowStockAlert: number | null;
+  isActive: boolean;
+  createdAt: string; // ISO date string over IPC
+  updatedAt: string; // ISO date string over IPC
 }

@@ -21,8 +21,8 @@ import {
 interface Product {
   id: number;
   name: string;
-  price: number;
-  stock: number;
+  salePrice: number;
+  stockQty: number;
   barcode?: string;
 }
 
@@ -30,8 +30,8 @@ interface Product {
  * Mock Database
  */
 const mockProducts: Product[] = [
-  { id: 1, name: 'Sample Product 1', price: 100, stock: 50 },
-  { id: 2, name: 'Sample Product 2', price: 200, stock: 30 },
+  { id: 1, name: 'Sample Product 1', salePrice: 100, stockQty: 50 },
+  { id: 2, name: 'Sample Product 2', salePrice: 200, stockQty: 30 },
 ];
 
 let nextProductId = 3;
@@ -49,8 +49,8 @@ export function registerProductCreateHandler(): void {
       const newProduct: Product = {
         id: nextProductId++,
         name: request.name,
-        price: request.price,
-        stock: request.stock,
+        salePrice: request.salePrice,
+        stockQty: request.stockQty,
         barcode: request.barcode,
       };
       
@@ -144,8 +144,8 @@ export function registerProductCreateWithCustomValidation(): void {
       const newProduct: Product = {
         id: nextProductId++,
         name: request.name,
-        price: request.price,
-        stock: request.stock,
+        salePrice: request.salePrice,
+        stockQty: request.stockQty,
         barcode: request.barcode,
       };
       

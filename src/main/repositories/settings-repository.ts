@@ -1,5 +1,5 @@
 import { BaseRepository, DatabaseError } from './base-repository';
-import { Logger } from '../utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * Setting Domain Object (application layer)
@@ -62,7 +62,7 @@ export class SettingsRepository extends BaseRepository {
 
     this.execute(sql, [key, value]);
 
-    Logger.info('Setting updated', { key, value });
+    logger.info('Setting updated', { key, value });
   }
 
   /**
@@ -116,7 +116,7 @@ export class SettingsRepository extends BaseRepository {
       throw new DatabaseError('Setting not found', 'NOT_FOUND');
     }
 
-    Logger.info('Setting deleted', { key });
+    logger.info('Setting deleted', { key });
   }
 
   /**
@@ -152,7 +152,7 @@ export class SettingsRepository extends BaseRepository {
       });
     });
 
-    Logger.info('Multiple settings updated', { count: Object.keys(settings).length });
+    logger.info('Multiple settings updated', { count: Object.keys(settings).length });
   }
 
   // ============================================

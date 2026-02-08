@@ -1,6 +1,6 @@
 import { databaseManager } from '../database';
 import { logger } from '../utils/logger';
-import type { Database } from 'better-sqlite3';
+import Database from 'better-sqlite3';
 
 /**
  * Base Repository Class
@@ -15,7 +15,7 @@ import type { Database } from 'better-sqlite3';
  */
 
 export abstract class BaseRepository {
-  protected db: Database;
+  protected db: Database.Database;
 
   constructor() {
     this.db = databaseManager.getDatabase();

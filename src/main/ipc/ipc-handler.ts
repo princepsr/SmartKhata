@@ -127,6 +127,8 @@ export class IPCHandler {
             duration: `${duration}ms`,
           });
         }
+        
+        // logger.info(`Raw handler response for ${channel}:`, { data });
 
         // Return success response
         return {

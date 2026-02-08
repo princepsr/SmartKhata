@@ -33,12 +33,15 @@ function ProductsPage() {
     fetchProducts();
   }, [fetchProducts]);
 
+  console.log('ProductsPage: products data:', products);
+
+
   const handleAddProduct = async () => {
     // Demo product data
     const newProduct = {
       name: 'New Product ' + Math.floor(Math.random() * 1000),
-      price: 100,
-      stock: 10,
+      salePrice: 100,
+      stockQty: 10,
     };
 
     const result = await createProduct(newProduct);
@@ -85,8 +88,8 @@ function ProductsPage() {
               {products?.map((product) => (
                 <div key={product.id} className="product-card">
                   <h3>{product.name}</h3>
-                  <p className="product-price">₹{product.price}</p>
-                  <p className="product-stock">Stock: {product.stock}</p>
+                  <p className="product-price">₹{product.salePrice}</p>
+                  <p className="product-stock">Stock: {product.stockQty}</p>
                 </div>
               ))}
             </div>
