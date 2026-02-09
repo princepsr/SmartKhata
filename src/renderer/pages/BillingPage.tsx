@@ -78,6 +78,10 @@ function BillingPage() {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<{
+    billNumber: string;
+    total: string;
+  } | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -116,12 +120,13 @@ function BillingPage() {
     loading: finalizing,
     error: finalizingError,
     execute: finalizeBill,
-  } = useIPCMutation<FinalizeBillInput, any>(IPC_CHANNELS.BILL_CREATE);
+  } = useIPCMutation<FinalizeBillInput, { bill: { id: number; billNumber: string } }>(
+    IPC_CHANNELS.BILL_CREATE
+  );
 
-  const { loading: printing, execute: printBill } = useIPCMutation<
-    { billId: number; printerName: string },
-    boolean
-  >(IPC_CHANNELS.BILL_PRINT);
+  const { execute: printBill } = useIPCMutation<{ billId: number; printerName: string }, boolean>(
+    IPC_CHANNELS.BILL_PRINT
+  );
 
   // Focus search input on mount and whenever returning to the page
   // Initial Load (Printers & Focus)
@@ -140,7 +145,7 @@ function BillingPage() {
       }
     }, 300); // Increased delay to 300ms to be safe against page transitions
     return () => clearTimeout(timer);
-  }, []);
+  }, [fetchPrinters]);
 
   // Discount State
   const [discountType, setDiscountType] = useState<'amount' | 'percent'>(() => {
@@ -168,7 +173,7 @@ function BillingPage() {
 
     // Persist preference
     localStorage.setItem('billing:discountType', discountType);
-  }, [discountValue, discountType, calculation?.subtotal, calculation?.gstTotal]);
+  }, [discountValue, discountType, calculation]);
 
   // Persist Printer Selection
   const handlePrinterChange = (printerName: string) => {
@@ -350,8 +355,10 @@ function BillingPage() {
     // Simple focus is enough now since we are not leaving the window context
     // But we keep a tiny delay just to be safe with React state updates
     setTimeout(() => {
-      searchInputRef.current?.focus();
-    }, 10);
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 50);
   };
 
   // Complete transaction
@@ -386,19 +393,38 @@ function BillingPage() {
         alert('Bill saved, but printing failed. Please reprint from dashboard.');
       });
 
-      // 2. Show Success (Blocking or Token?)
-      // For now, simple alert, then reset.
-      alert(
-        `Bill created successfully!\nBill Number: ${result.bill.billNumber}\nTotal: ₹${formatCurrency(calculation.grandTotal)}`
-      );
+      // 2. Show Success Notification (Non-blocking)
+      setSuccessMessage({
+        billNumber: result.bill.billNumber,
+        total: formatCurrency(calculation.grandTotal),
+      });
 
       // 3. Reset UI for next sale
       resetBill();
+
+      // 4. Auto-hide success message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 5000);
     }
   };
 
   return (
     <div className="page billing-page">
+      {/* Success Message Banner */}
+      {successMessage && (
+        <div className="success-banner" onClick={() => setSuccessMessage(null)}>
+          <div className="success-content">
+            <span className="success-icon">✅</span>
+            <div className="success-details">
+              <strong>Bill #{successMessage.billNumber} Saved!</strong>
+              <span>Total: ₹{successMessage.total}</span>
+            </div>
+          </div>
+          <button className="close-success">&times;</button>
+        </div>
+      )}
+
       <header className="page-header">
         <h1 className="page-title">Billing - New Sale</h1>
 

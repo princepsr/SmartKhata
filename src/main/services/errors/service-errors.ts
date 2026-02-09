@@ -1,6 +1,6 @@
 /**
  * Base Service Error Classes
- * 
+ *
  * Common error types for service layer business logic.
  * These errors are framework-agnostic and contain business context.
  */
@@ -17,7 +17,7 @@ export abstract class ServiceError extends Error {
     this.name = this.constructor.name;
     this.code = code;
     this.isOperational = isOperational;
-    
+
     // Maintains proper stack trace for where error was thrown
     Error.captureStackTrace(this, this.constructor);
   }
@@ -33,7 +33,7 @@ export abstract class ServiceError extends Error {
 
 /**
  * Validation Error
- * 
+ *
  * Thrown when input validation fails.
  * Examples: invalid quantity, missing required fields, format errors
  */
@@ -57,7 +57,7 @@ export class ValidationError extends ServiceError {
 
 /**
  * Business Rule Error
- * 
+ *
  * Thrown when business rules are violated.
  * Examples: insufficient stock, credit limit exceeded, duplicate entry
  */
@@ -72,7 +72,7 @@ export class BusinessError extends ServiceError {
 
 /**
  * Not Found Error
- * 
+ *
  * Thrown when a requested entity is not found.
  */
 export class NotFoundError extends ServiceError {
@@ -92,7 +92,7 @@ export class NotFoundError extends ServiceError {
 
 /**
  * Insufficient Stock Error
- * 
+ *
  * Thrown when trying to deduct more stock than available.
  */
 export class InsufficientStockError extends BusinessError {
@@ -114,13 +114,13 @@ export class InsufficientStockError extends BusinessError {
   }
 
   public getUserMessage(): string {
-    return `Not enough stock for ${this.productName}. Only ${this.available} available.`;
+    return `Not enough stock for ${this.productName}. Available: ${this.available}, Required: ${this.required}.`;
   }
 }
 
 /**
  * Duplicate Entry Error
- * 
+ *
  * Thrown when trying to create a duplicate entry.
  */
 export class DuplicateEntryError extends BusinessError {
@@ -128,23 +128,26 @@ export class DuplicateEntryError extends BusinessError {
   public readonly value: any;
 
   constructor(entityType: string, field: string, value: any) {
-    super(
-      `${entityType} with ${field} '${value}' already exists`,
-      'DUPLICATE_ENTRY',
-      { entityType, field, value }
-    );
+    super(`${entityType} with ${field} '${value}' already exists`, 'DUPLICATE_ENTRY', {
+      entityType,
+      field,
+      value,
+    });
     this.field = field;
     this.value = value;
   }
 
   public getUserMessage(): string {
-    return `This ${this.field} is already in use`;
+    // Format: "Product with this [Field] already exists"
+    // This allows frontend to easily parse the field name
+    const fieldName = this.field.charAt(0).toUpperCase() + this.field.slice(1);
+    return `Product with this ${fieldName} already exists`;
   }
 }
 
 /**
  * Inactive Entity Error
- * 
+ *
  * Thrown when trying to use an inactive entity.
  */
 export class InactiveEntityError extends BusinessError {
@@ -152,11 +155,7 @@ export class InactiveEntityError extends BusinessError {
   public readonly entityId: number;
 
   constructor(entityType: string, entityId: number) {
-    super(
-      `Cannot use inactive ${entityType}`,
-      'INACTIVE_ENTITY',
-      { entityType, entityId }
-    );
+    super(`Cannot use inactive ${entityType}`, 'INACTIVE_ENTITY', { entityType, entityId });
     this.entityType = entityType;
     this.entityId = entityId;
   }
@@ -168,7 +167,7 @@ export class InactiveEntityError extends BusinessError {
 
 /**
  * Invalid Quantity Error
- * 
+ *
  * Thrown when quantity is invalid (negative, zero, too large, etc.)
  */
 export class InvalidQuantityError extends ValidationError {
@@ -179,7 +178,7 @@ export class InvalidQuantityError extends ValidationError {
 
 /**
  * Credit Limit Exceeded Error
- * 
+ *
  * Thrown when customer credit limit is exceeded.
  */
 export class CreditLimitExceededError extends BusinessError {
@@ -212,7 +211,7 @@ export class CreditLimitExceededError extends BusinessError {
 
 /**
  * License Error
- * 
+ *
  * Thrown when license validation fails.
  */
 export class LicenseError extends BusinessError {

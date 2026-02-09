@@ -89,6 +89,15 @@ export class ProductRepository extends BaseRepository {
   }
 
   /**
+   * Create multiple products in a transaction
+   */
+  public createBatch(inputs: CreateProductInput[]): Product[] {
+    return this.transaction(() => {
+      return inputs.map((input) => this.create(input));
+    });
+  }
+
+  /**
    * Update a product
    */
   public update(id: number, data: UpdateProductInput): Product {
@@ -174,10 +183,10 @@ export class ProductRepository extends BaseRepository {
   /**
    * Find all active products
    */
-  public findAll(): Product[] {
+  public findAll(includeInactive: boolean = false): Product[] {
     const sql = `
       SELECT * FROM products
-      WHERE is_active = 1
+      ${includeInactive ? '' : 'WHERE is_active = 1'}
       ORDER BY name ASC
     `;
     const rows = this.queryAll<any>(sql);
@@ -187,10 +196,10 @@ export class ProductRepository extends BaseRepository {
   /**
    * Search products by name
    */
-  public searchByName(query: string): Product[] {
+  public searchByName(query: string, includeInactive: boolean = false): Product[] {
     const sql = `
       SELECT * FROM products
-      WHERE name LIKE ? AND is_active = 1
+      WHERE name LIKE ? ${includeInactive ? '' : 'AND is_active = 1'}
       ORDER BY name ASC
       LIMIT 50
     `;
@@ -201,10 +210,10 @@ export class ProductRepository extends BaseRepository {
   /**
    * Find product by barcode
    */
-  public findByBarcode(barcode: string): Product | null {
+  public findByBarcode(barcode: string, includeInactive: boolean = false): Product | null {
     const sql = `
       SELECT * FROM products
-      WHERE barcode = ? AND is_active = 1
+      WHERE barcode = ? ${includeInactive ? '' : 'AND is_active = 1'}
     `;
     const row = this.queryOne<any>(sql, [barcode]);
     return row ? this._mapToProduct(row) : null;
@@ -213,10 +222,10 @@ export class ProductRepository extends BaseRepository {
   /**
    * Find product by SKU
    */
-  public findBySku(sku: string): Product | null {
+  public findBySku(sku: string, includeInactive: boolean = false): Product | null {
     const sql = `
       SELECT * FROM products
-      WHERE sku = ? AND is_active = 1
+      WHERE sku = ? ${includeInactive ? '' : 'AND is_active = 1'}
     `;
     const row = this.queryOne<any>(sql, [sku]);
     return row ? this._mapToProduct(row) : null;

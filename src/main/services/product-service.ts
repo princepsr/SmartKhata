@@ -1,20 +1,24 @@
 /**
  * Product Service
- * 
+ *
  * Business logic for product management.
  * Handles validation, duplicate prevention, and stock adjustments.
  */
 
 import { BaseService } from './base-service';
-import { ProductRepository, CreateProductInput, UpdateProductInput } from '../repositories/product-repository';
+import {
+  ProductRepository,
+  CreateProductInput,
+  UpdateProductInput,
+} from '../repositories/product-repository';
 import { InventoryRepository } from '../repositories/inventory-repository';
-import { 
-  ValidationError, 
-  BusinessError, 
-  NotFoundError, 
+import {
+  ValidationError,
+  BusinessError,
+  NotFoundError,
   DuplicateEntryError,
   InactiveEntityError,
-  InvalidQuantityError 
+  InvalidQuantityError,
 } from './errors/service-errors';
 import { DatabaseError } from '../repositories/base-repository';
 
@@ -100,16 +104,16 @@ export class ProductService extends BaseService {
       purchasePrice: input.purchasePrice,
       gstPercent: input.gstPercent ?? 18, // Default 18% GST
       stockQty: input.stockQty ?? 0,
-      lowStockAlert: input.lowStockAlert
+      lowStockAlert: input.lowStockAlert,
     };
 
     try {
       const product = this.productRepo.create(productInput);
-      
-      this.logInfo('Product created', { 
-        id: product.id, 
+
+      this.logInfo('Product created', {
+        id: product.id,
         name: product.name,
-        sku: product.sku 
+        sku: product.sku,
       });
 
       return product;
@@ -117,6 +121,48 @@ export class ProductService extends BaseService {
       if (error instanceof DatabaseError) {
         if (error.isCode('UNIQUE_VIOLATION')) {
           throw new DuplicateEntryError('Product', 'SKU or barcode', input.sku || input.barcode);
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Bulk import products
+   */
+  public importProducts(inputs: AddProductInput[]): any[] {
+    // 1. Validate all inputs first
+    inputs.forEach((input, index) => {
+      try {
+        this._validateProductInput(input);
+      } catch (err: any) {
+        throw new ValidationError(`Row ${index + 1}: ${err.message}`, err.field);
+      }
+    });
+
+    // 2. Prepare inputs
+    const createInputs: CreateProductInput[] = inputs.map((input) => ({
+      name: input.name,
+      sku: input.sku,
+      barcode: input.barcode,
+      salePrice: input.salePrice,
+      purchasePrice: input.purchasePrice,
+      gstPercent: input.gstPercent ?? 18,
+      stockQty: input.stockQty ?? 0,
+      lowStockAlert: input.lowStockAlert,
+    }));
+
+    // 3. Execute batch create
+    try {
+      const products = this.productRepo.createBatch(createInputs);
+
+      this.logInfo('Bulk product import', { count: products.length });
+
+      return products;
+    } catch (error) {
+      if (error instanceof DatabaseError) {
+        if (error.isCode('UNIQUE_VIOLATION')) {
+          throw new DuplicateEntryError('Product', 'SKU or barcode', 'in batch');
         }
       }
       throw error;
@@ -170,22 +216,26 @@ export class ProductService extends BaseService {
       purchasePrice: updates.purchasePrice,
       gstPercent: updates.gstPercent,
       lowStockAlert: updates.lowStockAlert,
-      isActive: updates.isActive
+      isActive: updates.isActive,
     };
 
     try {
       const updatedProduct = this.productRepo.update(id, updateInput);
-      
-      this.logInfo('Product updated', { 
-        id: updatedProduct.id, 
-        name: updatedProduct.name 
+
+      this.logInfo('Product updated', {
+        id: updatedProduct.id,
+        name: updatedProduct.name,
       });
 
       return updatedProduct;
     } catch (error) {
       if (error instanceof DatabaseError) {
         if (error.isCode('UNIQUE_VIOLATION')) {
-          throw new DuplicateEntryError('Product', 'SKU or barcode', updates.sku || updates.barcode);
+          throw new DuplicateEntryError(
+            'Product',
+            'SKU or barcode',
+            updates.sku || updates.barcode
+          );
         }
       }
       throw error;
@@ -222,12 +272,12 @@ export class ProductService extends BaseService {
 
     // 4. Update stock and log change
     this.productRepo.updateStock(input.productId, input.deltaQty);
-    
+
     this.inventoryRepo.logChange({
       productId: input.productId,
       changeQty: input.deltaQty,
       reason: input.reason,
-      notes: input.notes || `Manual ${input.deltaQty > 0 ? 'addition' : 'deduction'}`
+      notes: input.notes || `Manual ${input.deltaQty > 0 ? 'addition' : 'deduction'}`,
     });
 
     this.logInfo('Stock adjusted', {
@@ -235,23 +285,24 @@ export class ProductService extends BaseService {
       productName: product.name,
       deltaQty: input.deltaQty,
       newStock: newStock,
-      reason: input.reason
+      reason: input.reason,
     });
   }
 
   /**
    * Search products by name or barcode
    */
-  public searchProducts(query: string): any[] {
+  public searchProducts(query: string, includeInactive: boolean = false): any[] {
     if (!query || query.trim() === '') {
       throw new ValidationError('Search query cannot be empty', 'query');
     }
 
-    const products = this.productRepo.searchByName(query);
-    
-    this.logInfo('Products searched', { 
-      query, 
-      resultCount: products.length 
+    const products = this.productRepo.searchByName(query, includeInactive);
+
+    this.logInfo('Products searched', {
+      query,
+      resultCount: products.length,
+      includeInactive,
     });
 
     return products;
@@ -271,8 +322,8 @@ export class ProductService extends BaseService {
   /**
    * Get all active products
    */
-  public getAllProducts(): any[] {
-    return this.productRepo.findAll();
+  public getAllProducts(includeInactive: boolean = false): any[] {
+    return this.productRepo.findAll(includeInactive);
   }
 
   /**
@@ -292,10 +343,10 @@ export class ProductService extends BaseService {
     }
 
     this.productRepo.update(id, { isActive: false });
-    
-    this.logInfo('Product deactivated', { 
-      id, 
-      name: product.name 
+
+    this.logInfo('Product deactivated', {
+      id,
+      name: product.name,
     });
   }
 
@@ -373,5 +424,11 @@ export class ProductService extends BaseService {
     if (input.barcode && input.barcode.length > 50) {
       throw new ValidationError('Barcode is too long (max 50 characters)', 'barcode');
     }
+  }
+  /**
+   * Get stock history for a product
+   */
+  public getStockHistory(productId: number): any[] {
+    return this.inventoryRepo.getStockHistory(productId);
   }
 }

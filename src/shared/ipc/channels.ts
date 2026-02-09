@@ -1,9 +1,9 @@
 /**
  * IPC Channel Registry
- * 
+ *
  * Single source of truth for all IPC channels.
  * Shared between main and renderer processes.
- * 
+ *
  * RULES:
  * - All channels must follow the format: module:action
  * - Channels are grouped by module
@@ -13,7 +13,7 @@
 
 /**
  * IPC Channel Registry
- * 
+ *
  * Add new channels here following the module:action pattern
  */
 export const IPC_CHANNELS = {
@@ -26,6 +26,9 @@ export const IPC_CHANNELS = {
   PRODUCT_UPDATE: 'product:update',
   PRODUCT_DELETE: 'product:delete',
   PRODUCT_SEARCH: 'product:search',
+  PRODUCT_IMPORT: 'product:import',
+  PRODUCT_HISTORY: 'product:history',
+  PRODUCT_TOGGLE_STATUS: 'product:toggleStatus',
 
   PRODUCT_COUNT: 'product:count',
   PRODUCT_LOW_STOCK: 'product:lowStock',
@@ -98,14 +101,14 @@ export const IPC_CHANNELS = {
 
 /**
  * Type-safe channel names
- * 
+ *
  * Use this type to ensure only registered channels are used
  */
-export type IPCChannel = typeof IPC_CHANNELS[keyof typeof IPC_CHANNELS];
+export type IPCChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];
 
 /**
  * Get all registered channel names as an array
- * 
+ *
  * Useful for validation in preload script
  */
 export const getAllChannels = (): readonly IPCChannel[] => {
@@ -114,7 +117,7 @@ export const getAllChannels = (): readonly IPCChannel[] => {
 
 /**
  * Check if a channel is registered
- * 
+ *
  * @param channel - Channel name to check
  * @returns true if channel is registered, false otherwise
  */
@@ -124,7 +127,7 @@ export const isValidChannel = (channel: string): channel is IPCChannel => {
 
 /**
  * Channel groups for organization
- * 
+ *
  * Useful for logging, debugging, and documentation
  */
 export const CHANNEL_GROUPS = {
@@ -135,6 +138,7 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.PRODUCT_UPDATE,
     IPC_CHANNELS.PRODUCT_DELETE,
     IPC_CHANNELS.PRODUCT_SEARCH,
+    IPC_CHANNELS.PRODUCT_IMPORT,
     IPC_CHANNELS.PRODUCT_COUNT,
     IPC_CHANNELS.PRODUCT_LOW_STOCK,
     IPC_CHANNELS.PRODUCT_ADJUST_STOCK,
@@ -165,11 +169,7 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.CUSTOMER_DELETE,
     IPC_CHANNELS.CUSTOMER_SEARCH,
   ],
-  REPORT: [
-    IPC_CHANNELS.REPORT_SALES,
-    IPC_CHANNELS.REPORT_INVENTORY,
-    IPC_CHANNELS.REPORT_PROFIT,
-  ],
+  REPORT: [IPC_CHANNELS.REPORT_SALES, IPC_CHANNELS.REPORT_INVENTORY, IPC_CHANNELS.REPORT_PROFIT],
   SYSTEM: [
     IPC_CHANNELS.SYSTEM_BACKUP,
     IPC_CHANNELS.SYSTEM_RESTORE,
@@ -178,14 +178,6 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.SYSTEM_PING,
     IPC_CHANNELS.SYSTEM_GET_APP_INFO,
   ],
-  SETTINGS: [
-    IPC_CHANNELS.SETTINGS_GET,
-    IPC_CHANNELS.SETTINGS_UPDATE,
-    IPC_CHANNELS.SETTINGS_RESET,
-  ],
-  APP: [
-    IPC_CHANNELS.APP_VERSION,
-    IPC_CHANNELS.APP_CONFIG,
-    IPC_CHANNELS.APP_LOGS,
-  ],
+  SETTINGS: [IPC_CHANNELS.SETTINGS_GET, IPC_CHANNELS.SETTINGS_UPDATE, IPC_CHANNELS.SETTINGS_RESET],
+  APP: [IPC_CHANNELS.APP_VERSION, IPC_CHANNELS.APP_CONFIG, IPC_CHANNELS.APP_LOGS],
 } as const;

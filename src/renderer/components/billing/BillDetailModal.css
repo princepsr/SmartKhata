@@ -1,0 +1,124 @@
+.bill-detail-modal {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  width: 650px;
+  max-width: 95vw;
+}
+
+.bill-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+}
+
+.bill-meta strong {
+  color: #64748b;
+  margin-right: 0.5rem;
+}
+
+.payment-badge {
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+}
+
+.items-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid #f1f5f9;
+  color: #64748b;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.items-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.bill-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-end;
+  padding: 1.5rem 1rem;
+  background-color: #f8fafc;
+  border-radius: var(--radius-md);
+  margin-top: 1rem;
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  width: 280px;
+  font-size: 0.95rem;
+  color: #64748b;
+}
+
+.summary-row span:last-child {
+  text-align: right;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.summary-row.discount {
+  color: #ef4444;
+}
+
+.summary-row.discount span:last-child {
+  color: #ef4444;
+}
+
+.summary-row.grand-total {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 2px dashed #cbd5e1;
+  width: 320px;
+}
+
+.summary-row.grand-total span:first-child {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.summary-row.grand-total span:last-child {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.modal-footer {
+  padding: 1.25rem 1.5rem;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}

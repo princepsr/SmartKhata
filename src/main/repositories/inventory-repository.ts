@@ -10,6 +10,7 @@ export interface InventoryLog {
   changeQty: number; // Positive = add, negative = deduct
   reason: 'SALE' | 'MANUAL' | 'ADJUSTMENT';
   referenceId: number | null; // Bill ID for sales, null for manual/adjustments
+  billNumber: string | null; // Joined from bills table
   notes: string | null;
   createdAt: Date;
 }
@@ -89,9 +90,11 @@ export class InventoryRepository extends BaseRepository {
    */
   public getStockHistory(productId: number): InventoryLog[] {
     const sql = `
-      SELECT * FROM inventory_logs
-      WHERE product_id = ?
-      ORDER BY created_at DESC
+      SELECT il.*, b.bill_number
+      FROM inventory_logs il
+      LEFT JOIN bills b ON il.reference_id = b.id AND il.reason = 'SALE'
+      WHERE il.product_id = ?
+      ORDER BY il.created_at DESC
     `;
 
     const rows = this.queryAll<any>(sql, [productId]);
@@ -213,6 +216,7 @@ export class InventoryRepository extends BaseRepository {
       changeQty: row.change_qty,
       reason: row.reason,
       referenceId: row.reference_id,
+      billNumber: row.bill_number || null,
       notes: row.notes,
       createdAt: this.parseDate(row.created_at),
     };
