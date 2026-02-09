@@ -10,6 +10,7 @@ interface ConfirmModalProps {
   confirmLabel?: string;
   cancelLabel?: string;
   type?: 'danger' | 'warning' | 'info';
+  isAlert?: boolean;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -18,10 +19,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onConfirm,
   title,
   message,
-  confirmLabel = 'Confirm',
+  confirmLabel,
   cancelLabel = 'Cancel',
   type = 'warning',
+  isAlert = false,
 }) => {
+  // Default confirm label based on type/mode
+  const finalConfirmLabel = confirmLabel || (isAlert ? 'OK' : 'Confirm');
+
   // Handle Escape key
   useEffect(() => {
     if (!isOpen) {
@@ -31,12 +36,17 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       if (e.key === 'Escape') {
         onClose();
       }
+      // Also handle Enter to close/confirm for alerts
+      if (isAlert && e.key === 'Enter') {
+        onClose();
+        onConfirm();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isAlert, onConfirm]);
 
   if (!isOpen) {
     return null;
@@ -55,17 +65,25 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <p>{message}</p>
         </div>
         <div className="confirm-footer">
-          <button className="btn-secondary" onClick={onClose}>
-            {cancelLabel}
-          </button>
+          {!isAlert && (
+            <button className="btn-secondary" onClick={onClose}>
+              {cancelLabel}
+            </button>
+          )}
           <button
             className={`btn-${type === 'danger' ? 'danger' : 'primary'}`}
             onClick={() => {
               onConfirm();
               onClose();
             }}
+            ref={(btn) => {
+              // Auto-focus the primary button for alerts
+              if (isAlert && btn) {
+                btn.focus();
+              }
+            }}
           >
-            {confirmLabel}
+            {finalConfirmLabel}
           </button>
         </div>
       </div>

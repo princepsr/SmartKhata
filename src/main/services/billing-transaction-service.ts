@@ -1,7 +1,12 @@
 import { BaseRepository } from '../repositories/base-repository';
 import { ProductRepository } from '../repositories/product-repository';
 import { CustomerRepository } from '../repositories/customer-repository';
-import { BillRepository, CreateBillInput, CreateBillItemInput, BillWithItems } from '../repositories/bill-repository';
+import {
+  BillRepository,
+  CreateBillInput,
+  CreateBillItemInput,
+  BillWithItems,
+} from '../repositories/bill-repository';
 import { InventoryRepository } from '../repositories/inventory-repository';
 import { logger } from '../utils/logger';
 
@@ -21,20 +26,20 @@ export interface CreateSaleInput {
   customerId?: number;
   items: SaleItemInput[];
   paymentMode: 'cash' | 'upi' | 'mixed';
-  paymentReceived?: number;  // Amount paid (for credit tracking)
+  paymentReceived?: number; // Amount paid (for credit tracking)
   discountAmount?: number;
 }
 
 /**
  * Billing Transaction Service
- * 
+ *
  * Orchestrates the complete billing process in a single atomic transaction:
  * 1. Validate stock availability
  * 2. Create bill with items
  * 3. Deduct product stock
  * 4. Log inventory changes
  * 5. Update customer balance (if applicable)
- * 
+ *
  * If ANY step fails, ALL changes are rolled back.
  */
 export class BillingTransactionService extends BaseRepository {
@@ -53,15 +58,15 @@ export class BillingTransactionService extends BaseRepository {
 
   /**
    * Create a complete sale (ATOMIC TRANSACTION)
-   * 
+   *
    * This method ensures that all billing operations happen atomically:
    * - Bill creation
    * - Stock deduction
    * - Inventory logging
    * - Customer balance update
-   * 
+   *
    * If any step fails, the entire transaction is rolled back.
-   * 
+   *
    * @param saleData - Sale input data
    * @returns Created bill with items
    */
@@ -76,7 +81,7 @@ export class BillingTransactionService extends BaseRepository {
       let subtotal = 0;
       let gstTotal = 0;
 
-      saleData.items.forEach(item => {
+      saleData.items.forEach((item) => {
         // Get product details
         const product = this.productRepo.findById(item.productId);
         if (!product) {
@@ -107,7 +112,7 @@ export class BillingTransactionService extends BaseRepository {
           quantity: item.quantity,
           unitPrice: product.salePrice,
           gstPercent: product.gstPercent,
-          lineTotal: lineTotal
+          lineTotal: lineTotal,
         });
       });
 
@@ -127,26 +132,26 @@ export class BillingTransactionService extends BaseRepository {
         gstTotal,
         discountAmount,
         grandTotal,
-        paymentMode: saleData.paymentMode
+        paymentMode: saleData.paymentMode,
       };
 
       const billWithItems = this.billRepo.createBillWithItems(billData, billItems);
 
-      logger.info('Bill created', { 
-        billId: billWithItems.bill.id, 
-        billNumber: billWithItems.bill.billNumber 
+      logger.info('Bill created', {
+        billId: billWithItems.bill.id,
+        billNumber: billWithItems.bill.billNumber,
       });
 
       // ============================================
       // STEP 4: Log inventory changes
       // ============================================
-      saleData.items.forEach(item => {
+      saleData.items.forEach((item) => {
         this.inventoryRepo.logChange({
           productId: item.productId,
           changeQty: -item.quantity,
           reason: 'SALE',
           referenceId: billWithItems.bill.id,
-          notes: `Bill #${saleData.billNumber}`
+          notes: `Bill #${saleData.billNumber}`,
         });
       });
 
@@ -161,17 +166,17 @@ export class BillingTransactionService extends BaseRepository {
 
         if (balanceChange !== 0) {
           this.customerRepo.updateBalance(saleData.customerId, balanceChange);
-          
-          logger.info('Customer balance updated', { 
-            customerId: saleData.customerId, 
-            balanceChange 
+
+          logger.info('Customer balance updated', {
+            customerId: saleData.customerId,
+            balanceChange,
           });
         }
       }
 
-      logger.info('Sale transaction completed', { 
+      logger.info('Sale transaction completed', {
         billNumber: saleData.billNumber,
-        grandTotal 
+        grandTotal,
       });
 
       return billWithItems;
@@ -185,10 +190,10 @@ export class BillingTransactionService extends BaseRepository {
 
   /**
    * Validate sale before processing (optional pre-check)
-   * 
+   *
    * This can be called before createSale() to validate without
    * starting a transaction. Useful for UI validation.
-   * 
+   *
    * @param saleData - Sale input data
    * @throws Error if validation fails
    */
@@ -221,9 +226,9 @@ export class BillingTransactionService extends BaseRepository {
     }
 
     // Validate products and stock
-    saleData.items.forEach(item => {
+    saleData.items.forEach((item) => {
       const product = this.productRepo.findById(item.productId);
-      
+
       if (!product) {
         throw new Error(`Product not found: ${item.productId}`);
       }

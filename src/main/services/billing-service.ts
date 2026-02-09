@@ -1,6 +1,6 @@
 /**
  * Billing Service
- * 
+ *
  * Single source of truth for billing business logic.
  * Handles calculation, validation, and orchestration of the billing flow.
  */
@@ -9,14 +9,14 @@ import { BaseService } from './base-service';
 import { ProductRepository } from '../repositories/product-repository';
 import { CustomerRepository } from '../repositories/customer-repository';
 import { BillRepository } from '../repositories/bill-repository';
-import { BillingTransactionService, CreateSaleInput, SaleItemInput } from './billing-transaction-service';
-import { 
-  ValidationError, 
+import { BillingTransactionService, CreateSaleInput } from './billing-transaction-service';
+import {
+  ValidationError,
   NotFoundError,
   InsufficientStockError,
   InactiveEntityError,
   DuplicateEntryError,
-  InvalidQuantityError
+  InvalidQuantityError,
 } from './errors/service-errors';
 
 /**
@@ -83,7 +83,7 @@ export class BillingService extends BaseService {
 
   /**
    * Calculate bill totals (preview before finalizing)
-   * 
+   *
    * This method calculates all totals WITHOUT creating a bill.
    * Useful for showing preview to user before finalizing.
    */
@@ -140,7 +140,7 @@ export class BillingService extends BaseService {
         gstPercent: product.gstPercent,
         lineSubtotal,
         lineGst,
-        lineTotal
+        lineTotal,
       });
     });
 
@@ -160,13 +160,13 @@ export class BillingService extends BaseService {
       subtotal,
       gstTotal,
       discountAmount,
-      grandTotal
+      grandTotal,
     };
   }
 
   /**
    * Finalize bill (create bill with atomic transaction)
-   * 
+   *
    * This method:
    * 1. Validates all inputs
    * 2. Checks stock availability
@@ -178,7 +178,7 @@ export class BillingService extends BaseService {
   public finalizeBill(input: FinalizeBillInput): any {
     // 1. Generate bill number if not provided
     if (!input.billNumber) {
-        input.billNumber = this.generateBillNumber();
+      input.billNumber = this.generateBillNumber();
     }
 
     // Validate bill number format (sanity check)
@@ -233,14 +233,8 @@ export class BillingService extends BaseService {
         throw new InactiveEntityError('Product', item.productId);
       }
 
-      // Check stock availability
       if (product.stockQty < item.quantity) {
-        throw new InsufficientStockError(
-          product.id,
-          product.name,
-          product.stockQty,
-          item.quantity
-        );
+        throw new InsufficientStockError(product.id, product.name, product.stockQty, item.quantity);
       }
     });
 
@@ -254,13 +248,13 @@ export class BillingService extends BaseService {
     const saleInput: CreateSaleInput = {
       billNumber: input.billNumber,
       customerId: input.customerId,
-      items: input.items.map(item => ({
+      items: input.items.map((item) => ({
         productId: item.productId,
-        quantity: item.quantity
+        quantity: item.quantity,
       })),
       paymentMode: input.paymentMode,
       paymentReceived: input.paymentReceived,
-      discountAmount: input.discountAmount || 0
+      discountAmount: input.discountAmount || 0,
     };
 
     // 10. Execute atomic transaction
@@ -270,7 +264,7 @@ export class BillingService extends BaseService {
       billNumber: input.billNumber,
       billId: result.bill.id,
       grandTotal: result.bill.grandTotal,
-      itemCount: result.items.length
+      itemCount: result.items.length,
     });
 
     return result;
@@ -278,10 +272,10 @@ export class BillingService extends BaseService {
 
   /**
    * Generate next bill number
-   * 
+   *
    * Format: BILL-YYYYMMDD-NNNN
    * Example: BILL-20260208-0001
-   * 
+   *
    * Uses database to find the last number to ensure no collisions.
    */
   public generateBillNumber(): string {
@@ -295,7 +289,7 @@ export class BillingService extends BaseService {
 
     // Get last bill number from DB
     const lastBillNumber = this.billRepo.findLastBillNumberByPrefix(prefix);
-    
+
     let nextSequence = 1;
 
     if (lastBillNumber) {

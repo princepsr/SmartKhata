@@ -215,22 +215,24 @@ const ProductsPage: React.FC = () => {
       <header className="page-header">
         <h1 className="page-title">Products & Inventory</h1>
         <div className="header-actions">
-          <label className="filter-checkbox">
-            <input
-              type="checkbox"
-              checked={showLowStockOnly}
-              onChange={(e) => setShowLowStockOnly(e.target.checked)}
-            />
-            Low Stock Only
-          </label>
-          <label className="filter-checkbox">
-            <input
-              type="checkbox"
-              checked={includeInactive}
-              onChange={(e) => setIncludeInactive(e.target.checked)}
-            />
-            Show Inactive
-          </label>
+          <div className="filter-group">
+            <label className="filter-checkbox">
+              <input
+                type="checkbox"
+                checked={showLowStockOnly}
+                onChange={(e) => setShowLowStockOnly(e.target.checked)}
+              />
+              Low Stock Only
+            </label>
+            <label className="filter-checkbox">
+              <input
+                type="checkbox"
+                checked={includeInactive}
+                onChange={(e) => setIncludeInactive(e.target.checked)}
+              />
+              Show Inactive
+            </label>
+          </div>
           <button
             className="btn-secondary"
             onClick={() => setIsImportOpen(true)}

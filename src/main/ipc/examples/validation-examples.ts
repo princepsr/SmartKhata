@@ -1,6 +1,6 @@
 /**
  * Example: Product Handlers with Zod Validation
- * 
+ *
  * Demonstrates how to use Zod schemas for IPC request validation
  */
 
@@ -45,7 +45,7 @@ export function registerProductCreateHandler(): void {
     async (request) => {
       // Request is already validated by Zod schema
       // TypeScript knows the exact shape of request
-      
+
       const newProduct: Product = {
         id: nextProductId++,
         name: request.name,
@@ -53,9 +53,9 @@ export function registerProductCreateHandler(): void {
         stockQty: request.stockQty,
         barcode: request.barcode,
       };
-      
+
       mockProducts.push(newProduct);
-      
+
       return newProduct;
     },
     {
@@ -72,15 +72,15 @@ export function registerProductUpdateHandler(): void {
   IPCHandler.handle<UpdateProductRequest, Product>(
     IPC_CHANNELS.PRODUCT_UPDATE,
     async (request) => {
-      const product = mockProducts.find(p => p.id === request.id);
-      
+      const product = mockProducts.find((p) => p.id === request.id);
+
       if (!product) {
         throw new Error('Product not found');
       }
-      
+
       // Update product with validated data
       Object.assign(product, request.data);
-      
+
       return product;
     },
     {
@@ -96,12 +96,12 @@ export function registerProductGetHandler(): void {
   IPCHandler.handle<number, Product>(
     IPC_CHANNELS.PRODUCT_GET,
     async (productId) => {
-      const product = mockProducts.find(p => p.id === productId);
-      
+      const product = mockProducts.find((p) => p.id === productId);
+
       if (!product) {
         throw new Error('Product not found');
       }
-      
+
       return product;
     },
     {
@@ -115,14 +115,13 @@ export function registerProductGetHandler(): void {
  * Example 4: Search Products with Zod Schema
  */
 export function registerProductSearchHandler(): void {
-  IPCHandler.handle<string, Product[]>(
+  IPCHandler.handle<{ query: string; includeInactive?: boolean }, Product[]>(
     IPC_CHANNELS.PRODUCT_SEARCH,
-    async (query) => {
+    async ({ query }) => {
       const lowerQuery = query.toLowerCase();
-      
-      return mockProducts.filter(p => 
-        p.name.toLowerCase().includes(lowerQuery) ||
-        p.barcode?.includes(query)
+
+      return mockProducts.filter(
+        (p) => p.name.toLowerCase().includes(lowerQuery) || p.barcode?.includes(query)
       );
     },
     {
@@ -140,7 +139,7 @@ export function registerProductCreateWithCustomValidation(): void {
     IPC_CHANNELS.PRODUCT_CREATE,
     async (request) => {
       // Both Zod schema and custom validation passed
-      
+
       const newProduct: Product = {
         id: nextProductId++,
         name: request.name,
@@ -148,32 +147,30 @@ export function registerProductCreateWithCustomValidation(): void {
         stockQty: request.stockQty,
         barcode: request.barcode,
       };
-      
+
       mockProducts.push(newProduct);
-      
+
       return newProduct;
     },
     {
       // Zod schema validates basic structure and types
       schema: CreateProductSchema,
-      
+
       // Custom validation for business logic
       validate: async (request) => {
         // Check if product name already exists
         const exists = mockProducts.some(
-          p => p.name.toLowerCase() === request.name.toLowerCase()
+          (p) => p.name.toLowerCase() === request.name.toLowerCase()
         );
-        
+
         if (exists) {
           throw new Error('Product with this name already exists');
         }
-        
+
         // Check if barcode is unique (if provided)
         if (request.barcode) {
-          const barcodeExists = mockProducts.some(
-            p => p.barcode === request.barcode
-          );
-          
+          const barcodeExists = mockProducts.some((p) => p.barcode === request.barcode);
+
           if (barcodeExists) {
             throw new Error('Product with this barcode already exists');
           }

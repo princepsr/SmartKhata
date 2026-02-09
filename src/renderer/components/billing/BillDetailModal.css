@@ -8,6 +8,15 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   width: 650px;
   max-width: 95vw;
+  height: 80vh; /* Fixed height to match history modal */
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1.5rem 1.5rem 1.5rem;
 }
 
 .bill-meta {

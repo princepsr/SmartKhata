@@ -7,6 +7,7 @@ import { PaymentModeSelector, type PaymentMode } from '../components/billing/Pay
 import { BillHistoryModal } from '../components/billing/BillHistoryModal';
 import { calculateBillPreview, formatCurrency, type BillCalculation } from '../utils/billing-math';
 import './BillingPage.css';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 /**
  * Billing Page
@@ -82,6 +83,19 @@ function BillingPage() {
     billNumber: string;
     total: string;
   } | null>(null);
+
+  // Alert State (for custom styled alerts)
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'warning' | 'danger' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'warning',
+  });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -185,7 +199,7 @@ function BillingPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchQuery.length >= 2) {
-        searchProducts(searchQuery);
+        searchProducts({ query: searchQuery, includeInactive: false });
       }
     }, 300);
     return () => clearTimeout(timer);
@@ -306,7 +320,19 @@ function BillingPage() {
 
   // Add product to cart
   const addToCart = (product: Product) => {
+    // Check for out of stock (accounting for what's already in cart)
     const existingItem = cart.find((item) => item.product.id === product.id);
+    const currentQtyInCart = existingItem ? existingItem.quantity : 0;
+
+    if (currentQtyInCart + 1 > product.stockQty) {
+      setAlertState({
+        isOpen: true,
+        title: 'Out of Stock',
+        message: `"${product.name}" only has ${product.stockQty} available.`,
+        type: 'warning',
+      });
+      return;
+    }
 
     if (existingItem) {
       // Increment quantity
@@ -390,7 +416,12 @@ function BillingPage() {
         printerName: selectedPrinter,
       }).catch((err) => {
         console.error('Print failed', err);
-        alert('Bill saved, but printing failed. Please reprint from dashboard.');
+        setAlertState({
+          isOpen: true,
+          title: 'Print Failed',
+          message: 'Bill saved, but printing failed. Please reprint from dashboard.',
+          type: 'warning',
+        });
       });
 
       // 2. Show Success Notification (Non-blocking)
@@ -645,61 +676,29 @@ function BillingPage() {
               <span>GST</span>
               <span>₹{calculation ? formatCurrency(calculation.gstTotal) : '0.00'}</span>
             </div>
-            <div className="summary-row">
+            <div className="summary-row discount-row">
               <span>Discount</span>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  gap: '0.5rem',
-                }}
-              >
-                <div
-                  className="toggle-switch"
-                  style={{
-                    display: 'flex',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.25rem',
-                    overflow: 'hidden',
-                  }}
-                >
+              <div className="discount-controls">
+                <div className="discount-toggle-group">
                   <button
+                    className={`discount-toggle-btn ${discountType === 'amount' ? 'active' : ''}`}
                     onClick={() => setDiscountType('amount')}
-                    style={{
-                      padding: '0.1rem 0.4rem',
-                      background: discountType === 'amount' ? '#e0f2fe' : 'white',
-                      color: discountType === 'amount' ? '#0369a1' : '#64748b',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                      fontWeight: discountType === 'amount' ? 600 : 400,
-                    }}
                   >
                     ₹
                   </button>
                   <button
+                    className={`discount-toggle-btn ${discountType === 'percent' ? 'active' : ''}`}
                     onClick={() => setDiscountType('percent')}
-                    style={{
-                      padding: '0.1rem 0.4rem',
-                      background: discountType === 'percent' ? '#e0f2fe' : 'white',
-                      color: discountType === 'percent' ? '#0369a1' : '#64748b',
-                      border: 'none',
-                      borderLeft: '1px solid #d1d5db',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                      fontWeight: discountType === 'percent' ? 600 : 400,
-                    }}
                   >
                     %
                   </button>
                 </div>
                 <input
+                  className="discount-input"
                   type="number"
                   value={discountValue}
                   onChange={(e) => setDiscountValue(e.target.value)}
                   placeholder="0"
-                  style={{ width: '80px', textAlign: 'right', fontSize: '1.2rem' }}
                 />
               </div>
             </div>
@@ -744,7 +743,6 @@ function BillingPage() {
           <div
             className="shortcuts-legend"
             style={{
-              marginTop: '1rem',
               padding: '0.75rem',
               background: '#f8fafc',
               borderRadius: '0.5rem',
@@ -846,6 +844,17 @@ function BillingPage() {
           </div>
         </div>
       )}
+
+      {/* Alert Modal */}
+      <ConfirmModal
+        isOpen={alertState.isOpen}
+        onClose={() => setAlertState((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={() => setAlertState((prev) => ({ ...prev, isOpen: false }))}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        isAlert={true}
+      />
     </div>
   );
 }

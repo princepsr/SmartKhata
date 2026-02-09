@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut } from 'electron';
 import path from 'path';
 import { configManager } from './config/app-config';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
@@ -30,7 +30,7 @@ if (!gotTheLock) {
   // This is the first instance, handle second-instance attempts
   app.on('second-instance', (event, commandLine, workingDirectory) => {
     logger.info('Second instance attempted to start', { commandLine, workingDirectory });
-    
+
     // Focus the existing window if it exists
     if (mainWindow) {
       if (mainWindow.isMinimized()) {
@@ -55,15 +55,19 @@ function createWindow(): void {
     show: false, // Don't show until ready (prevents flash)
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
-      nodeIntegration: false,        // Disable Node.js in renderer
-      contextIsolation: true,        // Isolate preload context
-      sandbox: false,                // Disable sandbox to allow require('../shared/...')
-      webSecurity: true,             // Enable web security (default, but explicit)
-      allowRunningInsecureContent: false,  // Block mixed content
-      experimentalFeatures: false,   // Disable experimental features
+      nodeIntegration: false, // Disable Node.js in renderer
+      contextIsolation: true, // Isolate preload context
+      sandbox: false, // Disable sandbox to allow require('../shared/...')
+      webSecurity: true, // Enable web security (default, but explicit)
+      allowRunningInsecureContent: false, // Block mixed content
+      experimentalFeatures: false, // Disable experimental features
     },
     title: APP_CONSTANTS.APP_NAME,
+    autoHideMenuBar: true, // Hide menu bar (File, Edit, etc.)
   });
+
+  // Remove the menu bar completely (optional: keep if you want Alt access, but 'removeMenu' clears it)
+  mainWindow.removeMenu();
 
   // Show window when ready (prevents white flash)
   mainWindow.once('ready-to-show', () => {
@@ -113,7 +117,6 @@ app.whenReady().then(async () => {
   } catch (error) {
     logger.error('Failed to initialize database', { error });
     // Show error dialog and quit
-    const { dialog } = require('electron');
     dialog.showErrorBox(
       'Database Initialization Failed',
       `SmartKhata could not initialize the database.\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nThe application will now close.`
@@ -129,7 +132,6 @@ app.whenReady().then(async () => {
     logger.info('Database migrations completed');
   } catch (error) {
     logger.error('Failed to run migrations', { error });
-    const { dialog } = require('electron');
     dialog.showErrorBox(
       'Database Migration Failed',
       `SmartKhata could not apply database migrations.\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nThe application will now close.`
@@ -143,6 +145,71 @@ app.whenReady().then(async () => {
 
   createWindow();
 
+  // Register Zoom Shortcuts
+
+  // Ctrl + = (Zoom In)
+  globalShortcut.register('CommandOrControl+=', () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+      const currentZoom = win.webContents.getZoomFactor();
+      win.webContents.setZoomFactor(currentZoom + 0.1);
+    }
+  });
+
+  // Ctrl + - (Zoom Out)
+  globalShortcut.register('CommandOrControl+-', () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+      const currentZoom = win.webContents.getZoomFactor();
+      // Prevent zooming out too much (e.g., < 50%)
+      if (currentZoom > 0.5) {
+        win.webContents.setZoomFactor(currentZoom - 0.1);
+      }
+    }
+  });
+
+  // Ctrl + 0 (Reset Zoom)
+  globalShortcut.register('CommandOrControl+0', () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+      win.webContents.setZoomFactor(1.0);
+    }
+  });
+
+  // Ctrl + Shift + I (Toggle DevTools)
+  globalShortcut.register('CommandOrControl+Shift+I', () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+      win.webContents.toggleDevTools();
+    }
+  });
+
+  // F11 (Toggle Fullscreen)
+  globalShortcut.register('F11', () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+      win.setFullScreen(!win.isFullScreen());
+    }
+  });
+
+  // Ctrl + R / F5 (Reload)
+  const reloadApp = () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+      win.reload();
+    }
+  };
+  globalShortcut.register('CommandOrControl+R', reloadApp);
+  globalShortcut.register('F5', reloadApp);
+
+  // Ctrl + Shift + R (Hard Reload)
+  globalShortcut.register('CommandOrControl+Shift+R', () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+      win.webContents.reloadIgnoringCache();
+    }
+  });
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       logger.info('Reactivating app (macOS)');
@@ -151,14 +218,19 @@ app.whenReady().then(async () => {
   });
 });
 
+// Unregister shortcuts on quit
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+});
+
 // Graceful shutdown handling
 app.on('before-quit', async (event) => {
   if (!shutdownManager.isShutdownInProgress()) {
     // Prevent immediate quit, run shutdown hooks first
     event.preventDefault();
-    
+
     logger.info('App quit requested, starting graceful shutdown');
-    
+
     // Close database connection
     try {
       databaseManager.close();
@@ -166,9 +238,9 @@ app.on('before-quit', async (event) => {
     } catch (error) {
       logger.error('Error closing database', { error });
     }
-    
+
     await shutdownManager.shutdown();
-    
+
     // Now allow the app to quit
     app.quit();
   }

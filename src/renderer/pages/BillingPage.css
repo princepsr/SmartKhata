@@ -48,7 +48,6 @@
 /* --- Header --- */
 .page-header {
   height: 64px;
-  padding: 0 1.5rem;
   background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -75,6 +74,7 @@
   grid-template-rows: auto 1fr;
   gap: 1.5rem;
   padding: 1.5rem;
+  padding-top: 0rem;
   overflow: hidden;
   max-width: 1600px;
   margin: 0 auto;
@@ -304,6 +304,72 @@
   font-weight: 800;
   color: var(--color-primary);
   line-height: 1;
+}
+
+/* Discount Row Styles */
+.discount-row {
+  align-items: flex-start; /* Align label to top if needed, but center usually works */
+}
+
+.discount-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.discount-toggle-group {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background-color: white;
+}
+
+.discount-toggle-btn {
+  padding: 0.25rem 0.6rem;
+  border: none;
+  background: white;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-right: 1px solid var(--border-color);
+}
+
+.discount-toggle-btn:last-child {
+  border-right: none;
+}
+
+.discount-toggle-btn.active {
+  background: #e0f2fe; /* Sky 100 */
+  color: #0369a1; /* Sky 700 */
+  font-weight: 600;
+}
+
+.discount-input {
+  width: 80px;
+  text-align: right;
+  font-size: 1.1rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  color: var(--text-primary);
+  /* Ensure height matches toggle buttons visually if needed */
+}
+
+.discount-input:focus {
+  outline: 2px solid #bae6fd;
+  border-color: #38bdf8;
+}
+
+/* Disable spin buttons */
+.discount-input::-webkit-inner-spin-button,
+.discount-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .actions-area {

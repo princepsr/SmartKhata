@@ -36,6 +36,11 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose, pri
     boolean
   >(IPC_CHANNELS.BILL_PRINT);
 
+  const [notification, setNotification] = React.useState<{
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
+
   // Initial Load
   useEffect(() => {
     refreshBills();
@@ -54,12 +59,17 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose, pri
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
   const handleReprint = async (billId: number) => {
     try {
       await reprintBill({ billId, printerName });
-      // Optional: Show toast
+      showNotification('Reprint command sent!', 'success');
     } catch (err) {
-      alert('Reprint failed. Check printer connection.');
+      showNotification('Reprint failed. Check printer.', 'error');
       console.error(err);
     }
   };
@@ -70,6 +80,17 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose, pri
         {/* Header */}
         <div className="modal-header">
           <h2>Today's Sales</h2>
+          {notification && (
+            <div
+              className="success-notification"
+              style={{
+                backgroundColor:
+                  notification.type === 'success' ? 'var(--color-success)' : 'var(--color-error)',
+              }}
+            >
+              {notification.message}
+            </div>
+          )}
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>

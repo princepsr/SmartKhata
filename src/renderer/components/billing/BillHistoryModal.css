@@ -15,9 +15,9 @@
   background-color: var(--color-bg);
   border-radius: var(--radius-lg);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  width: 800px;
+  width: 900px;
   max-width: 95vw;
-  max-height: 80vh;
+  height: 80vh; /* Fixed height as requested */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -143,4 +143,31 @@
 
 .font-bold {
   font-weight: 600;
+}
+
+.success-notification {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-success);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  animation: slide-down 0.3s ease-out;
+  z-index: 50;
+}
+
+@keyframes slide-down {
+  from {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
 }
