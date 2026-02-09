@@ -10,9 +10,9 @@ export interface Product {
   name: string;
   sku: string | null;
   barcode: string | null;
-  salePrice: number;        // In rupees (e.g., 40.00)
+  salePrice: number; // In rupees (e.g., 40.00)
   purchasePrice: number | null; // In rupees
-  gstPercent: number;       // As decimal (e.g., 18.00 for 18%)
+  gstPercent: number; // As decimal (e.g., 18.00 for 18%)
   stockQty: number;
   lowStockAlert: number | null;
   isActive: boolean;
@@ -27,9 +27,9 @@ export interface CreateProductInput {
   name: string;
   sku?: string;
   barcode?: string;
-  salePrice: number;        // In rupees
-  purchasePrice?: number;   // In rupees
-  gstPercent?: number;      // As decimal (default 18%)
+  salePrice: number; // In rupees
+  purchasePrice?: number; // In rupees
+  gstPercent?: number; // As decimal (default 18%)
   stockQty?: number;
   lowStockAlert?: number;
 }
@@ -41,9 +41,9 @@ export interface UpdateProductInput {
   name?: string;
   sku?: string;
   barcode?: string;
-  salePrice?: number;       // In rupees
-  purchasePrice?: number;   // In rupees
-  gstPercent?: number;      // As decimal
+  salePrice?: number; // In rupees
+  purchasePrice?: number; // In rupees
+  gstPercent?: number; // As decimal
   stockQty?: number;
   lowStockAlert?: number;
   isActive?: boolean;
@@ -51,7 +51,7 @@ export interface UpdateProductInput {
 
 /**
  * Product Repository
- * 
+ *
  * Handles all database operations for products.
  * Converts between database types (INTEGER paise) and domain types (number rupees).
  */
@@ -71,11 +71,11 @@ export class ProductRepository extends BaseRepository {
       data.name,
       data.sku || null,
       data.barcode || null,
-      Math.round(data.salePrice * 100),                    // Rupees → Paise
+      Math.round(data.salePrice * 100), // Rupees → Paise
       data.purchasePrice ? Math.round(data.purchasePrice * 100) : null,
-      Math.round((data.gstPercent || 18) * 100),          // Percent → Basis points
+      Math.round((data.gstPercent || 18) * 100), // Percent → Basis points
       data.stockQty || 0,
-      data.lowStockAlert || null
+      data.lowStockAlert || null,
     ]);
 
     logger.info('Product created', { id: result.lastInsertRowid, name: data.name });
@@ -181,7 +181,7 @@ export class ProductRepository extends BaseRepository {
       ORDER BY name ASC
     `;
     const rows = this.queryAll<any>(sql);
-    return rows.map(row => this._mapToProduct(row));
+    return rows.map((row) => this._mapToProduct(row));
   }
 
   /**
@@ -195,7 +195,7 @@ export class ProductRepository extends BaseRepository {
       LIMIT 50
     `;
     const rows = this.queryAll<any>(sql, [`%${query}%`]);
-    return rows.map(row => this._mapToProduct(row));
+    return rows.map((row) => this._mapToProduct(row));
   }
 
   /**
@@ -224,10 +224,10 @@ export class ProductRepository extends BaseRepository {
 
   /**
    * Update product stock (with negative stock prevention)
-   * 
+   *
    * IMPORTANT: This method checks stock BEFORE updating to prevent negative stock.
    * Use within a transaction for atomic operations.
-   * 
+   *
    * @param productId - Product ID
    * @param deltaQty - Change in quantity (positive = add, negative = deduct)
    * @throws Error if stock would become negative
@@ -248,7 +248,9 @@ export class ProductRepository extends BaseRepository {
     // 2. Prevent negative stock
     const newStock = product.stock_qty + deltaQty;
     if (newStock < 0) {
-      throw new Error(`Insufficient stock. Available: ${product.stock_qty}, Required: ${Math.abs(deltaQty)}`);
+      throw new Error(
+        `Insufficient stock. Available: ${product.stock_qty}, Required: ${Math.abs(deltaQty)}`
+      );
     }
 
     // 3. Update stock
@@ -274,7 +276,7 @@ export class ProductRepository extends BaseRepository {
       ORDER BY stock_qty ASC
     `;
     const rows = this.queryAll<any>(sql);
-    return rows.map(row => this._mapToProduct(row));
+    return rows.map((row) => this._mapToProduct(row));
   }
 
   /**
@@ -298,7 +300,7 @@ export class ProductRepository extends BaseRepository {
 
   /**
    * Map database row to Product domain object
-   * 
+   *
    * Converts:
    * - INTEGER paise → number rupees
    * - INTEGER basis points → number percent
@@ -311,14 +313,14 @@ export class ProductRepository extends BaseRepository {
       name: row.name,
       sku: row.sku,
       barcode: row.barcode,
-      salePrice: row.sale_price / 100,              // Paise → Rupees
+      salePrice: row.sale_price / 100, // Paise → Rupees
       purchasePrice: row.purchase_price ? row.purchase_price / 100 : null,
-      gstPercent: row.gst_percent / 100,            // Basis points → Percent
+      gstPercent: row.gst_percent / 100, // Basis points → Percent
       stockQty: row.stock_qty,
       lowStockAlert: row.low_stock_alert,
-      isActive: row.is_active === 1,                // INTEGER → boolean
-      createdAt: new Date(row.created_at),          // TEXT → Date
-      updatedAt: new Date(row.updated_at)
+      isActive: row.is_active === 1, // INTEGER → boolean
+      createdAt: this.parseDate(row.created_at), // TEXT → Date
+      updatedAt: this.parseDate(row.updated_at),
     };
   }
 }

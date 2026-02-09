@@ -9,10 +9,10 @@ export interface Bill {
   id: number;
   billNumber: string;
   customerId: number | null;
-  subtotal: number;          // In rupees
-  gstTotal: number;          // In rupees
-  discountAmount: number;    // In rupees
-  grandTotal: number;        // In rupees
+  subtotal: number; // In rupees
+  gstTotal: number; // In rupees
+  discountAmount: number; // In rupees
+  grandTotal: number; // In rupees
   paymentMode: 'cash' | 'upi' | 'mixed';
   createdAt: Date;
 }
@@ -24,11 +24,11 @@ export interface BillItem {
   id: number;
   billId: number;
   productId: number;
-  productNameSnapshot: string;  // Product name at time of sale
+  productNameSnapshot: string; // Product name at time of sale
   quantity: number;
-  unitPrice: number;            // In rupees
-  gstPercent: number;           // As decimal (e.g., 18.00)
-  lineTotal: number;            // In rupees
+  unitPrice: number; // In rupees
+  gstPercent: number; // As decimal (e.g., 18.00)
+  lineTotal: number; // In rupees
 }
 
 /**
@@ -45,10 +45,10 @@ export interface BillWithItems {
 export interface CreateBillInput {
   billNumber: string;
   customerId?: number;
-  subtotal: number;          // In rupees
-  gstTotal: number;          // In rupees
-  discountAmount?: number;   // In rupees
-  grandTotal: number;        // In rupees
+  subtotal: number; // In rupees
+  gstTotal: number; // In rupees
+  discountAmount?: number; // In rupees
+  grandTotal: number; // In rupees
   paymentMode: 'cash' | 'upi' | 'mixed';
 }
 
@@ -59,27 +59,27 @@ export interface CreateBillItemInput {
   productId: number;
   productNameSnapshot: string;
   quantity: number;
-  unitPrice: number;         // In rupees
-  gstPercent: number;        // As decimal
-  lineTotal: number;         // In rupees
+  unitPrice: number; // In rupees
+  gstPercent: number; // As decimal
+  lineTotal: number; // In rupees
 }
 
 /**
  * Bill Repository
- * 
+ *
  * Handles all database operations for bills and bill items.
  * Bills and items are ALWAYS saved together in a single transaction.
  */
 export class BillRepository extends BaseRepository {
   /**
    * Create a bill with items (ATOMIC OPERATION)
-   * 
+   *
    * This method ensures that:
    * 1. Bill and all items are saved in a single transaction
    * 2. If any item fails, the entire bill is rolled back
    * 3. Product snapshots are preserved for historical accuracy
    * 4. Final totals are stored (immutable)
-   * 
+   *
    * @param billData - Bill header data
    * @param items - Array of bill items
    * @returns Complete bill with items
@@ -105,11 +105,11 @@ export class BillRepository extends BaseRepository {
       const billResult = this.execute(billSql, [
         billData.billNumber,
         billData.customerId || null,
-        Math.round(billData.subtotal * 100),              // Rupees → Paise
+        Math.round(billData.subtotal * 100), // Rupees → Paise
         Math.round(billData.gstTotal * 100),
         Math.round((billData.discountAmount || 0) * 100),
         Math.round(billData.grandTotal * 100),
-        billData.paymentMode
+        billData.paymentMode,
       ]);
 
       const billId = Number(billResult.lastInsertRowid);
@@ -122,22 +122,22 @@ export class BillRepository extends BaseRepository {
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
 
-      items.forEach(item => {
+      items.forEach((item) => {
         this.execute(itemSql, [
           billId,
           item.productId,
           item.productNameSnapshot,
           item.quantity,
-          Math.round(item.unitPrice * 100),      // Rupees → Paise
-          Math.round(item.gstPercent * 100),     // Percent → Basis points
-          Math.round(item.lineTotal * 100)       // Rupees → Paise
+          Math.round(item.unitPrice * 100), // Rupees → Paise
+          Math.round(item.gstPercent * 100), // Percent → Basis points
+          Math.round(item.lineTotal * 100), // Rupees → Paise
         ]);
       });
 
-      logger.info('Bill created with items', { 
-        billId, 
-        billNumber: billData.billNumber, 
-        itemCount: items.length 
+      logger.info('Bill created with items', {
+        billId,
+        billNumber: billData.billNumber,
+        itemCount: items.length,
       });
 
       // 4. Fetch and return complete bill
@@ -150,10 +150,10 @@ export class BillRepository extends BaseRepository {
 
       return {
         bill,
-        items: billItems
+        items: billItems,
       };
     });
-    
+
     // Transaction ensures:
     // - All inserts succeed OR all are rolled back
     // - No partial bills in database
@@ -191,7 +191,7 @@ export class BillRepository extends BaseRepository {
 
     return {
       bill,
-      items
+      items,
     };
   }
 
@@ -208,7 +208,7 @@ export class BillRepository extends BaseRepository {
 
     return {
       bill,
-      items
+      items,
     };
   }
 
@@ -218,16 +218,14 @@ export class BillRepository extends BaseRepository {
   public findByDateRange(fromDate: Date, toDate: Date): Bill[] {
     const sql = `
       SELECT * FROM bills
-      WHERE created_at >= ? AND created_at <= ?
+      WHERE date(created_at, 'localtime') >= date(?, 'localtime') 
+        AND date(created_at, 'localtime') <= date(?, 'localtime')
       ORDER BY created_at DESC
     `;
 
-    const rows = this.queryAll<any>(sql, [
-      fromDate.toISOString(),
-      toDate.toISOString()
-    ]);
+    const rows = this.queryAll<any>(sql, [fromDate.toISOString(), toDate.toISOString()]);
 
-    return rows.map(row => this._mapToBill(row));
+    return rows.map((row) => this._mapToBill(row));
   }
 
   /**
@@ -241,7 +239,7 @@ export class BillRepository extends BaseRepository {
     `;
 
     const rows = this.queryAll<any>(sql, [customerId]);
-    return rows.map(row => this._mapToBill(row));
+    return rows.map((row) => this._mapToBill(row));
   }
 
   /**
@@ -255,7 +253,7 @@ export class BillRepository extends BaseRepository {
     `;
 
     const rows = this.queryAll<any>(sql, [limit, offset]);
-    return rows.map(row => this._mapToBill(row));
+    return rows.map((row) => this._mapToBill(row));
   }
 
   /**
@@ -269,30 +267,33 @@ export class BillRepository extends BaseRepository {
     `;
 
     const rows = this.queryAll<any>(sql, [billId]);
-    return rows.map(row => this._mapToBillItem(row));
+    return rows.map((row) => this._mapToBillItem(row));
   }
 
   /**
    * Get today's bills
    */
   public findToday(): Bill[] {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    return this.findByDateRange(today, tomorrow);
+    const sql = `
+      SELECT * FROM bills 
+      WHERE date(created_at, 'localtime') = date('now', 'localtime')
+      ORDER BY created_at DESC
+    `;
+    const rows = this.queryAll<any>(sql);
+    return rows.map((row) => this._mapToBill(row));
   }
 
   /**
    * Get sales summary for date range
    */
-  public getSalesSummary(fromDate: Date, toDate: Date): {
+  public getSalesSummary(
+    fromDate: Date,
+    toDate: Date
+  ): {
     totalBills: number;
-    totalSales: number;      // In rupees
-    totalGst: number;        // In rupees
-    totalDiscount: number;   // In rupees
+    totalSales: number; // In rupees
+    totalGst: number; // In rupees
+    totalDiscount: number; // In rupees
   } {
     const sql = `
       SELECT 
@@ -304,16 +305,13 @@ export class BillRepository extends BaseRepository {
       WHERE created_at >= ? AND created_at <= ?
     `;
 
-    const result = this.queryOne<any>(sql, [
-      fromDate.toISOString(),
-      toDate.toISOString()
-    ]);
+    const result = this.queryOne<any>(sql, [fromDate.toISOString(), toDate.toISOString()]);
 
     return {
       totalBills: result?.total_bills || 0,
-      totalSales: (result?.total_sales || 0) / 100,      // Paise → Rupees
+      totalSales: (result?.total_sales || 0) / 100, // Paise → Rupees
       totalGst: (result?.total_gst || 0) / 100,
-      totalDiscount: (result?.total_discount || 0) / 100
+      totalDiscount: (result?.total_discount || 0) / 100,
     };
   }
 
@@ -332,7 +330,7 @@ export class BillRepository extends BaseRepository {
       ORDER BY length(bill_number) DESC, bill_number DESC
       LIMIT 1
     `;
-    
+
     const row = this.queryOne<{ bill_number: string }>(sql, [`${prefix}%`]);
     return row ? row.bill_number : null;
   }
@@ -345,12 +343,12 @@ export class BillRepository extends BaseRepository {
       id: row.id,
       billNumber: row.bill_number,
       customerId: row.customer_id,
-      subtotal: row.subtotal / 100,              // Paise → Rupees
+      subtotal: row.subtotal / 100, // Paise → Rupees
       gstTotal: row.gst_total / 100,
       discountAmount: row.discount_amount / 100,
       grandTotal: row.grand_total / 100,
       paymentMode: row.payment_mode,
-      createdAt: new Date(row.created_at)
+      createdAt: this.parseDate(row.created_at),
     };
   }
 
@@ -364,9 +362,9 @@ export class BillRepository extends BaseRepository {
       productId: row.product_id,
       productNameSnapshot: row.product_name_snapshot,
       quantity: row.quantity,
-      unitPrice: row.unit_price / 100,           // Paise → Rupees
-      gstPercent: row.gst_percent / 100,         // Basis points → Percent
-      lineTotal: row.line_total / 100            // Paise → Rupees
+      unitPrice: row.unit_price / 100, // Paise → Rupees
+      gstPercent: row.gst_percent / 100, // Basis points → Percent
+      lineTotal: row.line_total / 100, // Paise → Rupees
     };
   }
 }

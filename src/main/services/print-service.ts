@@ -4,18 +4,19 @@ import { logger } from '../utils/logger';
 
 /**
  * Print Service
- * 
+ *
  * Handles silent thermal printing using a hidden BrowserWindow.
  * Generates HTML receipt and sends it to the default system printer.
  */
 export class PrintService {
-  
   /**
    * Print a bill by ID
    * (Fetches bill data should be done by caller, this accepts the data)
    */
   async printBill(billData: any, printerName: string = ''): Promise<boolean> {
-    logger.info(`Starting print job for bill #${billData.bill.billNumber} on printer: ${printerName || 'Default'}`);
+    logger.info(
+      `Starting print job for bill #${billData.bill.billNumber} on printer: ${printerName || 'Default'}`
+    );
 
     let printWindow: BrowserWindow | null = new BrowserWindow({
       show: false, // Hidden window
@@ -25,34 +26,40 @@ export class PrintService {
         nodeIntegration: false,
         contextIsolation: true,
         spellcheck: false, // Disable spellcheck
-        sandbox: true // Enable sandbox for better isolation
-      }
+        sandbox: true, // Enable sandbox for better isolation
+      },
     });
 
     try {
       const htmlContent = this.generateReceiptHtml(billData);
-      
+
       // Load HTML and wait for render
       await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
 
       // Print
       await new Promise<void>((resolve, reject) => {
-        if (!printWindow) return reject('Window closed');
-        
+        if (!printWindow) {
+          return reject('Window closed');
+        }
+
         // Use a slight delay to ensure styles are applied (thermal printers can be picky)
         setTimeout(() => {
-            if (!printWindow) return reject('Window closed');
-            
-            printWindow.webContents.print({
+          if (!printWindow) {
+            return reject('Window closed');
+          }
+
+          printWindow.webContents.print(
+            {
               silent: true,
               printBackground: true,
               deviceName: printerName, // Use provided printer name
               // Fix for "content size empty" on some drivers:
-              pageSize: 'A4', 
+              pageSize: 'A4',
               margins: {
-                marginType: 'printableArea'
-              }
-            }, (success, failureReason) => {
+                marginType: 'printableArea',
+              },
+            },
+            (success, failureReason) => {
               if (success) {
                 logger.info('Print job sent to printer');
                 resolve();
@@ -60,12 +67,12 @@ export class PrintService {
                 logger.error(`Print failed: ${failureReason}`);
                 reject(new Error(failureReason));
               }
-            });
+            }
+          );
         }, 500);
       });
 
       return true;
-
     } catch (error) {
       logger.error('Error in print service', { error });
       throw error;
@@ -85,23 +92,34 @@ export class PrintService {
     // We need a BrowserWindow to access getPrintersAsync
     // We can use the focused window or create a temporary one if needed
     const window = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
-    
+
     if (window) {
       return await window.webContents.getPrintersAsync();
     }
-    
+
     return [];
   }
 
   /**
    * Generates the HTML for a 3-inch (80mm) thermal receipt
    */
-  private generateReceiptHtml(data: { bill: any, items: any[] }): string {
+  private generateReceiptHtml(data: { bill: any; items: any[] }): string {
     const { bill, items } = data;
 
-    // Date formatting
-    const date = new Date(bill.createdAt).toLocaleDateString();
-    const time = new Date(bill.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Date formatting (Explicit en-IN)
+    // Date formatting (Explicit en-IN)
+    const date = new Date(bill.createdAt).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    });
+    const time = new Date(bill.createdAt).toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata',
+    });
 
     return `
       <!DOCTYPE html>
@@ -208,13 +226,17 @@ export class PrintService {
             </tr>
           </thead>
           <tbody>
-            ${items.map(item => `
+            ${items
+              .map(
+                (item) => `
               <tr>
                 <td class="item">${item.productNameSnapshot}</td>
                 <td class="qty">${item.quantity}</td>
                 <td class="price">${(item.lineTotal / 100).toFixed(2)}</td>
               </tr>
-            `).join('')}
+            `
+              )
+              .join('')}
           </tbody>
         </table>
 
@@ -229,12 +251,16 @@ export class PrintService {
             <span>GST:</span>
             <span>${(bill.gstTotal / 100).toFixed(2)}</span>
           </div>
-          ${bill.discountAmount > 0 ? `
+          ${
+            bill.discountAmount > 0
+              ? `
             <div class="totals-row">
               <span>Discount:</span>
               <span>-${(bill.discountAmount / 100).toFixed(2)}</span>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           <div class="totals-row grand-total">
             <span>Total:</span>
             <span>${(bill.grandTotal / 100).toFixed(2)}</span>

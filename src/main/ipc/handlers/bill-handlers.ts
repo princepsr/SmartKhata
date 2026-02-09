@@ -1,6 +1,6 @@
 /**
  * Bill IPC Handlers (Service-Based)
- * 
+ *
  * Wires billing operations from UI to BillingService.
  * No SQL logic, no repository calls - only service orchestration.
  */
@@ -9,9 +9,7 @@ import { IPCHandler } from '../ipc-handler';
 import { BillingService, FinalizeBillInput, BillItemInput } from '../../services/billing-service';
 import { BillRepository } from '../../repositories/bill-repository';
 import { PrintService } from '../../services/print-service'; // Import
-import { 
-  getUserFriendlyMessage
-} from '../../services/errors/service-errors';
+import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 
 /**
  * Register All Bill Handlers
@@ -31,7 +29,7 @@ export function registerBillHandlers(): void {
       const calculation = billingService.calculateBill(items, discountAmount || 0);
 
       return {
-        items: calculation.items.map(item => ({
+        items: calculation.items.map((item) => ({
           productId: item.productId,
           productName: item.productName,
           quantity: item.quantity,
@@ -39,16 +37,16 @@ export function registerBillHandlers(): void {
           gstPercent: item.gstPercent,
           lineSubtotal: item.lineSubtotal,
           lineGst: item.lineGst,
-          lineTotal: item.lineTotal
+          lineTotal: item.lineTotal,
         })),
         subtotal: calculation.subtotal,
         gstTotal: calculation.gstTotal,
         discountAmount: calculation.discountAmount,
-        grandTotal: calculation.grandTotal
+        grandTotal: calculation.grandTotal,
       };
     },
     {
-        transformError: (err) => getUserFriendlyMessage(err)
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 
@@ -71,9 +69,9 @@ export function registerBillHandlers(): void {
           discountAmount: result.bill.discountAmount,
           grandTotal: result.bill.grandTotal,
           paymentMode: result.bill.paymentMode,
-          createdAt: result.bill.createdAt.toISOString()
+          createdAt: result.bill.createdAt.getTime(),
         },
-        items: result.items.map(item => ({
+        items: result.items.map((item) => ({
           id: item.id,
           billId: item.billId,
           productId: item.productId,
@@ -81,12 +79,12 @@ export function registerBillHandlers(): void {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           gstPercent: item.gstPercent,
-          lineTotal: item.lineTotal
-        }))
+          lineTotal: item.lineTotal,
+        })),
       };
     },
     {
-        transformError: (err) => getUserFriendlyMessage(err)
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 
@@ -102,23 +100,26 @@ export function registerBillHandlers(): void {
 
       // 1. Fetch full bill details to ensure we print accurate data
       const billData = billRepo.findByIdWithItems(billId);
-      
+
       if (!billData) {
         throw new Error('Bill not found for printing');
       }
 
       // 2. Send to print service
       // We pass the raw DB objects, PrintService handles formatting
-      return await printService.printBill({
-        bill: {
-          ...billData.bill,
-          createdAt: billData.bill.createdAt // Date object is preserved in main process
+      return await printService.printBill(
+        {
+          bill: {
+            ...billData.bill,
+            createdAt: billData.bill.createdAt, // Date object is preserved in main process
+          },
+          items: billData.items,
         },
-        items: billData.items
-      }, printerName);
+        printerName
+      );
     },
     {
-        transformError: (err) => getUserFriendlyMessage(err)
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 
@@ -131,7 +132,7 @@ export function registerBillHandlers(): void {
       return await printService.getPrinters();
     },
     {
-        transformError: (err) => getUserFriendlyMessage(err)
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 
@@ -144,7 +145,7 @@ export function registerBillHandlers(): void {
       return billingService.generateBillNumber();
     },
     {
-        transformError: (err) => getUserFriendlyMessage(err)
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 
@@ -170,9 +171,9 @@ export function registerBillHandlers(): void {
           discountAmount: result.bill.discountAmount,
           grandTotal: result.bill.grandTotal,
           paymentMode: result.bill.paymentMode,
-          createdAt: result.bill.createdAt.toISOString()
+          createdAt: result.bill.createdAt.getTime(),
         },
-        items: result.items.map(item => ({
+        items: result.items.map((item) => ({
           id: item.id,
           billId: item.billId,
           productId: item.productId,
@@ -180,12 +181,12 @@ export function registerBillHandlers(): void {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           gstPercent: item.gstPercent,
-          lineTotal: item.lineTotal
-        }))
+          lineTotal: item.lineTotal,
+        })),
       };
     },
     {
-        transformError: (err) => getUserFriendlyMessage(err)
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 
@@ -197,12 +198,9 @@ export function registerBillHandlers(): void {
   IPCHandler.handle<{ fromDate: string; toDate: string }, any[]>(
     'bill:listByDateRange',
     async ({ fromDate, toDate }) => {
-      const bills = billRepo.findByDateRange(
-        new Date(fromDate),
-        new Date(toDate)
-      );
+      const bills = billRepo.findByDateRange(new Date(fromDate), new Date(toDate));
 
-      return bills.map(bill => ({
+      return bills.map((bill) => ({
         id: bill.id,
         billNumber: bill.billNumber,
         customerId: bill.customerId,
@@ -211,11 +209,11 @@ export function registerBillHandlers(): void {
         discountAmount: bill.discountAmount,
         grandTotal: bill.grandTotal,
         paymentMode: bill.paymentMode,
-        createdAt: bill.createdAt.toISOString()
+        createdAt: bill.createdAt.getTime(),
       }));
     },
     {
-        transformError: (err) => getUserFriendlyMessage(err)
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 
@@ -227,17 +225,17 @@ export function registerBillHandlers(): void {
     async () => {
       const bills = billRepo.findToday();
 
-      return bills.map(bill => ({
+      return bills.map((bill) => ({
         id: bill.id,
         billNumber: bill.billNumber,
         customerId: bill.customerId,
         grandTotal: bill.grandTotal,
         paymentMode: bill.paymentMode,
-        createdAt: bill.createdAt.toISOString()
+        createdAt: bill.createdAt.getTime(),
       }));
     },
     {
-        transformError: (err) => getUserFriendlyMessage(err)
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 
@@ -247,13 +245,10 @@ export function registerBillHandlers(): void {
   IPCHandler.handle<{ fromDate: string; toDate: string }, any>(
     'bill:salesSummary',
     async ({ fromDate, toDate }) => {
-      return billRepo.getSalesSummary(
-        new Date(fromDate),
-        new Date(toDate)
-      );
+      return billRepo.getSalesSummary(new Date(fromDate), new Date(toDate));
     },
     {
-        transformError: (err) => getUserFriendlyMessage(err)
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 }

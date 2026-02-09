@@ -12,7 +12,7 @@ export interface Setting {
 
 /**
  * Settings Repository
- * 
+ *
  * Handles all database operations for application settings.
  * Settings are stored as key-value pairs (both TEXT).
  * Type conversion is handled by the application layer.
@@ -20,7 +20,7 @@ export interface Setting {
 export class SettingsRepository extends BaseRepository {
   /**
    * Get a setting value by key
-   * 
+   *
    * @param key - Setting key
    * @returns Setting value as string, or null if not found
    */
@@ -32,7 +32,7 @@ export class SettingsRepository extends BaseRepository {
 
   /**
    * Get a setting with metadata
-   * 
+   *
    * @param key - Setting key
    * @returns Complete setting object or null
    */
@@ -44,10 +44,10 @@ export class SettingsRepository extends BaseRepository {
 
   /**
    * Set a setting value (INSERT or UPDATE)
-   * 
+   *
    * Uses UPSERT pattern (INSERT ... ON CONFLICT ... DO UPDATE)
    * to handle both new and existing settings.
-   * 
+   *
    * @param key - Setting key
    * @param value - Setting value (as string)
    */
@@ -67,34 +67,34 @@ export class SettingsRepository extends BaseRepository {
 
   /**
    * Get all settings
-   * 
+   *
    * @returns Array of all settings
    */
   public getAll(): Setting[] {
     const sql = `SELECT * FROM settings ORDER BY key ASC`;
     const rows = this.queryAll<any>(sql);
-    return rows.map(row => this._mapToSetting(row));
+    return rows.map((row) => this._mapToSetting(row));
   }
 
   /**
    * Get all settings as a key-value map
-   * 
+   *
    * @returns Object with key-value pairs
    */
   public getAllAsMap(): Record<string, string> {
     const settings = this.getAll();
     const map: Record<string, string> = {};
-    
-    settings.forEach(setting => {
+
+    settings.forEach((setting) => {
       map[setting.key] = setting.value;
     });
-    
+
     return map;
   }
 
   /**
    * Check if a setting exists
-   * 
+   *
    * @param key - Setting key
    * @returns true if setting exists
    */
@@ -105,7 +105,7 @@ export class SettingsRepository extends BaseRepository {
 
   /**
    * Delete a setting
-   * 
+   *
    * @param key - Setting key
    */
   public delete(key: string): void {
@@ -121,7 +121,7 @@ export class SettingsRepository extends BaseRepository {
 
   /**
    * Get multiple settings by keys
-   * 
+   *
    * @param keys - Array of setting keys
    * @returns Array of settings (only found ones)
    */
@@ -137,12 +137,12 @@ export class SettingsRepository extends BaseRepository {
     `;
 
     const rows = this.queryAll<any>(sql, keys);
-    return rows.map(row => this._mapToSetting(row));
+    return rows.map((row) => this._mapToSetting(row));
   }
 
   /**
    * Set multiple settings at once (transaction)
-   * 
+   *
    * @param settings - Object with key-value pairs
    */
   public setMany(settings: Record<string, string>): void {
@@ -161,7 +161,7 @@ export class SettingsRepository extends BaseRepository {
 
   /**
    * Get setting as boolean
-   * 
+   *
    * @param key - Setting key
    * @param defaultValue - Default value if not found
    * @returns Boolean value
@@ -174,7 +174,7 @@ export class SettingsRepository extends BaseRepository {
 
   /**
    * Get setting as number
-   * 
+   *
    * @param key - Setting key
    * @param defaultValue - Default value if not found
    * @returns Number value
@@ -188,7 +188,7 @@ export class SettingsRepository extends BaseRepository {
 
   /**
    * Get setting as integer
-   * 
+   *
    * @param key - Setting key
    * @param defaultValue - Default value if not found
    * @returns Integer value
@@ -202,7 +202,7 @@ export class SettingsRepository extends BaseRepository {
 
   /**
    * Set boolean setting
-   * 
+   *
    * @param key - Setting key
    * @param value - Boolean value
    */
@@ -212,7 +212,7 @@ export class SettingsRepository extends BaseRepository {
 
   /**
    * Set number setting
-   * 
+   *
    * @param key - Setting key
    * @param value - Number value
    */
@@ -227,7 +227,7 @@ export class SettingsRepository extends BaseRepository {
     return {
       key: row.key,
       value: row.value,
-      updatedAt: new Date(row.updated_at)
+      updatedAt: this.parseDate(row.updated_at),
     };
   }
 }

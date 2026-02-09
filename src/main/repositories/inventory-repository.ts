@@ -7,9 +7,9 @@ import { logger } from '../utils/logger';
 export interface InventoryLog {
   id: number;
   productId: number;
-  changeQty: number;              // Positive = add, negative = deduct
+  changeQty: number; // Positive = add, negative = deduct
   reason: 'SALE' | 'MANUAL' | 'ADJUSTMENT';
-  referenceId: number | null;     // Bill ID for sales, null for manual/adjustments
+  referenceId: number | null; // Bill ID for sales, null for manual/adjustments
   notes: string | null;
   createdAt: Date;
 }
@@ -19,15 +19,15 @@ export interface InventoryLog {
  */
 export interface CreateInventoryLogInput {
   productId: number;
-  changeQty: number;              // Positive = add, negative = deduct
+  changeQty: number; // Positive = add, negative = deduct
   reason: 'SALE' | 'MANUAL' | 'ADJUSTMENT';
-  referenceId?: number;           // Bill ID for sales
+  referenceId?: number; // Bill ID for sales
   notes?: string;
 }
 
 /**
  * Inventory Repository
- * 
+ *
  * Handles all database operations for inventory logs.
  * Logs are IMMUTABLE - once created, they cannot be modified or deleted.
  * This ensures a complete audit trail of all stock movements.
@@ -35,10 +35,10 @@ export interface CreateInventoryLogInput {
 export class InventoryRepository extends BaseRepository {
   /**
    * Log an inventory change (IMMUTABLE)
-   * 
+   *
    * This method creates an immutable log entry for any stock change.
    * Logs are never updated or deleted - they form a permanent audit trail.
-   * 
+   *
    * @param data - Inventory log data
    * @returns Created inventory log
    */
@@ -54,14 +54,14 @@ export class InventoryRepository extends BaseRepository {
       data.changeQty,
       data.reason,
       data.referenceId || null,
-      data.notes || null
+      data.notes || null,
     ]);
 
     logger.info('Inventory change logged', {
       id: result.lastInsertRowid,
       productId: data.productId,
       changeQty: data.changeQty,
-      reason: data.reason
+      reason: data.reason,
     });
 
     const log = this.findById(Number(result.lastInsertRowid));
@@ -83,7 +83,7 @@ export class InventoryRepository extends BaseRepository {
 
   /**
    * Get stock history for a product
-   * 
+   *
    * Returns all inventory changes for a product, ordered by date (newest first).
    * Useful for auditing and tracking stock movements.
    */
@@ -95,7 +95,7 @@ export class InventoryRepository extends BaseRepository {
     `;
 
     const rows = this.queryAll<any>(sql, [productId]);
-    return rows.map(row => this._mapToInventoryLog(row));
+    return rows.map((row) => this._mapToInventoryLog(row));
   }
 
   /**
@@ -109,7 +109,7 @@ export class InventoryRepository extends BaseRepository {
     `;
 
     const rows = this.queryAll<any>(sql, [reason]);
-    return rows.map(row => this._mapToInventoryLog(row));
+    return rows.map((row) => this._mapToInventoryLog(row));
   }
 
   /**
@@ -123,7 +123,7 @@ export class InventoryRepository extends BaseRepository {
     `;
 
     const rows = this.queryAll<any>(sql, [billId]);
-    return rows.map(row => this._mapToInventoryLog(row));
+    return rows.map((row) => this._mapToInventoryLog(row));
   }
 
   /**
@@ -136,12 +136,9 @@ export class InventoryRepository extends BaseRepository {
       ORDER BY created_at DESC
     `;
 
-    const rows = this.queryAll<any>(sql, [
-      fromDate.toISOString(),
-      toDate.toISOString()
-    ]);
+    const rows = this.queryAll<any>(sql, [fromDate.toISOString(), toDate.toISOString()]);
 
-    return rows.map(row => this._mapToInventoryLog(row));
+    return rows.map((row) => this._mapToInventoryLog(row));
   }
 
   /**
@@ -155,12 +152,12 @@ export class InventoryRepository extends BaseRepository {
     `;
 
     const rows = this.queryAll<any>(sql, [limit]);
-    return rows.map(row => this._mapToInventoryLog(row));
+    return rows.map((row) => this._mapToInventoryLog(row));
   }
 
   /**
    * Calculate total stock change for a product
-   * 
+   *
    * Sums all inventory changes to get the current stock level.
    * This should match the stock_qty in the products table.
    */
@@ -178,7 +175,10 @@ export class InventoryRepository extends BaseRepository {
   /**
    * Get inventory summary by reason for date range
    */
-  public getSummaryByReason(fromDate: Date, toDate: Date): {
+  public getSummaryByReason(
+    fromDate: Date,
+    toDate: Date
+  ): {
     reason: string;
     totalChanges: number;
     netQuantity: number;
@@ -194,15 +194,12 @@ export class InventoryRepository extends BaseRepository {
       ORDER BY reason
     `;
 
-    const rows = this.queryAll<any>(sql, [
-      fromDate.toISOString(),
-      toDate.toISOString()
-    ]);
+    const rows = this.queryAll<any>(sql, [fromDate.toISOString(), toDate.toISOString()]);
 
-    return rows.map(row => ({
+    return rows.map((row) => ({
       reason: row.reason,
       totalChanges: row.total_changes,
-      netQuantity: row.net_quantity
+      netQuantity: row.net_quantity,
     }));
   }
 
@@ -217,7 +214,7 @@ export class InventoryRepository extends BaseRepository {
       reason: row.reason,
       referenceId: row.reference_id,
       notes: row.notes,
-      createdAt: new Date(row.created_at)
+      createdAt: this.parseDate(row.created_at),
     };
   }
 }

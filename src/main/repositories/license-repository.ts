@@ -34,10 +34,10 @@ export interface LicenseValidationResult {
 
 /**
  * License Repository
- * 
+ *
  * Handles database operations for the license table.
  * The license table is a single-row table (id = 1).
- * 
+ *
  * IMPORTANT: This repository only handles data access.
  * License validation logic (encryption, fingerprinting, etc.)
  * should be handled by a separate LicenseService.
@@ -45,10 +45,10 @@ export interface LicenseValidationResult {
 export class LicenseRepository extends BaseRepository {
   /**
    * Save or update license (UPSERT)
-   * 
+   *
    * The license table only allows one row (id = 1).
    * This method will insert or update that single row.
-   * 
+   *
    * @param data - License data
    * @returns Saved license
    */
@@ -63,11 +63,7 @@ export class LicenseRepository extends BaseRepository {
         updated_at = datetime('now')
     `;
 
-    this.execute(sql, [
-      data.licenseKey,
-      data.expiresAt.toISOString(),
-      data.machineFingerprint
-    ]);
+    this.execute(sql, [data.licenseKey, data.expiresAt.toISOString(), data.machineFingerprint]);
 
     logger.info('License saved');
 
@@ -81,7 +77,7 @@ export class LicenseRepository extends BaseRepository {
 
   /**
    * Get the license
-   * 
+   *
    * @returns License or null if not activated
    */
   public get(): License | null {
@@ -92,7 +88,7 @@ export class LicenseRepository extends BaseRepository {
 
   /**
    * Check if license exists
-   * 
+   *
    * @returns true if license is activated
    */
   public exists(): boolean {
@@ -114,11 +110,11 @@ export class LicenseRepository extends BaseRepository {
 
   /**
    * Check if license is valid (basic offline check)
-   * 
+   *
    * This performs a simple expiry check only.
    * For complete validation (encryption, fingerprint, signature),
    * use a LicenseService.
-   * 
+   *
    * @returns Validation result
    */
   public isValid(): LicenseValidationResult {
@@ -128,7 +124,7 @@ export class LicenseRepository extends BaseRepository {
     if (!license) {
       return {
         isValid: false,
-        reason: 'No license found'
+        reason: 'No license found',
       };
     }
 
@@ -138,20 +134,20 @@ export class LicenseRepository extends BaseRepository {
       return {
         isValid: false,
         reason: 'License expired',
-        license
+        license,
       };
     }
 
     // Basic validation passed
     return {
       isValid: true,
-      license
+      license,
     };
   }
 
   /**
    * Get days until expiry
-   * 
+   *
    * @returns Days until expiry, or null if no license
    */
   public getDaysUntilExpiry(): number | null {
@@ -169,13 +165,13 @@ export class LicenseRepository extends BaseRepository {
 
   /**
    * Check if license is expiring soon
-   * 
+   *
    * @param daysThreshold - Number of days to consider "soon" (default 7)
    * @returns true if license expires within threshold
    */
   public isExpiringSoon(daysThreshold: number = 7): boolean {
     const daysUntilExpiry = this.getDaysUntilExpiry();
-    
+
     if (daysUntilExpiry === null) {
       return false;
     }
@@ -190,11 +186,11 @@ export class LicenseRepository extends BaseRepository {
     return {
       id: row.id,
       licenseKey: row.license_key,
-      activatedAt: new Date(row.activated_at),
-      expiresAt: new Date(row.expires_at),
+      activatedAt: this.parseDate(row.activated_at),
+      expiresAt: this.parseDate(row.expires_at),
       machineFingerprint: row.machine_fingerprint,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at)
+      createdAt: this.parseDate(row.created_at),
+      updatedAt: this.parseDate(row.updated_at),
     };
   }
 }

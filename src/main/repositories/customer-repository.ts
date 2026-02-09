@@ -9,7 +9,7 @@ export interface Customer {
   id: number;
   name: string;
   phone: string | null;
-  balanceDue: number;       // In rupees (positive = owes, negative = advance)
+  balanceDue: number; // In rupees (positive = owes, negative = advance)
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -21,7 +21,7 @@ export interface Customer {
 export interface CreateCustomerInput {
   name: string;
   phone?: string;
-  balanceDue?: number;      // In rupees (default 0)
+  balanceDue?: number; // In rupees (default 0)
 }
 
 /**
@@ -30,13 +30,13 @@ export interface CreateCustomerInput {
 export interface UpdateCustomerInput {
   name?: string;
   phone?: string;
-  balanceDue?: number;      // In rupees
+  balanceDue?: number; // In rupees
   isActive?: boolean;
 }
 
 /**
  * Customer Repository
- * 
+ *
  * Handles all database operations for customers.
  * Converts between database types (INTEGER paise) and domain types (number rupees).
  */
@@ -53,7 +53,7 @@ export class CustomerRepository extends BaseRepository {
     const result = this.execute(sql, [
       data.name,
       data.phone || null,
-      Math.round((data.balanceDue || 0) * 100)  // Rupees → Paise
+      Math.round((data.balanceDue || 0) * 100), // Rupees → Paise
     ]);
 
     logger.info('Customer created', { id: result.lastInsertRowid, name: data.name });
@@ -151,7 +151,7 @@ export class CustomerRepository extends BaseRepository {
       ORDER BY name ASC
     `;
     const rows = this.queryAll<any>(sql);
-    return rows.map(row => this._mapToCustomer(row));
+    return rows.map((row) => this._mapToCustomer(row));
   }
 
   /**
@@ -165,12 +165,12 @@ export class CustomerRepository extends BaseRepository {
       LIMIT 50
     `;
     const rows = this.queryAll<any>(sql, [`%${query}%`]);
-    return rows.map(row => this._mapToCustomer(row));
+    return rows.map((row) => this._mapToCustomer(row));
   }
 
   /**
    * Update customer balance (for udhaar tracking)
-   * 
+   *
    * @param customerId - Customer ID
    * @param deltaAmount - Change in balance (in rupees)
    *                      Positive = customer owes more
@@ -203,7 +203,7 @@ export class CustomerRepository extends BaseRepository {
       ORDER BY balance_due DESC
     `;
     const rows = this.queryAll<any>(sql);
-    return rows.map(row => this._mapToCustomer(row));
+    return rows.map((row) => this._mapToCustomer(row));
   }
 
   /**
@@ -216,7 +216,7 @@ export class CustomerRepository extends BaseRepository {
       ORDER BY balance_due ASC
     `;
     const rows = this.queryAll<any>(sql);
-    return rows.map(row => this._mapToCustomer(row));
+    return rows.map((row) => this._mapToCustomer(row));
   }
 
   /**
@@ -240,7 +240,7 @@ export class CustomerRepository extends BaseRepository {
 
   /**
    * Map database row to Customer domain object
-   * 
+   *
    * Converts:
    * - INTEGER paise → number rupees
    * - INTEGER 0/1 → boolean
@@ -251,10 +251,10 @@ export class CustomerRepository extends BaseRepository {
       id: row.id,
       name: row.name,
       phone: row.phone,
-      balanceDue: row.balance_due / 100,        // Paise → Rupees
-      isActive: row.is_active === 1,            // INTEGER → boolean
-      createdAt: new Date(row.created_at),      // TEXT → Date
-      updatedAt: new Date(row.updated_at)
+      balanceDue: row.balance_due / 100, // Paise → Rupees
+      isActive: row.is_active === 1, // INTEGER → boolean
+      createdAt: this.parseDate(row.created_at), // TEXT → Date
+      updatedAt: this.parseDate(row.updated_at),
     };
   }
 }

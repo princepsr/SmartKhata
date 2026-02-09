@@ -4,13 +4,13 @@ import Database from 'better-sqlite3';
 
 /**
  * Base Repository Class
- * 
+ *
  * Provides common database operations with:
  * - Type-safe query execution
  * - Centralized error handling
  * - Automatic logging
  * - Transaction support
- * 
+ *
  * All repositories should extend this class.
  */
 
@@ -23,7 +23,7 @@ export abstract class BaseRepository {
 
   /**
    * Execute a query that doesn't return data (INSERT, UPDATE, DELETE)
-   * 
+   *
    * @param sql - SQL query string
    * @param params - Query parameters
    * @returns RunResult with lastInsertRowid and changes
@@ -43,7 +43,7 @@ export abstract class BaseRepository {
 
   /**
    * Query for a single row
-   * 
+   *
    * @param sql - SQL query string
    * @param params - Query parameters
    * @returns Single row or undefined
@@ -63,7 +63,7 @@ export abstract class BaseRepository {
 
   /**
    * Query for multiple rows
-   * 
+   *
    * @param sql - SQL query string
    * @param params - Query parameters
    * @returns Array of rows (empty if no results)
@@ -83,7 +83,7 @@ export abstract class BaseRepository {
 
   /**
    * Execute a function within a transaction
-   * 
+   *
    * @param fn - Function to execute
    * @returns Result of the function
    */
@@ -101,7 +101,7 @@ export abstract class BaseRepository {
 
   /**
    * Check if a record exists
-   * 
+   *
    * @param sql - SQL query string (should return count or id)
    * @param params - Query parameters
    * @returns true if record exists
@@ -118,7 +118,7 @@ export abstract class BaseRepository {
 
   /**
    * Get count of records
-   * 
+   *
    * @param sql - SQL query string (should return count)
    * @param params - Query parameters
    * @returns Count of records
@@ -135,7 +135,7 @@ export abstract class BaseRepository {
 
   /**
    * Centralized error handling
-   * 
+   *
    * Converts database errors into application-friendly errors
    */
   private handleError(error: unknown, operation: string): Error {
@@ -144,29 +144,29 @@ export abstract class BaseRepository {
       if (error.message.includes('UNIQUE constraint failed')) {
         return new DatabaseError('Record already exists', 'UNIQUE_VIOLATION', error);
       }
-      
+
       if (error.message.includes('FOREIGN KEY constraint failed')) {
-        return new DatabaseError('Referenced record does not exist', 'FOREIGN_KEY_VIOLATION', error);
+        return new DatabaseError(
+          'Referenced record does not exist',
+          'FOREIGN_KEY_VIOLATION',
+          error
+        );
       }
-      
+
       if (error.message.includes('NOT NULL constraint failed')) {
         return new DatabaseError('Required field is missing', 'NOT_NULL_VIOLATION', error);
       }
-      
+
       if (error.message.includes('CHECK constraint failed')) {
         return new DatabaseError('Invalid data value', 'CHECK_VIOLATION', error);
       }
-      
+
       if (error.message.includes('database is locked')) {
         return new DatabaseError('Database is busy, please try again', 'DATABASE_LOCKED', error);
       }
 
       // Generic database error
-      return new DatabaseError(
-        `Database operation failed: ${operation}`,
-        'DATABASE_ERROR',
-        error
-      );
+      return new DatabaseError(`Database operation failed: ${operation}`, 'DATABASE_ERROR', error);
     }
 
     // Unknown error
@@ -176,11 +176,32 @@ export abstract class BaseRepository {
       new Error(String(error))
     );
   }
+  /**
+   * Parse SQLite date string (UTC) to JavaScript Date object
+   *
+   * SQLite datetime('now') returns 'YYYY-MM-DD HH:MM:SS' in UTC.
+   * Native JS 'new Date()' without 'Z' or offset assumes Local Time.
+   * This helper ensures the string is forced to UTC interpretation.
+   */
+  protected parseDate(dateStr: string): Date {
+    if (!dateStr) {
+      return new Date();
+    }
+
+    // If it's already an ISO string with Z or offset, use as is
+    if (dateStr.includes('Z') || /[+-]\d{2}:\d{2}$/.test(dateStr)) {
+      return new Date(dateStr);
+    }
+
+    // SQLite format 'YYYY-MM-DD HH:MM:SS' -> 'YYYY-MM-DDTHH:MM:SSZ'
+    const utcStr = dateStr.replace(' ', 'T') + 'Z';
+    return new Date(utcStr);
+  }
 }
 
 /**
  * Custom Database Error
- * 
+ *
  * Provides structured error information for better error handling
  */
 export class DatabaseError extends Error {
