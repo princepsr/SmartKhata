@@ -47,6 +47,7 @@ Layout
 **Why sidebar?**
 
 ✅ **Advantages:**
+
 - Always visible (no hamburger menu)
 - Vertical space is less precious than horizontal
 - Large clickable targets
@@ -54,6 +55,7 @@ Layout
 - Doesn't compete with page headers
 
 ❌ **Top bar would:**
+
 - Take horizontal space needed for tables/forms
 - Require smaller icons/text
 - Hide shortcuts or require dropdown
@@ -66,20 +68,22 @@ Layout
 
 ```css
 :root {
-  --font-size-base: 18px;   /* Normal text */
-  --font-size-lg: 22px;     /* Important text */
-  --font-size-xl: 28px;     /* Section headers */
-  --font-size-2xl: 36px;    /* Page titles */
+  --font-size-base: 18px; /* Normal text */
+  --font-size-lg: 22px; /* Important text */
+  --font-size-xl: 28px; /* Section headers */
+  --font-size-2xl: 36px; /* Page titles */
 }
 ```
 
 **Why large fonts?**
+
 - Readable from 2-3 feet away (standing at counter)
 - Reduces eye strain during long shifts
 - Easier for older shopkeepers
 - Faster visual scanning
 
 **Comparison:**
+
 - Web apps: 14-16px base
 - SmartKhata: 18px base (22% larger)
 
@@ -89,20 +93,22 @@ Layout
 
 ```css
 :root {
-  --color-bg: #ffffff;           /* Pure white */
-  --color-text: #111827;         /* Near black */
-  --color-primary: #2563eb;      /* Vibrant blue */
-  --color-border: #d1d5db;       /* Clear gray */
+  --color-bg: #ffffff; /* Pure white */
+  --color-text: #111827; /* Near black */
+  --color-primary: #2563eb; /* Vibrant blue */
+  --color-border: #d1d5db; /* Clear gray */
 }
 ```
 
 **Why high contrast?**
+
 - Visibility in bright shop environments
 - Works under fluorescent lighting
 - No pastel or low-contrast colors
 - Clear visual hierarchy
 
 **WCAG Compliance:**
+
 - Text contrast ratio: 16:1 (AAA standard)
 - Interactive elements: 7:1 minimum
 
@@ -111,6 +117,7 @@ Layout
 ### 4. Keyboard-First Navigation
 
 **Keyboard shortcuts:**
+
 - `F2` - Billing
 - `F3` - Products
 - `F4` - Customers
@@ -121,6 +128,7 @@ Layout
 - `Esc` - Cancel
 
 **Visual indicators:**
+
 ```css
 *:focus-visible {
   outline: 2px solid var(--color-primary);
@@ -130,6 +138,7 @@ Layout
 ```
 
 **Why keyboard-first?**
+
 - Faster than mouse for repetitive tasks
 - Hands stay on keyboard during billing
 - Accessibility for power users
@@ -140,6 +149,7 @@ Layout
 ### 5. Minimal Clutter
 
 **What we avoid:**
+
 - ❌ Animations (slow on low-end PCs)
 - ❌ Gradients (visual noise)
 - ❌ Drop shadows (except subtle ones)
@@ -147,6 +157,7 @@ Layout
 - ❌ Decorative elements
 
 **What we use:**
+
 - ✅ Flat colors
 - ✅ Clear borders
 - ✅ Generous whitespace
@@ -160,18 +171,35 @@ Layout
 ## Billing Page Specifics
 
 ### 1. Search Results Grid
+
 **Decision:** Use CSS Grid for search dropdown results to ensure vertical alignment of product name, stock, and price.
 
 **Structure:**
+
 - **Product Name:** `1fr` (Flexible space, left-aligned)
 - **Stock / SKU:** `1fr` (Flexible space, left-aligned in center)
 - **Price:** `100px` (Fixed space, right-aligned)
 
 ### 2. Cart Quantity Controls
+
 **Decision:** Horizontal alignment of `-`, `Input`, and `+` buttons for better ergonomics.
 
 - **Non-destructive Input:** Local state allows clearing the input without immediate item removal.
 - **Circular Buttons:** Large targets optimized for quick interaction.
+
+### 3. Vertical Filter Pattern
+
+**Decision:** Stack filters vertically on the left/right of data tables (e.g., Products Page) rather than horizontally.
+
+- **Reasoning:** Better scanability and more vertical space for the main data table.
+- **Implementation:** Use a sidebar or a dedicated column for filters that remains consistent across management screens.
+
+### 4. Billing Summary Refinement
+
+**Decision:** Semantic grouping of totals (Subtotal, GST, Discount, Grand Total) with clear toggle controls for discounts.
+
+- **Flat Structure:** Discount row uses flexbox for label, toggle, and input alignment.
+- **Visual Priority:** Grand total is emphasized with larger font and vibrant success color.
 
 ---
 
@@ -189,7 +217,7 @@ Layout
       <h1>SmartKhata</h1>
       <p>v{appVersion}</p>
     </div>
-    
+
     <nav className="sidebar-nav">
       <NavLink to="/billing">
         <span className="nav-icon">💳</span>
@@ -199,7 +227,7 @@ Layout
       {/* ... more nav items */}
     </nav>
   </aside>
-  
+
   {/* Main Content */}
   <main className="layout-main">
     <Outlet />
@@ -215,24 +243,25 @@ Layout
 
 ```css
 .layout {
-  display: flex;           /* Sidebar + Main */
-  height: 100vh;           /* Full viewport */
-  overflow: hidden;        /* No scroll on layout */
+  display: flex; /* Sidebar + Main */
+  height: 100vh; /* Full viewport */
+  overflow: hidden; /* No scroll on layout */
 }
 
 .layout-sidebar {
-  width: 250px;            /* Fixed width */
+  width: 250px; /* Fixed width */
   background-color: var(--color-primary);
 }
 
 .layout-main {
-  flex: 1;                 /* Take remaining space */
-  overflow-y: auto;        /* Scroll within main */
+  flex: 1; /* Take remaining space */
+  overflow-y: auto; /* Scroll within main */
   background-color: var(--color-bg-secondary);
 }
 ```
 
 **Key points:**
+
 - Flexbox for layout (simple, performant)
 - Fixed sidebar width (predictable)
 - Scrolling only in main area
@@ -252,6 +281,7 @@ Layout
 ```
 
 **Visual feedback:**
+
 - Background highlight
 - Left border indicator
 - Always clear which page you're on
@@ -267,6 +297,7 @@ Layout
 ```
 
 **Subtle feedback:**
+
 - Light background on hover
 - Smooth transition (0.2s)
 - Not distracting
@@ -288,6 +319,7 @@ Layout
 ```
 
 **Benefits:**
+
 - Always visible
 - Teaches users shortcuts
 - Aligned to the right
@@ -300,6 +332,7 @@ Layout
 **Current:** Fixed 250px sidebar
 
 **Future (if needed):**
+
 - Collapsible sidebar (toggle with `Ctrl+B`)
 - Icon-only mode (save space)
 - Top bar on very small screens (unlikely for POS)
@@ -318,12 +351,14 @@ Layout
 ```
 
 **Usage:**
+
 - Sidebar background
 - Primary buttons
 - Focus indicators
 - Active links
 
 **Why blue?**
+
 - Professional
 - High contrast with white
 - Not associated with errors/warnings
@@ -334,12 +369,13 @@ Layout
 ### Semantic Colors
 
 ```css
---color-success: #16a34a;  /* Green */
---color-warning: #ea580c;  /* Orange */
---color-error: #dc2626;    /* Red */
+--color-success: #16a34a; /* Green */
+--color-warning: #ea580c; /* Orange */
+--color-error: #dc2626; /* Red */
 ```
 
 **Usage:**
+
 - Success: Completed sales, saved settings
 - Warning: Low stock, pending actions
 - Error: Failed operations, validation errors
@@ -349,11 +385,12 @@ Layout
 ### Background Colors
 
 ```css
---color-bg: #ffffff;           /* Main background */
+--color-bg: #ffffff; /* Main background */
 --color-bg-secondary: #f3f4f6; /* Content area */
 ```
 
 **Why two backgrounds?**
+
 - Visual separation
 - Cards/forms stand out on secondary
 - Depth without shadows
@@ -369,6 +406,7 @@ Layout
 ```
 
 **System font stack:**
+
 - Fast (no download)
 - Native look
 - Excellent readability
@@ -378,13 +416,13 @@ Layout
 
 ### Font Sizes
 
-| Variable | Size | Usage |
-|----------|------|-------|
-| `--font-size-sm` | 16px | Helper text, shortcuts |
-| `--font-size-base` | 18px | Body text, labels |
-| `--font-size-lg` | 22px | Important text, inputs |
-| `--font-size-xl` | 28px | Section headers |
-| `--font-size-2xl` | 36px | Page titles |
+| Variable           | Size | Usage                  |
+| ------------------ | ---- | ---------------------- |
+| `--font-size-sm`   | 16px | Helper text, shortcuts |
+| `--font-size-base` | 18px | Body text, labels      |
+| `--font-size-lg`   | 22px | Important text, inputs |
+| `--font-size-xl`   | 28px | Section headers        |
+| `--font-size-2xl`  | 36px | Page titles            |
 
 **Scale:** ~1.22x ratio (harmonious)
 
@@ -401,11 +439,13 @@ Layout
 ```
 
 **8px base grid:**
+
 - Consistent rhythm
 - Easy mental math
 - Aligns with design tools
 
 **Usage:**
+
 - `xs`: Icon padding
 - `sm`: Between related items
 - `md`: Standard padding
@@ -419,6 +459,7 @@ Layout
 ### Keyboard Navigation
 
 ✅ **Implemented:**
+
 - Tab order follows visual order
 - Focus indicators on all interactive elements
 - Keyboard shortcuts for main actions
@@ -429,6 +470,7 @@ Layout
 ### Screen Readers
 
 ✅ **Semantic HTML:**
+
 ```tsx
 <aside>        // Sidebar
 <nav>          // Navigation
@@ -437,6 +479,7 @@ Layout
 ```
 
 **Benefits:**
+
 - Screen readers understand structure
 - Better SEO (if web version)
 - Easier to maintain
@@ -446,11 +489,13 @@ Layout
 ### Color Contrast
 
 ✅ **WCAG AAA:**
+
 - Text on white: 16:1 ratio
 - White on blue: 7:1 ratio
 - All interactive elements: 7:1 minimum
 
 **Tested with:**
+
 - WebAIM Contrast Checker
 - Chrome DevTools Accessibility
 
@@ -461,6 +506,7 @@ Layout
 ### CSS Performance
 
 ✅ **Optimizations:**
+
 - No complex selectors
 - Minimal nesting
 - CSS variables (fast)
@@ -473,6 +519,7 @@ Layout
 ### Layout Performance
 
 ✅ **Optimizations:**
+
 - Flexbox (GPU-accelerated)
 - No absolute positioning
 - Fixed sidebar width (no reflow)
@@ -505,9 +552,7 @@ Layout
 ```tsx
 const [collapsed, setCollapsed] = useState(false);
 
-<aside className={collapsed ? 'sidebar-collapsed' : 'sidebar'}>
-  {/* Icon-only mode */}
-</aside>
+<aside className={collapsed ? 'sidebar-collapsed' : 'sidebar'}>{/* Icon-only mode */}</aside>;
 ```
 
 **Use case:** More screen space for tables
@@ -518,8 +563,7 @@ const [collapsed, setCollapsed] = useState(false);
 
 ```tsx
 <nav className="breadcrumbs">
-  <a href="/products">Products</a> / 
-  <span>Edit Product</span>
+  <a href="/products">Products</a> /<span>Edit Product</span>
 </nav>
 ```
 
@@ -554,14 +598,14 @@ const [collapsed, setCollapsed] = useState(false);
 
 ## Summary
 
-| Aspect | Decision | Rationale |
-|--------|----------|-----------|
-| **Layout** | Sidebar + Main | Always visible navigation |
-| **Fonts** | 18px base, up to 36px | Readable from distance |
-| **Colors** | High contrast | Visibility in bright shops |
-| **Navigation** | Keyboard-first | Faster for POS workflow |
-| **Clutter** | Minimal | Focus on content |
-| **Performance** | Simple CSS | Works on low-end PCs |
+| Aspect          | Decision              | Rationale                  |
+| --------------- | --------------------- | -------------------------- |
+| **Layout**      | Sidebar + Main        | Always visible navigation  |
+| **Fonts**       | 18px base, up to 36px | Readable from distance     |
+| **Colors**      | High contrast         | Visibility in bright shops |
+| **Navigation**  | Keyboard-first        | Faster for POS workflow    |
+| **Clutter**     | Minimal               | Focus on content           |
+| **Performance** | Simple CSS            | Works on low-end PCs       |
 
 **Key principle:** **Function over form. Speed over beauty. Clarity over cleverness.**
 

@@ -111,6 +111,7 @@ SmartKhata/
 │
 ├── docs/                          # Project documentation
 │   ├── ARCHITECTURE_DECISIONS.md
+│   ├── UI_ARCHITECTURE.md
 │   ├── GIT_WORKFLOW.md
 │   └── API.md                     # IPC API documentation
 │
@@ -120,11 +121,9 @@ SmartKhata/
 │   └── migrate.js
 │
 ├── tests/                         # Tests (mirrors src structure)
-│   ├── main/
-│   │   ├── services/
-│   │   └── repositories/
-│   └── renderer/
-│       └── components/
+│   ├── services/                  # Integration tests
+│   ├── unit/                      # Pure unit tests (no dependencies)
+│   └── utils/                     # Test helpers
 │
 ├── .gitignore
 ├── package.json
@@ -132,6 +131,8 @@ SmartKhata/
 ├── tsconfig.json                  # Root TypeScript config
 ├── tsconfig.main.json             # Main process config
 ├── tsconfig.renderer.json         # Renderer config
+├── vitest.config.ts               # Global test config
+├── vitest.unit.config.ts          # Pure unit test config
 ├── eslint.config.js
 └── README.md
 ```
@@ -144,16 +145,17 @@ SmartKhata/
 
 **Purpose:** Backend logic, database access, system operations
 
-| Folder | Responsibility | Example |
-|--------|---------------|---------|
-| `services/` | Business logic, orchestration | `product-service.ts` handles product CRUD + validation |
-| `repositories/` | Direct database access (SQLite) | `product-repository.ts` executes SQL queries |
+| Folder          | Responsibility                    | Example                                                  |
+| --------------- | --------------------------------- | -------------------------------------------------------- |
+| `services/`     | Business logic, orchestration     | `product-service.ts` handles product CRUD + validation   |
+| `repositories/` | Direct database access (SQLite)   | `product-repository.ts` executes SQL queries             |
 | `ipc-handlers/` | Handle IPC requests from renderer | `product-handlers.ts` receives IPC calls, calls services |
-| `database/` | DB connection, migrations, seeds | `connection.ts` manages SQLite connection pool |
-| `utils/` | Main-specific utilities | `printer.ts` handles thermal printer communication |
-| `config/` | App configuration | `app-config.ts` loads settings from file/env |
+| `database/`     | DB connection, migrations, seeds  | `connection.ts` manages SQLite connection pool           |
+| `utils/`        | Main-specific utilities           | `printer.ts` handles thermal printer communication       |
+| `config/`       | App configuration                 | `app-config.ts` loads settings from file/env             |
 
 **Key Principles:**
+
 - Services call repositories (never direct DB access from services)
 - IPC handlers call services (thin layer, no business logic)
 - All database code stays in `repositories/`
@@ -164,17 +166,18 @@ SmartKhata/
 
 **Purpose:** User interface, user interactions, display logic
 
-| Folder | Responsibility | Example |
-|--------|---------------|---------|
-| `pages/` | Full-page components (routes) | `BillingPage.tsx` - main billing screen |
-| `components/` | Reusable UI components | `ProductSearch.tsx` - search widget |
-| `components/common/` | Generic UI elements | `Button.tsx`, `Modal.tsx` |
-| `hooks/` | Custom React hooks | `useProducts.ts` - fetch products via IPC |
-| `services/` | IPC wrappers (API layer) | `product-api.ts` wraps `window.electron.getProducts()` |
-| `styles/` | Global CSS, themes | `variables.css` - color palette, spacing |
-| `utils/` | Renderer-specific utilities | `formatters.ts` - format currency, dates |
+| Folder               | Responsibility                | Example                                                |
+| -------------------- | ----------------------------- | ------------------------------------------------------ |
+| `pages/`             | Full-page components (routes) | `BillingPage.tsx` - main billing screen                |
+| `components/`        | Reusable UI components        | `ProductSearch.tsx` - search widget                    |
+| `components/common/` | Generic UI elements           | `Button.tsx`, `Modal.tsx`                              |
+| `hooks/`             | Custom React hooks            | `useProducts.ts` - fetch products via IPC              |
+| `services/`          | IPC wrappers (API layer)      | `product-api.ts` wraps `window.electron.getProducts()` |
+| `styles/`            | Global CSS, themes            | `variables.css` - color palette, spacing               |
+| `utils/`             | Renderer-specific utilities   | `formatters.ts` - format currency, dates               |
 
 **Key Principles:**
+
 - Pages compose components
 - Components use hooks for data fetching
 - Hooks call services (IPC wrappers)
@@ -186,17 +189,18 @@ SmartKhata/
 
 **Purpose:** Secure bridge between main and renderer processes
 
-| File | Responsibility |
-|------|---------------|
-| `index.ts` | Exposes safe IPC methods to renderer via `contextBridge` |
-| `ipc-channels.ts` | Defines IPC channel name constants |
+| File              | Responsibility                                           |
+| ----------------- | -------------------------------------------------------- |
+| `index.ts`        | Exposes safe IPC methods to renderer via `contextBridge` |
+| `ipc-channels.ts` | Defines IPC channel name constants                       |
 
 **Example:**
+
 ```typescript
 // preload/index.ts
 contextBridge.exposeInMainWorld('electron', {
   getProducts: () => ipcRenderer.invoke('products:getAll'),
-  createSale: (data) => ipcRenderer.invoke('sales:create', data)
+  createSale: (data) => ipcRenderer.invoke('sales:create', data),
 });
 ```
 
@@ -206,13 +210,14 @@ contextBridge.exposeInMainWorld('electron', {
 
 **Purpose:** Code used by both main and renderer processes
 
-| Folder | Responsibility | Example |
-|--------|---------------|---------|
-| `types/` | TypeScript interfaces/types | `product.types.ts` - `Product` interface |
-| `constants/` | Shared constants | `ipc-events.ts` - IPC channel names |
-| `utils/` | Pure utility functions | `date-utils.ts` - date formatting |
+| Folder       | Responsibility              | Example                                  |
+| ------------ | --------------------------- | ---------------------------------------- |
+| `types/`     | TypeScript interfaces/types | `product.types.ts` - `Product` interface |
+| `constants/` | Shared constants            | `ipc-events.ts` - IPC channel names      |
+| `utils/`     | Pure utility functions      | `date-utils.ts` - date formatting        |
 
 **Key Principles:**
+
 - No Node.js-specific code (must work in browser)
 - No Electron-specific code
 - Pure functions only
@@ -295,11 +300,13 @@ contextBridge.exposeInMainWorld('electron', {
 ## Future Extensibility
 
 **For cloud sync (later):**
+
 - Add `src/main/sync/` for sync logic
 - Add `src/shared/types/sync.types.ts`
 - Keep repositories unchanged (sync layer sits above)
 
 **For plugins/extensions:**
+
 - Add `src/main/plugins/` for plugin system
 - Add `src/shared/plugin-api/` for plugin interfaces
 
@@ -307,13 +314,13 @@ contextBridge.exposeInMainWorld('electron', {
 
 ## Summary
 
-| Layer | Location | Purpose |
-|-------|----------|---------|
-| **UI** | `src/renderer/` | React components, pages, hooks |
-| **IPC Bridge** | `src/preload/` | Secure main ↔ renderer communication |
-| **Business Logic** | `src/main/services/` | Validation, orchestration |
-| **Data Access** | `src/main/repositories/` | SQLite queries |
-| **Shared** | `src/shared/` | Types, constants, pure utils |
+| Layer              | Location                 | Purpose                              |
+| ------------------ | ------------------------ | ------------------------------------ |
+| **UI**             | `src/renderer/`          | React components, pages, hooks       |
+| **IPC Bridge**     | `src/preload/`           | Secure main ↔ renderer communication |
+| **Business Logic** | `src/main/services/`     | Validation, orchestration            |
+| **Data Access**    | `src/main/repositories/` | SQLite queries                       |
+| **Shared**         | `src/shared/`            | Types, constants, pure utils         |
 
 ---
 

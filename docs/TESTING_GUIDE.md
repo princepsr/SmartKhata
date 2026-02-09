@@ -48,10 +48,12 @@ tests/
 ├── utils/
 │   └── test-db.ts                    # Test database utilities
 └── services/
-    ├── billing-service.test.ts       # Billing tests (18 tests)
-    ├── product-service.test.ts       # Product tests (15 tests)
-    ├── customer-service.test.ts      # Customer tests (10 tests)
-    └── license-service.test.ts       # License tests (9 tests)
+    ├── billing-service.test.ts       # Billing services (14 tests)
+    ├── product-service.test.ts       # Product services (23 tests)
+    ├── customer-service.test.ts      # Customer tests (12 tests)
+    └── license-service.test.ts       # License tests (12 tests)
+├── unit/
+    └── billing-math.test.ts          # Pure math tests (9 tests)
 ```
 
 ---
@@ -97,12 +99,13 @@ describe('MyService', () => {
 
 ### Current Coverage
 
-| Component | Tests | Coverage Goal |
-|-----------|-------|---------------|
-| BillingService | 18 | 90%+ |
-| ProductService | 15 | 90%+ |
-| CustomerService | 10 | 90%+ |
-| LicenseService | 9 | 90%+ |
+| Component       | Tests | Coverage Goal |
+| --------------- | ----- | ------------- |
+| BillingService  | 14    | 90%+          |
+| ProductService  | 23    | 90%+          |
+| CustomerService | 12    | 90%+          |
+| LicenseService  | 12    | 90%+          |
+| BillingMath     | 9     | 100%          |
 
 ### View Coverage Report
 
@@ -160,6 +163,7 @@ describe('MyService - Feature Name', () => {
 **File:** `tests/services/billing-service.test.ts`
 
 **Tests:**
+
 - ✅ Line total calculations
 - ✅ Bill total calculations
 - ✅ Discount application
@@ -173,6 +177,7 @@ describe('MyService - Feature Name', () => {
 **File:** `tests/services/product-service.test.ts`
 
 **Tests:**
+
 - ✅ Product creation
 - ✅ Input validation
 - ✅ Duplicate prevention
@@ -185,6 +190,7 @@ describe('MyService - Feature Name', () => {
 **File:** `tests/services/customer-service.test.ts`
 
 **Tests:**
+
 - ✅ Customer creation
 - ✅ Phone validation
 - ✅ Balance management
@@ -196,6 +202,7 @@ describe('MyService - Feature Name', () => {
 **File:** `tests/services/license-service.test.ts`
 
 **Tests:**
+
 - ✅ Trial license generation
 - ✅ License activation
 - ✅ Expiry validation
@@ -320,9 +327,11 @@ jobs:
 ## Summary
 
 **Testing Stack:**
+
 - ✅ Vitest - Test framework
 - ✅ In-memory SQLite - Test database
 - ✅ Coverage reports - V8 provider
-- ✅ 52+ test cases - Comprehensive coverage
+- ✅ 70+ test cases - Comprehensive coverage
+- ✅ Pure unit tests - For math and logic
 
 **Run tests before committing code!**

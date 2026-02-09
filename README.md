@@ -8,15 +8,15 @@ A fast, offline-first point-of-sale system built for Indian kirana shops. No clo
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Desktop Framework** | Electron 34 |
-| **UI** | React 18 + TypeScript |
-| **Build Tool** | Vite 6 |
-| **Database** | SQLite (better-sqlite3) |
-| **Testing** | Vitest + In-memory SQLite |
-| **Package Manager** | pnpm |
-| **Linting** | ESLint + Prettier |
+| Layer                 | Technology                |
+| --------------------- | ------------------------- |
+| **Desktop Framework** | Electron 34               |
+| **UI**                | React 18 + TypeScript     |
+| **Build Tool**        | Vite 6                    |
+| **Database**          | SQLite (better-sqlite3)   |
+| **Testing**           | Vitest + In-memory SQLite |
+| **Package Manager**   | pnpm                      |
+| **Linting**           | ESLint + Prettier         |
 
 **Architecture:** Clean layered architecture (UI → IPC → Service → Repository → Database)
 
@@ -131,55 +131,6 @@ pnpm clean            # Remove build directories
 
 ---
 
-## Project Status
-
-**Current Phase:** T1.4 - Service Layer ✅ COMPLETE
-
-### Completed ✅
-
-**Foundation (T0.1)**
-- [x] Mono-repo structure with pnpm
-- [x] TypeScript configuration (main, renderer, shared)
-- [x] ESLint + Prettier (minimal rules)
-- [x] Vite build setup
-- [x] Environment configuration (dev vs prod)
-- [x] File-based logging system
-- [x] Git workflow & branching strategy
-- [x] IPC communication layer (Handler, Registry, Validation, Secure Preload)
-
-**Database Layer (T1.1-T1.3)**
-- [x] SQLite integration (better-sqlite3)
-- [x] Database schema (8 tables)
-- [x] Migration system
-- [x] Repository pattern (BaseRepository + 6 repositories)
-- [x] Transaction support
-- [x] Error handling & recovery
-
-**Service Layer (T1.4)**
-- [x] Service layer architecture
-- [x] ProductService (CRUD, stock, validation)
-- [x] BillingService (calculations, finalization)
-- [x] CustomerService (balance, phone validation)
-- [x] InventoryService (stock rules, availability)
-- [x] SettingsService (config, caching)
-- [x] LicenseService (validation, expiry)
-- [x] Typed error system
-- [x] IPC to Service mapping
-- [x] Unit tests (52+ test cases, Vitest)
-
-### In Progress 🚧
-- [ ] UI components (React)
-- [ ] Billing screen
-- [ ] Product management screen
-
-### Upcoming 📋
-- [ ] Customer management screen
-- [ ] Reports & analytics
-- [ ] Thermal printer support
-- [ ] Database backup/restore
-
----
-
 ## Architecture Principles
 
 ### Golden Rules
@@ -217,10 +168,12 @@ SQLite Database
 **SQLite** (single file, local-only)
 
 **Location:**
+
 - Dev: `SmartKhata/dev-data/smartkhata.db`
 - Prod: `C:\Users\<User>\AppData\Roaming\SmartKhata\data\smartkhata.db`
 
 **Tables:**
+
 - `products` - Product catalog
 - `customers` - Customer info
 - `bills` - Sales records
@@ -244,6 +197,7 @@ SQLite Database
 ### App Constants
 
 All constants in `src/shared/constants/app-constants.ts`:
+
 - App metadata (name, version)
 - IPC event names
 - Business rules (currency, tax)
@@ -266,6 +220,7 @@ logger.error('Database error', error);
 ```
 
 **Log files:**
+
 - Dev: `SmartKhata/dev-data/logs/app-2026-02-08.log`
 - Prod: `C:\Users\<User>\AppData\Roaming\SmartKhata\logs\app-2026-02-08.log`
 
@@ -285,6 +240,7 @@ pnpm build:win
 ```
 
 **Output:**
+
 ```
 release/
 ├── SmartKhata Setup 0.1.0.exe    # Installer
@@ -303,11 +259,11 @@ pnpm build:win:portable
 
 ## Team Structure
 
-| Developer | Responsibility |
-|-----------|---------------|
+| Developer | Responsibility                       |
+| --------- | ------------------------------------ |
 | **Dev 1** | Electron main process, IPC, printing |
-| **Dev 2** | React UI, UX, components |
-| **Dev 3** | Database, services, business logic |
+| **Dev 2** | React UI, UX, components             |
+| **Dev 3** | Database, services, business logic   |
 
 **Workflow:** See [GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)
 
@@ -316,43 +272,48 @@ pnpm build:win:portable
 ## Documentation
 
 ### Core Architecture
-| Document | Purpose |
-|----------|---------|
-| [CURRENT_ARCHITECTURE.md](docs/CURRENT_ARCHITECTURE.md) | **Complete architecture overview** |
+
+| Document                                                    | Purpose                               |
+| ----------------------------------------------------------- | ------------------------------------- |
+| [CURRENT_ARCHITECTURE.md](docs/CURRENT_ARCHITECTURE.md)     | **Complete architecture overview**    |
 | [ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md) | Tech choices, service layer, patterns |
-| [FOLDER_STRUCTURE.md](docs/FOLDER_STRUCTURE.md) | Complete folder breakdown |
+| [FOLDER_STRUCTURE.md](docs/FOLDER_STRUCTURE.md)             | Complete folder breakdown             |
 
 ### Service Layer
-| Document | Purpose |
-|----------|---------|
-| [SERVICE_LAYER_RULES.md](docs/SERVICE_LAYER_RULES.md) | Service layer responsibilities & rules |
-| [SERVICE_ERROR_FLOW.md](docs/SERVICE_ERROR_FLOW.md) | Error handling & typed errors |
-| [IPC_SERVICE_MAPPING.md](docs/IPC_SERVICE_MAPPING.md) | IPC to service communication |
-| [SERVICE_LAYER_TESTING.md](docs/SERVICE_LAYER_TESTING.md) | Testing strategy |
-| [TESTING_GUIDE.md](docs/TESTING_GUIDE.md) | How to run and write tests |
+
+| Document                                                  | Purpose                                |
+| --------------------------------------------------------- | -------------------------------------- |
+| [SERVICE_LAYER_RULES.md](docs/SERVICE_LAYER_RULES.md)     | Service layer responsibilities & rules |
+| [SERVICE_ERROR_FLOW.md](docs/SERVICE_ERROR_FLOW.md)       | Error handling & typed errors          |
+| [IPC_SERVICE_MAPPING.md](docs/IPC_SERVICE_MAPPING.md)     | IPC to service communication           |
+| [SERVICE_LAYER_TESTING.md](docs/SERVICE_LAYER_TESTING.md) | Testing strategy                       |
+| [TESTING_GUIDE.md](docs/TESTING_GUIDE.md)                 | How to run and write tests             |
 
 ### Database & Repository
-| Document | Purpose |
-|----------|---------|
-| [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | Complete schema documentation |
-| [REPOSITORY_RULES.md](docs/REPOSITORY_RULES.md) | Repository pattern & rules |
-| [DATABASE_TRANSACTIONS.md](docs/DATABASE_TRANSACTIONS.md) | Transaction handling |
+
+| Document                                                  | Purpose                       |
+| --------------------------------------------------------- | ----------------------------- |
+| [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)             | Complete schema documentation |
+| [REPOSITORY_RULES.md](docs/REPOSITORY_RULES.md)           | Repository pattern & rules    |
+| [DATABASE_TRANSACTIONS.md](docs/DATABASE_TRANSACTIONS.md) | Transaction handling          |
 
 ### Development
-| Document | Purpose |
-|----------|---------|
-| [TYPESCRIPT_SETUP.md](docs/TYPESCRIPT_SETUP.md) | TypeScript configs, path aliases |
-| [LINTING_FORMATTING.md](docs/LINTING_FORMATTING.md) | ESLint + Prettier setup |
-| [DEV_SCRIPTS.md](docs/DEV_SCRIPTS.md) | Development workflow, HMR, builds |
-| [ENVIRONMENT_CONFIG.md](docs/ENVIRONMENT_CONFIG.md) | Config management, file paths |
-| [LOGGING.md](docs/LOGGING.md) | Logging system usage |
-| [GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md) | Branching, PRs, merge strategy |
+
+| Document                                            | Purpose                           |
+| --------------------------------------------------- | --------------------------------- |
+| [TYPESCRIPT_SETUP.md](docs/TYPESCRIPT_SETUP.md)     | TypeScript configs, path aliases  |
+| [LINTING_FORMATTING.md](docs/LINTING_FORMATTING.md) | ESLint + Prettier setup           |
+| [DEV_SCRIPTS.md](docs/DEV_SCRIPTS.md)               | Development workflow, HMR, builds |
+| [ENVIRONMENT_CONFIG.md](docs/ENVIRONMENT_CONFIG.md) | Config management, file paths     |
+| [LOGGING.md](docs/LOGGING.md)                       | Logging system usage              |
+| [GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)             | Branching, PRs, merge strategy    |
 
 ---
 
 ## Roadmap
 
 ### Phase 1 (Current) - Local-First MVP
+
 - Windows desktop app
 - SQLite database
 - Offline billing
@@ -360,12 +321,14 @@ pnpm build:win:portable
 - Inventory management
 
 ### Phase 2 - Cloud Sync (Optional)
+
 - Cloud backup
 - Multi-device sync
 - Web dashboard
 - Online reports
 
 ### Phase 3 - Multi-Store
+
 - Android companion app
 - Multi-store management
 - Analytics dashboard

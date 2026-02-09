@@ -9,10 +9,9 @@ This document outlines the **unit testing strategy** for the service layer, focu
 ## Testing Principles
 
 1. **Isolated Testing** - Test services in isolation from UI and Electron
-2. **In-Memory Database** - Use in-memory SQLite for fast tests
-3. **Business Logic Focus** - Test calculations, validations, and business rules
-4. **Error Scenarios** - Test error handling and edge cases
-5. **Transaction Testing** - Verify atomic operations and rollbacks
+2. **In-Memory Database** - Use in-memory SQLite for service integration tests
+3. **Pure Logic Extraction** - Extract complex math to standalone utilities for 100% unit test coverage
+4. **Database Abstraction** - Use `BetterSqliteCompatibleDatabase` to mock SQLite in test environments
 
 ---
 
@@ -21,15 +20,16 @@ This document outlines the **unit testing strategy** for the service layer, focu
 ### Test Database Strategy
 
 **Use in-memory SQLite database:**
+
 ```typescript
 import Database from 'better-sqlite3';
 
 function createTestDatabase(): Database.Database {
   const db = new Database(':memory:');
-  
+
   // Run migrations
   runMigrations(db);
-  
+
   return db;
 }
 
@@ -48,6 +48,7 @@ function resetTestDatabase(db: Database.Database): void {
 ### Test Framework
 
 **Use Vitest (or Jest):**
+
 ```typescript
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 ```
@@ -59,6 +60,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 ### 1. Billing Calculations
 
 **Test Cases:**
+
 - ✅ Calculate line totals correctly
 - ✅ Calculate GST correctly
 - ✅ Apply discounts correctly
@@ -69,6 +71,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 ### 2. Stock Deduction Logic
 
 **Test Cases:**
+
 - ✅ Deduct stock correctly
 - ✅ Prevent negative stock
 - ✅ Handle insufficient stock
@@ -78,6 +81,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 ### 3. Transaction Rollback
 
 **Test Cases:**
+
 - ✅ Rollback on insufficient stock
 - ✅ Rollback on duplicate bill number
 - ✅ Rollback on invalid customer
@@ -86,6 +90,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 ### 4. License Validation
 
 **Test Cases:**
+
 - ✅ Validate license signature
 - ✅ Check expiry date
 - ✅ Verify machine fingerprint
@@ -119,14 +124,14 @@ describe('BillingService - Calculations', () => {
       name: 'Coca Cola 500ml',
       salePrice: 40,
       gstPercent: 18,
-      stockQty: 100
+      stockQty: 100,
     });
 
     productRepo.create({
       name: 'Lays Chips',
       salePrice: 20,
       gstPercent: 12,
-      stockQty: 50
+      stockQty: 50,
     });
   });
 
@@ -135,30 +140,29 @@ describe('BillingService - Calculations', () => {
   });
 
   it('should calculate line totals correctly', () => {
-    const calculation = billingService.calculateBill([
-      { productId: 1, quantity: 2 }
-    ], 0);
+    const calculation = billingService.calculateBill([{ productId: 1, quantity: 2 }], 0);
 
     expect(calculation.items[0].lineSubtotal).toBe(80); // 40 * 2
-    expect(calculation.items[0].lineGst).toBe(14.4);    // 80 * 0.18
-    expect(calculation.items[0].lineTotal).toBe(94.4);  // 80 + 14.4
+    expect(calculation.items[0].lineGst).toBe(14.4); // 80 * 0.18
+    expect(calculation.items[0].lineTotal).toBe(94.4); // 80 + 14.4
   });
 
   it('should calculate bill totals correctly', () => {
-    const calculation = billingService.calculateBill([
-      { productId: 1, quantity: 2 }, // Coca Cola: 80 + 14.4 = 94.4
-      { productId: 2, quantity: 3 }  // Lays: 60 + 7.2 = 67.2
-    ], 0);
+    const calculation = billingService.calculateBill(
+      [
+        { productId: 1, quantity: 2 }, // Coca Cola: 80 + 14.4 = 94.4
+        { productId: 2, quantity: 3 }, // Lays: 60 + 7.2 = 67.2
+      ],
+      0
+    );
 
-    expect(calculation.subtotal).toBe(140);    // 80 + 60
-    expect(calculation.gstTotal).toBe(21.6);   // 14.4 + 7.2
+    expect(calculation.subtotal).toBe(140); // 80 + 60
+    expect(calculation.gstTotal).toBe(21.6); // 14.4 + 7.2
     expect(calculation.grandTotal).toBe(161.6); // 140 + 21.6
   });
 
   it('should apply discount correctly', () => {
-    const calculation = billingService.calculateBill([
-      { productId: 1, quantity: 2 }
-    ], 10);
+    const calculation = billingService.calculateBill([{ productId: 1, quantity: 2 }], 10);
 
     expect(calculation.subtotal).toBe(80);
     expect(calculation.gstTotal).toBe(14.4);
@@ -168,17 +172,23 @@ describe('BillingService - Calculations', () => {
 
   it('should throw error if discount makes grand total negative', () => {
     expect(() => {
-      billingService.calculateBill([
-        { productId: 1, quantity: 1 } // Total: 47.2
-      ], 100); // Discount: 100
+      billingService.calculateBill(
+        [
+          { productId: 1, quantity: 1 }, // Total: 47.2
+        ],
+        100
+      ); // Discount: 100
     }).toThrow('Grand total cannot be negative');
   });
 
   it('should handle multiple items with different GST rates', () => {
-    const calculation = billingService.calculateBill([
-      { productId: 1, quantity: 1 }, // 18% GST
-      { productId: 2, quantity: 1 }  // 12% GST
-    ], 0);
+    const calculation = billingService.calculateBill(
+      [
+        { productId: 1, quantity: 1 }, // 18% GST
+        { productId: 2, quantity: 1 }, // 12% GST
+      ],
+      0
+    );
 
     expect(calculation.items[0].gstPercent).toBe(18);
     expect(calculation.items[1].gstPercent).toBe(12);
@@ -209,7 +219,7 @@ describe('ProductService - Stock Management', () => {
       name: 'Test Product',
       salePrice: 100,
       gstPercent: 18,
-      stockQty: 50
+      stockQty: 50,
     });
   });
 
@@ -222,7 +232,7 @@ describe('ProductService - Stock Management', () => {
       productId: 1,
       deltaQty: -10,
       reason: 'MANUAL',
-      notes: 'Test deduction'
+      notes: 'Test deduction',
     });
 
     const product = productRepo.findById(1);
@@ -234,7 +244,7 @@ describe('ProductService - Stock Management', () => {
       productId: 1,
       deltaQty: 20,
       reason: 'MANUAL',
-      notes: 'Test addition'
+      notes: 'Test addition',
     });
 
     const product = productRepo.findById(1);
@@ -246,7 +256,7 @@ describe('ProductService - Stock Management', () => {
       productService.adjustStock({
         productId: 1,
         deltaQty: -100, // More than available
-        reason: 'MANUAL'
+        reason: 'MANUAL',
       });
     }).toThrow('Cannot deduct 100 units. Only 50 available');
   });
@@ -256,7 +266,7 @@ describe('ProductService - Stock Management', () => {
       productId: 1,
       deltaQty: -10,
       reason: 'MANUAL',
-      notes: 'Test log'
+      notes: 'Test log',
     });
 
     const logs = inventoryRepo.getStockHistory(1);
@@ -270,7 +280,7 @@ describe('ProductService - Stock Management', () => {
       productService.adjustStock({
         productId: 1,
         deltaQty: -60, // Would result in -10
-        reason: 'MANUAL'
+        reason: 'MANUAL',
       });
     }).toThrow();
   });
@@ -299,14 +309,14 @@ describe('BillingService - Transaction Rollback', () => {
       name: 'Product A',
       salePrice: 100,
       gstPercent: 18,
-      stockQty: 10
+      stockQty: 10,
     });
 
     productRepo.create({
       name: 'Product B',
       salePrice: 50,
       gstPercent: 18,
-      stockQty: 5
+      stockQty: 5,
     });
   });
 
@@ -322,10 +332,10 @@ describe('BillingService - Transaction Rollback', () => {
       billingService.finalizeBill({
         billNumber: 'BILL-001',
         items: [
-          { productId: 1, quantity: 5 },  // OK
-          { productId: 2, quantity: 10 }  // Insufficient!
+          { productId: 1, quantity: 5 }, // OK
+          { productId: 2, quantity: 10 }, // Insufficient!
         ],
-        paymentMode: 'cash'
+        paymentMode: 'cash',
       });
     }).toThrow('Insufficient stock');
 
@@ -343,7 +353,7 @@ describe('BillingService - Transaction Rollback', () => {
     billingService.finalizeBill({
       billNumber: 'BILL-001',
       items: [{ productId: 1, quantity: 1 }],
-      paymentMode: 'cash'
+      paymentMode: 'cash',
     });
 
     const initialStock = productRepo.findById(1).stockQty;
@@ -353,7 +363,7 @@ describe('BillingService - Transaction Rollback', () => {
       billingService.finalizeBill({
         billNumber: 'BILL-001', // Duplicate!
         items: [{ productId: 1, quantity: 2 }],
-        paymentMode: 'cash'
+        paymentMode: 'cash',
       });
     }).toThrow('Bill number already exists');
 
@@ -370,14 +380,14 @@ describe('BillingService - Transaction Rollback', () => {
       billNumber: 'BILL-001',
       items: [
         { productId: 1, quantity: 2 },
-        { productId: 2, quantity: 1 }
+        { productId: 2, quantity: 1 },
       ],
-      paymentMode: 'cash'
+      paymentMode: 'cash',
     });
 
     // Verify stock deducted
-    expect(productRepo.findById(1).stockQty).toBe(8);  // 10 - 2
-    expect(productRepo.findById(2).stockQty).toBe(4);  // 5 - 1
+    expect(productRepo.findById(1).stockQty).toBe(8); // 10 - 2
+    expect(productRepo.findById(2).stockQty).toBe(4); // 5 - 1
 
     // Verify bill created
     const bills = billRepo.findAll();
@@ -405,7 +415,7 @@ describe('LicenseService - Validation', () => {
 
   it('should validate trial license', () => {
     const trialKey = licenseService.generateTrialLicense(30);
-    
+
     licenseService.activateLicense({ licenseKey: trialKey });
 
     const validation = licenseService.isLicenseValid();
@@ -416,7 +426,7 @@ describe('LicenseService - Validation', () => {
   it('should reject expired license', () => {
     // Generate expired license (0 days)
     const expiredKey = licenseService.generateTrialLicense(0);
-    
+
     expect(() => {
       licenseService.activateLicense({ licenseKey: expiredKey });
     }).toThrow('License has expired');
@@ -424,7 +434,7 @@ describe('LicenseService - Validation', () => {
 
   it('should reject invalid signature', () => {
     const invalidKey = 'INVALID_LICENSE_KEY_12345';
-    
+
     expect(() => {
       licenseService.activateLicense({ licenseKey: invalidKey });
     }).toThrow('Invalid license key');
@@ -467,7 +477,7 @@ describe('CustomerService - Balance Management', () => {
     customerRepo.create({
       name: 'Test Customer',
       phone: '9876543210',
-      balanceDue: 0
+      balanceDue: 0,
     });
   });
 
@@ -483,7 +493,7 @@ describe('CustomerService - Balance Management', () => {
   });
 
   it('should decrease balance on payment', () => {
-    customerService.updateBalance(1, 500);  // Credit
+    customerService.updateBalance(1, 500); // Credit
     customerService.updateBalance(1, -200); // Payment
 
     const customer = customerRepo.findById(1);
@@ -518,13 +528,13 @@ import { runMigrations } from '../database/migrations';
 
 export function createTestDatabase(): Database.Database {
   const db = new Database(':memory:');
-  
+
   // Enable foreign keys
   db.pragma('foreign_keys = ON');
-  
+
   // Run migrations
   runMigrations(db);
-  
+
   return db;
 }
 
@@ -569,37 +579,41 @@ export function seedTestData(db: Database.Database): void {
 
 ```
 tests/
-├── services/
+├── services/                 # Integration tests (Service + DB)
 │   ├── billing-service.test.ts
 │   ├── product-service.test.ts
-│   ├── customer-service.test.ts
-│   ├── inventory-service.test.ts
-│   ├── settings-service.test.ts
-│   └── license-service.test.ts
-├── repositories/
-│   ├── product-repository.test.ts
-│   ├── bill-repository.test.ts
-│   └── customer-repository.test.ts
+│   ...
+├── unit/                    # Pure unit tests (No DB)
+│   └── billing-math.test.ts
 └── utils/
-    └── test-utils.ts
+    └── test-db.ts           # SQLite wrapper & utilities
+```
+
+### Specialized Configurations
+
+For pure logic tests that don't need the database environment, use the unit config:
+
+```bash
+npx vitest run --config vitest.unit.config.ts
 ```
 
 ---
 
 ## Coverage Goals
 
-| Component | Target Coverage |
-|-----------|----------------|
-| Services | 90%+ |
-| Repositories | 80%+ |
-| Business Logic | 95%+ |
-| Error Handling | 100% |
+| Component      | Target Coverage |
+| -------------- | --------------- |
+| Services       | 90%+            |
+| Repositories   | 80%+            |
+| Business Logic | 95%+            |
+| Error Handling | 100%            |
 
 ---
 
 ## Summary
 
 **Testing Strategy:**
+
 1. ✅ Use in-memory SQLite for fast tests
 2. ✅ Test business logic in isolation
 3. ✅ Verify calculations and validations
