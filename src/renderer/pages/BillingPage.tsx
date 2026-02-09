@@ -5,7 +5,12 @@ import type { Product } from '@shared/types/ipc';
 import { BillItemList } from '../components/billing/BillItemList';
 import { PaymentModeSelector, type PaymentMode } from '../components/billing/PaymentModeSelector';
 import { BillHistoryModal } from '../components/billing/BillHistoryModal';
-import { calculateBillPreview, formatCurrency, type BillCalculation } from '../utils/billing-math';
+import {
+  calculateBillPreview,
+  formatCurrency,
+  type BillCalculation,
+  calculateDiscountAmount,
+} from '../utils/billing-math';
 import './BillingPage.css';
 import { ConfirmModal } from '../components/ConfirmModal';
 
@@ -170,17 +175,20 @@ function BillingPage() {
   // Update calculation when discount changes
   useEffect(() => {
     let amt = 0;
-    const val = parseFloat(discountValue) || 0;
+    // const val = parseFloat(discountValue) || 0; // Unused after refactor
 
-    if (discountType === 'percent') {
-      // Calculate percentage of Subtotal + GST
-      // Note: calculation object might be null initially
-      if (calculation) {
-        const baseTotal = calculation.subtotal + calculation.gstTotal;
-        amt = Math.round((baseTotal * val) / 100);
-      }
+    if (calculation) {
+      amt = calculateDiscountAmount(
+        discountType,
+        discountValue,
+        calculation.subtotal,
+        calculation.gstTotal
+      );
     } else {
-      amt = val * 100; // Convert to paise
+      // If no calculation yet, just handle fixed amount
+      if (discountType === 'amount') {
+        amt = (parseFloat(discountValue) || 0) * 100;
+      }
     }
 
     setDiscountAmount(amt);

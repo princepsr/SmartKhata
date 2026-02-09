@@ -11,19 +11,21 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       exclude: [
         'node_modules/',
-        'tests/',
+        'post-build/',
+        'dist/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData',
-        'dist/'
-      ]
-    }
+        'src/main/**/*',
+        'src/preload/**/*',
+      ],
+    },
   },
   resolve: {
     alias: {
       '@shared': path.resolve(__dirname, './src/shared'),
       '@main': path.resolve(__dirname, './src/main'),
-      '@renderer': path.resolve(__dirname, './src/renderer')
-    }
-  }
+      '@renderer': path.resolve(__dirname, './src/renderer'),
+    },
+  },
 });

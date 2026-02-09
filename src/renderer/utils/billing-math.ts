@@ -26,17 +26,20 @@ interface CartItem {
 
 /**
  * Calculate Bill Preview (Client-Side)
- * 
+ *
  * Mirrors the logic in BillingTransactionService for instant UI feedback.
  * NOTE: This is a PREVIEW only. Final calculations are always done by the backend.
- * 
+ *
  * Logic:
  * - Sale Price is treated as BASE price (Exclusive of Tax) based on service implementation.
  * - Subtotal = Sum(Base Price * Qty)
  * - GST = Sum(Subtotal * GST%)
  * - Grand Total = Subtotal + GST - Discount
  */
-export function calculateBillPreview(items: CartItem[], discountAmount: number = 0): BillCalculation {
+export function calculateBillPreview(
+  items: CartItem[],
+  discountAmount: number = 0
+): BillCalculation {
   let subtotal = 0;
   let gstTotal = 0;
   const calculatedItems: CalculatedLineItem[] = [];
@@ -45,19 +48,19 @@ export function calculateBillPreview(items: CartItem[], discountAmount: number =
     const { product, quantity } = item;
 
     // Line calculations
-    // Ensure we handle floating point precision by keeping everything in integers (cents/paisa) if possible, 
+    // Ensure we handle floating point precision by keeping everything in integers (cents/paisa) if possible,
     // or strictly following the service logic which seems to use raw numbers but Javascript math.
     // Service uses: lineSubtotal = product.salePrice * item.quantity;
     // We should probably safeguard against NaN or negative inputs.
-    
+
     const qty = Math.max(0, quantity);
-    const lineSubtotal = product.salePrice * qty; // salePrice is in paisa (integer)? or float? 
-    // Types say 'number'. Usually DB stores integers for money. 
+    const lineSubtotal = product.salePrice * qty; // salePrice is in paisa (integer)? or float?
+    // Types say 'number'. Usually DB stores integers for money.
     // If salePrice is 10000 (100.00), then lineSubtotal is 20000.
-    
+
     // Tax
     const lineGst = (lineSubtotal * product.gstPercent) / 100;
-    
+
     // Total
     const lineTotal = lineSubtotal + lineGst;
 
@@ -73,7 +76,7 @@ export function calculateBillPreview(items: CartItem[], discountAmount: number =
       gstPercent: product.gstPercent,
       lineSubtotal,
       lineGst,
-      lineTotal
+      lineTotal,
     });
   }
 
@@ -85,7 +88,7 @@ export function calculateBillPreview(items: CartItem[], discountAmount: number =
     subtotal,
     gstTotal,
     discountAmount,
-    grandTotal: Math.max(0, grandTotal) // Prevent negative total
+    grandTotal: Math.max(0, grandTotal), // Prevent negative total
   };
 }
 
@@ -96,4 +99,33 @@ export function calculateBillPreview(items: CartItem[], discountAmount: number =
  */
 export function formatCurrency(amountInPaisa: number): string {
   return (amountInPaisa / 100).toFixed(2);
+}
+
+/**
+ * Calculate Discrete Discount Amount
+ *
+ * @param type 'amount' or 'percent'
+ * @param value The raw input value (e.g. "10" for 10% or 10 rupees)
+ * @param subtotal Subtotal in paisa
+ * @param gstTotal GST Total in paisa
+ * @returns Discount amount in paisa
+ */
+export function calculateDiscountAmount(
+  type: 'amount' | 'percent',
+  value: string,
+  subtotal: number,
+  gstTotal: number
+): number {
+  const val = parseFloat(value) || 0;
+
+  if (val <= 0) return 0;
+
+  if (type === 'percent') {
+    // Calculate percentage of Subtotal + GST
+    const baseTotal = subtotal + gstTotal;
+    return Math.round((baseTotal * val) / 100);
+  } else {
+    // Fixed amount (convert to paisa)
+    return Math.round(val * 100);
+  }
 }

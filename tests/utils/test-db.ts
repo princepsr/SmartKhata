@@ -1,6 +1,6 @@
 /**
  * Test Database Utilities
- * 
+ *
  * Provides in-memory SQLite database for testing using sql.js.
  * This is a pure JavaScript implementation that doesn't require native bindings.
  */
@@ -8,7 +8,7 @@
 import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
 
 // Wrapper to make sql.js compatible with better-sqlite3 API
-class BetterSqliteCompatibleDatabase {
+export class BetterSqliteCompatibleDatabase {
   private db: SqlJsDatabase;
 
   constructor(db: SqlJsDatabase) {
@@ -180,10 +180,10 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `;
-  
+
   // Execute schema
   db.exec(schema);
-  
+
   const wrapped = new BetterSqliteCompatibleDatabase(db);
   testDbInstance = wrapped;
   return wrapped;

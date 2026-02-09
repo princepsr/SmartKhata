@@ -1,6 +1,6 @@
 /**
  * ProductService Tests
- * 
+ *
  * Tests for product management, validation, and stock adjustments.
  */
 
@@ -8,20 +8,26 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ProductService } from '../../src/main/services/product-service';
 import { ProductRepository } from '../../src/main/repositories/product-repository';
 import { InventoryRepository } from '../../src/main/repositories/inventory-repository';
-import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
-import { ValidationError, DuplicateEntryError, NotFoundError, InactiveEntityError } from '../../src/main/services/errors/service-errors';
-import type Database from 'better-sqlite3';
+import {
+  createTestDatabase,
+  resetTestDatabase,
+  seedTestData,
+  type BetterSqliteCompatibleDatabase,
+} from '../utils/test-db';
+import {
+  ValidationError,
+  DuplicateEntryError,
+  InactiveEntityError,
+} from '../../src/main/services/errors/service-errors';
 
 describe('ProductService - Add Product', () => {
-  let db: Database.Database;
+  let db: BetterSqliteCompatibleDatabase;
   let productService: ProductService;
-  let productRepo: ProductRepository;
 
   beforeEach(async () => {
     db = await createTestDatabase();
     seedTestData(db);
     productService = new ProductService();
-    productRepo = new ProductRepository();
   });
 
   afterEach(() => {
@@ -34,7 +40,7 @@ describe('ProductService - Add Product', () => {
       sku: 'NEW-001',
       salePrice: 100,
       gstPercent: 18,
-      stockQty: 50
+      stockQty: 50,
     });
 
     expect(product.name).toBe('New Product');
@@ -47,7 +53,7 @@ describe('ProductService - Add Product', () => {
     expect(() => {
       productService.addProduct({
         name: '',
-        salePrice: 100
+        salePrice: 100,
       });
     }).toThrow(ValidationError);
   });
@@ -56,7 +62,7 @@ describe('ProductService - Add Product', () => {
     expect(() => {
       productService.addProduct({
         name: 'Test Product',
-        salePrice: -10
+        salePrice: -10,
       });
     }).toThrow(ValidationError);
   });
@@ -66,7 +72,7 @@ describe('ProductService - Add Product', () => {
       productService.addProduct({
         name: 'Duplicate Product',
         sku: 'COKE-500', // Already exists
-        salePrice: 100
+        salePrice: 100,
       });
     }).toThrow(DuplicateEntryError);
   });
@@ -76,7 +82,7 @@ describe('ProductService - Add Product', () => {
       productService.addProduct({
         name: 'Duplicate Product',
         barcode: '8901234567890', // Already exists
-        salePrice: 100
+        salePrice: 100,
       });
     }).toThrow(DuplicateEntryError);
   });
@@ -84,7 +90,7 @@ describe('ProductService - Add Product', () => {
   it('should set default GST to 18%', () => {
     const product = productService.addProduct({
       name: 'Test Product',
-      salePrice: 100
+      salePrice: 100,
     });
 
     expect(product.gstPercent).toBe(18);
@@ -95,14 +101,34 @@ describe('ProductService - Add Product', () => {
       productService.addProduct({
         name: 'Test Product',
         salePrice: 100,
-        gstPercent: 150 // Invalid
+        gstPercent: 150, // Invalid
       });
+    }).toThrow(ValidationError);
+  });
+
+  it('should import products in bulk', () => {
+    const products = productService.importProducts([
+      { name: 'Bulk 1', sku: 'BULK-1', salePrice: 100 },
+      { name: 'Bulk 2', sku: 'BULK-2', salePrice: 200 },
+    ]);
+
+    expect(products).toHaveLength(2);
+    expect(products[0].sku).toBe('BULK-1');
+    expect(products[1].sku).toBe('BULK-2');
+  });
+
+  it('should throw error if any product in bulk import is invalid', () => {
+    expect(() => {
+      productService.importProducts([
+        { name: 'Valid', sku: 'V-1', salePrice: 100 },
+        { name: '', sku: 'I-1', salePrice: 100 }, // Invalid name
+      ]);
     }).toThrow(ValidationError);
   });
 });
 
 describe('ProductService - Stock Adjustment', () => {
-  let db: Database.Database;
+  let db: BetterSqliteCompatibleDatabase;
   let productService: ProductService;
   let productRepo: ProductRepository;
   let inventoryRepo: InventoryRepository;
@@ -120,30 +146,38 @@ describe('ProductService - Stock Adjustment', () => {
   });
 
   it('should deduct stock correctly', () => {
-    const initialStock = productRepo.findById(1)!.stockQty;
+    const product = productRepo.findById(1);
+    expect(product).toBeDefined();
+    const initialStock = product?.stockQty || 0;
 
     productService.adjustStock({
       productId: 1,
       deltaQty: -10,
       reason: 'MANUAL',
-      notes: 'Test deduction'
+      notes: 'Test deduction',
     });
 
-    const finalStock = productRepo.findById(1)!.stockQty;
+    const finalProduct = productRepo.findById(1);
+    expect(finalProduct).toBeDefined();
+    const finalStock = finalProduct?.stockQty || 0;
     expect(finalStock).toBe(initialStock - 10);
   });
 
   it('should add stock correctly', () => {
-    const initialStock = productRepo.findById(1)!.stockQty;
+    const product = productRepo.findById(1);
+    expect(product).toBeDefined();
+    const initialStock = product?.stockQty || 0;
 
     productService.adjustStock({
       productId: 1,
       deltaQty: 20,
       reason: 'MANUAL',
-      notes: 'Test addition'
+      notes: 'Test addition',
     });
 
-    const finalStock = productRepo.findById(1)!.stockQty;
+    const finalProduct = productRepo.findById(1);
+    expect(finalProduct).toBeDefined();
+    const finalStock = finalProduct?.stockQty || 0;
     expect(finalStock).toBe(initialStock + 20);
   });
 
@@ -152,7 +186,7 @@ describe('ProductService - Stock Adjustment', () => {
       productService.adjustStock({
         productId: 1,
         deltaQty: -200, // More than available
-        reason: 'MANUAL'
+        reason: 'MANUAL',
       });
     }).toThrow(ValidationError);
   });
@@ -162,7 +196,7 @@ describe('ProductService - Stock Adjustment', () => {
       productService.adjustStock({
         productId: 1,
         deltaQty: 0,
-        reason: 'MANUAL'
+        reason: 'MANUAL',
       });
     }).toThrow(ValidationError);
   });
@@ -172,12 +206,12 @@ describe('ProductService - Stock Adjustment', () => {
       productId: 1,
       deltaQty: -10,
       reason: 'MANUAL',
-      notes: 'Test log'
+      notes: 'Test log',
     });
 
     const logs = inventoryRepo.getStockHistory(1);
     expect(logs.length).toBeGreaterThan(0);
-    
+
     const lastLog = logs[logs.length - 1];
     expect(lastLog.changeQty).toBe(-10);
     expect(lastLog.reason).toBe('MANUAL');
@@ -188,22 +222,64 @@ describe('ProductService - Stock Adjustment', () => {
       productService.adjustStock({
         productId: 4, // Inactive product
         deltaQty: 10,
-        reason: 'MANUAL'
+        reason: 'MANUAL',
       });
     }).toThrow(InactiveEntityError);
   });
 
+  it('should update product details correctly', () => {
+    productService.updateProduct(1, {
+      name: 'Updated Coke',
+      salePrice: 4500,
+    });
+
+    const product = productRepo.findById(1);
+    expect(product?.name).toBe('Updated Coke');
+    expect(product?.salePrice).toBe(4500);
+  });
+
+  it('should verify stock history consistency', () => {
+    productService.adjustStock({ productId: 1, deltaQty: 10, reason: 'MANUAL' });
+    productService.adjustStock({ productId: 1, deltaQty: -5, reason: 'MANUAL' });
+
+    const history = inventoryRepo.getStockHistory(1);
+    expect(history.length).toBeGreaterThanOrEqual(2);
+    expect(history[history.length - 2].changeQty).toBe(10);
+    expect(history[history.length - 1].changeQty).toBe(-5);
+  });
+
   it('should calculate margin correctly', () => {
     const margin = productService.calculateMargin(1);
-    
-    // Sale: 40, Purchase: 30
-    // Margin: (40 - 30) / 40 * 100 = 25%
+    // Sale: 4000, Purchase: 3000 (from seed data)
+    // Margin: (4000 - 3000) / 4000 * 100 = 25%
     expect(margin).toBe(25);
+  });
+
+  it('should handle margin calculation with zero purchase price', () => {
+    const product = productService.addProduct({
+      name: 'Free Item',
+      salePrice: 1000,
+      purchasePrice: 0,
+    });
+
+    const margin = productService.calculateMargin(product.id);
+    expect(margin).toBe(0);
+  });
+
+  it('should deactivate product and exclude from default search', () => {
+    productService.deactivateProduct(1);
+
+    const results = productService.searchProducts('Coca');
+    expect(results).toHaveLength(0);
+
+    const allResults = productService.searchProducts('Coca', true);
+    expect(allResults).toHaveLength(1);
+    expect(allResults[0].isActive).toBeFalsy();
   });
 });
 
 describe('ProductService - Search and Query', () => {
-  let db: Database.Database;
+  let db: BetterSqliteCompatibleDatabase;
   let productService: ProductService;
 
   beforeEach(async () => {
@@ -218,7 +294,7 @@ describe('ProductService - Search and Query', () => {
 
   it('should search products by name', () => {
     const results = productService.searchProducts('Coca');
-    
+
     expect(results.length).toBeGreaterThan(0);
     expect(results[0].name).toContain('Coca');
   });
@@ -234,11 +310,11 @@ describe('ProductService - Search and Query', () => {
     productService.adjustStock({
       productId: 1,
       deltaQty: -95, // Leaves 5, below alert of 10
-      reason: 'MANUAL'
+      reason: 'MANUAL',
     });
 
     const lowStock = productService.getLowStockProducts();
-    
+
     expect(lowStock.length).toBeGreaterThan(0);
   });
 });
