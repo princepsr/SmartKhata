@@ -47,6 +47,9 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
 │  - BillingService (calculations, finalization)               │
 │  - CustomerService (balance, phone validation)               │
 │  - InventoryService (stock rules, availability)              │
+│  - ReportService (aggregation, trends, comparisons)          │
+│  - ExportService (CSV generation, file handling)             │
+│  - PrintService (thermal printing, receipt formatting)       │
 │  - SettingsService (config, caching)                         │
 │  - LicenseService (validation, expiry)                       │
 │                                                                │
@@ -69,6 +72,7 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
 │  - BillRepository                                             │
 │  - CustomerRepository                                         │
 │  - InventoryRepository                                        │
+│  - ReportRepository                                           │
 │  - SettingsRepository                                         │
 │  - LicenseRepository                                          │
 │                                                                │
@@ -93,7 +97,6 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
 │  - inventory_logs                                             │
 │  - settings                                                   │
 │  - license                                                    │
-│  - schema_migrations                                          │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -106,6 +109,7 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
 **Technology:** React + TypeScript + Zustand
 
 **Responsibilities:**
+
 - ✅ Display data to user
 - ✅ Collect user input
 - ✅ Manage UI state
@@ -115,15 +119,16 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
 - ❌ NO SQL queries
 
 **Example:**
+
 ```typescript
 const createProduct = async (productData) => {
   const result = await window.api.product.create(productData);
-  
+
   if (!result.success) {
     alert(result.error);
     return;
   }
-  
+
   // Update UI state
   setProducts([...products, result.data]);
 };
@@ -136,6 +141,7 @@ const createProduct = async (productData) => {
 **Technology:** Electron contextBridge
 
 **Responsibilities:**
+
 - ✅ Expose secure IPC methods to renderer
 - ✅ Validate channel names
 - ✅ Prevent arbitrary IPC calls
@@ -143,12 +149,13 @@ const createProduct = async (productData) => {
 - ❌ NO data transformation
 
 **Example:**
+
 ```typescript
 contextBridge.exposeInMainWorld('api', {
   product: {
     create: (data) => ipcRenderer.invoke('product:create', data),
-    list: () => ipcRenderer.invoke('product:list')
-  }
+    list: () => ipcRenderer.invoke('product:list'),
+  },
 });
 ```
 
@@ -159,6 +166,7 @@ contextBridge.exposeInMainWorld('api', {
 **Technology:** Electron ipcMain + Custom IPCHandler
 
 **Responsibilities:**
+
 - ✅ Orchestrate service calls
 - ✅ Validate input (schema validation)
 - ✅ Handle service errors
@@ -169,6 +177,7 @@ contextBridge.exposeInMainWorld('api', {
 - ❌ NO calculations
 
 **Example:**
+
 ```typescript
 IPCHandler.handle('product:create', async (request) => {
   try {
@@ -179,7 +188,7 @@ IPCHandler.handle('product:create', async (request) => {
       return {
         success: false,
         error: 'This SKU is already in use',
-        errorCode: 'DUPLICATE_ENTRY'
+        errorCode: 'DUPLICATE_ENTRY',
       };
     }
     return { success: false, error: getUserFriendlyMessage(error) };
@@ -194,6 +203,7 @@ IPCHandler.handle('product:create', async (request) => {
 **Technology:** TypeScript Classes
 
 **Responsibilities:**
+
 - ✅ Validate business rules
 - ✅ Perform calculations
 - ✅ Orchestrate multiple repositories
@@ -205,36 +215,35 @@ IPCHandler.handle('product:create', async (request) => {
 
 **Services:**
 
-| Service | Responsibilities |
-|---------|------------------|
-| **ProductService** | Product CRUD, stock adjustments, duplicate prevention, margin calculation |
-| **BillingService** | Bill calculations, finalization, validation, bill number generation |
-| **CustomerService** | Customer CRUD, phone validation, balance tracking |
-| **InventoryService** | Stock availability, deduction rules, integrity verification |
-| **SettingsService** | Configuration management, caching, validation |
-| **LicenseService** | License validation, expiry checking, machine binding |
+| Service              | Responsibilities                                                          |
+| -------------------- | ------------------------------------------------------------------------- |
+| **ProductService**   | Product CRUD, stock adjustments, duplicate prevention, margin calculation |
+| **BillingService**   | Bill calculations, finalization, validation, bill number generation       |
+| **CustomerService**  | Customer CRUD, phone validation, balance tracking                         |
+| **InventoryService** | Stock availability, deduction rules, integrity verification               |
+| **ReportService**    | Data aggregation for sales, GST, payment modes, and trend analytics       |
+| **ExportService**    | CSV/PDF generation, file system interactions for report exports           |
+| **PrintService**     | Thermal receipt formatting, printer driver communication, status checks   |
+| **SettingsService**  | Configuration management, caching, validation                             |
+| **LicenseService**   | License validation, expiry checking, machine binding                      |
 
 **Example:**
+
 ```typescript
 export class BillingService extends BaseService {
   public finalizeBill(input: FinalizeBillInput): BillWithItems {
     // 1. Validate
     this._validateBillNumber(input.billNumber);
     this._validatePaymentMode(input.paymentMode);
-    
+
     // 2. Check stock availability
-    input.items.forEach(item => {
+    input.items.forEach((item) => {
       const product = this.productRepo.findById(item.productId);
       if (product.stockQty < item.quantity) {
-        throw new InsufficientStockError(
-          product.id,
-          product.name,
-          product.stockQty,
-          item.quantity
-        );
+        throw new InsufficientStockError(product.id, product.name, product.stockQty, item.quantity);
       }
     });
-    
+
     // 3. Execute atomic transaction
     return this.transactionService.createSale(saleInput);
   }
@@ -248,6 +257,7 @@ export class BillingService extends BaseService {
 **Technology:** TypeScript Classes + better-sqlite3
 
 **Responsibilities:**
+
 - ✅ Execute SQL queries
 - ✅ Map database rows to domain objects
 - ✅ Handle transactions
@@ -258,16 +268,18 @@ export class BillingService extends BaseService {
 
 **Repositories:**
 
-| Repository | Responsibilities |
-|------------|------------------|
-| **ProductRepository** | Product CRUD, stock updates, SKU/barcode lookup |
-| **BillRepository** | Bill creation, queries, sales summaries |
-| **CustomerRepository** | Customer CRUD, balance updates, phone lookup |
-| **InventoryRepository** | Inventory logging, stock history |
-| **SettingsRepository** | Key-value storage, UPSERT operations |
-| **LicenseRepository** | Single-row license management |
+| Repository              | Responsibilities                                          |
+| ----------------------- | --------------------------------------------------------- |
+| **ProductRepository**   | Product CRUD, stock updates, SKU/barcode lookup           |
+| **BillRepository**      | Bill creation, queries, sales summaries                   |
+| **CustomerRepository**  | Customer CRUD, balance updates, phone lookup              |
+| **InventoryRepository** | Inventory logging, stock history                          |
+| **ReportRepository**    | Advanced aggregation, GST slabs, and trend analytics data |
+| **SettingsRepository**  | Key-value storage, UPSERT operations                      |
+| **LicenseRepository**   | Single-row license management                             |
 
 **Example:**
+
 ```typescript
 export class ProductRepository extends BaseRepository {
   public create(data: CreateProductInput): Product {
@@ -275,14 +287,14 @@ export class ProductRepository extends BaseRepository {
       INSERT INTO products (name, sale_price, gst_percent, stock_qty)
       VALUES (?, ?, ?, ?)
     `;
-    
+
     const result = this.execute(sql, [
       data.name,
-      Math.round(data.salePrice * 100),  // Rupees → Paise
+      Math.round(data.salePrice * 100), // Rupees → Paise
       Math.round(data.gstPercent * 100), // Percent → Basis points
-      data.stockQty
+      data.stockQty,
     ]);
-    
+
     return this.findById(result.lastInsertRowid)!;
   }
 }
@@ -295,12 +307,14 @@ export class ProductRepository extends BaseRepository {
 **Technology:** SQLite (better-sqlite3)
 
 **Configuration:**
+
 - WAL mode (Write-Ahead Logging)
 - FULL synchronous mode
 - Foreign keys enabled
 - Busy timeout: 5000ms
 
 **Schema:**
+
 - 8 tables (products, customers, bills, bill_items, inventory_logs, settings, license, schema_migrations)
 - Monetary values stored as integers (paise)
 - Percentages stored as basis points (1/100th of a percent)
@@ -396,15 +410,15 @@ UI displays error to user
 
 ### Error Types
 
-| Error Class | Usage | Example |
-|-------------|-------|---------|
-| `ValidationError` | Invalid input | "Product name is required" |
-| `NotFoundError` | Entity not found | "Product not found" |
-| `DuplicateEntryError` | Duplicate entry | "This SKU is already in use" |
-| `InsufficientStockError` | Not enough stock | "Not enough stock for Coca Cola. Only 5 available." |
-| `InactiveEntityError` | Entity is inactive | "This product is inactive" |
-| `CreditLimitExceededError` | Credit limit exceeded | "Customer credit limit exceeded" |
-| `LicenseError` | License issue | "License has expired" |
+| Error Class                | Usage                 | Example                                             |
+| -------------------------- | --------------------- | --------------------------------------------------- |
+| `ValidationError`          | Invalid input         | "Product name is required"                          |
+| `NotFoundError`            | Entity not found      | "Product not found"                                 |
+| `DuplicateEntryError`      | Duplicate entry       | "This SKU is already in use"                        |
+| `InsufficientStockError`   | Not enough stock      | "Not enough stock for Coca Cola. Only 5 available." |
+| `InactiveEntityError`      | Entity is inactive    | "This product is inactive"                          |
+| `CreditLimitExceededError` | Credit limit exceeded | "Customer credit limit exceeded"                    |
+| `LicenseError`             | License issue         | "License has expired"                               |
 
 ---
 
@@ -415,12 +429,14 @@ UI displays error to user
 **Test Database:** In-memory SQLite
 
 **Test Coverage:**
+
 - ✅ BillingService (18 tests)
 - ✅ ProductService (15 tests)
 - ✅ CustomerService (10 tests)
 - ✅ LicenseService (9 tests)
 
 **Run Tests:**
+
 ```bash
 pnpm test              # Run all tests
 pnpm test:watch        # Watch mode
@@ -436,6 +452,7 @@ pnpm test:coverage     # Coverage report
 **Why:** Separate business logic from data access and UI
 
 **Benefits:**
+
 - Testable without UI or database
 - Reusable across multiple IPC handlers
 - Centralized business rules
@@ -446,6 +463,7 @@ pnpm test:coverage     # Coverage report
 **Why:** Provide structured error information
 
 **Benefits:**
+
 - User-friendly messages
 - Error codes for UI handling
 - Context for debugging
@@ -456,6 +474,7 @@ pnpm test:coverage     # Coverage report
 **Why:** Avoid repeated database queries for settings
 
 **Benefits:**
+
 - Fast reads
 - Reduced database load
 - Automatic cache invalidation on writes
@@ -465,6 +484,7 @@ pnpm test:coverage     # Coverage report
 **Why:** Ensure data consistency
 
 **Benefits:**
+
 - All-or-nothing operations
 - Automatic rollback on error
 - Data integrity
@@ -474,26 +494,33 @@ pnpm test:coverage     # Coverage report
 ## Documentation Index
 
 ### Core Architecture
+
 - [`CURRENT_ARCHITECTURE.md`](./CURRENT_ARCHITECTURE.md) - This document
 - [`ARCHITECTURE_DECISIONS.md`](./ARCHITECTURE_DECISIONS.md) - Architecture decisions
 - [`FOLDER_STRUCTURE.md`](./FOLDER_STRUCTURE.md) - Project structure
 
 ### Service Layer
+
 - [`SERVICE_LAYER_RULES.md`](./SERVICE_LAYER_RULES.md) - Service layer rules
 - [`SERVICE_ERROR_FLOW.md`](./SERVICE_ERROR_FLOW.md) - Error handling
 - [`IPC_SERVICE_MAPPING.md`](./IPC_SERVICE_MAPPING.md) - IPC to service mapping
 - [`SERVICE_LAYER_TESTING.md`](./SERVICE_LAYER_TESTING.md) - Testing strategy
+- [`REPORTS_ARCHITECTURE.md`](./REPORTS_ARCHITECTURE.md) - Reporting and Analytics
+- [`PRINT_SERVICE.md`](./PRINT_SERVICE.md) - Printing and Receipt formatting
 
 ### Repository Layer
+
 - [`REPOSITORY_RULES.md`](./REPOSITORY_RULES.md) - Repository rules
 - [`BASE_REPOSITORY.md`](./BASE_REPOSITORY.md) - Base repository
 - [`DATABASE_TRANSACTIONS.md`](./DATABASE_TRANSACTIONS.md) - Transactions
 
 ### Database
+
 - [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md) - Schema documentation
 - [`DATABASE_MIGRATIONS.md`](./DATABASE_MIGRATIONS.md) - Migration system
 
 ### IPC
+
 - [`IPC_ARCHITECTURE.md`](./IPC_ARCHITECTURE.md) - IPC architecture
 - [`IPC_HANDLER_FRAMEWORK.md`](./IPC_HANDLER_FRAMEWORK.md) - Handler framework
 
@@ -508,6 +535,7 @@ UI → IPC → Service → Repository → Database
 ```
 
 **Each layer has clear responsibilities:**
+
 - **UI**: Display and collect data
 - **IPC**: Orchestrate and handle errors
 - **Service**: Business logic and validation
@@ -515,6 +543,7 @@ UI → IPC → Service → Repository → Database
 - **Database**: Data storage
 
 **This architecture ensures:**
+
 - ✅ Separation of concerns
 - ✅ Testability
 - ✅ Maintainability

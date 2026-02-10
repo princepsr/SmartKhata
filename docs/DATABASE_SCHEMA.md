@@ -10,6 +10,7 @@ The initial schema (`001_initial_schema.sql`) defines 5 core tables for the Smar
 
 > [!IMPORTANT]
 > All monetary values (Prices, Totals, Discounts, Balances) are stored as **Integers in Paisa** (e.g., ₹1.00 is stored as `100`).
+>
 > - **Why:** To prevent floating-point rounding errors during calculation.
 > - **Precision:** 100% precision for all financial transactions.
 > - **Formatting:** The renderer is responsible for converting Paisa to Rupees (`value / 100`) for display using the `formatCurrency` utility.
@@ -20,68 +21,80 @@ The initial schema (`001_initial_schema.sql`) defines 5 core tables for the Smar
 
 ```mermaid
 erDiagram
-    PRODUCTS ||--o{ SALE_ITEMS : contains
-    CUSTOMERS ||--o{ SALES : places
-    SALES ||--|{ SALE_ITEMS : has
-    
-    PRODUCTS {
+    products ||--o{ bill_items : contains
+    customers ||--o{ bills : places
+    bills ||--|{ bill_items : has
+    products ||--o{ inventory_logs : logs
+
+    products {
         int id PK
         text name
         text barcode UK
-        int price       /* Stored in Paisa (Integer) */
-        int cost        /* Stored in Paisa (Integer) */
-        int stock
-        text unit
-        text category
-        text description
+        text sku UK
+        int sale_price       /* Stored in Paisa (Integer) */
+        int purchase_price   /* Stored in Paisa (Integer) */
+        int gst_percent      /* Stored in Basis Points (1800 = 18.00%) */
+        int stock_qty
+        int low_stock_alert
         int is_active
         text created_at
         text updated_at
     }
-    
-    CUSTOMERS {
+
+    customers {
         int id PK
         text name
         text phone UK
-        text email
-        text address
-        int credit_limit        /* Stored in Paisa (Integer) */
-        int outstanding_balance   /* Stored in Paisa (Integer) */
+        int balance_due      /* Stored in Paisa (Integer) */
         int is_active
         text created_at
         text updated_at
     }
-    
-    SALES {
+
+    bills {
         int id PK
+        text bill_number UK
         int customer_id FK
-        int subtotal    /* Stored in Paisa (Integer) */
-        int tax         /* Stored in Paisa (Integer) */
-        int discount    /* Stored in Paisa (Integer) */
-        int total       /* Stored in Paisa (Integer) */
-        text payment_method
-        text payment_status
-        text notes
-        int is_void
+        int subtotal         /* Stored in Paisa (Integer) */
+        int gst_total        /* Stored in Paisa (Integer) */
+        int discount_amount  /* Stored in Paisa (Integer) */
+        int grand_total      /* Stored in Paisa (Integer) */
+        text payment_mode    /* 'cash', 'upi', 'mixed' */
         text created_at
-        text updated_at
     }
-    
-    SALE_ITEMS {
+
+    bill_items {
         int id PK
-        int sale_id FK
+        int bill_id FK
         int product_id FK
-        text product_name
-        real quantity
-        int unit_price  /* Stored in Paisa (Integer) */
-        int subtotal    /* Stored in Paisa (Integer) */
+        text product_name_snapshot
+        int quantity
+        int unit_price       /* Stored in Paisa (Integer) */
+        int gst_percent
+        int line_total       /* Stored in Paisa (Integer) */
+    }
+
+    inventory_logs {
+        int id PK
+        int product_id FK
+        int change_qty
+        text reason
+        int reference_id
         text created_at
     }
-    
-    SETTINGS {
+
+    settings {
         text key PK
         text value
         text updated_at
+    }
+
+    license {
+        int id PK
+        text license_key UK
+        text machine_fingerprint
+        text expires_at
+        text activated_at
     }
 ```
 
@@ -94,124 +107,68 @@ erDiagram
 **Purpose:** Product catalog with pricing and inventory
 
 **Key Fields:**
+
 - `id`: Auto-incrementing primary key
-- `name`: Product name (required)
 - `barcode`: Unique barcode (optional, for scanner support)
-- `price`: Selling price (required, must be ≥ 0)
-- `cost`: Cost price (optional, for profit tracking)
-- `stock`: Current inventory count (default: 0)
-- `unit`: Unit of measure (default: 'piece')
-- `category`: Product category (optional, for filtering)
+- `sku`: Unique SKU (required)
+- `name`: Product name (required)
+- `brand`: Product brand (optional)
+- `category`: Product category (optional)
+- `sale_price`: Selling price in Paisa (required, ≥ 0)
+- `purchase_price`: Cost price in Paisa (optional, for profit tracking)
+- `gst_percent`: GST percentage in basis points (e.g., 1800 for 18%)
+- `stock_qty`: Current inventory count (default: 0)
+- `low_stock_alert`: Threshold for low stock warning
 - `is_active`: Soft delete flag (1 = active, 0 = inactive)
-
-**Indexes:**
-- `barcode` - Fast barcode lookups
-- `name` - Search by name
-- `category` - Filter by category
-- `is_active` - Filter active products
-
-**Constraints:**
-- `price >= 0`
-- `cost >= 0` (if provided)
-- `stock >= 0`
-- `barcode` must be unique
-- `is_active` must be 0 or 1
 
 ---
 
 ### 2. `customers`
 
-**Purpose:** Customer records with credit tracking
+**Purpose:** Customer records with balance tracking
 
 **Key Fields:**
+
 - `id`: Auto-incrementing primary key
 - `name`: Customer name (required)
-- `phone`: Phone number (unique, optional)
-- `email`: Email address (optional)
-- `address`: Physical address (optional)
-- `credit_limit`: Maximum credit allowed (default: 0)
-- `outstanding_balance`: Current unpaid amount (default: 0)
+- `phone`: Phone number (unique)
+- `balance_due`: Current unpaid amount in Paisa (default: 0)
 - `is_active`: Soft delete flag
 
-**Indexes:**
-- `phone` - Fast phone lookups
-- `name` - Search by name
-- `is_active` - Filter active customers
-
-**Constraints:**
-- `credit_limit >= 0`
-- `phone` must be unique (if provided)
-- `is_active` must be 0 or 1
-
 ---
 
-### 3. `sales`
+### 3. `bills` (Legacy name: `sales`)
 
-**Purpose:** Sale transactions (bills/invoices)
+**Purpose:** Sale transactions
 
 **Key Fields:**
+
 - `id`: Auto-incrementing primary key
+- `bill_number`: Unique bill number (e.g., SK-2025-0001)
 - `customer_id`: Foreign key to customers (optional)
-- `subtotal`: Sum of line items (required, ≥ 0)
-- `tax`: Tax amount (default: 0)
-- `discount`: Discount amount (default: 0)
-- `total`: Final amount (required, ≥ 0)
-- `payment_method`: Payment type (default: 'cash')
-- `payment_status`: Payment state ('paid', 'pending', 'partial')
-- `notes`: Additional notes (optional)
-- `is_void`: Cancellation flag (0 = valid, 1 = voided)
-
-**Indexes:**
-- `customer_id` - Find sales by customer
-- `created_at` - Chronological queries
-- `payment_status` - Filter unpaid sales
-- `is_void` - Filter valid sales
-
-**Constraints:**
-- `subtotal >= 0`
-- `tax >= 0`
-- `discount >= 0`
-- `total >= 0`
-- `payment_status` must be 'paid', 'pending', or 'partial'
-- `is_void` must be 0 or 1
-
-**Foreign Keys:**
-- `customer_id` → `customers(id)` ON DELETE SET NULL
-  - If customer is deleted, sale remains but customer_id becomes NULL
+- `subtotal`: Sum of line items in Paisa (required)
+- `gst_total`: Total GST in Paisa
+- `discount_amount`: Total discount in Paisa
+- `grand_total`: Final amount in Paisa (required)
+- `payment_mode`: Payment type ('cash', 'upi', 'mixed')
+- `created_at`: Transaction timestamp
 
 ---
 
-### 4. `sale_items`
+### 4. `bill_items` (Legacy name: `sale_items`)
 
-**Purpose:** Line items for each sale (products in a bill)
+**Purpose:** Line items for each bill
 
 **Key Fields:**
+
 - `id`: Auto-incrementing primary key
-- `sale_id`: Foreign key to sales (required)
+- `bill_id`: Foreign key to bills (required)
 - `product_id`: Foreign key to products (required)
-- `product_name`: Product name snapshot (required)
+- `product_name_snapshot`: Name at time of sale
 - `quantity`: Quantity sold (required, > 0)
-- `unit_price`: Price at time of sale (required, ≥ 0)
-- `subtotal`: Line total (quantity × unit_price)
-
-**Indexes:**
-- `sale_id` - Find items for a sale
-- `product_id` - Find sales of a product
-
-**Constraints:**
-- `quantity > 0`
-- `unit_price >= 0`
-- `subtotal >= 0`
-
-**Foreign Keys:**
-- `sale_id` → `sales(id)` ON DELETE CASCADE
-  - If sale is deleted, all line items are deleted
-- `product_id` → `products(id)` ON DELETE RESTRICT
-  - Cannot delete a product that has been sold
-
-**Why Store `product_name`?**
-- Historical accuracy: If product name changes, old receipts remain correct
-- Performance: No need to join products table for receipt display
+- `unit_price`: Price at time of sale in Paisa
+- `gst_percent`: GST rate at time of sale
+- `line_total`: Line total in Paisa
 
 ---
 
@@ -220,11 +177,13 @@ erDiagram
 **Purpose:** Application configuration (key-value store)
 
 **Key Fields:**
+
 - `key`: Setting name (primary key)
 - `value`: Setting value (stored as text)
 - `updated_at`: Last modification timestamp
 
 **Default Settings:**
+
 - `business_name`: "SmartKhata POS"
 - `tax_rate`: "0" (percentage, e.g., "18" for 18%)
 - `currency`: "INR"
@@ -234,17 +193,33 @@ erDiagram
 
 ---
 
+### 7. `license`
+
+**Purpose:** Software licensing and activation
+
+**Key Fields:**
+
+- `id`: Primary key (restricted to 1)
+- `license_key`: Activation key
+- `machine_fingerprint`: Unique hardware ID
+- `expires_at`: License expiration date
+- `activated_at`: Activation timestamp
+
+---
+
 ## Relationship Details
 
 ### One-to-Many Relationships
 
 **1. Customer → Sales**
+
 ```
 One customer can have many sales
 One sale belongs to zero or one customer (optional)
 ```
 
 **SQL:**
+
 ```sql
 -- Get all sales for a customer
 SELECT * FROM sales WHERE customer_id = ?;
@@ -256,12 +231,14 @@ WHERE s.id = ?;
 ```
 
 **2. Sale → Sale Items**
+
 ```
 One sale has many sale items
 One sale item belongs to exactly one sale
 ```
 
 **SQL:**
+
 ```sql
 -- Get all items for a sale
 SELECT * FROM sale_items WHERE sale_id = ?;
@@ -273,12 +250,14 @@ WHERE si.id = ?;
 ```
 
 **3. Product → Sale Items**
+
 ```
 One product can appear in many sale items
 One sale item references exactly one product
 ```
 
 **SQL:**
+
 ```sql
 -- Get all sales of a product
 SELECT si.* FROM sale_items si
@@ -295,30 +274,36 @@ WHERE si.id = ?;
 ## Foreign Key Behaviors
 
 ### ON DELETE SET NULL
+
 ```sql
 FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
 ```
 
 **Scenario:** Customer is deleted
+
 - Sales remain in database
 - `customer_id` becomes NULL
 - Historical data preserved
 
 ### ON DELETE CASCADE
+
 ```sql
 FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
 ```
 
 **Scenario:** Sale is deleted
+
 - All `sale_items` for that sale are automatically deleted
 - Maintains referential integrity
 
 ### ON DELETE RESTRICT
+
 ```sql
 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
 ```
 
 **Scenario:** Attempt to delete a product that has been sold
+
 - Deletion fails with error
 - Prevents data loss
 - Use `is_active = 0` for soft delete instead
@@ -337,7 +322,7 @@ VALUES (5, 1000, 180, 50, 1130, 'cash');
 
 -- 2. Insert sale items
 INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, subtotal)
-VALUES 
+VALUES
   (42, 10, 'Product A', 2, 300, 600),
   (42, 15, 'Product B', 1, 400, 400);
 
@@ -353,6 +338,7 @@ UPDATE products SET stock = stock - 1 WHERE id = 15;
 The schema is designed to be extended without breaking changes:
 
 **Future Additions (via migrations):**
+
 - `products.supplier_id` - Supplier tracking
 - `sales.cashier_id` - User tracking
 - `sale_items.discount` - Line-item discounts
@@ -361,6 +347,7 @@ The schema is designed to be extended without breaking changes:
 - `categories` table - Normalize product categories
 
 **Current Design Allows:**
+
 - Adding columns without affecting existing queries
 - Adding new tables without foreign key conflicts
 - Soft deletes preserve historical data
@@ -369,17 +356,18 @@ The schema is designed to be extended without breaking changes:
 
 ## Summary
 
-| Table | Purpose | Parent Tables | Child Tables |
-|-------|---------|---------------|--------------|
-| `products` | Product catalog | None | `sale_items` |
-| `customers` | Customer records | None | `sales` |
-| `sales` | Sale transactions | `customers` | `sale_items` |
-| `sale_items` | Line items | `sales`, `products` | None |
-| `settings` | Configuration | None | None |
+| Table            | Purpose           | Parent Tables       | Child Tables                   |
+| ---------------- | ----------------- | ------------------- | ------------------------------ |
+| `products`       | Product catalog   | None                | `bill_items`, `inventory_logs` |
+| `customers`      | Customer records  | None                | `bills`                        |
+| `bills`          | Sale transactions | `customers`         | `bill_items`                   |
+| `bill_items`     | Line items        | `bills`, `products` | None                           |
+| `inventory_logs` | Stock history     | `products`          | None                           |
+| `settings`       | Configuration     | None                | None                           |
+| `license`        | Licensing         | None                | None                           |
 
-**Total Tables:** 5  
-**Total Foreign Keys:** 3  
-**Total Indexes:** 13
+**Total Tables:** 7  
+**Total Foreign Keys:** 5
 
 ---
 

@@ -13,6 +13,7 @@ src/shared/ipc/channels.ts
 ```
 
 **Purpose:**
+
 - Define all allowed IPC channels
 - Provide TypeScript types for type safety
 - Shared between main and renderer processes
@@ -30,15 +31,25 @@ export const IPC_CHANNELS = {
   PRODUCT_LIST: 'product:list',
   PRODUCT_GET: 'product:get',
   PRODUCT_CREATE: 'product:create',
-  
+
   // Sale module
   SALE_CREATE: 'sale:create',
   SALE_LIST: 'sale:list',
-  
+
   // Bill module
   BILL_CREATE: 'bill:create',
   BILL_PRINT: 'bill:print',
   PRINTER_LIST: 'printer:list',
+
+  // Report module
+  REPORT_GET_DAILY_SUMMARY: 'report:getDailySummary',
+  REPORT_GET_GST_SUMMARY: 'report:getGstSummary',
+  REPORT_GET_TREND_ANALYTICS: 'report:getTrendAnalytics',
+  REPORT_GET_BILLS: 'report:getBills',
+  REPORT_GET_STOCK_SUMMARY: 'report:getStockSummary',
+
+  // Export module
+  EXPORT_TO_CSV: 'export:toCsv',
 
   // Customer module
   CUSTOMER_SEARCH: 'customer:search',
@@ -46,6 +57,7 @@ export const IPC_CHANNELS = {
 ```
 
 **Key Points:**
+
 - `as const` makes it readonly and preserves literal types
 - Grouped by module for organization
 - Follows `module:action` naming convention
@@ -55,19 +67,21 @@ export const IPC_CHANNELS = {
 ### 2. Type Definitions
 
 ```typescript
-export type IPCChannel = typeof IPC_CHANNELS[keyof typeof IPC_CHANNELS];
+export type IPCChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];
 ```
 
 **What this does:**
+
 - Extracts all channel values as a union type
 - TypeScript will only allow registered channel names
 - Provides autocomplete in IDE
 
 **Type resolves to:**
+
 ```typescript
-type IPCChannel = 
-  | 'product:list' 
-  | 'product:get' 
+type IPCChannel =
+  | 'product:list'
+  | 'product:get'
   | 'product:create'
   | 'sale:create'
   | 'sale:list'
@@ -87,6 +101,7 @@ export const getAllChannels = (): readonly IPCChannel[] => {
 ```
 
 **Usage:**
+
 ```typescript
 const channels = getAllChannels();
 // ['product:list', 'product:get', ...]
@@ -103,6 +118,7 @@ export const isValidChannel = (channel: string): channel is IPCChannel => {
 ```
 
 **Usage:**
+
 ```typescript
 if (isValidChannel(userInput)) {
   // TypeScript knows userInput is IPCChannel here
@@ -129,6 +145,7 @@ export const CHANNEL_GROUPS = {
 ```
 
 **Purpose:**
+
 - Organize channels by module
 - Useful for logging/debugging
 - Documentation
@@ -146,12 +163,9 @@ import { IPCHandler } from '../ipc-handler';
 
 export function registerProductHandlers(): void {
   // ✅ GOOD: Use registry constant
-  IPCHandler.handle(
-    IPC_CHANNELS.PRODUCT_LIST,
-    async () => {
-      // handler logic
-    }
-  );
+  IPCHandler.handle(IPC_CHANNELS.PRODUCT_LIST, async () => {
+    // handler logic
+  });
 
   // ❌ BAD: String literal
   // IPCHandler.handle('product:list', ...); // NO!
@@ -159,6 +173,7 @@ export function registerProductHandlers(): void {
 ```
 
 **Benefits:**
+
 - Autocomplete for channel names
 - Compile-time error if channel doesn't exist
 - Refactoring is safe (rename in one place)
@@ -192,6 +207,7 @@ contextBridge.exposeInMainWorld('electron', electronAPI);
 ```
 
 **Benefits:**
+
 - Only registered channels can be invoked
 - Type safety in preload script
 - Runtime validation available
@@ -211,6 +227,7 @@ const products = await window.electron.products.list();
 ```
 
 **Benefits:**
+
 - Full TypeScript autocomplete
 - Impossible to use unregistered channels
 - Compile-time safety
@@ -238,10 +255,8 @@ export const IPC_CHANNELS = {
 ```typescript
 export const CHANNEL_GROUPS = {
   // ... existing groups
-  
-  INVENTORY: [
-    IPC_CHANNELS.INVENTORY_ADJUST,
-  ],
+
+  INVENTORY: [IPC_CHANNELS.INVENTORY_ADJUST],
 } as const;
 ```
 
@@ -253,12 +268,9 @@ export const CHANNEL_GROUPS = {
 // src/main/ipc/handlers/inventory-handlers.ts
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 
-IPCHandler.handle(
-  IPC_CHANNELS.INVENTORY_ADJUST,
-  async (request) => {
-    // handler logic
-  }
-);
+IPCHandler.handle(IPC_CHANNELS.INVENTORY_ADJUST, async (request) => {
+  // handler logic
+});
 ```
 
 ---
@@ -269,10 +281,9 @@ IPCHandler.handle(
 // src/preload/index.ts
 const electronAPI = {
   // ... existing APIs
-  
+
   inventory: {
-    adjust: (data: any) => 
-      ipcRenderer.invoke(IPC_CHANNELS.INVENTORY_ADJUST, data),
+    adjust: (data: any) => ipcRenderer.invoke(IPC_CHANNELS.INVENTORY_ADJUST, data),
   },
 };
 ```
@@ -298,6 +309,7 @@ IPCHandler.handle('random:channel', ...);
 ### 2. Autocomplete
 
 When typing `IPC_CHANNELS.`, your IDE will show:
+
 ```
 IPC_CHANNELS.
   ├─ PRODUCT_LIST
@@ -314,6 +326,7 @@ IPC_CHANNELS.
 **Scenario:** Rename `product:list` to `product:get-all`
 
 **Before:**
+
 ```typescript
 // Multiple files with string literals
 ipcMain.handle('product:list', ...);
@@ -322,6 +335,7 @@ ipcRenderer.invoke('product:list');
 ```
 
 **After (with registry):**
+
 ```typescript
 // Change in ONE place
 export const IPC_CHANNELS = {
@@ -349,7 +363,7 @@ const safeInvoke = (channel: string, ...args: any[]) => {
     console.error(`Attempted to invoke invalid channel: ${channel}`);
     throw new Error(`Invalid IPC channel: ${channel}`);
   }
-  
+
   return ipcRenderer.invoke(channel, ...args);
 };
 ```
@@ -423,6 +437,7 @@ ipcMain.handle(IPC_CHANNELS.PRODUCT_LIST, ...);
 ```
 
 **Migration steps:**
+
 1. Add channels to new registry
 2. Update all imports
 3. Update all usages
@@ -433,6 +448,7 @@ ipcMain.handle(IPC_CHANNELS.PRODUCT_LIST, ...);
 ## Summary
 
 **Registry provides:**
+
 - ✅ Single source of truth
 - ✅ TypeScript type safety
 - ✅ Compile-time checking
@@ -444,6 +460,7 @@ ipcMain.handle(IPC_CHANNELS.PRODUCT_LIST, ...);
 **File:** `src/shared/ipc/channels.ts`
 
 **Import in:**
+
 - Main process handlers
 - Preload script
 - (Indirectly) Renderer via typed API

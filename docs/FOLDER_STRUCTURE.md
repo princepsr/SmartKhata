@@ -15,18 +15,23 @@ SmartKhata/
 │   │   ├── index.ts               # Entry point
 │   │   ├── services/              # Business logic layer
 │   │   │   ├── product-service.ts
-│   │   │   ├── sales-service.ts
+│   │   │   ├── billing-service.ts
 │   │   │   ├── customer-service.ts
-│   │   │   └── inventory-service.ts
+│   │   │   ├── inventory-service.ts
+│   │   │   ├── report-service.ts
+│   │   │   ├── export-service.ts
+│   │   │   └── print-service.ts
 │   │   ├── repositories/          # Data access layer (SQLite)
 │   │   │   ├── product-repository.ts
-│   │   │   ├── sales-repository.ts
+│   │   │   ├── bill-repository.ts
 │   │   │   ├── customer-repository.ts
+│   │   │   ├── inventory-repository.ts
+│   │   │   ├── report-repository.ts
 │   │   │   └── base-repository.ts
-│   │   ├── ipc-handlers/          # IPC event handlers
-│   │   │   ├── product-handlers.ts
-│   │   │   ├── sales-handlers.ts
-│   │   │   └── customer-handlers.ts
+│   │   ├── ipc/                   # IPC logic & handlers
+│   │   │   ├── handlers/          # Specific logic handlers
+│   │   │   ├── ipc-handler.ts     # Registry and base logic
+│   │   │   └── index.ts           # Entry point
 │   │   ├── database/              # Database setup & migrations
 │   │   │   ├── connection.ts
 │   │   │   ├── migrations/
@@ -44,14 +49,11 @@ SmartKhata/
 │   ├── renderer/                  # React UI (browser context)
 │   │   ├── index.tsx              # React entry point
 │   │   ├── App.tsx                # Root component
-│   │   ├── pages/                 # Page-level components
-│   │   │   ├── BillingPage/
-│   │   │   │   ├── BillingPage.tsx
-│   │   │   │   ├── BillingPage.module.css
-│   │   │   │   └── index.ts
-│   │   │   ├── InventoryPage/
-│   │   │   ├── ReportsPage/
-│   │   │   └── SettingsPage/
+│   │   ├── pages/                 # Flat structure of page files
+│   │   │   ├── BillingPage.tsx
+│   │   │   ├── ReportsPage.tsx
+│   │   │   ├── ProductsPage.tsx
+│   │   │   └── SettingsPage.tsx
 │   │   ├── components/            # Reusable UI components
 │   │   │   ├── ProductSearch/
 │   │   │   │   ├── ProductSearch.tsx
@@ -67,7 +69,7 @@ SmartKhata/
 │   │   │   ├── useProducts.ts
 │   │   │   ├── useSales.ts
 │   │   │   └── useKeyboardShortcuts.ts
-│   │   ├── services/              # Frontend service layer (IPC wrappers)
+│   │   ├── services/              # API layer for renderer hooks
 │   │   │   ├── product-api.ts
 │   │   │   ├── sales-api.ts
 │   │   │   └── customer-api.ts
@@ -84,16 +86,16 @@ SmartKhata/
 │   │   └── ipc-channels.ts        # Channel name constants
 │   │
 │   └── shared/                    # Shared code (main + renderer)
-│       ├── types/                 # TypeScript types/interfaces
+│       ├── types/                 # product.types.ts, report.types.ts, etc.
 │       │   ├── product.types.ts
-│       │   ├── sales.types.ts
-│       │   ├── customer.types.ts
-│       │   └── common.types.ts
+│   │   │   ├── sales.types.ts
+│   │   │   ├── customer.types.ts
+│   │   │   └── common.types.ts
 │       ├── constants/             # Shared constants
 │       │   ├── ipc-events.ts
 │       │   ├── app-constants.ts
 │       │   └── validation-rules.ts
-│       └── utils/                 # Shared utilities
+│       └── utils/                 # Pure utilities
 │           ├── date-utils.ts
 │           └── currency-utils.ts
 │
@@ -122,8 +124,8 @@ SmartKhata/
 │
 ├── tests/                         # Tests (mirrors src structure)
 │   ├── services/                  # Integration tests
-│   ├── unit/                      # Pure unit tests (no dependencies)
-│   └── utils/                     # Test helpers
+│   ├── unit/                      # Unit tests
+│   └── utils/                     # Test db and helpers
 │
 ├── .gitignore
 ├── package.json

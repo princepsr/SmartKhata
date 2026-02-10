@@ -51,6 +51,7 @@ tests/
     ├── billing-service.test.ts       # Billing services (14 tests)
     ├── product-service.test.ts       # Product services (23 tests)
     ├── customer-service.test.ts      # Customer tests (12 tests)
+    ├── report-service.test.ts        # Report and Analytics (13 tests)
     └── license-service.test.ts       # License tests (12 tests)
 ├── unit/
     └── billing-math.test.ts          # Pure math tests (9 tests)
@@ -104,6 +105,7 @@ describe('MyService', () => {
 | BillingService  | 14    | 90%+          |
 | ProductService  | 23    | 90%+          |
 | CustomerService | 12    | 90%+          |
+| ReportService   | 13    | 95%+          |
 | LicenseService  | 12    | 90%+          |
 | BillingMath     | 9     | 100%          |
 
@@ -204,10 +206,24 @@ describe('MyService - Feature Name', () => {
 **Tests:**
 
 - ✅ Trial license generation
-- ✅ License activation
 - ✅ Expiry validation
 - ✅ Signature verification
 - ✅ Machine fingerprint
+
+### 5. Report Tests
+
+**File:** `tests/services/report-service.test.ts`
+
+**Tests:**
+
+- ✅ Daily sales summary accuracy
+- ✅ Payment mode reconciliation
+- ✅ GST slab aggregation
+- ✅ Stock alert precision
+- ✅ Trend analytics (Day/Month granularity)
+- ✅ Percentage change and growth logic
+- ✅ Bill listing with pagination
+- ✅ Date range validation (Start ≤ End)
 
 ---
 
