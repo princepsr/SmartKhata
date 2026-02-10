@@ -102,7 +102,7 @@ export class BillRepository extends BaseRepository {
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
 
-      const billResult = this.execute(billSql, [
+      const params = [
         billData.billNumber,
         billData.customerId || null,
         Math.round(billData.subtotal * 100), // Rupees → Paise
@@ -110,7 +110,9 @@ export class BillRepository extends BaseRepository {
         Math.round((billData.discountAmount || 0) * 100),
         Math.round(billData.grandTotal * 100),
         billData.paymentMode,
-      ]);
+      ];
+
+      const billResult = this.execute(billSql, params);
 
       const billId = Number(billResult.lastInsertRowid);
 
@@ -129,7 +131,7 @@ export class BillRepository extends BaseRepository {
           item.productNameSnapshot,
           item.quantity,
           Math.round(item.unitPrice * 100), // Rupees → Paise
-          Math.round(item.gstPercent * 100), // Percent → Basis points
+          Math.round(item.gstPercent * 100), // Percent → Basis points (Keep 100?)
           Math.round(item.lineTotal * 100), // Rupees → Paise
         ]);
       });

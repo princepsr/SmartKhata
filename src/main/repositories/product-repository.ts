@@ -324,7 +324,7 @@ export class ProductRepository extends BaseRepository {
       barcode: row.barcode,
       salePrice: row.sale_price / 100, // Paise → Rupees
       purchasePrice: row.purchase_price ? row.purchase_price / 100 : null,
-      gstPercent: row.gst_percent / 100, // Basis points → Percent
+      gstPercent: row.gst_percent / 100, // Basis points → Percent (This stays 100 as per schema usually)
       stockQty: row.stock_qty,
       lowStockAlert: row.low_stock_alert,
       isActive: row.is_active === 1, // INTEGER → boolean

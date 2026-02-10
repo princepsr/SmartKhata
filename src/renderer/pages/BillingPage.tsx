@@ -13,6 +13,7 @@ import {
 } from '../utils/billing-math';
 import './BillingPage.css';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { RichSelect } from '../components/ui/RichSelect';
 
 /**
  * Billing Page
@@ -450,408 +451,385 @@ function BillingPage() {
 
   return (
     <div className="page billing-page">
-      {/* Success Message Banner */}
-      {successMessage && (
-        <div className="success-banner" onClick={() => setSuccessMessage(null)}>
-          <div className="success-content">
-            <span className="success-icon">✅</span>
-            <div className="success-details">
-              <strong>Bill #{successMessage.billNumber} Saved!</strong>
-              <span>Total: ₹{successMessage.total}</span>
+      <div className="page-content-wrapper animate-fade-in">
+        {/* Success Message Banner */}
+        {successMessage && (
+          <div className="success-banner" onClick={() => setSuccessMessage(null)}>
+            <div className="success-content">
+              <span className="success-icon">✅</span>
+              <div className="success-details">
+                <strong>Bill #{successMessage.billNumber} Saved!</strong>
+                <span>Total: ₹{successMessage.total}</span>
+              </div>
             </div>
+            <button className="close-success">&times;</button>
           </div>
-          <button className="close-success">&times;</button>
-        </div>
-      )}
+        )}
 
-      <header className="page-header">
-        <h1 className="page-title">Billing - New Sale</h1>
+        <header className="page-header">
+          <h1 className="page-title">Billing - New Sale</h1>
 
-        {/* Customer Section in Header */}
-        <div
-          className="header-actions"
-          style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}
-        >
-          {/* History Button */}
-          <button
-            onClick={() => setShowHistory(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.4rem 1rem',
-              background: '#f8fafc',
-              border: '1px solid #d1d5db',
-              borderRadius: '0.375rem',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              color: '#475569',
-              transition: 'all 0.2s',
-            }}
-            className="hover:bg-gray-100"
-          >
-            <span>🕒</span>
-            <span>History (F4)</span>
-          </button>
+          {/* Customer Section in Header */}
+          <div className="header-actions">
+            {/* History Button */}
+            <button
+              onClick={() => setShowHistory(true)}
+              className="header-btn"
+              title="View Bill History (F4)"
+            >
+              <span>🕒</span>
+              <span>History</span>
+            </button>
 
-          {/* Printer Selector */}
-          <div className="printer-selector">
-            <select
+            {/* Printer Selector */}
+            <RichSelect
               value={selectedPrinter}
-              onChange={(e) => handlePrinterChange(e.target.value)}
-              style={{
-                padding: '0.4rem',
-                fontSize: '0.9rem',
-                borderRadius: '0.375rem',
-                border: '1px solid #d1d5db',
-                maxWidth: '150px',
-              }}
-            >
-              <option value="">Default Printer</option>
-              {printers?.map((p) => (
-                <option key={p.name} value={p.name}>
-                  {p.name} {p.isDefault ? '(Default)' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+              onChange={handlePrinterChange}
+              options={[
+                { value: '', label: 'Default Printer' },
+                ...(printers?.map((p) => ({
+                  value: p.name,
+                  label: `${p.name} ${p.isDefault ? '(Default)' : ''}`,
+                })) || []),
+              ]}
+              placeholder="Select Printer"
+              className="billing-printer-select"
+            />
 
-          {selectedCustomer ? (
-            <div
-              className="selected-customer-badge"
-              style={{
-                background: '#e0f2fe',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '999px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                border: '1px solid #bae6fd',
-              }}
-            >
-              <span style={{ fontWeight: 600, color: '#0369a1' }}>{selectedCustomer.name}</span>
-              <span style={{ fontSize: '0.85rem', color: '#0c4a6e' }}>
-                ({selectedCustomer.phone})
-              </span>
-              <button
-                onClick={() => setSelectedCustomer(null)}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#0369a1',
-                  fontWeight: 'bold',
-                  padding: '0 0.25rem',
-                }}
-              >
-                ×
-              </button>
-            </div>
-          ) : (
-            <div className="customer-search" style={{ position: 'relative' }}>
-              <input
-                type="text"
-                placeholder="Customer (Optional)"
-                className="customer-search-input"
-                value={customerQuery}
-                onChange={(e) => {
-                  setCustomerQuery(e.target.value);
-                  setShowCustomerSearch(true);
-                }}
-                onFocus={() => setShowCustomerSearch(true)}
-                onBlur={() => setTimeout(() => setShowCustomerSearch(false), 200)} // Delay to allow click
-                style={{
-                  padding: '0.4rem 0.8rem',
-                  borderRadius: '0.375rem',
-                  border: '1px solid #d1d5db',
-                  fontSize: '0.9rem',
-                  width: '200px',
-                }}
-              />
-
-              {/* Customer Search Results Dropdown */}
-              {showCustomerSearch && customerQuery.length >= 2 && customerResults && (
-                <div
-                  className="customer-results-dropdown"
+            {selectedCustomer ? (
+              <div className="selected-customer-badge">
+                <span style={{ fontWeight: 600 }}>{selectedCustomer.name}</span>
+                <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>
+                  ({selectedCustomer.phone})
+                </span>
+                <button
+                  onClick={() => setSelectedCustomer(null)}
                   style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    width: '300px',
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 4px 6px -1px update(0, 0, 0, 0.1)',
-                    zIndex: 20,
-                    marginTop: '0.25rem',
-                    maxHeight: '200px',
-                    overflowY: 'auto',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    color: 'inherit',
+                    fontWeight: 'bold',
+                    padding: '0 0.25rem',
+                    marginLeft: 'auto',
                   }}
                 >
-                  {searchingCustomers ? (
-                    <div style={{ padding: '0.5rem', color: '#6b7280' }}>Searching...</div>
-                  ) : customerResults.length > 0 ? (
-                    customerResults.map((c) => (
+                  ×
+                </button>
+              </div>
+            ) : (
+              <div className="customer-search" style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Customer (Optional)"
+                  className="header-input"
+                  value={customerQuery}
+                  onChange={(e) => {
+                    setCustomerQuery(e.target.value);
+                    setShowCustomerSearch(true);
+                  }}
+                  onFocus={() => setShowCustomerSearch(true)}
+                  onBlur={() => setTimeout(() => setShowCustomerSearch(false), 200)}
+                />
+                {/* Customer Search Results Dropdown */}
+                {showCustomerSearch && customerQuery.length >= 2 && customerResults && (
+                  <div
+                    className="customer-results-dropdown"
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      width: '300px',
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.5rem',
+                      boxShadow: '0 4px 6px -1px update(0, 0, 0, 0.1)',
+                      zIndex: 20,
+                      marginTop: '0.25rem',
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {searchingCustomers ? (
+                      <div style={{ padding: '0.5rem', color: '#6b7280' }}>Searching...</div>
+                    ) : customerResults.length > 0 ? (
+                      customerResults.map((c) => (
+                        <div
+                          key={c.id}
+                          onClick={() => {
+                            setSelectedCustomer(c);
+                            setCustomerQuery('');
+                            setShowCustomerSearch(false);
+                          }}
+                          style={{
+                            padding: '0.5rem 0.75rem',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #f3f4f6',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                          }}
+                          className="hover:bg-gray-50"
+                        >
+                          <span style={{ fontWeight: 500 }}>{c.name}</span>
+                          <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>{c.phone}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '0.5rem', color: '#6b7280' }}>No customer found</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </header>
+
+        <div className="billing-content">
+          {/* 1. Search Section (Full Width Top) */}
+          <div className="search-panel" ref={searchContainerRef}>
+            <input
+              ref={searchInputRef}
+              type="text"
+              className="search-input"
+              placeholder="Search Item (F2) - Name / SKU / Barcode"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowProductSearch(true);
+              }}
+              onFocus={() => setShowProductSearch(true)}
+              onKeyDown={handleSearchKeyDown}
+              autoFocus
+            />
+
+            {/* Absolute dropdown for results */}
+            <div className="search-results-container">
+              {showProductSearch && searchQuery.length >= 2 && (
+                <div className="search-results">
+                  {searching ? (
+                    <>
+                      {[1, 2, 3].map((i) => (
+                        <div
+                          key={i}
+                          className="skeleton"
+                          style={{
+                            height: '50px',
+                            width: '100%',
+                            marginBottom: '4px',
+                            borderRadius: 'var(--radius-md)',
+                          }}
+                        />
+                      ))}
+                    </>
+                  ) : searchResults && searchResults.length > 0 ? (
+                    searchResults.map((product, index) => (
                       <div
-                        key={c.id}
-                        onClick={() => {
-                          setSelectedCustomer(c);
-                          setCustomerQuery('');
-                          setShowCustomerSearch(false);
-                        }}
-                        style={{
-                          padding: '0.5rem 0.75rem',
-                          cursor: 'pointer',
-                          borderBottom: '1px solid #f3f4f6',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                        }}
-                        className="hover:bg-gray-50"
+                        key={product.id}
+                        className={`product-item ${index === selectedResultIndex ? 'selected' : ''}`}
+                        onClick={() => addToCart(product)}
                       >
-                        <span style={{ fontWeight: 500 }}>{c.name}</span>
-                        <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>{c.phone}</span>
+                        <span className="product-name">{product.name}</span>
+                        <span className="product-meta">
+                          Stock: {product.stockQty} • SKU: {product.sku}
+                        </span>
+                        <span className="product-price">{formatCurrency(product.salePrice)}</span>
                       </div>
                     ))
                   ) : (
-                    <div style={{ padding: '0.5rem', color: '#6b7280' }}>No customer found</div>
+                    <div className="no-results" style={{ padding: '1rem', textAlign: 'center' }}>
+                      No products found.
+                    </div>
                   )}
                 </div>
               )}
             </div>
-          )}
-        </div>
-      </header>
+          </div>
 
-      <div className="billing-content">
-        {/* 1. Search Section (Full Width Top) */}
-        <div className="search-panel" ref={searchContainerRef}>
-          <input
-            ref={searchInputRef}
-            type="text"
-            className="search-input"
-            placeholder="Search Item (F2) - Name / SKU / Barcode"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setShowProductSearch(true);
-            }}
-            onFocus={() => setShowProductSearch(true)}
-            onKeyDown={handleSearchKeyDown}
-            autoFocus
-          />
+          {/* 2. Bill Items List (Left Column) */}
+          <div className="cart-panel">
+            <BillItemList cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeFromCart} />
+          </div>
 
-          {/* Absolute dropdown for results */}
-          <div className="search-results-container">
-            {searching && <div className="loading">Searching...</div>}
-
-            {showProductSearch &&
-              searchQuery.length >= 2 &&
-              searchResults &&
-              searchResults.length > 0 && (
-                <div className="search-results">
-                  {searchResults.map((product, index) => (
-                    <div
-                      key={product.id}
-                      className={`product-item ${index === selectedResultIndex ? 'selected' : ''}`}
-                      onClick={() => addToCart(product)}
+          {/* 3. Totals & Actions (Right Column) */}
+          <div className="totals-panel">
+            <div className="totals-area">
+              <div className="summary-row">
+                <span>Subtotal</span>
+                <span>{calculation ? formatCurrency(calculation.subtotal) : '₹ 0.00'}</span>
+              </div>
+              <div className="summary-row">
+                <span>GST</span>
+                <span>{calculation ? formatCurrency(calculation.gstTotal) : '₹ 0.00'}</span>
+              </div>
+              <div className="summary-row discount-row">
+                <span>Discount</span>
+                <div className="discount-controls">
+                  <div className="discount-toggle-group">
+                    <button
+                      className={`discount-toggle-btn ${discountType === 'amount' ? 'active' : ''}`}
+                      onClick={() => setDiscountType('amount')}
                     >
-                      <span className="product-name">{product.name}</span>
-                      <span className="product-meta">
-                        Stock: {product.stockQty} • SKU: {product.sku}
-                      </span>
-                      <span className="product-price">₹{formatCurrency(product.salePrice)}</span>
-                    </div>
-                  ))}
+                      ₹
+                    </button>
+                    <button
+                      className={`discount-toggle-btn ${discountType === 'percent' ? 'active' : ''}`}
+                      onClick={() => setDiscountType('percent')}
+                    >
+                      %
+                    </button>
+                  </div>
+                  <input
+                    className="discount-input"
+                    type="number"
+                    value={discountValue}
+                    onChange={(e) => setDiscountValue(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="summary-row grand-total">
+                <span>{calculation ? formatCurrency(calculation.grandTotal) : '₹ 0.00'}</span>
+              </div>
+            </div>
+
+            <div className="actions-area">
+              <PaymentModeSelector
+                currentMode={paymentMode}
+                onModeChange={setPaymentMode}
+                disabled={finalizing}
+              />
+
+              {finalizingError && (
+                <div
+                  className="error-message"
+                  style={{
+                    color: '#ef4444',
+                    marginBottom: '0.5rem',
+                    textAlign: 'right',
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  Error: {finalizingError}
                 </div>
               )}
-          </div>
-        </div>
 
-        {/* 2. Bill Items List (Left Column) */}
-        <div className="cart-panel">
-          <BillItemList cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeFromCart} />
-        </div>
-
-        {/* 3. Totals & Actions (Right Column) */}
-        <div className="totals-panel">
-          <div className="totals-area">
-            <div className="summary-row">
-              <span>Subtotal</span>
-              <span>₹{calculation ? formatCurrency(calculation.subtotal) : '0.00'}</span>
-            </div>
-            <div className="summary-row">
-              <span>GST</span>
-              <span>₹{calculation ? formatCurrency(calculation.gstTotal) : '0.00'}</span>
-            </div>
-            <div className="summary-row discount-row">
-              <span>Discount</span>
-              <div className="discount-controls">
-                <div className="discount-toggle-group">
-                  <button
-                    className={`discount-toggle-btn ${discountType === 'amount' ? 'active' : ''}`}
-                    onClick={() => setDiscountType('amount')}
-                  >
-                    ₹
-                  </button>
-                  <button
-                    className={`discount-toggle-btn ${discountType === 'percent' ? 'active' : ''}`}
-                    onClick={() => setDiscountType('percent')}
-                  >
-                    %
-                  </button>
-                </div>
-                <input
-                  className="discount-input"
-                  type="number"
-                  value={discountValue}
-                  onChange={(e) => setDiscountValue(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className="summary-row grand-total">
-              <span>₹{calculation ? formatCurrency(calculation.grandTotal) : '0.00'}</span>
-            </div>
-          </div>
-
-          <div className="actions-area">
-            <PaymentModeSelector
-              currentMode={paymentMode}
-              onModeChange={setPaymentMode}
-              disabled={finalizing}
-            />
-
-            {finalizingError && (
-              <div
-                className="error-message"
-                style={{
-                  color: '#ef4444',
-                  marginBottom: '0.5rem',
-                  textAlign: 'right',
-                  fontSize: '0.9rem',
-                }}
+              <button
+                ref={checkoutBtnRef}
+                className="btn-pay"
+                disabled={finalizing || cart.length === 0}
+                onClick={handleCheckout}
               >
-                Error: {finalizingError}
-              </div>
-            )}
-
-            <button
-              ref={checkoutBtnRef}
-              className="btn-pay"
-              disabled={finalizing || cart.length === 0}
-              onClick={handleCheckout}
-            >
-              {finalizing ? 'Processing...' : `PAY (F9)`}
-            </button>
-          </div>
-
-          {/* Shortcuts Legend */}
-          <div
-            className="shortcuts-legend"
-            style={{
-              padding: '0.75rem',
-              background: '#f8fafc',
-              borderRadius: '0.5rem',
-              fontSize: '0.75rem',
-              color: '#64748b',
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '0.5rem',
-            }}
-          >
-            <div>
-              <strong style={{ color: '#475569' }}>F2</strong> Focus Search
+                {finalizing ? 'Processing...' : `PAY (F9)`}
+              </button>
             </div>
-            <div>
-              <strong style={{ color: '#475569' }}>Enter</strong> Add Item
-            </div>
-            <div>
-              <strong style={{ color: '#475569' }}>F9</strong> Pay & Print
-            </div>
-            <div>
-              <strong style={{ color: '#475569' }}>Esc</strong> Clear / Reset
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {showHistory && (
-        <BillHistoryModal onClose={() => setShowHistory(false)} printerName={selectedPrinter} />
-      )}
-
-      {/* Custom Reset Confirmation Modal */}
-      {showResetConfirmation && (
-        <div
-          className="modal-overlay"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 2000,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <div
-            className="modal-content"
-            style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: '0.5rem',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-              width: '350px',
-              textAlign: 'center',
-            }}
-          >
-            <h3 style={{ marginTop: 0 }}>Clear Bill?</h3>
-            <p>Are you sure you want to discard the current sale?</p>
+            {/* Shortcuts Legend */}
             <div
+              className="shortcuts-legend"
               style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: '1rem',
-                marginTop: '1.5rem',
+                padding: '0.75rem',
+                background: '#f8fafc',
+                borderRadius: '0.5rem',
+                fontSize: '0.75rem',
+                color: '#64748b',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.5rem',
               }}
             >
-              <button
-                onClick={() => setShowResetConfirmation(false)}
-                style={{
-                  padding: '0.5rem 1.5rem',
-                  borderRadius: '0.25rem',
-                  border: '1px solid #d1d5db',
-                  background: 'white',
-                  cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowResetConfirmation(false);
-                  resetBill();
-                }}
-                autoFocus
-                style={{
-                  padding: '0.5rem 1.5rem',
-                  borderRadius: '0.25rem',
-                  border: 'none',
-                  background: '#ef4444',
-                  color: 'white',
-                  cursor: 'pointer',
-                }}
-              >
-                Clear Bill
-              </button>
+              <div>
+                <strong style={{ color: '#475569' }}>F2</strong> Focus Search
+              </div>
+              <div>
+                <strong style={{ color: '#475569' }}>Enter</strong> Add Item
+              </div>
+              <div>
+                <strong style={{ color: '#475569' }}>F9</strong> Pay & Print
+              </div>
+              <div>
+                <strong style={{ color: '#475569' }}>Esc</strong> Clear / Reset
+              </div>
             </div>
           </div>
         </div>
-      )}
+
+        {showHistory && (
+          <BillHistoryModal onClose={() => setShowHistory(false)} printerName={selectedPrinter} />
+        )}
+
+        {/* Custom Reset Confirmation Modal */}
+        {showResetConfirmation && (
+          <div
+            className="modal-overlay"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              zIndex: 2000,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <div
+              className="modal-content"
+              style={{
+                background: 'white',
+                padding: '2rem',
+                borderRadius: '0.5rem',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                width: '350px',
+                textAlign: 'center',
+              }}
+            >
+              <h3 style={{ marginTop: 0 }}>Clear Bill?</h3>
+              <p>Are you sure you want to discard the current sale?</p>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '1rem',
+                  marginTop: '1.5rem',
+                }}
+              >
+                <button
+                  onClick={() => setShowResetConfirmation(false)}
+                  style={{
+                    padding: '0.5rem 1.5rem',
+                    borderRadius: '0.25rem',
+                    border: '1px solid #d1d5db',
+                    background: 'white',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowResetConfirmation(false);
+                    resetBill();
+                  }}
+                  autoFocus
+                  style={{
+                    padding: '0.5rem 1.5rem',
+                    borderRadius: '0.25rem',
+                    border: 'none',
+                    background: '#ef4444',
+                    color: 'white',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Clear Bill
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Alert Modal */}
       <ConfirmModal

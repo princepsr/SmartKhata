@@ -22,6 +22,14 @@ interface Product {
   isActive: boolean;
 }
 
+const SkeletonRows: React.FC = () => (
+  <>
+    {[1, 2, 3, 4, 5].map((i) => (
+      <div key={i} className="skeleton skeleton-row" />
+    ))}
+  </>
+);
+
 const ProductsPage: React.FC = () => {
   const {
     data: products,
@@ -212,125 +220,131 @@ const ProductsPage: React.FC = () => {
 
   return (
     <div className="page products-page">
-      <header className="page-header">
-        <h1 className="page-title">Products & Inventory</h1>
-        <div className="header-actions">
-          <div className="filter-group">
-            <label className="filter-checkbox">
-              <input
-                type="checkbox"
-                checked={showLowStockOnly}
-                onChange={(e) => setShowLowStockOnly(e.target.checked)}
-              />
-              Low Stock Only
-            </label>
-            <label className="filter-checkbox">
-              <input
-                type="checkbox"
-                checked={includeInactive}
-                onChange={(e) => setIncludeInactive(e.target.checked)}
-              />
-              Show Inactive
-            </label>
-          </div>
-          <button
-            className="btn-secondary"
-            onClick={() => setIsImportOpen(true)}
-            style={{ marginRight: '1rem' }}
-          >
-            Import CSV
-          </button>
-          <input
-            ref={searchInputRef}
-            type="text"
-            className="search-input"
-            placeholder="Search Product (F2) - Name / SKU / Barcode"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
-          />
-          <button className="btn-primary" onClick={handleAddProduct} title="Ctrl + N">
-            + Add Product (Ctrl+N)
-          </button>
-        </div>
-      </header>
-
-      <div className="products-content">
-        {loading && <div className="loading">Loading products...</div>}
-        {error && <div className="error">Error: {error}</div>}
-
-        {!loading && !error && (
-          <div className="data-table-container" ref={listContainerRef}>
-            <div className="data-table-header">
-              <div className="col-name">Name</div>
-              <div className="col-sku">SKU / Barcode</div>
-              <div className="col-price">Price</div>
-              <div className="col-stock">Stock</div>
-              <div className="col-status">Status</div>
-              <div className="col-actions">Actions</div>
+      <div className="page-content-wrapper animate-fade-in">
+        <header className="page-header">
+          <h1 className="page-title">Products & Inventory</h1>
+          <div className="header-actions">
+            <div className="filter-group">
+              <label className="filter-checkbox">
+                <input
+                  type="checkbox"
+                  checked={showLowStockOnly}
+                  onChange={(e) => setShowLowStockOnly(e.target.checked)}
+                />
+                Low Stock Only
+              </label>
+              <label className="filter-checkbox">
+                <input
+                  type="checkbox"
+                  checked={includeInactive}
+                  onChange={(e) => setIncludeInactive(e.target.checked)}
+                />
+                Show Inactive
+              </label>
             </div>
-
-            {filteredProducts.length === 0 ? (
-              <div className="no-results">No products found</div>
-            ) : (
-              filteredProducts.map((product, index) => (
-                <div
-                  key={product.id}
-                  className={`data-table-row ${index === selectedIndex ? 'selected' : ''} ${!product.isActive ? 'inactive-row' : ''}`}
-                  onClick={() => setSelectedIndex(index)}
-                  onDoubleClick={() => handleEditProduct(product)}
-                >
-                  <div className="col-name">{product.name}</div>
-                  <div className="col-sku">{product.sku || product.barcode || '-'}</div>
-                  <div className="col-price">₹{formatCurrency(product.salePrice)}</div>
-                  <div className="col-stock">
-                    <span
-                      className={
-                        product.stockQty <= 0
-                          ? 'stock-out'
-                          : product.stockQty <= (product.lowStockAlert || 0)
-                            ? 'stock-low'
-                            : ''
-                      }
-                    >
-                      {product.stockQty}
-                    </span>
-                  </div>
-                  <div className="col-status">
-                    <span className={`status-badge ${product.isActive ? 'active' : 'inactive'}`}>
-                      {product.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <div className="col-actions">
-                    <button
-                      className="btn-sm btn-secondary"
-                      onClick={(e) => handleAdjustStock(e, product)}
-                      title="Adjust Stock"
-                    >
-                      Adj
-                    </button>
-                    <button
-                      className="btn-sm btn-secondary"
-                      onClick={(e) => handleViewHistory(e, product)}
-                      title="View History"
-                      style={{ marginLeft: '0.5rem' }}
-                    >
-                      Hist
-                    </button>
-                    <button
-                      className={`btn-sm ${product.isActive ? 'btn-secondary' : 'btn-success'}`}
-                      onClick={(e) => handleToggleStatus(e, product)}
-                      title={product.isActive ? 'Deactivate' : 'Activate'}
-                      style={{ marginLeft: '0.5rem' }}
-                    >
-                      {product.isActive ? 'Off' : 'On'}
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
+            <button
+              className="btn-secondary"
+              onClick={() => setIsImportOpen(true)}
+              style={{ marginRight: '1rem' }}
+            >
+              Import CSV
+            </button>
+            <input
+              ref={searchInputRef}
+              type="text"
+              className="search-input"
+              placeholder="Search Product (F2) - Name / SKU / Barcode"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
+            <button className="btn-primary" onClick={handleAddProduct} title="Ctrl + N">
+              + Add Product (Ctrl+N)
+            </button>
           </div>
-        )}
+        </header>
+
+        <div className="products-content">
+          {loading && (
+            <div className="data-table-container">
+              <SkeletonRows />
+            </div>
+          )}
+          {error && <div className="error">Error: {error}</div>}
+
+          {!loading && !error && (
+            <div className="data-table-container" ref={listContainerRef}>
+              <div className="data-table-header">
+                <div className="col-name">Name</div>
+                <div className="col-sku">SKU / Barcode</div>
+                <div className="col-price">Price</div>
+                <div className="col-stock">Stock</div>
+                <div className="col-status">Status</div>
+                <div className="col-actions">Actions</div>
+              </div>
+
+              {filteredProducts.length === 0 ? (
+                <div className="no-results">No products found</div>
+              ) : (
+                filteredProducts.map((product, index) => (
+                  <div
+                    key={product.id}
+                    className={`data-table-row ${index === selectedIndex ? 'selected' : ''} ${!product.isActive ? 'inactive-row' : ''}`}
+                    onClick={() => setSelectedIndex(index)}
+                    onDoubleClick={() => handleEditProduct(product)}
+                  >
+                    <div className="col-name">{product.name}</div>
+                    <div className="col-sku">{product.sku || product.barcode || '-'}</div>
+                    <div className="col-price">{formatCurrency(product.salePrice)}</div>
+                    <div className="col-stock">
+                      <span
+                        className={
+                          product.stockQty <= 0
+                            ? 'stock-out'
+                            : product.stockQty <= (product.lowStockAlert || 0)
+                              ? 'stock-low'
+                              : ''
+                        }
+                      >
+                        {product.stockQty}
+                      </span>
+                    </div>
+                    <div className="col-status">
+                      <span className={`status-badge ${product.isActive ? 'active' : 'inactive'}`}>
+                        {product.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div className="col-actions">
+                      <button
+                        className="btn-sm btn-secondary"
+                        onClick={(e) => handleAdjustStock(e, product)}
+                        title="Adjust Stock"
+                      >
+                        Adj
+                      </button>
+                      <button
+                        className="btn-sm btn-secondary"
+                        onClick={(e) => handleViewHistory(e, product)}
+                        title="View History"
+                        style={{ marginLeft: '0.5rem' }}
+                      >
+                        Hist
+                      </button>
+                      <button
+                        className={`btn-sm ${product.isActive ? 'btn-secondary' : 'btn-success'}`}
+                        onClick={(e) => handleToggleStatus(e, product)}
+                        title={product.isActive ? 'Deactivate' : 'Activate'}
+                        style={{ marginLeft: '0.5rem' }}
+                      >
+                        {product.isActive ? 'Off' : 'On'}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <ProductFormModal

@@ -145,7 +145,7 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose, pri
                     <td>
                       <span className={`mode-badge ${bill.paymentMode}`}>{bill.paymentMode}</span>
                     </td>
-                    <td className="text-right font-bold">₹{formatCurrency(bill.grandTotal)}</td>
+                    <td className="text-right font-bold">{formatCurrency(bill.grandTotal)}</td>
                     <td className="text-right">
                       <button
                         className="btn-sm btn-secondary"

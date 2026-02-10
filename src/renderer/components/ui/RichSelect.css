@@ -1,0 +1,109 @@
+/* Rich Select Component - Global "Rich App" Dropdown Style */
+.rich-select-wrapper {
+  position: relative;
+  /* margin-left removed to allow flexibility in usage sites */
+}
+
+.rich-select-trigger {
+  padding: 0 2rem 0 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  color: var(--text-primary);
+  height: 34px;
+  box-sizing: border-box;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  background-color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  min-width: 140px;
+  position: relative;
+}
+
+.rich-select-trigger::after {
+  content: '';
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  /* Using same accent-color chevron */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  transition: transform 0.2s;
+  pointer-events: none;
+}
+
+.rich-select-trigger.is-open {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.rich-select-trigger.is-open::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.rich-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0; /* Default alignment */
+  left: 0;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000; /* High z-index for dropdowns */
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 100%;
+  width: max-content;
+  max-width: 300px;
+  animation: fadeIn 0.1s ease-out forwards;
+}
+
+.rich-select-option {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.1s;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.rich-select-option:hover {
+  background-color: #f1f5f9;
+  color: var(--color-primary);
+}
+
+.rich-select-option.selected {
+  background-color: rgba(37, 99, 235, 0.08);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.rich-select-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

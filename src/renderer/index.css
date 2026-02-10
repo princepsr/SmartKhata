@@ -54,6 +54,13 @@
 }
 
 /* Base Styles */
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
 html {
   font-size: var(--font-size-base);
 }
@@ -65,7 +72,6 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden; /* Prevent scrolling in Electron window */
 }
 
 /* Keyboard Focus Indicators */
@@ -114,4 +120,62 @@ kbd {
 ::selection {
   background-color: var(--color-primary);
   color: white;
+}
+
+/* --- Global Animations --- */
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 2px, 0) scale(0.998);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeInScale 0.5s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* Global Page Layout Wrapper */
+.page {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  display: block;
+  position: relative;
+  background-color: var(--color-bg);
+}
+
+.page-content-wrapper {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* --- Skeleton Utilities --- */
+.skeleton {
+  background: #f6f7f8;
+  background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
+  background-repeat: no-repeat;
+  background-size: 800px 400px;
+  display: inline-block;
+  position: relative;
+  animation: shimmer 2s infinite linear;
+  border-radius: var(--radius-sm);
+  will-change: background-position;
 }

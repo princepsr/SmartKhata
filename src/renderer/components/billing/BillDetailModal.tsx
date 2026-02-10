@@ -87,8 +87,8 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
                     <tr key={item.id}>
                       <td>{item.productNameSnapshot}</td>
                       <td className="text-right">{item.quantity}</td>
-                      <td className="text-right">₹{formatCurrency(item.unitPrice)}</td>
-                      <td className="text-right">₹{formatCurrency(item.lineTotal)}</td>
+                      <td className="text-right">{formatCurrency(item.unitPrice)}</td>
+                      <td className="text-right">{formatCurrency(item.lineTotal)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -97,21 +97,21 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
               <div className="bill-summary">
                 <div className="summary-row">
                   <span>Subtotal:</span>
-                  <span>₹{formatCurrency(data.bill.subtotal)}</span>
+                  <span>{formatCurrency(data.bill.subtotal)}</span>
                 </div>
                 <div className="summary-row">
                   <span>GST:</span>
-                  <span>₹{formatCurrency(data.bill.gstTotal)}</span>
+                  <span>{formatCurrency(data.bill.gstTotal)}</span>
                 </div>
                 {data.bill.discountAmount > 0 && (
                   <div className="summary-row discount">
                     <span>Discount:</span>
-                    <span>-₹{formatCurrency(data.bill.discountAmount)}</span>
+                    <span>-{formatCurrency(data.bill.discountAmount)}</span>
                   </div>
                 )}
                 <div className="summary-row grand-total">
                   <span>Grand Total:</span>
-                  <span>₹{formatCurrency(data.bill.grandTotal)}</span>
+                  <span>{formatCurrency(data.bill.grandTotal)}</span>
                 </div>
               </div>
             </div>

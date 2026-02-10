@@ -166,7 +166,11 @@ export abstract class BaseRepository {
       }
 
       // Generic database error
-      return new DatabaseError(`Database operation failed: ${operation}`, 'DATABASE_ERROR', error);
+      return new DatabaseError(
+        `Database operation failed: ${operation} - ${(error as Error).message}`,
+        'DATABASE_ERROR',
+        error
+      );
     }
 
     // Unknown error

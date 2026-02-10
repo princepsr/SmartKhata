@@ -1,6 +1,6 @@
 /**
  * IPC Handler Registration
- * 
+ *
  * Central place to register all IPC handlers.
  * Import and call this from main process on app startup.
  */
@@ -11,10 +11,11 @@ import { registerSystemHandlers } from './handlers/system-handlers';
 // import { registerSaleHandlers } from './handlers/sale-handlers';
 import { registerAppHandlers } from './handlers/app-handlers';
 import { registerBillHandlers } from './handlers/bill-handlers';
+import { registerReportHandlers } from './handlers/report-handlers';
 
 /**
  * Register all IPC handlers
- * 
+ *
  * Call this function once when the app starts
  */
 export function registerIPCHandlers(): void {
@@ -26,6 +27,7 @@ export function registerIPCHandlers(): void {
     registerSystemHandlers();
     registerAppHandlers();
     registerBillHandlers();
+    registerReportHandlers();
     // registerSaleHandlers();      // TODO: Implement
     // registerCustomerHandlers(); // TODO: Implement
 

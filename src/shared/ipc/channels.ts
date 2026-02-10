@@ -69,9 +69,15 @@ export const IPC_CHANNELS = {
   // ============================================
   // REPORT MODULE
   // ============================================
-  REPORT_SALES: 'report:sales',
-  REPORT_INVENTORY: 'report:inventory',
-  REPORT_PROFIT: 'report:profit',
+  REPORT_DAILY_SALES: 'report:sales',
+  REPORT_PAYMENT_MODE: 'reports:payment-mode', // Kept for backward compat or specialized use if needed, or I could just leave it. Request didn't mention it.
+  REPORT_GST: 'report:gst',
+  REPORT_STOCK: 'report:stock',
+  REPORT_BILL_WISE: 'report:bills',
+  REPORT_PRINT: 'report:print',
+  REPORT_EXPORT_PDF: 'report:export-pdf',
+  REPORT_EXPORT_EXCEL: 'report:export-excel',
+  REPORT_ANALYTICS: 'report:analytics',
 
   // ============================================
   // SYSTEM MODULE
@@ -169,7 +175,14 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.CUSTOMER_DELETE,
     IPC_CHANNELS.CUSTOMER_SEARCH,
   ],
-  REPORT: [IPC_CHANNELS.REPORT_SALES, IPC_CHANNELS.REPORT_INVENTORY, IPC_CHANNELS.REPORT_PROFIT],
+  REPORT: [
+    IPC_CHANNELS.REPORT_DAILY_SALES,
+    IPC_CHANNELS.REPORT_PAYMENT_MODE,
+    IPC_CHANNELS.REPORT_GST,
+    IPC_CHANNELS.REPORT_STOCK,
+    IPC_CHANNELS.REPORT_BILL_WISE,
+    IPC_CHANNELS.REPORT_ANALYTICS,
+  ],
   SYSTEM: [
     IPC_CHANNELS.SYSTEM_BACKUP,
     IPC_CHANNELS.SYSTEM_RESTORE,

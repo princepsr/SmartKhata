@@ -172,7 +172,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
       SYSTEM_FIELDS.forEach((field) => {
         const colIdx = parseInt(mapping[field.key]);
         if (!isNaN(colIdx) && row[colIdx] !== undefined) {
-          let value = row[colIdx];
+          let value: any = row[colIdx];
 
           // Convert Price fields (Rupees -> Paise)
           if (field.key === 'salePrice' || field.key === 'purchasePrice') {

@@ -92,23 +92,21 @@ export function calculateBillPreview(
   };
 }
 
+import { formatCurrency as standardFormatCurrency } from './formatters';
+
 /**
- * Format currency (Paisa -> Rupee)
- * @param amountInPaisa Amount in paisa (integer)
- * @returns Formatted string (e.g. "100.00")
+ * Format currency (Rupees -> String)
  */
-export function formatCurrency(amountInPaisa: number): string {
-  return (amountInPaisa / 100).toFixed(2);
-}
+export const formatCurrency = standardFormatCurrency;
 
 /**
  * Calculate Discrete Discount Amount
  *
  * @param type 'amount' or 'percent'
  * @param value The raw input value (e.g. "10" for 10% or 10 rupees)
- * @param subtotal Subtotal in paisa
- * @param gstTotal GST Total in paisa
- * @returns Discount amount in paisa
+ * @param subtotal Subtotal in rupees
+ * @param gstTotal GST Total in rupees
+ * @returns Discount amount in rupees
  */
 export function calculateDiscountAmount(
   type: 'amount' | 'percent',
@@ -118,14 +116,16 @@ export function calculateDiscountAmount(
 ): number {
   const val = parseFloat(value) || 0;
 
-  if (val <= 0) return 0;
+  if (val <= 0) {
+    return 0;
+  }
 
   if (type === 'percent') {
     // Calculate percentage of Subtotal + GST
     const baseTotal = subtotal + gstTotal;
-    return Math.round((baseTotal * val) / 100);
+    return (baseTotal * val) / 100;
   } else {
-    // Fixed amount (convert to paisa)
-    return Math.round(val * 100);
+    // Fixed amount (already in rupees)
+    return val;
   }
 }
