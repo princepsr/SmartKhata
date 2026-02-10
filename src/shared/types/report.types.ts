@@ -93,6 +93,7 @@ export interface BillSummary {
 }
 // 6. Analytics & Trends
 export interface AnalyticsPeriod {
+  periodId: string; // raw ID e.g. "2025-01-01" or "2025-01"
   period: string; // e.g., "Jan", "Week 12"
   totalSales: number;
   netSales: number;

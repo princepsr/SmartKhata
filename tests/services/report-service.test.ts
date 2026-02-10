@@ -30,7 +30,8 @@ describe('ReportService Integration Tests', () => {
     items: { productId: number; quantity: number }[],
     mode: 'cash' | 'upi' = 'cash',
     billNoSuffix: string,
-    discount: number = 0
+    discount: number = 0,
+    date?: string // Optional date format 'YYYY-MM-DD'
   ) => {
     const billNumber = `BILL-TEST-${billNoSuffix}`;
     billingService.finalizeBill({
@@ -40,10 +41,9 @@ describe('ReportService Integration Tests', () => {
       discountAmount: discount,
     });
 
-    // Update created_at to ensure it matches 'today' avoiding timezone mismatches between JS and SQLite
-    const today = new Date().toISOString().split('T')[0];
+    const targetDate = date || new Date().toISOString().split('T')[0];
     db.exec(
-      `UPDATE bills SET created_at = '${today} 12:00:00' WHERE bill_number = '${billNumber}'`
+      `UPDATE bills SET created_at = '${targetDate} 12:00:00' WHERE bill_number = '${billNumber}'`
     );
   };
 
@@ -230,5 +230,111 @@ describe('ReportService New API Tests', () => {
 
     expect(report).toBeDefined();
     expect(report.totalTaxable).toBeGreaterThan(0);
+  });
+
+  it('getBills should support pagination', () => {
+    // Generate 5 bills
+    for (let i = 1; i <= 5; i++) {
+      generateBill([{ productId: 1, quantity: 1 }], 'cash', `PAG-${i}`);
+    }
+    const today = new Date().toISOString().split('T')[0];
+
+    const page1 = reportService.getBills({ startDate: today, endDate: today }, 1, 2);
+    expect(page1.data).toHaveLength(2);
+    expect(page1.total).toBe(5);
+    expect(page1.page).toBe(1);
+
+    const page2 = reportService.getBills({ startDate: today, endDate: today }, 2, 2);
+    expect(page2.data).toHaveLength(2);
+    expect(page2.page).toBe(2);
+
+    const page3 = reportService.getBills({ startDate: today, endDate: today }, 3, 2);
+    expect(page3.data).toHaveLength(1);
+    expect(page3.page).toBe(3);
+  });
+
+  it('should validate date range', () => {
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    // Invalid: start > end
+    expect(() => reportService.getDailySalesSummary(today, yesterday)).toThrow(
+      'Start date cannot be after end date'
+    );
+
+    // Invalid: missing dates
+    expect(() => reportService.getDailySalesSummary('', '')).toThrow(
+      'Start date and end date are required'
+    );
+  });
+});
+
+describe('ReportService Trend Analytics', () => {
+  let db: BetterSqliteCompatibleDatabase;
+  let reportService: ReportService;
+  let billingService: BillingService;
+
+  beforeEach(async () => {
+    db = await createTestDatabase();
+    seedTestData(db);
+    reportService = new ReportService();
+    billingService = new BillingService();
+  });
+
+  afterEach(() => {
+    resetTestDatabase(db);
+  });
+
+  const generateBill = (
+    items: { productId: number; quantity: number }[],
+    mode: 'cash' | 'upi' = 'cash',
+    billNoSuffix: string,
+    date: string
+  ) => {
+    const billNumber = `BILL-TREND-${billNoSuffix}`;
+    billingService.finalizeBill({
+      billNumber,
+      items,
+      paymentMode: mode,
+    });
+    db.exec(`UPDATE bills SET created_at = '${date} 12:00:00' WHERE bill_number = '${billNumber}'`);
+  };
+
+  it('should return trend analytics with day granularity', () => {
+    generateBill([{ productId: 1, quantity: 1 }], 'cash', 'D1', '2025-01-01');
+    generateBill([{ productId: 1, quantity: 2 }], 'cash', 'D2', '2025-01-02');
+
+    const result = reportService.getTrendAnalytics('2025-01-01', '2025-01-10', 'day');
+
+    expect(result.periods).toHaveLength(2);
+    expect(result.periods[0].periodId).toBe('2025-01-01');
+    expect(result.periods[0].totalSales).toBe(47.2); // 1 * 47.20
+    expect(result.periods[1].totalSales).toBe(94.4); // 2 * 47.20
+    expect(result.periods[1].growth).toBe(100); // (94.4 - 47.2) / 47.2 = 100%
+  });
+
+  it('should return trend analytics with month granularity', () => {
+    generateBill([{ productId: 1, quantity: 1 }], 'cash', 'M1', '2025-01-15');
+    generateBill([{ productId: 1, quantity: 2 }], 'cash', 'M2', '2025-02-15');
+
+    const result = reportService.getTrendAnalytics('2025-01-01', '2025-03-01', 'month');
+
+    expect(result.periods).toHaveLength(2);
+    expect(result.periods[0].periodId).toBe('2025-01');
+    expect(result.periods[1].periodId).toBe('2025-02');
+  });
+
+  it('should calculate previous period comparison correctly in getDailySalesSummary', () => {
+    // Current period: Feb 10, 2025. 1 Bill.
+    generateBill([{ productId: 1, quantity: 2 }], 'cash', 'CUR', '2025-02-10'); // 94.4
+
+    // Previous period: Feb 9, 2025. 1 Bill.
+    generateBill([{ productId: 1, quantity: 1 }], 'cash', 'PREV', '2025-02-09'); // 47.2
+
+    const summary = reportService.getDailySalesSummary('2025-02-10', '2025-02-10');
+
+    expect(summary.totalSales).toBe(94.4);
+    expect(summary.comparison?.totalSales.change).toBe(100);
+    expect(summary.comparison?.totalSales.trend).toBe('up');
   });
 });

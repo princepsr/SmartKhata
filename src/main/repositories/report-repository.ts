@@ -298,6 +298,7 @@ export class ReportRepository extends BaseRepository {
       }
 
       return {
+        periodId: row.periodId,
         period: label,
         totalSales: row.totalSales / 100,
         netSales: row.netSales / 100,
