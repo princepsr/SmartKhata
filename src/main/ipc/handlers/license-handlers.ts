@@ -1,50 +1,63 @@
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { IPCHandler } from '../ipc-handler';
-import { LicenseService } from '@main/services/license-service';
+import { LicenseService, LicenseStatus } from '@main/services/license-service';
+import { getUserFriendlyMessage } from '@main/services/errors/service-errors';
 
 export function registerLicenseHandlers(): void {
   const licenseService = new LicenseService();
 
   /**
-   * Get current license info
+   * Get current license status
    */
-  IPCHandler.handle<
-    void,
+  IPCHandler.handle<void, LicenseStatus>(
+    IPC_CHANNELS.LICENSE_STATUS,
+    async () => {
+      return licenseService.getLicenseStatus();
+    },
     {
-      activated: boolean;
-      expiresAt?: Date;
-      daysRemaining?: number;
-      machineFingerprint: string;
-    }
-  >(IPC_CHANNELS.LICENSE_GET, async () => {
-    return licenseService.getLicenseInfo();
-  });
-
-  /**
-   * Activate license
-   */
-  IPCHandler.handle<{ licenseKey: string }, { success: boolean; error?: string }>(
-    IPC_CHANNELS.LICENSE_ACTIVATE,
-    async (payload) => {
-      try {
-        licenseService.activateLicense(payload);
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 
   /**
-   * Check if license is valid
+   * Activate license
    */
-  IPCHandler.handle<void, { isValid: boolean; reason?: string }>(
-    IPC_CHANNELS.LICENSE_CHECK,
+  IPCHandler.handle<{ licenseKey: string }, void>(
+    IPC_CHANNELS.LICENSE_ACTIVATE,
+    async (payload) => {
+      licenseService.activateLicense(payload);
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
+
+  /**
+   * Get trial specific info (days/bills)
+   */
+  IPCHandler.handle<
+    void,
+    {
+      type: string;
+      daysRemaining?: number;
+      billsRemaining?: number;
+      isExpired: boolean;
+      isGracePeriod: boolean;
+    }
+  >(
+    IPC_CHANNELS.LICENSE_TRIAL_INFO,
     async () => {
-      return licenseService.isLicenseValid();
+      const status = licenseService.getLicenseStatus();
+      return {
+        type: status.type,
+        daysRemaining: status.daysRemaining,
+        billsRemaining: status.billsRemaining,
+        isExpired: status.isExpired,
+        isGracePeriod: status.isGracePeriod,
+      };
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 }

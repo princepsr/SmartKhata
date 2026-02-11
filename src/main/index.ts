@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, globalShortcut } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { configManager } from './config/app-config';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import { logger } from './utils/logger';
@@ -8,12 +9,41 @@ import { registerGlobalErrorHandlers } from './utils/error-handler';
 import { registerIPCHandlers } from './ipc';
 import { databaseManager } from './database';
 import { migrationRunner } from './database/migrations';
+import { LicenseService } from './services/license-service';
 
 /**
  * Main Electron Process Entry Point
  */
 
 let mainWindow: BrowserWindow | null = null;
+
+// Simple .env loader (since npm install dotenv failed)
+function loadEnv(): void {
+  try {
+    const envPath = path.join(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      content.split('\n').forEach((line) => {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#')) {
+          const [key, ...valueParts] = trimmed.split('=');
+          if (key && valueParts.length > 0) {
+            const value = valueParts
+              .join('=')
+              .trim()
+              .replace(/^["']|["']$/g, '');
+            process.env[key.trim()] = value;
+          }
+        }
+      });
+      logger.info('.env file loaded successfully');
+    }
+  } catch (error) {
+    logger.error('Failed to load .env file', { error });
+  }
+}
+
+loadEnv();
 
 // Register global error handlers FIRST (before any other code)
 registerGlobalErrorHandlers();
@@ -138,6 +168,15 @@ app.whenReady().then(async () => {
     );
     app.quit();
     return;
+  }
+
+  // Initialize Licensing/Trial
+  try {
+    new LicenseService().initializeTrial();
+    logger.info('Licensing/Trial system initialized');
+  } catch (error) {
+    logger.error('Failed to initialize license system', { error });
+    // Not critical enough to quit, but worth logging
   }
 
   // Register IPC handlers

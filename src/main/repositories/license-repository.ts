@@ -7,9 +7,11 @@ import { logger } from '../utils/logger';
 export interface License {
   id: number;
   licenseKey: string;
-  activatedAt: Date;
-  expiresAt: Date;
-  machineFingerprint: string;
+  activatedOn: Date;
+  expiresOn: Date;
+  deviceId: string;
+  trialStartedOn: Date | null;
+  isTrial: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,8 +21,8 @@ export interface License {
  */
 export interface SaveLicenseInput {
   licenseKey: string;
-  expiresAt: Date;
-  machineFingerprint: string;
+  expiresOn: Date;
+  deviceId: string;
 }
 
 /**
@@ -54,16 +56,17 @@ export class LicenseRepository extends BaseRepository {
    */
   public save(data: SaveLicenseInput): License {
     const sql = `
-      INSERT INTO license (id, license_key, expires_at, machine_fingerprint)
-      VALUES (1, ?, ?, ?)
+      INSERT INTO license (id, license_key, expires_on, device_id, is_trial)
+      VALUES (1, ?, ?, ?, 0)
       ON CONFLICT(id) DO UPDATE SET
         license_key = excluded.license_key,
-        expires_at = excluded.expires_at,
-        machine_fingerprint = excluded.machine_fingerprint,
+        expires_on = excluded.expires_on,
+        device_id = excluded.device_id,
+        is_trial = 0,
         updated_at = datetime('now')
     `;
 
-    this.execute(sql, [data.licenseKey, data.expiresAt.toISOString(), data.machineFingerprint]);
+    this.execute(sql, [data.licenseKey, data.expiresOn.toISOString(), data.deviceId]);
 
     logger.info('License saved');
 
@@ -97,14 +100,52 @@ export class LicenseRepository extends BaseRepository {
   }
 
   /**
+   * Update trial start date
+   *
+   * @param date - Trial start date
+   */
+  public updateTrialStart(date: Date): void {
+    // Check if record exists
+    const exists = this.queryOne<{ id: number }>('SELECT id FROM license WHERE id = 1');
+
+    if (exists) {
+      const sql = `
+        UPDATE license SET
+          trial_started_on = COALESCE(trial_started_on, ?),
+          is_trial = CASE WHEN license_key = '' OR license_key IS NULL THEN 1 ELSE is_trial END,
+          updated_at = datetime('now')
+        WHERE id = 1
+      `;
+      this.execute(sql, [date.toISOString()]);
+    } else {
+      const sql = `
+        INSERT INTO license (id, license_key, expires_on, device_id, trial_started_on, is_trial)
+        VALUES (1, '', '9999-12-31', '', ?, 1)
+      `;
+      this.execute(sql, [date.toISOString()]);
+    }
+    logger.info('Trial start date updated');
+  }
+
+  /**
    * Delete the license (deactivate)
+   *
+   * NOTE: This keeps the trial_started_at to prevent trial reset.
    */
   public delete(): void {
-    const sql = `DELETE FROM license WHERE id = 1`;
+    const sql = `
+      UPDATE license 
+      SET license_key = '', 
+          expires_on = '1970-01-01', 
+          device_id = '',
+          is_trial = 1,
+          updated_at = datetime('now')
+      WHERE id = 1
+    `;
     const result = this.execute(sql);
 
     if (result.changes > 0) {
-      logger.info('License deleted');
+      logger.info('License cleared');
     }
   }
 
@@ -130,7 +171,7 @@ export class LicenseRepository extends BaseRepository {
 
     // Check expiry
     const now = new Date();
-    if (license.expiresAt < now) {
+    if (license.expiresOn < now) {
       return {
         isValid: false,
         reason: 'License expired',
@@ -157,7 +198,7 @@ export class LicenseRepository extends BaseRepository {
     }
 
     const now = new Date();
-    const diffMs = license.expiresAt.getTime() - now.getTime();
+    const diffMs = license.expiresOn.getTime() - now.getTime();
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
     return diffDays;
@@ -186,9 +227,11 @@ export class LicenseRepository extends BaseRepository {
     return {
       id: row.id,
       licenseKey: row.license_key,
-      activatedAt: this.parseDate(row.activated_at),
-      expiresAt: this.parseDate(row.expires_at),
-      machineFingerprint: row.machine_fingerprint,
+      activatedOn: this.parseDate(row.activated_on),
+      expiresOn: this.parseDate(row.expires_on),
+      deviceId: row.device_id,
+      trialStartedOn: row.trial_started_on ? this.parseDate(row.trial_started_on) : null,
+      isTrial: Boolean(row.is_trial),
       createdAt: this.parseDate(row.created_at),
       updatedAt: this.parseDate(row.updated_at),
     };

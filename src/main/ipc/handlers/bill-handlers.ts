@@ -9,6 +9,7 @@ import { IPCHandler } from '../ipc-handler';
 import { BillingService, FinalizeBillInput, BillItemInput } from '../../services/billing-service';
 import { BillRepository } from '../../repositories/bill-repository';
 import { PrintService } from '../../services/print-service'; // Import
+import { LicenseService } from '../../services/license-service';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 
 /**
@@ -55,8 +56,13 @@ export function registerBillHandlers(): void {
   // ============================================
   IPCHandler.handle<FinalizeBillInput, any>(
     'bill:create',
-    // ... existing implementation ...
     async (billInput) => {
+      // Polite Locking: Check if license is valid before creating bill
+      const licenseStatus = new LicenseService().getLicenseStatus();
+      if (licenseStatus.isLocked) {
+        throw new Error('Trial or License has expired. Please activate to continue billing.');
+      }
+
       const result = billingService.finalizeBill(billInput);
 
       return {
@@ -94,6 +100,14 @@ export function registerBillHandlers(): void {
   IPCHandler.handle<{ billId: number; printerName?: string }, boolean>(
     'bill:print',
     async (payload) => {
+      // 0. Polite Locking: Check if license is valid before printing
+      const licenseStatus = new LicenseService().getLicenseStatus();
+      if (licenseStatus.isLocked) {
+        throw new Error(
+          'Trial or License has expired. Please activate to continue printing bills.'
+        );
+      }
+
       // Handle both number (legacy) and object payload
       const billId = typeof payload === 'number' ? payload : payload.billId;
       const printerName = typeof payload === 'number' ? '' : payload.printerName;

@@ -2,10 +2,17 @@
  * Layout Component Styles
  */
 
-.layout {
+.app-container {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   width: 100vw;
+  overflow: hidden;
+}
+
+.layout {
+  display: flex;
+  flex: 1;
   overflow: hidden;
 }
 

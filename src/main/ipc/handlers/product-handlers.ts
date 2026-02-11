@@ -15,6 +15,7 @@ import {
   type UpdateProductRequest,
 } from '@shared/validation/schemas';
 import { ProductService, AddProductInput, UpdateProductData } from '../../services/product-service';
+import { LicenseService } from '../../services/license-service';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 
 /**
@@ -88,6 +89,12 @@ export function registerProductHandlers(): void {
   IPCHandler.handle<CreateProductRequest, any>(
     IPC_CHANNELS.PRODUCT_CREATE,
     async (request) => {
+      // Polite Locking
+      if (new LicenseService().getLicenseStatus().isLocked) {
+        throw new Error(
+          'Trial or License has expired. Please activate to continue adding products.'
+        );
+      }
       const input: AddProductInput = {
         name: request.name,
         sku: request.sku,
@@ -127,6 +134,12 @@ export function registerProductHandlers(): void {
   IPCHandler.handle<CreateProductRequest[], any[]>(
     IPC_CHANNELS.PRODUCT_IMPORT,
     async (requests) => {
+      // Polite Locking
+      if (new LicenseService().getLicenseStatus().isLocked) {
+        throw new Error(
+          'Trial or License has expired. Please activate to continue importing products.'
+        );
+      }
       const inputs: AddProductInput[] = requests.map((req) => ({
         name: req.name,
         sku: req.sku,
@@ -168,6 +181,12 @@ export function registerProductHandlers(): void {
   IPCHandler.handle<UpdateProductRequest, any>(
     IPC_CHANNELS.PRODUCT_UPDATE,
     async (request) => {
+      // Polite Locking
+      if (new LicenseService().getLicenseStatus().isLocked) {
+        throw new Error(
+          'Trial or License has expired. Please activate to continue editing products.'
+        );
+      }
       const updates: UpdateProductData = {
         name: request.data.name,
         sku: request.data.sku,
@@ -259,6 +278,10 @@ export function registerProductHandlers(): void {
   >(
     IPC_CHANNELS.PRODUCT_ADJUST_STOCK,
     async ({ productId, deltaQty, reason, notes }) => {
+      // Polite Locking
+      if (new LicenseService().getLicenseStatus().isLocked) {
+        throw new Error('Trial or License has expired. Please activate to adjust stock.');
+      }
       productService.adjustStock({ productId, deltaQty, reason, notes });
     },
     {
@@ -298,6 +321,10 @@ export function registerProductHandlers(): void {
   IPCHandler.handle<number, void>(
     IPC_CHANNELS.PRODUCT_DELETE,
     async (productId) => {
+      // Polite Locking
+      if (new LicenseService().getLicenseStatus().isLocked) {
+        throw new Error('Trial or License has expired. Please activate to manage products.');
+      }
       productService.deactivateProduct(productId);
     },
     {
@@ -312,6 +339,10 @@ export function registerProductHandlers(): void {
   IPCHandler.handle<{ id: number; isActive: boolean }, void>(
     IPC_CHANNELS.PRODUCT_TOGGLE_STATUS,
     async ({ id, isActive }) => {
+      // Polite Locking
+      if (new LicenseService().getLicenseStatus().isLocked) {
+        throw new Error('Trial or License has expired. Please activate to manage products.');
+      }
       productService.updateProduct(id, { isActive });
     },
     {

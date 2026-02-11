@@ -1,20 +1,21 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import GlobalMessages from './GlobalMessages';
+import LicenseBanner from './layout/LicenseBanner';
+import LicenseActivationModal from './modals/LicenseActivationModal';
 import './Layout.css';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 
 /**
  * Layout Component
- * 
+ *
  * Main layout wrapper with navigation sidebar and content area.
  * Used by all routes.
  */
 
 function Layout() {
   const [appVersion, setAppVersion] = useState<string>('');
-
-
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -29,7 +30,7 @@ function Layout() {
         console.error('Failed to get app version:', error);
       }
     };
-    
+
     fetchVersion();
   }, []);
 
@@ -67,10 +68,19 @@ function Layout() {
   }, [navigate]);
 
   return (
-    <>
+    <div className="app-container">
       {/* Global Messages (loading, error, success) */}
       <GlobalMessages />
-      
+
+      {/* License Banner (Global) */}
+      <LicenseBanner onActivateClick={() => setIsLicenseModalOpen(true)} />
+
+      {/* License Activation Modal */}
+      <LicenseActivationModal
+        isOpen={isLicenseModalOpen}
+        onClose={() => setIsLicenseModalOpen(false)}
+      />
+
       <div className="layout">
         {/* Sidebar Navigation */}
         <aside className="layout-sidebar">
@@ -117,7 +127,7 @@ function Layout() {
           <Outlet />
         </main>
       </div>
-    </>
+    </div>
   );
 }
 

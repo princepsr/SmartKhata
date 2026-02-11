@@ -3,6 +3,9 @@ import { useAppSettingsStore } from '../store';
 import { IPCPoc } from '../components/Debug/IPCPoc';
 import { DatabaseStatus } from '../components/Debug/DatabaseStatus';
 import { DataManagement } from '../components/Settings/DataManagement';
+import { useLicense } from '../hooks/useLicense';
+import LicenseActivationModal from '../components/modals/LicenseActivationModal';
+import LicenseSettings from '../components/Settings/LicenseSettings';
 import './SettingsPage.css';
 
 /**
@@ -12,11 +15,13 @@ import './SettingsPage.css';
  * Fully synchronized with the "Rich App" design language and structural layout.
  */
 
-type SettingsTab = 'shop' | 'inventory' | 'data' | 'debug';
+type SettingsTab = 'shop' | 'inventory' | 'licensing' | 'data' | 'debug';
 
 function SettingsPage() {
   const { settings, updateSettings, resetSettings } = useAppSettingsStore();
+  const { refresh } = useLicense();
   const [activeTab, setActiveTab] = useState<SettingsTab>('shop');
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
 
   const handleSave = () => {
     alert('Settings saved successfully!');
@@ -162,6 +167,12 @@ function SettingsPage() {
               Inventory
             </button>
             <button
+              className={activeTab === 'licensing' ? 'active' : ''}
+              onClick={() => setActiveTab('licensing')}
+            >
+              Licensing
+            </button>
+            <button
               className={activeTab === 'data' ? 'active' : ''}
               onClick={() => setActiveTab('data')}
             >
@@ -179,10 +190,23 @@ function SettingsPage() {
         <main className="settings-content">
           {activeTab === 'shop' && renderShopInfo()}
           {activeTab === 'inventory' && renderInventorySettings()}
+          {activeTab === 'licensing' && (
+            <LicenseSettings onActivate={() => setShowLicenseModal(true)} />
+          )}
           {activeTab === 'data' && renderDataManagement()}
           {activeTab === 'debug' && renderSystemDebug()}
         </main>
       </div>
+
+      {showLicenseModal && (
+        <LicenseActivationModal
+          isOpen={showLicenseModal}
+          onClose={() => {
+            setShowLicenseModal(false);
+            refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

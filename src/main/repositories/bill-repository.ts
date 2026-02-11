@@ -259,6 +259,15 @@ export class BillRepository extends BaseRepository {
   }
 
   /**
+   * Get total number of bills in the system
+   */
+  public getTotalBillCount(): number {
+    const sql = `SELECT COUNT(*) as count FROM bills`;
+    const result = this.queryOne<{ count: number }>(sql);
+    return result?.count || 0;
+  }
+
+  /**
    * Find bill items by bill ID
    */
   public findItemsByBillId(billId: number): BillItem[] {

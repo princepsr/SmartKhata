@@ -109,9 +109,9 @@ export const IPC_CHANNELS = {
   // ============================================
   // LICENSE MODULE
   // ============================================
-  LICENSE_GET: 'license:get',
+  LICENSE_STATUS: 'license:status',
   LICENSE_ACTIVATE: 'license:activate',
-  LICENSE_CHECK: 'license:check',
+  LICENSE_TRIAL_INFO: 'license:trialInfo',
 } as const;
 
 /**
@@ -201,5 +201,9 @@ export const CHANNEL_GROUPS = {
   ],
   SETTINGS: [IPC_CHANNELS.SETTINGS_GET, IPC_CHANNELS.SETTINGS_UPDATE, IPC_CHANNELS.SETTINGS_RESET],
   APP: [IPC_CHANNELS.APP_VERSION, IPC_CHANNELS.APP_CONFIG, IPC_CHANNELS.APP_LOGS],
-  LICENSE: [IPC_CHANNELS.LICENSE_GET, IPC_CHANNELS.LICENSE_ACTIVATE, IPC_CHANNELS.LICENSE_CHECK],
+  LICENSE: [
+    IPC_CHANNELS.LICENSE_STATUS,
+    IPC_CHANNELS.LICENSE_ACTIVATE,
+    IPC_CHANNELS.LICENSE_TRIAL_INFO,
+  ],
 } as const;

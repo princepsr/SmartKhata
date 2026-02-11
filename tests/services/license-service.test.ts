@@ -1,18 +1,16 @@
 /**
  * LicenseService Tests
- * 
+ *
  * Tests for license validation, activation, and expiry checking.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LicenseService } from '../../src/main/services/license-service';
-import { LicenseRepository } from '../../src/main/repositories/license-repository';
 import { createTestDatabase, resetTestDatabase } from '../utils/test-db';
 import { LicenseError, ValidationError } from '../../src/main/services/errors/service-errors';
-import type Database from 'better-sqlite3';
 
 describe('LicenseService - Trial License', () => {
-  let db: Database.Database;
+  let db: any;
   let licenseService: LicenseService;
 
   beforeEach(async () => {
@@ -26,7 +24,7 @@ describe('LicenseService - Trial License', () => {
 
   it('should generate trial license', () => {
     const trialKey = licenseService.generateTrialLicense(30);
-    
+
     expect(trialKey).toBeDefined();
     expect(typeof trialKey).toBe('string');
     expect(trialKey.length).toBeGreaterThan(0);
@@ -34,7 +32,7 @@ describe('LicenseService - Trial License', () => {
 
   it('should activate trial license', () => {
     const trialKey = licenseService.generateTrialLicense(30);
-    
+
     expect(() => {
       licenseService.activateLicense({ licenseKey: trialKey });
     }).not.toThrow();
@@ -45,14 +43,14 @@ describe('LicenseService - Trial License', () => {
     licenseService.activateLicense({ licenseKey: trialKey });
 
     const validation = licenseService.isLicenseValid();
-    
+
     expect(validation.isValid).toBe(true);
     expect(validation.daysRemaining).toBeGreaterThan(29);
   });
 
   it('should reject expired license', () => {
     const expiredKey = licenseService.generateTrialLicense(-1); // Expired yesterday
-    
+
     expect(() => {
       licenseService.activateLicense({ licenseKey: expiredKey });
     }).toThrow(LicenseError);
@@ -68,7 +66,7 @@ describe('LicenseService - Trial License', () => {
 });
 
 describe('LicenseService - Validation', () => {
-  let db: Database.Database;
+  let db: any;
   let licenseService: LicenseService;
 
   beforeEach(async () => {
@@ -80,11 +78,12 @@ describe('LicenseService - Validation', () => {
     resetTestDatabase(db);
   });
 
-  it('should return invalid for no license', () => {
+  it('should initialize and return valid trial for no license', () => {
     const validation = licenseService.isLicenseValid();
-    
-    expect(validation.isValid).toBe(false);
-    expect(validation.reason).toBe('No license found');
+
+    expect(validation.isValid).toBe(true);
+    expect(validation.type).toBe('TRIAL');
+    expect(validation.daysRemaining).toBeGreaterThan(29);
   });
 
   it('should throw error for empty license key', () => {
@@ -99,14 +98,15 @@ describe('LicenseService - Validation', () => {
     }).toThrow(LicenseError);
   });
 
-  it('should deactivate license', () => {
+  it('should deactivate license and fall back to trial', () => {
     const trialKey = licenseService.generateTrialLicense(30);
     licenseService.activateLicense({ licenseKey: trialKey });
 
     licenseService.deactivateLicense();
 
     const validation = licenseService.isLicenseValid();
-    expect(validation.isValid).toBe(false);
+    expect(validation.isValid).toBe(true);
+    expect(validation.type).toBe('TRIAL');
   });
 
   it('should get license info', () => {
@@ -114,16 +114,17 @@ describe('LicenseService - Validation', () => {
     licenseService.activateLicense({ licenseKey: trialKey });
 
     const info = licenseService.getLicenseInfo();
-    
+
     expect(info.activated).toBe(true);
-    expect(info.expiresAt).toBeDefined();
+    expect(info.expiresOn).toBeDefined();
     expect(info.daysRemaining).toBeGreaterThan(29);
-    expect(info.machineFingerprint).toBeDefined();
+    expect(info.deviceId).toBeDefined();
+    expect(info.type).toBe('PAID');
   });
 });
 
 describe('LicenseService - Machine Fingerprint', () => {
-  let db: Database.Database;
+  let db: any;
   let licenseService: LicenseService;
 
   beforeEach(async () => {
@@ -140,16 +141,38 @@ describe('LicenseService - Machine Fingerprint', () => {
     licenseService.activateLicense({ licenseKey: trialKey });
 
     const validation = licenseService.isLicenseValid();
-    
+
     // Should be valid on same machine
     expect(validation.isValid).toBe(true);
   });
 
   it('should include machine fingerprint in license info', () => {
     const info = licenseService.getLicenseInfo();
-    
-    expect(info.machineFingerprint).toBeDefined();
-    expect(typeof info.machineFingerprint).toBe('string');
-    expect(info.machineFingerprint.length).toBe(32); // SHA-256 hash (32 chars)
+
+    expect(info.deviceId).toBeDefined();
+    expect(typeof info.deviceId).toBe('string');
+    expect(info.deviceId.length).toBe(32); // SHA-256 hash (32 chars)
+  });
+
+  it('should validate and activate short KRN key', () => {
+    // 1. Get local device ID
+    const deviceId = (licenseService as any)._getMachineFingerprint();
+    const expiryDays = 365; // ~1 year from 2026-01-01
+
+    // 2. Mock generation logic (same as in generator script)
+    const deviceHashID = (licenseService as any)._getTruncatedHash(deviceId, 22);
+    const signature = (licenseService as any)._generateShortSignature(expiryDays, deviceHashID);
+    const bits = (BigInt(expiryDays) << 46n) | (BigInt(deviceHashID) << 24n) | BigInt(signature);
+    const rawKey = (licenseService as any)._encodeBase32(bits, 12);
+    const key = `KRN-${rawKey.substring(0, 4)}-${rawKey.substring(4, 8)}-${rawKey.substring(8, 12)}`;
+
+    // 3. Activate
+    expect(() => {
+      licenseService.activateLicense({ licenseKey: key });
+    }).not.toThrow();
+
+    const status = licenseService.getLicenseStatus();
+    expect(status.type).toBe('PAID');
+    expect(status.activated).toBe(true);
   });
 });

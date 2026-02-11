@@ -181,9 +181,11 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
     CREATE TABLE IF NOT EXISTS license (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       license_key TEXT UNIQUE NOT NULL,
-      machine_fingerprint TEXT NOT NULL,
-      expires_at TEXT,
-      activated_at TEXT,
+      device_id TEXT NOT NULL,
+      expires_on TEXT,
+      activated_on TEXT,
+      trial_started_on TEXT,
+      is_trial INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
