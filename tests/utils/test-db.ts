@@ -5,6 +5,7 @@
  * This is a pure JavaScript implementation that doesn't require native bindings.
  */
 
+import { vi } from 'vitest';
 import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
 
 // Wrapper to make sql.js compatible with better-sqlite3 API
@@ -15,7 +16,7 @@ export class BetterSqliteCompatibleDatabase {
     this.db = db;
   }
 
-  pragma(statement: string): void {
+  pragma(_statement: string): void {
     // sql.js doesn't support pragma the same way, but we can ignore for tests
   }
 
@@ -68,6 +69,13 @@ export class BetterSqliteCompatibleDatabase {
       },
     };
   }
+
+  backup = vi.fn(async (destinationPath: string): Promise<void> => {
+    // Create a dummy file so zip operations don't fail
+    const fs = await import('fs');
+    fs.writeFileSync(destinationPath, 'SQLite format 3\0\0\0\0\0\0\0\0\0\0');
+    return Promise.resolve();
+  });
 
   close(): void {
     this.db.close();
@@ -204,7 +212,7 @@ export function resetTestDatabase(db: any): void {
       DELETE FROM settings;
       DELETE FROM license;
     `);
-  } catch (e) {
+  } catch {
     // Ignore errors if tables don't exist yet
   }
 }
@@ -248,7 +256,7 @@ export function seedTestData(db: any): void {
         ('gst_enabled', 'true'),
         ('default_gst_rate', '18');
     `);
-  } catch (e) {
+  } catch {
     // Ignore if already seeded
   }
 }

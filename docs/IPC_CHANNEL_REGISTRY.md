@@ -35,6 +35,8 @@ export const IPC_CHANNELS = {
   // Sale module
   SALE_CREATE: 'sale:create',
   SALE_LIST: 'sale:list',
+  SALE_GET: 'sale:get',
+  SALE_VOID: 'sale:void',
 
   // Bill module
   BILL_CREATE: 'bill:create',
@@ -42,14 +44,22 @@ export const IPC_CHANNELS = {
   PRINTER_LIST: 'printer:list',
 
   // Report module
-  REPORT_GET_DAILY_SUMMARY: 'report:getDailySummary',
-  REPORT_GET_GST_SUMMARY: 'report:getGstSummary',
-  REPORT_GET_TREND_ANALYTICS: 'report:getTrendAnalytics',
-  REPORT_GET_BILLS: 'report:getBills',
-  REPORT_GET_STOCK_SUMMARY: 'report:getStockSummary',
+  REPORT_DAILY_SALES: 'report:sales',
+  REPORT_PAYMENT_MODE: 'reports:payment-mode',
+  REPORT_GST: 'report:gst',
+  REPORT_STOCK: 'report:stock',
+  REPORT_BILL_WISE: 'report:bills',
+  REPORT_ANALYTICS: 'report:analytics',
 
-  // Export module
-  EXPORT_TO_CSV: 'export:toCsv',
+  // Backup module
+  BACKUP_CREATE: 'backup:create',
+  BACKUP_RESTORE: 'backup:restore',
+  BACKUP_INFO: 'backup:info',
+
+  // System module
+  SYSTEM_PING: 'system:ping',
+  SYSTEM_GET_APP_INFO: 'system:get-app-info',
+  SYSTEM_DB_STATUS: 'system:dbStatus',
 
   // Customer module
   CUSTOMER_SEARCH: 'customer:search',

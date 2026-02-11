@@ -1,4 +1,4 @@
-# Current Architecture (As of 2026-02-08)
+# Current Architecture (As of 2026-02-11)
 
 ## Overview
 
@@ -52,6 +52,7 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
 │  - PrintService (thermal printing, receipt formatting)       │
 │  - SettingsService (config, caching)                         │
 │  - LicenseService (validation, expiry)                       │
+│  - BackupService (archival, atomic restore)                  │
 │                                                                │
 │  Responsibilities:                                            │
 │  - Validate business rules                                    │
@@ -226,6 +227,7 @@ IPCHandler.handle('product:create', async (request) => {
 | **PrintService**     | Thermal receipt formatting, printer driver communication, status checks   |
 | **SettingsService**  | Configuration management, caching, validation                             |
 | **LicenseService**   | License validation, expiry checking, machine binding                      |
+| **BackupService**    | Atomic database archival and ZIP-based restoration flow                   |
 
 **Example:**
 
@@ -506,7 +508,9 @@ pnpm test:coverage     # Coverage report
 - [`IPC_SERVICE_MAPPING.md`](./IPC_SERVICE_MAPPING.md) - IPC to service mapping
 - [`SERVICE_LAYER_TESTING.md`](./SERVICE_LAYER_TESTING.md) - Testing strategy
 - [`REPORTS_ARCHITECTURE.md`](./REPORTS_ARCHITECTURE.md) - Reporting and Analytics
+- [`SETTINGS_ARCHITECTURE.md`](./SETTINGS_ARCHITECTURE.md) - Settings UI & Patterns
 - [`PRINT_SERVICE.md`](./PRINT_SERVICE.md) - Printing and Receipt formatting
+- [`BACKUP_RESTORE.md`](./BACKUP_RESTORE.md) - Backup & Restore Architecture
 
 ### Repository Layer
 

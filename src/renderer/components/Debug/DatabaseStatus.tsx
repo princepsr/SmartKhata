@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import './DatabaseStatus.css';
 
 /**
  * Database Status Component
- * 
+ *
+ * Standardized for the POS "Rich App" theme.
  * Displays database connection status and metadata.
- * Proof of concept for IPC → DB wiring.
  */
 
-interface DatabaseStatus {
+interface DatabaseStatusInfo {
   path: string;
   schemaVersion: number;
   tableCount: number;
@@ -17,7 +16,7 @@ interface DatabaseStatus {
 }
 
 export function DatabaseStatus() {
-  const [status, setStatus] = useState<DatabaseStatus | null>(null);
+  const [status, setStatus] = useState<DatabaseStatusInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,9 +25,7 @@ export function DatabaseStatus() {
     setError(null);
 
     try {
-      const response = await window.api.invoke<DatabaseStatus>(
-        IPC_CHANNELS.SYSTEM_DB_STATUS
-      );
+      const response = await window.api.invoke<DatabaseStatusInfo>(IPC_CHANNELS.SYSTEM_DB_STATUS);
 
       if (response.success && response.data) {
         setStatus(response.data);
@@ -43,48 +40,54 @@ export function DatabaseStatus() {
   };
 
   return (
-    <div className="database-status">
-      <h3>Database Status</h3>
-      
-      <button 
-        onClick={fetchDatabaseStatus} 
-        disabled={loading}
-        className="btn btn-primary"
-      >
-        {loading ? 'Loading...' : 'Check Database Status'}
-      </button>
+    <div className="debug-component-content">
+      <h3 className="debug-sub-title">Storage Health</h3>
+
+      <div className="debug-row">
+        <div className="debug-info">
+          <span className="debug-label">SQLite Engine Status</span>
+          <p className="debug-description">
+            Perform a real-time check of the local database connection.
+          </p>
+        </div>
+        <button onClick={fetchDatabaseStatus} disabled={loading} className="btn btn-secondary">
+          {loading ? 'Checking...' : 'Check Status'}
+        </button>
+      </div>
 
       {error && (
-        <div className="status-error">
-          <strong>Error:</strong> {error}
+        <div className="debug-alert error">
+          <span className="icon">❌</span>
+          <span className="message">
+            <strong>Error:</strong> {error}
+          </span>
         </div>
       )}
 
       {status && (
-        <div className="status-info">
-          <div className="status-item">
-            <span className="status-label">Status:</span>
-            <span className={`status-value ${status.isReady ? 'ready' : 'not-ready'}`}>
-              {status.isReady ? '✓ Ready' : '✗ Not Ready'}
+        <div className="debug-data-grid">
+          <div className="grid-item">
+            <span className="label">Status</span>
+            <span className={`value status-badge ${status.isReady ? 'ready' : 'not-ready'}`}>
+              {status.isReady ? '✓ Healthy' : '✗ Unreachable'}
             </span>
           </div>
-
-          <div className="status-item">
-            <span className="status-label">Database Path:</span>
-            <span className="status-value path">{status.path}</span>
+          <div className="grid-item full-width">
+            <span className="label">Database Path</span>
+            <span className="value font-mono text-xs">{status.path}</span>
           </div>
-
-          <div className="status-item">
-            <span className="status-label">Schema Version:</span>
-            <span className="status-value">{status.schemaVersion}</span>
+          <div className="grid-item">
+            <span className="label">Schema</span>
+            <span className="value">v{status.schemaVersion}</span>
           </div>
-
-          <div className="status-item">
-            <span className="status-label">Table Count:</span>
-            <span className="status-value">{status.tableCount}</span>
+          <div className="grid-item">
+            <span className="label">Total Tables</span>
+            <span className="value">{status.tableCount}</span>
           </div>
         </div>
       )}
+
+      <div className="debug-footer-note">Database: SQLite 3.x (Local Storage)</div>
     </div>
   );
 }

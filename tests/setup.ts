@@ -9,42 +9,63 @@ import path from 'path';
 import { createTestDatabase, getTestDatabase } from './utils/test-db';
 
 // Mock Electron's app object
-vi.mock('electron', () => ({
-  app: {
-    getPath: (name: string) => {
-      const testDataPath = path.join(process.cwd(), 'test-data');
-      if (name === 'userData') return testDataPath;
-      return testDataPath;
-    },
-    getVersion: () => '0.1.0-test',
-  },
-}));
-
-// Mock database manager to use test database
-vi.mock('../src/main/database/index.ts', () => {
+vi.mock('electron', () => {
+  const testDataPath = path.join(process.cwd(), 'test-data');
   return {
-    databaseManager: {
-      getDatabase: () => {
-        try {
-          return getTestDatabase();
-        } catch (e) {
-          // Database not initialized yet, will be set up in beforeAll
-          return null;
+    app: {
+      getPath: vi.fn((name: string) => {
+        if (name === 'temp') {
+          return path.join(testDataPath, 'temp');
         }
-      },
-      transaction: (fn: () => any) => {
-        // sql.js doesn't have native transaction support
-        // For tests, execute the function (no actual transaction)
-        return fn();
-      },
-      isReady: () => true,
-      getDatabasePath: () => ':memory:',
+        return testDataPath;
+      }),
+      getVersion: vi.fn(() => '0.1.0-test'),
+    },
+    dialog: {
+      showSaveDialog: vi.fn(),
+      showOpenDialog: vi.fn(),
     },
   };
 });
 
+// Mock database manager to use test database
+const databaseMock = {
+  initialize: vi.fn(),
+  close: vi.fn(),
+  getDatabase: vi.fn(() => {
+    try {
+      return getTestDatabase();
+    } catch {
+      return {
+        prepare: vi.fn().mockReturnValue({
+          run: vi.fn().mockReturnValue({ changes: 0, lastInsertRowid: 0 }),
+          get: vi.fn().mockReturnValue(undefined),
+          all: vi.fn().mockReturnValue([]),
+        }),
+        backup: vi.fn().mockResolvedValue(undefined),
+        exec: vi.fn(),
+        close: vi.fn(),
+      };
+    }
+  }),
+  transaction: vi.fn((fn: () => unknown) => fn()),
+  isReady: vi.fn(() => true),
+  getDatabasePath: vi.fn(() => './test-data/active.sqlite'),
+};
+
+// Target the canonical path for databaseManager
+vi.mock('@main/database', () => ({ databaseManager: databaseMock }));
+vi.mock('../src/main/database/index.ts', () => ({ databaseManager: databaseMock }));
+
+// Mock migration runner
+vi.mock('@main/database/migrations', () => ({
+  migrationRunner: {
+    getCurrentVersion: vi.fn().mockReturnValue(1),
+  },
+}));
+
 // Mock logger to avoid file system operations in tests
-vi.mock('../src/main/utils/logger.ts', () => ({
+vi.mock('@main/utils/logger', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),

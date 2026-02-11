@@ -80,10 +80,11 @@ export const IPC_CHANNELS = {
   REPORT_ANALYTICS: 'report:analytics',
 
   // ============================================
-  // SYSTEM MODULE
+  // BACKUP MODULE
   // ============================================
-  SYSTEM_BACKUP: 'system:backup',
-  SYSTEM_RESTORE: 'system:restore',
+  BACKUP_CREATE: 'backup:create',
+  BACKUP_RESTORE: 'backup:restore',
+  BACKUP_INFO: 'backup:info',
   SYSTEM_EXPORT: 'system:export',
   SYSTEM_IMPORT: 'system:import',
   SYSTEM_PING: 'system:ping',
@@ -103,6 +104,14 @@ export const IPC_CHANNELS = {
   APP_VERSION: 'app:version',
   APP_CONFIG: 'app:config',
   APP_LOGS: 'app:logs',
+  APP_RESTART: 'app:restart',
+
+  // ============================================
+  // LICENSE MODULE
+  // ============================================
+  LICENSE_GET: 'license:get',
+  LICENSE_ACTIVATE: 'license:activate',
+  LICENSE_CHECK: 'license:check',
 } as const;
 
 /**
@@ -183,9 +192,8 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.REPORT_BILL_WISE,
     IPC_CHANNELS.REPORT_ANALYTICS,
   ],
+  BACKUP: [IPC_CHANNELS.BACKUP_CREATE, IPC_CHANNELS.BACKUP_RESTORE, IPC_CHANNELS.BACKUP_INFO],
   SYSTEM: [
-    IPC_CHANNELS.SYSTEM_BACKUP,
-    IPC_CHANNELS.SYSTEM_RESTORE,
     IPC_CHANNELS.SYSTEM_EXPORT,
     IPC_CHANNELS.SYSTEM_IMPORT,
     IPC_CHANNELS.SYSTEM_PING,
@@ -193,4 +201,5 @@ export const CHANNEL_GROUPS = {
   ],
   SETTINGS: [IPC_CHANNELS.SETTINGS_GET, IPC_CHANNELS.SETTINGS_UPDATE, IPC_CHANNELS.SETTINGS_RESET],
   APP: [IPC_CHANNELS.APP_VERSION, IPC_CHANNELS.APP_CONFIG, IPC_CHANNELS.APP_LOGS],
+  LICENSE: [IPC_CHANNELS.LICENSE_GET, IPC_CHANNELS.LICENSE_ACTIVATE, IPC_CHANNELS.LICENSE_CHECK],
 } as const;

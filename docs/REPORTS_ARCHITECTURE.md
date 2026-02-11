@@ -46,10 +46,11 @@ All calculations in the repository are performed in **Paisa (Integer)** to avoid
 
 Reports are fetched via the following IPC channels:
 
-- `report:getDailySummary`: Returns gross sales, net sales, and comparisons.
-- `report:getGstSummary`: Returns GST slabs and totals.
-- `report:getTrendAnalytics`: Returns periodic data for charts.
-- `report:getBillwise`: Returns a paginated list of individual bills.
+- `report:sales`: Returns gross sales, net sales, and comparisons.
+- `report:gst`: Returns GST slabs and totals.
+- `report:analytics`: Returns periodic data for charts (Day/Week/Month).
+- `report:bills`: Returns a paginated list of individual bills.
+- `report:stock`: Returns low stock item summaries.
 
 ## Exporting
 

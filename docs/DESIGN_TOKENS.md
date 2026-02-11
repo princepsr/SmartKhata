@@ -18,14 +18,14 @@ All design tokens are defined in the `:root` selector:
   --color-primary: #2563eb;
   --color-success: #16a34a;
   /* ... more tokens */
-  
+
   /* Typography */
   --font-size-base: 18px;
   --font-family: -apple-system, ...;
-  
+
   /* Spacing */
   --spacing-md: 16px;
-  
+
   /* Other */
   --radius-sm: 4px;
   --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.5);
@@ -39,9 +39,10 @@ All design tokens are defined in the `:root` selector:
 ### Colors
 
 #### Primary Colors
+
 ```css
---color-primary: #2563eb;        /* Blue - Main brand color */
---color-primary-dark: #1e40af;   /* Darker blue - Hover states */
+--color-primary: #2563eb; /* Blue - Main brand color */
+--color-primary-dark: #1e40af; /* Darker blue - Hover states */
 ```
 
 **Usage:** Buttons, links, sidebar, focus indicators
@@ -49,10 +50,11 @@ All design tokens are defined in the `:root` selector:
 ---
 
 #### Semantic Colors
+
 ```css
---color-success: #16a34a;        /* Green - Success states */
---color-warning: #ea580c;        /* Orange - Warnings */
---color-error: #dc2626;          /* Red - Errors */
+--color-success: #16a34a; /* Green - Success states */
+--color-warning: #ea580c; /* Orange - Warnings */
+--color-error: #dc2626; /* Red - Errors */
 ```
 
 **Usage:** Status messages, validation, alerts
@@ -60,9 +62,10 @@ All design tokens are defined in the `:root` selector:
 ---
 
 #### Background Colors
+
 ```css
---color-bg: #ffffff;             /* White - Main background */
---color-bg-secondary: #f3f4f6;   /* Light gray - Content area */
+--color-bg: #ffffff; /* White - Main background */
+--color-bg-secondary: #f3f4f6; /* Light gray - Content area */
 ```
 
 **Usage:** Page backgrounds, cards, sections
@@ -70,8 +73,9 @@ All design tokens are defined in the `:root` selector:
 ---
 
 #### Text Colors
+
 ```css
---color-text: #111827;           /* Near black - Primary text */
+--color-text: #111827; /* Near black - Primary text */
 --color-text-secondary: #6b7280; /* Gray - Secondary text */
 ```
 
@@ -80,8 +84,9 @@ All design tokens are defined in the `:root` selector:
 ---
 
 #### Border Colors
+
 ```css
---color-border: #d1d5db;         /* Gray - Borders */
+--color-border: #d1d5db; /* Gray - Borders */
 ```
 
 **Usage:** Input borders, dividers, card outlines
@@ -91,11 +96,13 @@ All design tokens are defined in the `:root` selector:
 ### Typography
 
 #### Font Family
+
 ```css
 --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 ```
 
 **System font stack:**
+
 - Fast (no web font download)
 - Native appearance
 - Excellent readability
@@ -103,12 +110,13 @@ All design tokens are defined in the `:root` selector:
 ---
 
 #### Font Sizes
+
 ```css
---font-size-sm: 16px;      /* Small text, shortcuts */
---font-size-base: 18px;    /* Body text, labels */
---font-size-lg: 22px;      /* Important text, inputs */
---font-size-xl: 28px;      /* Section headers */
---font-size-2xl: 36px;     /* Page titles */
+--font-size-sm: 16px; /* Small text, shortcuts */
+--font-size-base: 18px; /* Body text, labels */
+--font-size-lg: 22px; /* Important text, inputs */
+--font-size-xl: 28px; /* Section headers */
+--font-size-2xl: 36px; /* Page titles */
 ```
 
 **Scale:** ~1.22x ratio
@@ -120,11 +128,11 @@ All design tokens are defined in the `:root` selector:
 ### Spacing
 
 ```css
---spacing-xs: 4px;         /* Tight spacing */
---spacing-sm: 8px;         /* Small gaps */
---spacing-md: 16px;        /* Standard padding */
---spacing-lg: 24px;        /* Section spacing */
---spacing-xl: 32px;        /* Page padding */
+--spacing-xs: 4px; /* Tight spacing */
+--spacing-sm: 8px; /* Small gaps */
+--spacing-md: 16px; /* Standard padding */
+--spacing-lg: 24px; /* Section spacing */
+--spacing-xl: 32px; /* Page padding */
 ```
 
 **8px base grid:** Consistent rhythm, easy mental math
@@ -134,9 +142,9 @@ All design tokens are defined in the `:root` selector:
 ### Border Radius
 
 ```css
---radius-sm: 4px;          /* Buttons, inputs */
---radius-md: 8px;          /* Cards */
---radius-lg: 12px;         /* Large cards */
+--radius-sm: 4px; /* Buttons, inputs */
+--radius-md: 8px; /* Cards */
+--radius-lg: 12px; /* Large cards */
 ```
 
 **Subtle rounding:** Not too round, professional look
@@ -146,6 +154,7 @@ All design tokens are defined in the `:root` selector:
 ### Effects
 
 #### Focus Ring
+
 ```css
 --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.5);
 ```
@@ -178,6 +187,7 @@ All design tokens are defined in the `:root` selector:
 ```
 
 **Benefits:**
+
 - ✅ Consistent values across app
 - ✅ Easy to update (change once, applies everywhere)
 - ✅ No magic numbers
@@ -206,16 +216,12 @@ All design tokens are defined in the `:root` selector:
 
 ```typescript
 // Get computed value
-const primaryColor = getComputedStyle(document.documentElement)
-  .getPropertyValue('--color-primary');
+const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary');
 
 console.log(primaryColor); // "#2563eb"
 
 // Set token value dynamically
-document.documentElement.style.setProperty(
-  '--color-primary',
-  '#1e40af'
-);
+document.documentElement.style.setProperty('--color-primary', '#1e40af');
 ```
 
 **Use case:** Dynamic theming, user preferences
@@ -257,10 +263,12 @@ document.documentElement.style.setProperty(
 ```
 
 **Pros:**
+
 - Automatic based on system preference
 - No JavaScript needed
 
 **Cons:**
+
 - Can't override user preference
 - No toggle button
 
@@ -285,16 +293,19 @@ document.documentElement.style.setProperty(
 ```
 
 **Usage:**
+
 ```tsx
 // Toggle dark theme
 document.documentElement.classList.toggle('dark-theme');
 ```
 
 **Pros:**
+
 - User can toggle manually
 - Can persist preference to localStorage
 
 **Cons:**
+
 - Requires JavaScript
 
 ---
@@ -304,6 +315,7 @@ document.documentElement.classList.toggle('dark-theme');
 **Stick with light theme only.**
 
 **Why?**
+
 - POS environments are usually bright (shops, stores)
 - Dark mode may reduce visibility under fluorescent lights
 - Simpler codebase (one theme to maintain)
@@ -342,6 +354,7 @@ src/renderer/styles/
 ```
 
 **Why not?**
+
 - More files to manage
 - Extra HTTP requests (dev)
 - Harder to see all tokens at once
@@ -383,6 +396,7 @@ src/renderer/styles/
 ### Example: Button Component
 
 **CSS:**
+
 ```css
 /* src/renderer/components/Button.css */
 .btn {
@@ -417,6 +431,7 @@ src/renderer/styles/
 ```
 
 **Component:**
+
 ```tsx
 // src/renderer/components/Button.tsx
 import './Button.css';
@@ -429,10 +444,7 @@ interface ButtonProps {
 
 function Button({ variant = 'primary', children, onClick }: ButtonProps) {
   return (
-    <button 
-      className={`btn btn-${variant}`}
-      onClick={onClick}
-    >
+    <button className={`btn btn-${variant}`} onClick={onClick}>
       {children}
     </button>
   );
@@ -440,6 +452,7 @@ function Button({ variant = 'primary', children, onClick }: ButtonProps) {
 ```
 
 **Usage:**
+
 ```tsx
 <Button variant="primary">Save</Button>
 <Button variant="secondary">Cancel</Button>
@@ -450,6 +463,7 @@ function Button({ variant = 'primary', children, onClick }: ButtonProps) {
 ### Example: Card Component
 
 **CSS:**
+
 ```css
 /* src/renderer/components/Card.css */
 .card {
@@ -479,12 +493,14 @@ function Button({ variant = 'primary', children, onClick }: ButtonProps) {
 ### CSS Variables Performance
 
 ✅ **Fast:**
+
 - Native browser feature
 - No JavaScript overhead
 - GPU-accelerated
 - Instant updates
 
 **Benchmark:**
+
 - Changing a CSS variable: ~1ms
 - Re-rendering affected elements: ~16ms (1 frame)
 
@@ -525,11 +541,13 @@ function Button({ variant = 'primary', children, onClick }: ButtonProps) {
 ### Changing a Token
 
 **Before:**
+
 ```css
 --color-primary: #2563eb;
 ```
 
 **After:**
+
 ```css
 --color-primary: #1e40af;
 ```
@@ -541,13 +559,15 @@ function Button({ variant = 'primary', children, onClick }: ButtonProps) {
 ### Adding a New Token
 
 1. **Define in `:root`:**
+
 ```css
 :root {
-  --color-info: #0ea5e9;  /* New token */
+  --color-info: #0ea5e9; /* New token */
 }
 ```
 
 2. **Use in components:**
+
 ```css
 .info-message {
   background-color: var(--color-info);
@@ -566,16 +586,17 @@ function Button({ variant = 'primary', children, onClick }: ButtonProps) {
 :root {
   /* Primary brand color - used for buttons, links, sidebar */
   --color-primary: #2563eb;
-  
+
   /* Success state - used for completed actions */
   --color-success: #16a34a;
-  
+
   /* Base font size - optimized for POS readability */
   --font-size-base: 18px;
 }
 ```
 
 **Benefits:**
+
 - Self-documenting
 - Easy to understand purpose
 - Helps future developers
@@ -591,7 +612,7 @@ function Button({ variant = 'primary', children, onClick }: ButtonProps) {
 test('design tokens are defined', () => {
   const root = document.documentElement;
   const primary = getComputedStyle(root).getPropertyValue('--color-primary');
-  
+
   expect(primary).toBe('#2563eb');
 });
 ```
@@ -601,23 +622,72 @@ test('design tokens are defined', () => {
 ### Manual Testing
 
 **Checklist:**
+
 - [ ] All colors have sufficient contrast (WCAG AAA)
 - [ ] Font sizes are readable from 2 feet away
 - [ ] Spacing is consistent across components
-- [ ] Focus ring is visible on all interactive elements
+- [ ] Checkbox/Radio inputs have 0.25rem radius
+
+---
+
+## 🏗️ Premium Layout Patterns
+
+### 1. Multi-Row View Header
+
+Adopted from the Reporting module and standardized in Settings:
+
+```css
+/* Container 1: Metadata */
+.header-row-static {
+  padding: 1rem 1.5rem;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Container 2: Navigation/Toolbar */
+.header-row-toolbar {
+  padding: 0 1.5rem 1.25rem 1.5rem;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+}
+```
+
+### 2. Premium Section Cards
+
+```css
+.section-card {
+  background: var(--bg-panel);
+  padding: 2.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.section-card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--color-primary); /* Use color-warning for high-priority */
+}
+```
 
 ---
 
 ## Summary
 
-| Aspect | Implementation | Rationale |
-|--------|---------------|-----------|
-| **Technology** | CSS Custom Properties | Native, fast, no dependencies |
-| **Organization** | Single file (`index.css`) | Simple, easy to find |
-| **Naming** | `--category-name-variant` | Consistent, descriptive |
-| **Theme** | Light only (for now) | POS environments are bright |
-| **Performance** | Excellent (~1ms updates) | Native browser feature |
-| **Maintenance** | Easy (change once) | Tokens used everywhere |
+| Aspect           | Implementation            | Rationale                     |
+| ---------------- | ------------------------- | ----------------------------- |
+| **Technology**   | CSS Custom Properties     | Native, fast, no dependencies |
+| **Organization** | Single file (`index.css`) | Simple, easy to find          |
+| **Naming**       | `--category-name-variant` | Consistent, descriptive       |
+| **Theme**        | Light only (for now)      | POS environments are bright   |
+| **Performance**  | Excellent (~1ms updates)  | Native browser feature        |
+| **Maintenance**  | Easy (change once)        | Tokens used everywhere        |
 
 **Key principle:** **Simple, performant, maintainable. No framework needed.**
 
@@ -650,5 +720,5 @@ var(--focus-ring)
 
 ---
 
-**Last updated:** 2026-02-08  
+**Last updated:** 2026-02-11  
 **File:** `src/renderer/index.css`

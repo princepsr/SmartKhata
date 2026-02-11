@@ -1,0 +1,73 @@
+﻿.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content.restore-modal {
+  background-color: var(--color-surface, #fff);
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header h3 {
+  color: var(--color-danger, #dc3545);
+  margin-top: 0;
+}
+
+.warning-banner {
+  background-color: rgba(220, 53, 69, 0.1);
+  border: 1px solid var(--color-danger, #dc3545);
+  color: var(--color-danger, #dc3545);
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+}
+
+.backup-details {
+  background-color: var(--color-background, #f8f9fa);
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+}
+
+.backup-details table {
+  width: 100%;
+}
+
+.backup-details td {
+  padding: 0.5rem 0;
+  vertical-align: top;
+}
+
+.backup-details td:first-child {
+  width: 100px;
+  color: var(--color-text-muted, #6c757d);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn-danger {
+  background-color: var(--color-danger, #dc3545);
+  color: white;
+  border: none;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}

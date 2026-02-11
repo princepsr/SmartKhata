@@ -12,6 +12,8 @@ import { registerSystemHandlers } from './handlers/system-handlers';
 import { registerAppHandlers } from './handlers/app-handlers';
 import { registerBillHandlers } from './handlers/bill-handlers';
 import { registerReportHandlers } from './handlers/report-handlers';
+import { registerSettingsHandlers } from './handlers/settings-handlers';
+import { registerLicenseHandlers } from './handlers/license-handlers';
 
 /**
  * Register all IPC handlers
@@ -28,6 +30,8 @@ export function registerIPCHandlers(): void {
     registerAppHandlers();
     registerBillHandlers();
     registerReportHandlers();
+    registerSettingsHandlers();
+    registerLicenseHandlers();
     // registerSaleHandlers();      // TODO: Implement
     // registerCustomerHandlers(); // TODO: Implement
 

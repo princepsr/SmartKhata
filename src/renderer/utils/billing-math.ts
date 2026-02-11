@@ -123,9 +123,9 @@ export function calculateDiscountAmount(
   if (type === 'percent') {
     // Calculate percentage of Subtotal + GST
     const baseTotal = subtotal + gstTotal;
-    return (baseTotal * val) / 100;
+    return Math.round((baseTotal * val) / 100);
   } else {
-    // Fixed amount (already in rupees)
-    return val;
+    // Fixed amount (convert Rupees to Paise)
+    return Math.round(val * 100);
   }
 }
