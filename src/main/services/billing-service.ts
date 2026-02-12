@@ -8,7 +8,8 @@
 import { BaseService } from './base-service';
 import { ProductRepository } from '../repositories/product-repository';
 import { CustomerRepository } from '../repositories/customer-repository';
-import { BillRepository } from '../repositories/bill-repository';
+import { BillRepository, BillWithItems } from '../repositories/bill-repository';
+import { SettingsService } from './settings-service';
 import { BillingTransactionService, CreateSaleInput } from './billing-transaction-service';
 import {
   ValidationError,
@@ -122,9 +123,12 @@ export class BillingService extends BaseService {
         throw new InactiveEntityError('Product', item.productId);
       }
 
+      // Get settings to check if GST is enabled
+      const settings = SettingsService.getInstance().getConfig();
+
       // Calculate line totals
       const lineSubtotal = product.salePrice * item.quantity;
-      const lineGst = (lineSubtotal * product.gstPercent) / 100;
+      const lineGst = settings.gstEnabled ? (lineSubtotal * product.gstPercent) / 100 : 0;
       const lineTotal = lineSubtotal + lineGst;
 
       // Accumulate totals
@@ -175,7 +179,7 @@ export class BillingService extends BaseService {
    * 5. Logs inventory
    * 6. Updates customer balance
    */
-  public finalizeBill(input: FinalizeBillInput): any {
+  public finalizeBill(input: FinalizeBillInput): BillWithItems {
     // 1. Generate bill number if not provided
     if (!input.billNumber) {
       input.billNumber = this.generateBillNumber();

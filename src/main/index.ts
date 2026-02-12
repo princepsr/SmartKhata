@@ -10,6 +10,7 @@ import { registerIPCHandlers } from './ipc';
 import { databaseManager } from './database';
 import { migrationRunner } from './database/migrations';
 import { LicenseService } from './services/license-service';
+import { SettingsService } from './services/settings-service';
 
 /**
  * Main Electron Process Entry Point
@@ -189,6 +190,9 @@ app.whenReady().then(async () => {
 
   // Register IPC handlers
   registerIPCHandlers();
+
+  // Initialize Settings Service (loads defaults/cache)
+  SettingsService.getInstance().initialize();
 
   createWindow();
 

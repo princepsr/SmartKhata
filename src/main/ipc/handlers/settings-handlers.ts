@@ -1,25 +1,28 @@
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { IPCHandler } from '../ipc-handler';
 import { SettingsService } from '@main/services/settings-service';
+import { AppConfig } from '@main/repositories/settings-repository';
+import { PrintService } from '@main/services/print-service';
+import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 
 export function registerSettingsHandlers(): void {
-  const settingsService = new SettingsService();
+  const settingsService = SettingsService.getInstance();
 
   /**
-   * Get all settings
+   * Get application configuration (Unifying settings:get)
    */
-  IPCHandler.handle<void, Record<string, string>>(IPC_CHANNELS.SETTINGS_GET, async () => {
-    return settingsService.getAllSettings();
+  IPCHandler.handle<void, AppConfig>(IPC_CHANNELS.SETTINGS_GET, async () => {
+    return settingsService.getConfig();
   });
 
   /**
-   * Update settings
+   * Update configuration
    */
-  IPCHandler.handle<Record<string, string>, { success: boolean; error?: string }>(
+  IPCHandler.handle<Partial<AppConfig>, { success: boolean; error?: string }>(
     IPC_CHANNELS.SETTINGS_UPDATE,
     async (payload) => {
       try {
-        settingsService.updateSettings(payload);
+        settingsService.updateConfig(payload);
         return { success: true };
       } catch (error) {
         return {
@@ -31,20 +34,16 @@ export function registerSettingsHandlers(): void {
   );
 
   /**
-   * Reset all settings
+   * Test Print (Standardized)
    */
-  IPCHandler.handle<void, { success: boolean; error?: string }>(
-    IPC_CHANNELS.SETTINGS_RESET,
-    async () => {
-      try {
-        settingsService.resetAllSettings();
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
+  IPCHandler.handle<{ printerName?: string; paperSize?: '58mm' | '80mm' }, boolean>(
+    IPC_CHANNELS.SETTINGS_TEST_PRINT,
+    async ({ printerName, paperSize }) => {
+      const printService = new PrintService();
+      return await printService.testPrint(printerName || '', paperSize || '58mm');
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
     }
   );
 }

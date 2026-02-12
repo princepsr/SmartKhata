@@ -2,6 +2,7 @@ import { BrowserWindow, dialog } from 'electron';
 import fs from 'fs';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import { logger } from '../utils/logger';
+import { SettingsService } from './settings-service';
 
 /**
  * Print Service
@@ -224,10 +225,139 @@ export class PrintService {
   }
 
   /**
+   * Test Print
+   */
+  async testPrint(printerName: string = '', paperSize: '58mm' | '80mm' = '58mm'): Promise<boolean> {
+    logger.info(`Starting test print on printer: ${printerName || 'Default'} (${paperSize})`);
+
+    let printWindow: BrowserWindow | null = new BrowserWindow({
+      show: false,
+      width: 400,
+      height: 600,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
+      },
+    });
+
+    try {
+      const htmlContent = this.generateTestReceiptHtml(paperSize);
+
+      await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+
+      await new Promise<void>((resolve, reject) => {
+        if (!printWindow) {
+          return reject(new Error('Window closed'));
+        }
+
+        setTimeout(() => {
+          if (!printWindow) {
+            return reject(new Error('Window closed'));
+          }
+
+          printWindow.webContents.print(
+            {
+              silent: true,
+              printBackground: true,
+              deviceName: printerName,
+              pageSize: 'A4', // Electron print pageSize is often ignored for custom widths, but we set margins
+              margins: { marginType: 'printableArea' },
+            },
+            (success, failureReason) => {
+              if (success) {
+                logger.info('Test print sent successfully');
+                resolve();
+              } else {
+                logger.error(`Test print failed: ${failureReason}`);
+                reject(new Error(failureReason));
+              }
+            }
+          );
+        }, 500);
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('Error in test print', { error });
+      throw error;
+    } finally {
+      if (printWindow) {
+        printWindow.close();
+        printWindow = null;
+      }
+    }
+  }
+
+  /**
+   * Generates HTML for a test receipt
+   */
+  private generateTestReceiptHtml(paperSize: '58mm' | '80mm'): string {
+    const width = paperSize === '80mm' ? '78mm' : '54mm';
+    const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+    const settings = SettingsService.getInstance().getConfig();
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px; 
+            margin: 0; 
+            padding: 5px; 
+            width: ${width}; 
+            color: #000; 
+            background: #fff; 
+          }
+          .header { text-align: center; margin-bottom: 10px; }
+          .logo-placeholder { 
+            border: 1px dashed #ccc; 
+            padding: 10px; 
+            margin-bottom: 10px; 
+            display: ${settings.showLogo ? 'block' : 'none'}; 
+            font-size: 10px;
+            color: #666;
+          }
+          .header h1 { margin: 0; font-size: 18px; }
+          .divider { border-top: 1px dashed #000; margin: 10px 0; }
+          .content { text-align: center; }
+          .footer { text-align: center; margin-top: 15px; font-size: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo-placeholder">LOGO SPACE</div>
+          <h1>TEST PRINT</h1>
+          <p>${settings.shopName || 'SmartKhata POS'}</p>
+        </div>
+        <div class="divider"></div>
+        <div class="content">
+          <p>Printer: Standard Thermal</p>
+          <p>Paper Size: ${paperSize}</p>
+          <p>Status: ONLINE</p>
+          <p>If you can read this, your printer is correctly configured.</p>
+        </div>
+        <div class="divider"></div>
+        <div class="footer">
+          <p>${settings.footerMessage}</p>
+          <p>${timestamp}</p>
+          <p>-- End of Test --</p>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
    * Generates the HTML for a 3-inch (80mm) thermal receipt
    */
   private generateReceiptHtml(data: { bill: any; items: any[] }): string {
     const { bill, items } = data;
+    const settings = SettingsService.getInstance().getConfig();
 
     const date = new Date(bill.createdAt).toLocaleDateString('en-IN', {
       day: '2-digit',
@@ -268,16 +398,17 @@ export class PrintService {
       </head>
       <body>
         <div class="header">
-          <h1>${APP_CONSTANTS.APP_NAME}</h1>
+          <div class="logo-placeholder">LOGO SPACE</div>
+          <h1>${settings.shopName}</h1>
           <p>General Store & Provisions</p>
-          <p>Phone: 9876543210</p>
+          <p>Phone: ${settings.phone || '-'}</p>
         </div>
         <div class="divider"></div>
         <div class="meta-row">
           <span>Bill No: ${bill.billNumber}</span>
           <span>${date} ${time}</span>
         </div>
-        ${bill.customerId ? `<div class="meta-row"><span>Customer ID: ${bill.customerId}</span></div>` : ''}
+        ${bill.customerId && settings.showCustomerDetails ? `<div class="meta-row"><span>Customer ID: ${bill.customerId}</span></div>` : ''}
         <div class="divider"></div>
         <table>
           <thead>
@@ -330,7 +461,7 @@ export class PrintService {
           </div>
         </div>
         <div class="footer">
-          <p>Thank you! Visit Again</p>
+          <p>${settings.footerMessage}</p>
           <p>No Exchange / No Refund</p>
         </div>
       </body>

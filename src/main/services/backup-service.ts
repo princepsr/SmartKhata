@@ -24,10 +24,7 @@ class BackupService {
   constructor() {}
 
   private get settingsService(): SettingsService {
-    if (!this._settingsService) {
-      this._settingsService = new SettingsService();
-    }
-    return this._settingsService;
+    return SettingsService.getInstance();
   }
 
   /**
@@ -111,7 +108,7 @@ class BackupService {
         version: app.getVersion(),
         timestamp: new Date().toISOString(),
         schemaVersion: migrationRunner.getCurrentVersion(),
-        shopName: this.settingsService.getSetting('shop_name', 'My Shop'),
+        shopName: this.settingsService.getConfig().shopName || 'SmartKhata Shop',
       };
 
       // 3. Create ZIP archive
@@ -195,7 +192,7 @@ class BackupService {
           logger.debug('Restoring application settings');
           const settingsContent = fs.readFileSync(extractedSettingsPath, 'utf8');
           const settings = JSON.parse(settingsContent);
-          this.settingsService.updateSettings(settings);
+          this.settingsService.updateConfig(settings);
         } catch (settingsError) {
           logger.warn('Failed to restore settings, continuing with database restore', {
             settingsError,

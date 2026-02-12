@@ -11,6 +11,26 @@ export interface Setting {
 }
 
 /**
+ * App Configuration Domain Object
+ */
+export interface AppConfig {
+  shopName: string;
+  ownerName: string | null;
+  address: string | null;
+  phone: string | null;
+  gstNumber: string | null;
+  printerName: string | null;
+  paperSize: '58mm' | '80mm';
+  gstEnabled: boolean;
+  roundOffEnabled: boolean;
+  gstPercentage: number;
+  showLogo: boolean;
+  showCustomerDetails: boolean;
+  footerMessage: string;
+  updatedAt: Date;
+}
+
+/**
  * Settings Repository
  *
  * Handles all database operations for application settings.
@@ -38,7 +58,11 @@ export class SettingsRepository extends BaseRepository {
    */
   public getSetting(key: string): Setting | null {
     const sql = `SELECT * FROM settings WHERE key = ?`;
-    const row = this.queryOne<any>(sql, [key]);
+    const row = this.queryOne<{
+      key: string;
+      value: string;
+      updated_at: string;
+    }>(sql, [key]);
     return row ? this._mapToSetting(row) : null;
   }
 
@@ -72,7 +96,11 @@ export class SettingsRepository extends BaseRepository {
    */
   public getAll(): Setting[] {
     const sql = `SELECT * FROM settings ORDER BY key ASC`;
-    const rows = this.queryAll<any>(sql);
+    const rows = this.queryAll<{
+      key: string;
+      value: string;
+      updated_at: string;
+    }>(sql);
     return rows.map((row) => this._mapToSetting(row));
   }
 
@@ -136,7 +164,11 @@ export class SettingsRepository extends BaseRepository {
       WHERE key IN (${placeholders})
     `;
 
-    const rows = this.queryAll<any>(sql, keys);
+    const rows = this.queryAll<{
+      key: string;
+      value: string;
+      updated_at: string;
+    }>(sql, keys);
     return rows.map((row) => this._mapToSetting(row));
   }
 
@@ -168,7 +200,9 @@ export class SettingsRepository extends BaseRepository {
    */
   public getBoolean(key: string, defaultValue: boolean = false): boolean {
     const value = this.get(key);
-    if (value === null) return defaultValue;
+    if (value === null) {
+      return defaultValue;
+    }
     return value === 'true' || value === '1';
   }
 
@@ -181,7 +215,9 @@ export class SettingsRepository extends BaseRepository {
    */
   public getNumber(key: string, defaultValue: number = 0): number {
     const value = this.get(key);
-    if (value === null) return defaultValue;
+    if (value === null) {
+      return defaultValue;
+    }
     const num = parseFloat(value);
     return isNaN(num) ? defaultValue : num;
   }
@@ -195,7 +231,9 @@ export class SettingsRepository extends BaseRepository {
    */
   public getInt(key: string, defaultValue: number = 0): number {
     const value = this.get(key);
-    if (value === null) return defaultValue;
+    if (value === null) {
+      return defaultValue;
+    }
     const num = parseInt(value, 10);
     return isNaN(num) ? defaultValue : num;
   }
@@ -221,12 +259,152 @@ export class SettingsRepository extends BaseRepository {
   }
 
   /**
+   * Get application configuration (singleton)
+   *
+   * @returns AppConfig object
+   */
+  public getConfig(): AppConfig {
+    const sql = `SELECT * FROM app_config WHERE id = 1`;
+    const row = this.queryOne<{
+      shop_name: string;
+      owner_name: string | null;
+      address: string | null;
+      phone: string | null;
+      gst_number: string | null;
+      printer_name: string | null;
+      paper_size: '58mm' | '80mm';
+      gst_enabled: number;
+      round_off_enabled: number;
+      gst_percentage: number;
+      show_logo: number;
+      show_customer_details: number;
+      footer_message: string;
+      updated_at: string;
+    }>(sql);
+
+    if (!row) {
+      // Return hardcoded defaults if DB row is missing (should not happen after migration)
+      logger.warn('Application configuration row not found in DB, using hardcoded defaults');
+      return {
+        shopName: 'SmartKhata Shop',
+        ownerName: null,
+        address: null,
+        phone: null,
+        gstNumber: null,
+        printerName: null,
+        paperSize: '58mm',
+        gstEnabled: true,
+        roundOffEnabled: true,
+        gstPercentage: 18,
+        showLogo: false,
+        showCustomerDetails: true,
+        footerMessage: 'Thank you! Visit Again',
+        updatedAt: new Date(),
+      };
+    }
+
+    return this._mapToAppConfig(row);
+  }
+
+  /**
+   * Update application configuration
+   *
+   * @param config - Partial config object
+   */
+  public updateConfig(config: Partial<Omit<AppConfig, 'updatedAt'>>): void {
+    const fields: string[] = [];
+    const values: (string | number | null)[] = [];
+
+    // Map camelCase to snake_case for DB
+    const mapping: Record<string, string> = {
+      shopName: 'shop_name',
+      ownerName: 'owner_name',
+      address: 'address',
+      phone: 'phone',
+      gstNumber: 'gst_number',
+      printerName: 'printer_name',
+      paperSize: 'paper_size',
+      gstEnabled: 'gst_enabled',
+      roundOffEnabled: 'round_off_enabled',
+      gstPercentage: 'gst_percentage',
+      showLogo: 'show_logo',
+      showCustomerDetails: 'show_customer_details',
+      footerMessage: 'footer_message',
+    };
+
+    Object.entries(config).forEach(([key, value]) => {
+      if (mapping[key]) {
+        fields.push(`${mapping[key]} = ?`);
+
+        // Convert boolean to integer for SQLite
+        if (typeof value === 'boolean') {
+          values.push(value ? 1 : 0);
+        } else {
+          values.push(value);
+        }
+      }
+    });
+
+    if (fields.length === 0) {
+      return;
+    }
+
+    fields.push("updated_at = datetime('now')");
+
+    const sql = `
+      UPDATE app_config 
+      SET ${fields.join(', ')}
+      WHERE id = 1
+    `;
+
+    this.execute(sql, values);
+    logger.info('Application configuration updated', { updatedFields: Object.keys(config) });
+  }
+
+  /**
    * Map database row to Setting domain object
    */
-  private _mapToSetting(row: any): Setting {
+  private _mapToSetting(row: { key: string; value: string; updated_at: string }): Setting {
     return {
       key: row.key,
       value: row.value,
+      updatedAt: this.parseDate(row.updated_at),
+    };
+  }
+
+  /**
+   * Map database row to AppConfig domain object
+   */
+  private _mapToAppConfig(row: {
+    shop_name: string;
+    owner_name: string | null;
+    address: string | null;
+    phone: string | null;
+    gst_number: string | null;
+    printer_name: string | null;
+    paper_size: string;
+    gst_enabled: number;
+    round_off_enabled: number;
+    gst_percentage: number;
+    show_logo: number;
+    show_customer_details: number;
+    footer_message: string;
+    updated_at: string;
+  }): AppConfig {
+    return {
+      shopName: row.shop_name,
+      ownerName: row.owner_name,
+      address: row.address,
+      phone: row.phone,
+      gstNumber: row.gst_number,
+      printerName: row.printer_name,
+      paperSize: row.paper_size as '58mm' | '80mm',
+      gstEnabled: row.gst_enabled === 1,
+      roundOffEnabled: row.round_off_enabled === 1,
+      gstPercentage: row.gst_percentage,
+      showLogo: row.show_logo === 1,
+      showCustomerDetails: row.show_customer_details === 1,
+      footerMessage: row.footer_message,
       updatedAt: this.parseDate(row.updated_at),
     };
   }

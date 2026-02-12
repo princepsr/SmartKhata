@@ -131,10 +131,7 @@ export function DataManagement() {
   return (
     <div className="settings-section-card">
       <h2>Backup & Restore</h2>
-      <p
-        className="settings-description"
-        style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}
-      >
+      <p className="settings-description">
         Keep your data safe by creating regular backups. You can restore data from a previous backup
         if needed.
       </p>

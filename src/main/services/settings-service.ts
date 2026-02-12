@@ -1,334 +1,173 @@
 /**
  * Settings Service
- * 
+ *
  * Manages application settings with in-memory caching.
  * Provides defaults and validates configuration values.
  */
 
+import { EventEmitter } from 'events';
 import { BaseService } from './base-service';
-import { SettingsRepository } from '../repositories/settings-repository';
+import { SettingsRepository, AppConfig } from '../repositories/settings-repository';
 import { ValidationError } from './errors/service-errors';
-
-/**
- * Default Settings
- */
-const DEFAULT_SETTINGS: Record<string, string> = {
-  // Shop Information
-  'shop_name': 'My Shop',
-  'shop_address': '',
-  'shop_phone': '',
-  'shop_gstin': '',
-  
-  // GST Configuration
-  'gst_enabled': 'true',
-  'default_gst_rate': '18',
-  
-  // Printer Configuration
-  'printer_enabled': 'false',
-  'printer_name': '',
-  'auto_print': 'false',
-  
-  // Language
-  'language': 'en',
-  
-  // Currency
-  'currency_symbol': '₹',
-  'currency_code': 'INR',
-  
-  // Business Rules
-  'allow_negative_stock': 'false',
-  'low_stock_alert_enabled': 'true',
-  
-  // UI Preferences
-  'theme': 'light',
-  'date_format': 'DD/MM/YYYY',
-  'time_format': '24h'
-};
 
 /**
  * Settings Service
  */
 export class SettingsService extends BaseService {
+  private static instance: SettingsService;
   private settingsRepo: SettingsRepository;
-  private cache: Map<string, string>;
-  private cacheLoaded: boolean;
+  private configCache: AppConfig | null;
+  private events: EventEmitter;
 
   constructor() {
     super();
     this.settingsRepo = new SettingsRepository();
-    this.cache = new Map();
-    this.cacheLoaded = false;
+    this.configCache = null;
+    this.events = new EventEmitter();
   }
 
   /**
-   * Get a setting value (from cache)
-   * 
-   * @param key - Setting key
-   * @param defaultValue - Optional default value
-   * @returns Setting value or default
+   * Get Singleton Instance
    */
-  public getSetting(key: string, defaultValue?: string): string {
-    // Load cache if not loaded
-    if (!this.cacheLoaded) {
-      this._loadCache();
+  public static getInstance(): SettingsService {
+    if (!SettingsService.instance) {
+      SettingsService.instance = new SettingsService();
     }
-
-    // Check cache
-    if (this.cache.has(key)) {
-      return this.cache.get(key)!;
-    }
-
-    // Check default settings
-    if (DEFAULT_SETTINGS[key] !== undefined) {
-      return DEFAULT_SETTINGS[key];
-    }
-
-    // Return provided default or empty string
-    return defaultValue ?? '';
+    return SettingsService.instance;
   }
 
   /**
-   * Get setting as boolean
+   * Initialize Service
+   * Loads settings into memory on start
    */
-  public getBoolean(key: string, defaultValue: boolean = false): boolean {
-    const value = this.getSetting(key);
-    if (value === '') {
-      return defaultValue;
+  public initialize(): void {
+    try {
+      this.reloadCache();
+      const config = this.getConfig();
+      this.logInfo('Settings service initialized', {
+        shopName: config.shopName,
+        printer: config.printerName || 'Default',
+        paperSize: config.paperSize,
+        gstEnabled: config.gstEnabled,
+      });
+    } catch (error) {
+      this.logError('Failed to initialize settings service', error);
+      // Don't throw, use defaults from repository if possible
     }
-    return value === 'true' || value === '1';
   }
 
   /**
-   * Get setting as number
+   * Subscribe to setting changes
    */
-  public getNumber(key: string, defaultValue: number = 0): number {
-    const value = this.getSetting(key);
-    if (value === '') {
-      return defaultValue;
-    }
-    const num = parseFloat(value);
-    return isNaN(num) ? defaultValue : num;
+  public onChange(callback: (config: AppConfig) => void): void {
+    this.events.on('settings-changed', callback);
   }
 
   /**
-   * Get setting as integer
+   * Get application configuration
+   *
+   * @returns AppConfig object
    */
-  public getInt(key: string, defaultValue: number = 0): number {
-    const value = this.getSetting(key);
-    if (value === '') {
-      return defaultValue;
+  public getConfig(): AppConfig {
+    if (!this.configCache) {
+      this.reloadCache();
     }
-    const num = parseInt(value, 10);
-    return isNaN(num) ? defaultValue : num;
+    return this.configCache as AppConfig;
   }
 
   /**
-   * Update a setting (updates DB + cache)
-   * 
-   * @param key - Setting key
-   * @param value - Setting value
+   * Update application configuration
+   *
+   * @param config - Partial config object
    */
-  public updateSetting(key: string, value: string): void {
-    // Validate setting
-    this._validateSetting(key, value);
+  public updateConfig(config: Partial<Omit<AppConfig, 'updatedAt'>>): void {
+    // Validate config fields
+    this._validateConfig(config);
 
     // Update database
-    this.settingsRepo.set(key, value);
+    this.settingsRepo.updateConfig(config);
 
     // Update cache
-    this.cache.set(key, value);
+    this.reloadCache();
 
-    this.logInfo('Setting updated', { key, value });
-  }
-
-  /**
-   * Update multiple settings (batch update)
-   */
-  public updateSettings(settings: Record<string, string>): void {
-    // Validate all settings first
-    Object.entries(settings).forEach(([key, value]) => {
-      this._validateSetting(key, value);
-    });
-
-    // Update database (in transaction)
-    this.settingsRepo.setMany(settings);
-
-    // Update cache
-    Object.entries(settings).forEach(([key, value]) => {
-      this.cache.set(key, value);
-    });
-
-    this.logInfo('Multiple settings updated', { count: Object.keys(settings).length });
-  }
-
-  /**
-   * Get all settings
-   */
-  public getAllSettings(): Record<string, string> {
-    // Load cache if not loaded
-    if (!this.cacheLoaded) {
-      this._loadCache();
+    // Emit event
+    if (this.configCache) {
+      this.events.emit('settings-changed', this.configCache);
     }
 
-    // Convert cache to object
-    const settings: Record<string, string> = {};
-    this.cache.forEach((value, key) => {
-      settings[key] = value;
-    });
-
-    // Add defaults for missing keys
-    Object.entries(DEFAULT_SETTINGS).forEach(([key, value]) => {
-      if (settings[key] === undefined) {
-        settings[key] = value;
-      }
-    });
-
-    return settings;
-  }
-
-  /**
-   * Reset setting to default
-   */
-  public resetSetting(key: string): void {
-    const defaultValue = DEFAULT_SETTINGS[key];
-    
-    if (defaultValue === undefined) {
-      throw new ValidationError(`No default value for setting: ${key}`, 'key');
-    }
-
-    this.updateSetting(key, defaultValue);
-    
-    this.logInfo('Setting reset to default', { key, value: defaultValue });
-  }
-
-  /**
-   * Reset all settings to defaults
-   */
-  public resetAllSettings(): void {
-    this.updateSettings(DEFAULT_SETTINGS);
-    this.logInfo('All settings reset to defaults');
+    this.logInfo('Application configuration updated', { updatedFields: Object.keys(config) });
   }
 
   /**
    * Reload cache from database
    */
   public reloadCache(): void {
-    this._loadCache();
+    this.configCache = this.settingsRepo.getConfig();
     this.logInfo('Settings cache reloaded');
   }
 
   /**
-   * Load cache from database
+   * Legacy method support (for backward compatibility if needed)
+   * Converts AppConfig back to string record for old IPC handlers
    */
-  private _loadCache(): void {
-    const settings = this.settingsRepo.getAllAsMap();
-    
-    this.cache.clear();
-    Object.entries(settings).forEach(([key, value]) => {
-      this.cache.set(key, value);
-    });
-
-    this.cacheLoaded = true;
+  public getAllSettings(): Record<string, string> {
+    const config = this.getConfig();
+    return {
+      shop_name: config.shopName,
+      owner_name: config.ownerName || '',
+      address: config.address || '',
+      phone: config.phone || '',
+      gst_number: config.gstNumber || '',
+      printer_name: config.printerName || '',
+      paper_size: config.paperSize,
+      gst_enabled: config.gstEnabled ? 'true' : 'false',
+      round_off_enabled: config.roundOffEnabled ? 'true' : 'false',
+      gst_percentage: config.gstPercentage.toString(),
+    };
   }
 
   /**
-   * Validate setting value
+   * Validate config fields
    */
-  private _validateSetting(key: string, value: string): void {
-    // GST rate validation
-    if (key === 'default_gst_rate') {
-      const gstRate = parseFloat(value);
-      if (isNaN(gstRate) || gstRate < 0 || gstRate > 100) {
-        throw new ValidationError(
-          'GST rate must be between 0 and 100',
-          'default_gst_rate'
-        );
+  private _validateConfig(config: Partial<AppConfig>): void {
+    // Shop Name validation
+    if (config.shopName !== undefined && config.shopName.trim() === '') {
+      throw new ValidationError('Shop name cannot be empty', 'shopName');
+    }
+
+    // Paper Size validation
+    if (config.paperSize !== undefined) {
+      const validSizes = ['58mm', '80mm'];
+      if (!validSizes.includes(config.paperSize)) {
+        throw new ValidationError('Invalid paper size. Must be 58mm or 80mm', 'paperSize');
       }
     }
 
-    // Language validation
-    if (key === 'language') {
-      const validLanguages = ['en', 'hi', 'mr', 'gu', 'ta', 'te', 'kn', 'ml'];
-      if (!validLanguages.includes(value)) {
-        throw new ValidationError(
-          `Invalid language. Must be one of: ${validLanguages.join(', ')}`,
-          'language'
-        );
-      }
-    }
-
-    // Theme validation
-    if (key === 'theme') {
-      const validThemes = ['light', 'dark'];
-      if (!validThemes.includes(value)) {
-        throw new ValidationError(
-          `Invalid theme. Must be one of: ${validThemes.join(', ')}`,
-          'theme'
-        );
-      }
-    }
-
-    // Date format validation
-    if (key === 'date_format') {
-      const validFormats = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'];
-      if (!validFormats.includes(value)) {
-        throw new ValidationError(
-          `Invalid date format. Must be one of: ${validFormats.join(', ')}`,
-          'date_format'
-        );
-      }
-    }
-
-    // Time format validation
-    if (key === 'time_format') {
-      const validFormats = ['12h', '24h'];
-      if (!validFormats.includes(value)) {
-        throw new ValidationError(
-          `Invalid time format. Must be one of: ${validFormats.join(', ')}`,
-          'time_format'
-        );
-      }
-    }
-
-    // Boolean settings validation
-    const booleanSettings = [
-      'gst_enabled',
-      'printer_enabled',
-      'auto_print',
-      'allow_negative_stock',
-      'low_stock_alert_enabled'
-    ];
-    
-    if (booleanSettings.includes(key)) {
-      const validValues = ['true', 'false', '0', '1'];
-      if (!validValues.includes(value)) {
-        throw new ValidationError(
-          `${key} must be true or false`,
-          key
-        );
-      }
-    }
-
-    // Phone validation (if shop_phone)
-    if (key === 'shop_phone' && value !== '') {
-      const cleanPhone = value.replace(/[\s\-\(\)]/g, '');
+    // Phone validation
+    if (config.phone !== undefined && config.phone !== null && config.phone !== '') {
+      const cleanPhone = config.phone.replace(/[\s-()]/g, '');
       if (!/^\d{10}$/.test(cleanPhone)) {
-        throw new ValidationError(
-          'Shop phone must be 10 digits',
-          'shop_phone'
-        );
+        throw new ValidationError('Shop phone must be 10 digits', 'phone');
       }
     }
 
-    // GSTIN validation (if shop_gstin)
-    if (key === 'shop_gstin' && value !== '') {
-      // Basic GSTIN format: 15 characters (alphanumeric)
-      if (!/^[0-9A-Z]{15}$/.test(value)) {
-        throw new ValidationError(
-          'GSTIN must be 15 alphanumeric characters',
-          'shop_gstin'
-        );
+    // GSTIN validation
+    if (config.gstNumber !== undefined && config.gstNumber !== null && config.gstNumber !== '') {
+      if (!/^[0-9A-Z]{15}$/.test(config.gstNumber)) {
+        throw new ValidationError('GST number must be 15 alphanumeric characters', 'gstNumber');
       }
+    }
+
+    // GST Percentage validation
+    if (config.gstPercentage !== undefined) {
+      if (![5, 12, 18].includes(config.gstPercentage)) {
+        throw new ValidationError('Invalid GST percentage. Must be 5, 12, or 18', 'gstPercentage');
+      }
+    }
+
+    // Footer Message validation
+    if (config.footerMessage !== undefined && config.footerMessage.length > 200) {
+      throw new ValidationError('Footer message is too long (max 200 chars)', 'footerMessage');
     }
   }
 }

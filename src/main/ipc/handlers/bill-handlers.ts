@@ -265,4 +265,17 @@ export function registerBillHandlers(): void {
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );
+
+  // ============================================
+  // TEST PRINT
+  // ============================================
+  IPCHandler.handle<{ printerName?: string; paperSize?: '58mm' | '80mm' }, boolean>(
+    'printer:testPrint',
+    async ({ printerName, paperSize }) => {
+      return await printService.testPrint(printerName || '', paperSize || '58mm');
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
 }
