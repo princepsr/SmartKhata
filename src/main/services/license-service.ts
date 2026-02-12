@@ -176,18 +176,23 @@ export class LicenseService extends BaseService {
     }
     try {
       const key = 'HKCU:\\Software\\SmartKhata\\SysData';
-      const command = `powershell -Command "if (Test-Path '${key}') { Get-ItemProperty -Path '${key}' | Select-Object -ExpandProperty Data -ErrorAction SilentlyContinue }"`;
+      // Use Out-String and strip all whitespace to prevent PowerShell formatting issues
+      const command = `powershell -Command "if (Test-Path '${key}') { (Get-ItemProperty -Path '${key}' -ErrorAction SilentlyContinue).Data }"`;
       const result = execSync(command, {
         encoding: 'utf-8',
         stdio: ['ignore', 'pipe', 'ignore'],
-      }).trim();
-      if (result) {
-        const decoded = Buffer.from(result, 'base64').toString('utf-8');
+      });
+
+      // Crucial: Strip ALL whitespace/newlines from PowerShell output
+      const cleanResult = result.replace(/\s+/g, '');
+
+      if (cleanResult) {
+        const decoded = Buffer.from(cleanResult, 'base64').toString('utf-8');
         const json = JSON.parse(decoded);
         return { trialStartedOn: json.t || null, updatedAt: json.u || null };
       }
     } catch {
-      // Ignored
+      logger.debug('Registry read failed (likely key not found yet)');
     }
     return { trialStartedOn: null, updatedAt: null };
   }
@@ -228,13 +233,19 @@ export class LicenseService extends BaseService {
       return;
     }
     try {
-      const key = 'HKCU:\\Software\\SmartKhata\\SysData';
+      const rootKey = 'HKCU:\\Software\\SmartKhata';
+      const sysKey = `${rootKey}\\SysData`;
       const payload = JSON.stringify({ t: trialDate, u: lastSeenDate });
       const base64 = Buffer.from(payload).toString('base64');
-      const command = `powershell -Command "if (!(Test-Path 'HKCU:\\Software\\SmartKhata')) { New-Item -Path 'HKCU:\\Software\\SmartKhata' -Force }; if (!(Test-Path '${key}')) { New-Item -Path '${key}' -Force }; Set-ItemProperty -Path '${key}' -Name 'Data' -Value '${base64}'"`;
+
+      // Create keys if they don't exist, then set the property
+      const command = `powershell -Command "if (!(Test-Path '${rootKey}')) { New-Item -Path '${rootKey}' -Force }; if (!(Test-Path '${sysKey}')) { New-Item -Path '${sysKey}' -Force }; Set-ItemProperty -Path '${sysKey}' -Name 'Data' -Value '${base64}'"`;
+
       execSync(command, { stdio: 'ignore' });
     } catch (error) {
-      logger.error('Failed to write to Registry', { error });
+      logger.error('Failed to write to Registry', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
