@@ -91,6 +91,7 @@ function createWindow(): void {
       webSecurity: true, // Enable web security (default, but explicit)
       allowRunningInsecureContent: false, // Block mixed content
       experimentalFeatures: false, // Disable experimental features
+      devTools: config.isDevelopment, // Disable DevTools in production
     },
     title: APP_CONSTANTS.APP_NAME,
     autoHideMenuBar: true, // Hide menu bar (File, Edit, etc.)
@@ -105,6 +106,13 @@ function createWindow(): void {
     mainWindow?.show();
     logger.info('Main window shown (maximized)');
   });
+
+  // Prevent right-click context menu (Inspect Element) in production
+  if (!config.isDevelopment) {
+    mainWindow.webContents.on('context-menu', (e) => {
+      e.preventDefault();
+    });
+  }
 
   // Load the app
   if (config.isDevelopment) {
@@ -215,13 +223,16 @@ app.whenReady().then(async () => {
     }
   });
 
-  // Ctrl + Shift + I (Toggle DevTools)
-  globalShortcut.register('CommandOrControl+Shift+I', () => {
-    const win = BrowserWindow.getFocusedWindow();
-    if (win) {
-      win.webContents.toggleDevTools();
-    }
-  });
+  // Register Debug Shortcuts (ONLY in Development)
+  if (config.isDevelopment) {
+    // Ctrl + Shift + I (Toggle DevTools)
+    globalShortcut.register('CommandOrControl+Shift+I', () => {
+      const win = BrowserWindow.getFocusedWindow();
+      if (win) {
+        win.webContents.toggleDevTools();
+      }
+    });
+  }
 
   // F11 (Toggle Fullscreen)
   globalShortcut.register('F11', () => {
@@ -231,23 +242,25 @@ app.whenReady().then(async () => {
     }
   });
 
-  // Ctrl + R / F5 (Reload)
-  const reloadApp = () => {
-    const win = BrowserWindow.getFocusedWindow();
-    if (win) {
-      win.reload();
-    }
-  };
-  globalShortcut.register('CommandOrControl+R', reloadApp);
-  globalShortcut.register('F5', reloadApp);
+  if (config.isDevelopment) {
+    // Ctrl + R / F5 (Reload)
+    const reloadApp = () => {
+      const win = BrowserWindow.getFocusedWindow();
+      if (win) {
+        win.reload();
+      }
+    };
+    globalShortcut.register('CommandOrControl+R', reloadApp);
+    globalShortcut.register('F5', reloadApp);
 
-  // Ctrl + Shift + R (Hard Reload)
-  globalShortcut.register('CommandOrControl+Shift+R', () => {
-    const win = BrowserWindow.getFocusedWindow();
-    if (win) {
-      win.webContents.reloadIgnoringCache();
-    }
-  });
+    // Ctrl + Shift + R (Hard Reload)
+    globalShortcut.register('CommandOrControl+Shift+R', () => {
+      const win = BrowserWindow.getFocusedWindow();
+      if (win) {
+        win.webContents.reloadIgnoringCache();
+      }
+    });
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

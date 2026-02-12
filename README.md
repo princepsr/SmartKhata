@@ -320,6 +320,20 @@ pnpm build:win:portable
 - Thermal printing
 - Inventory management
 
+---
+
+## Security & Licensing
+
+SmartKhata includes a robust, offline-first licensing system:
+
+- **Triple Redundancy**: License markers are stored in 3 obscure system locations + the Windows Registry to prevent trial reset by deleting folders.
+- **Anti-Time-Travel**: Implements a "High-Water Mark" monotonic clock. If a user sets their system clock backward, the app detects it and usage time remains "frozen."
+- **Cryptographic Binding**: All licenses are cryptographically signed and bound to the machine's unique hardware fingerprint.
+- **Code Obfuscation**: Production builds are obfuscated using `javascript-obfuscator` to prevent reverse engineering and patching.
+- **DevTools Lockdown**: Production environment disables DevTools, context menus, and debug shortcuts.
+
+---
+
 ### Phase 2 - Cloud Sync (Optional)
 
 - Cloud backup

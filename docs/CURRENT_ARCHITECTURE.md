@@ -216,18 +216,18 @@ IPCHandler.handle('product:create', async (request) => {
 
 **Services:**
 
-| Service              | Responsibilities                                                          |
-| -------------------- | ------------------------------------------------------------------------- |
-| **ProductService**   | Product CRUD, stock adjustments, duplicate prevention, margin calculation |
-| **BillingService**   | Bill calculations, finalization, validation, bill number generation       |
-| **CustomerService**  | Customer CRUD, phone validation, balance tracking                         |
-| **InventoryService** | Stock availability, deduction rules, integrity verification               |
-| **ReportService**    | Data aggregation for sales, GST, payment modes, and trend analytics       |
-| **ExportService**    | CSV/PDF generation, file system interactions for report exports           |
-| **PrintService**     | Thermal receipt formatting, printer driver communication, status checks   |
-| **SettingsService**  | Configuration management, caching, validation                             |
-| **LicenseService**   | License validation, expiry checking, machine binding                      |
-| **BackupService**    | Atomic database archival and ZIP-based restoration flow                   |
+| Service              | Responsibilities                                                                                               |
+| -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **ProductService**   | Product CRUD, stock adjustments, duplicate prevention, margin calculation                                      |
+| **BillingService**   | Bill calculations, finalization, validation, bill number generation                                            |
+| **CustomerService**  | Customer CRUD, phone validation, balance tracking                                                              |
+| **InventoryService** | Stock availability, deduction rules, integrity verification                                                    |
+| **ReportService**    | Data aggregation for sales, GST, payment modes, and trend analytics                                            |
+| **ExportService**    | CSV/PDF generation, file system interactions for report exports                                                |
+| **PrintService**     | Thermal receipt formatting, printer driver communication, status checks                                        |
+| **SettingsService**  | Configuration management, caching, validation                                                                  |
+| **LicenseService**   | License validation, expiry checking, machine binding, redundant marker persistence, and anti-time-tamper logic |
+| **BackupService**    | Atomic database archival and ZIP-based restoration flow                                                        |
 
 **Example:**
 

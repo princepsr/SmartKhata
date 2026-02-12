@@ -1,15 +1,30 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import obfuscator from 'vite-plugin-javascript-obfuscator';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  
+  plugins: [
+    react(),
+    obfuscator({
+      include: [/\.(js|ts|jsx|tsx)$/],
+      exclude: [/node_modules/],
+      options: {
+        compact: true,
+        controlFlowFlattening: false,
+        selfDefending: true,
+        stringArray: true,
+        stringArrayEncoding: ['base64'],
+        stringArrayThreshold: 0.75,
+      },
+    }),
+  ],
+
   // Renderer entry point (index.html location)
   root: path.resolve(__dirname, 'src/renderer'),
   publicDir: path.resolve(__dirname, 'public'),
-  
+
   // Development server config
   server: {
     port: 5173,

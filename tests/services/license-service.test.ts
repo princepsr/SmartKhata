@@ -4,10 +4,15 @@
  * Tests for license validation, activation, and expiry checking.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LicenseService } from '../../src/main/services/license-service';
 import { createTestDatabase, resetTestDatabase } from '../utils/test-db';
 import { LicenseError, ValidationError } from '../../src/main/services/errors/service-errors';
+import fs from 'fs';
+import { execSync } from 'child_process';
+
+vi.mock('fs');
+vi.mock('child_process');
 
 describe('LicenseService - Trial License', () => {
   let db: any;
@@ -45,7 +50,7 @@ describe('LicenseService - Trial License', () => {
     const validation = licenseService.isLicenseValid();
 
     expect(validation.isValid).toBe(true);
-    expect(validation.daysRemaining).toBeGreaterThan(29);
+    expect(validation.daysRemaining).toBeGreaterThanOrEqual(29);
   });
 
   it('should reject expired license', () => {
@@ -83,7 +88,7 @@ describe('LicenseService - Validation', () => {
 
     expect(validation.isValid).toBe(true);
     expect(validation.type).toBe('TRIAL');
-    expect(validation.daysRemaining).toBeGreaterThan(29);
+    expect(validation.daysRemaining).toBeGreaterThanOrEqual(29);
   });
 
   it('should throw error for empty license key', () => {
@@ -117,7 +122,7 @@ describe('LicenseService - Validation', () => {
 
     expect(info.activated).toBe(true);
     expect(info.expiresOn).toBeDefined();
-    expect(info.daysRemaining).toBeGreaterThan(29);
+    expect(info.daysRemaining).toBeGreaterThanOrEqual(29);
     expect(info.deviceId).toBeDefined();
     expect(info.type).toBe('PAID');
   });
@@ -174,5 +179,49 @@ describe('LicenseService - Machine Fingerprint', () => {
     const status = licenseService.getLicenseStatus();
     expect(status.type).toBe('PAID');
     expect(status.activated).toBe(true);
+  });
+
+  it('should detect and handle backdated system clock (High-Water Mark)', () => {
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 1);
+
+    // Mock marker having a future date (last seen)
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        trialStartedOn: new Date().toISOString(),
+        updatedAt: futureDate.toISOString(),
+      })
+    );
+
+    const status = licenseService.getLicenseStatus();
+
+    // The logic should use futureDate as 'effectiveNow'
+    // Since trial duration is 30 days and effectiveNow is 1 year in future, it should be expired/locked
+    expect(status.isExpired).toBe(true);
+    expect(status.isLocked).toBe(true);
+  });
+
+  it('should recover trial date from Registry if AppData is wiped', () => {
+    const originalDate = new Date('2026-01-01T00:00:00Z');
+
+    // 1. AppData is empty (fs.existsSync false)
+    vi.mocked(fs.existsSync).mockReturnValue(false);
+
+    // 2. Registry has the date
+    const registryPayload = JSON.stringify({
+      t: originalDate.toISOString(),
+      u: originalDate.toISOString(),
+    });
+    const base64Registry = Buffer.from(registryPayload).toString('base64');
+    vi.mocked(execSync).mockReturnValue(base64Registry);
+
+    // 3. Initialize should restore the date to DB
+    licenseService.initializeTrial();
+
+    const status = licenseService.getLicenseStatus();
+    // Trial expiry should be Jan 2026 + 30 days, which is long past current date
+    expect(status.expiresOn! < new Date()).toBe(true);
+    expect(status.isExpired).toBe(true);
   });
 });

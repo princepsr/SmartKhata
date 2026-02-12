@@ -74,85 +74,206 @@ export class LicenseService extends BaseService {
   }
 
   /**
-   * Get path for the hidden marker file (Trial Reset Prevention)
+   * Get paths for hidden marker files (Trial Reset Prevention)
+   * Uses multiple system locations for redundancy.
    */
-  private _getMarkerPath(): string {
-    const appData =
+  private _getMarkerPaths(): string[] {
+    const roaming =
       process.env.APPDATA ||
       (process.platform === 'darwin'
         ? path.join(os.homedir(), 'Library', 'Application Support')
         : os.homedir());
-    const markerDir = path.join(appData, 'SmartKhata', '.system_info');
 
-    if (!fs.existsSync(markerDir)) {
+    const local =
+      process.env.LOCALAPPDATA || (process.platform === 'darwin' ? roaming : os.homedir());
+
+    const paths = [
+      path.join(roaming, 'SmartKhata', '.system_info', '.t_marker'),
+      path.join(local, '.sys_data', '.cache_bin'), // Obscure location 2
+      path.join(os.homedir(), '.config', '.sys_meta'), // Obscure location 3 (User Home)
+    ];
+
+    // Ensure directories exist
+    paths.forEach((p) => {
+      const dir = path.dirname(p);
+      if (!fs.existsSync(dir)) {
+        try {
+          fs.mkdirSync(dir, { recursive: true });
+        } catch (error) {
+          logger.error('Failed to create marker directory', { dir, error });
+        }
+      }
+    });
+
+    return paths;
+  }
+
+  /**
+   * Read trial start date and last seen date from hidden markers
+   * Returns the EARLIEST trial date and LATEST last-seen date found across all redundant markers.
+   */
+  private _readMarker(): { trialStartedOn: Date | null; lastSeenDate: Date | null } {
+    const markerPaths = this._getMarkerPaths();
+    let earliestTrialDate: Date | null = null;
+    let latestLastSeenDate: Date | null = null;
+
+    // 1. Read from multi-location files
+    for (const markerPath of markerPaths) {
+      if (fs.existsSync(markerPath)) {
+        try {
+          const data = fs.readFileSync(markerPath, 'utf-8');
+          const json = JSON.parse(data);
+
+          // trialStartedOn
+          if (json && json.trialStartedOn) {
+            const date = new Date(json.trialStartedOn);
+            if (!isNaN(date.getTime())) {
+              if (!earliestTrialDate || date < earliestTrialDate) {
+                earliestTrialDate = date;
+              }
+            }
+          }
+
+          // updatedAt
+          if (json && json.updatedAt) {
+            const date = new Date(json.updatedAt);
+            if (!isNaN(date.getTime())) {
+              if (!latestLastSeenDate || date > latestLastSeenDate) {
+                latestLastSeenDate = date;
+              }
+            }
+          }
+        } catch (error) {
+          logger.error('Failed to read trial marker', { markerPath, error });
+        }
+      }
+    }
+
+    // 2. Read from Windows Registry (Location 4)
+    const reg = this._readRegistry();
+    if (reg.trialStartedOn) {
+      const date = new Date(reg.trialStartedOn);
+      if (!isNaN(date.getTime()) && (!earliestTrialDate || date < earliestTrialDate)) {
+        earliestTrialDate = date;
+      }
+    }
+    if (reg.updatedAt) {
+      const date = new Date(reg.updatedAt);
+      if (!isNaN(date.getTime()) && (!latestLastSeenDate || date > latestLastSeenDate)) {
+        latestLastSeenDate = date;
+      }
+    }
+
+    return { trialStartedOn: earliestTrialDate, lastSeenDate: latestLastSeenDate };
+  }
+
+  /**
+   * Helper to read from Windows Registry via PowerShell
+   */
+  private _readRegistry(): { trialStartedOn: string | null; updatedAt: string | null } {
+    if (process.platform !== 'win32') {
+      return { trialStartedOn: null, updatedAt: null };
+    }
+    try {
+      const key = 'HKCU:\\Software\\SmartKhata\\SysData';
+      const command = `powershell -Command "if (Test-Path '${key}') { Get-ItemProperty -Path '${key}' | Select-Object -ExpandProperty Data -ErrorAction SilentlyContinue }"`;
+      const result = execSync(command, {
+        encoding: 'utf-8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
+      if (result) {
+        const decoded = Buffer.from(result, 'base64').toString('utf-8');
+        const json = JSON.parse(decoded);
+        return { trialStartedOn: json.t || null, updatedAt: json.u || null };
+      }
+    } catch {
+      // Ignored
+    }
+    return { trialStartedOn: null, updatedAt: null };
+  }
+
+  /**
+   * Write trial start date to all redundant hidden markers
+   */
+  private _writeMarker(trialDate: Date, lastSeenDate?: Date): void {
+    const markerPaths = this._getMarkerPaths();
+    const now = new Date();
+    const finalLastSeen = lastSeenDate && lastSeenDate > now ? lastSeenDate : now;
+
+    const payloadObj = {
+      trialStartedOn: trialDate.toISOString(),
+      deviceId: this._getMachineFingerprint(),
+      updatedAt: finalLastSeen.toISOString(),
+    };
+
+    // 1. Write to multi-location files
+    const payloadStr = JSON.stringify(payloadObj);
+    markerPaths.forEach((markerPath) => {
       try {
-        fs.mkdirSync(markerDir, { recursive: true });
+        fs.writeFileSync(markerPath, payloadStr, { mode: 0o600 });
       } catch (error) {
-        logger.error('Failed to create marker directory', { error });
+        logger.error('Failed to write trial marker', { markerPath, error });
       }
-    }
+    });
 
-    return path.join(markerDir, '.t_marker');
+    // 2. Write to Windows Registry (Location 4)
+    this._writeRegistry(trialDate.toISOString(), finalLastSeen.toISOString());
   }
 
   /**
-   * Read trial start date from hidden marker
+   * Helper to write to Windows Registry via PowerShell
    */
-  private _readMarker(): Date | null {
-    const markerPath = this._getMarkerPath();
-    if (!fs.existsSync(markerPath)) {
-      return null;
+  private _writeRegistry(trialDate: string, lastSeenDate: string): void {
+    if (process.platform !== 'win32') {
+      return;
     }
-
     try {
-      const data = fs.readFileSync(markerPath, 'utf-8');
-      const json = JSON.parse(data);
-      if (json && json.trialStartedOn) {
-        return new Date(json.trialStartedOn);
-      }
+      const key = 'HKCU:\\Software\\SmartKhata\\SysData';
+      const payload = JSON.stringify({ t: trialDate, u: lastSeenDate });
+      const base64 = Buffer.from(payload).toString('base64');
+      const command = `powershell -Command "if (!(Test-Path 'HKCU:\\Software\\SmartKhata')) { New-Item -Path 'HKCU:\\Software\\SmartKhata' -Force }; if (!(Test-Path '${key}')) { New-Item -Path '${key}' -Force }; Set-ItemProperty -Path '${key}' -Name 'Data' -Value '${base64}'"`;
+      execSync(command, { stdio: 'ignore' });
     } catch (error) {
-      logger.error('Failed to read trial marker', { error });
-    }
-    return null;
-  }
-
-  /**
-   * Write trial start date to hidden marker
-   */
-  private _writeMarker(date: Date): void {
-    const markerPath = this._getMarkerPath();
-    try {
-      const data = JSON.stringify({
-        trialStartedOn: date.toISOString(),
-        deviceId: this._getMachineFingerprint(),
-        updatedAt: new Date().toISOString(),
-      });
-      fs.writeFileSync(markerPath, data, { mode: 0o600 }); // Private file
-    } catch (error) {
-      logger.error('Failed to write trial marker', { error });
+      logger.error('Failed to write to Registry', { error });
     }
   }
 
   /**
    * Initialize trial if not already done
+   * Includes self-healing logic for redundant markers.
    */
   public initializeTrial(): void {
     const license = this.licenseRepo.get();
-    const markerDate = this._readMarker();
+    const marker = this._readMarker();
     const now = new Date();
 
+    // High-Water Mark for time (protection against backdating)
+    const lastSeen = marker.lastSeenDate || (license ? license.updatedAt : null);
+    const effectiveNow = lastSeen && lastSeen > now ? lastSeen : now;
+
     if (!license || !license.trialStartedOn) {
-      const startDate = markerDate || now;
+      // No trial in DB
+      const startDate = marker.trialStartedOn || effectiveNow;
       this.licenseRepo.updateTrialStart(startDate);
 
-      if (!markerDate) {
-        this._writeMarker(startDate);
-      }
+      // Restore/Create markers
+      this._writeMarker(startDate, effectiveNow);
 
-      this.logInfo('Trial initialized', { restored: !!markerDate });
-    } else if (!markerDate) {
-      // Sync DB to Marker if marker is missing
-      this._writeMarker(license.trialStartedOn);
+      this.logInfo('Trial initialized', {
+        restored: !!marker.trialStartedOn,
+        startDate: startDate.toISOString(),
+        timeTamper: effectiveNow > now,
+      });
+    } else {
+      // Trial exists in DB - perform self-healing and update last seen
+      const startDate = license.trialStartedOn;
+
+      // Update markers with the latest time high-water mark
+      this._writeMarker(startDate, effectiveNow);
+
+      if (!marker.trialStartedOn || startDate < marker.trialStartedOn) {
+        this.logInfo('Trial markers self-healed from DB');
+      }
     }
   }
 
@@ -167,7 +288,8 @@ export class LicenseService extends BaseService {
     // 1. Detect if this is a short key (KRN- or length around 14-16)
     const cleanKey = input.licenseKey.replace(/-/g, '').toUpperCase();
     if (cleanKey.startsWith('KRN') || cleanKey.length === 12) {
-      return this._activateShortKey(input.licenseKey);
+      this._activateShortKey(input.licenseKey);
+      return;
     }
 
     // 2. Fallback to Legacy/JSON activation
@@ -362,57 +484,127 @@ export class LicenseService extends BaseService {
    */
   public getLicenseStatus(): LicenseStatus {
     const license = this.licenseRepo.get();
+    const marker = this._readMarker();
     const machineFingerprint = this._getMachineFingerprint();
     const currentBills = this.billRepo.getTotalBillCount();
     const now = new Date();
 
-    // 1. If Paid License exists
+    // HIGH-WATER MARK: Detect if system clock was moved backward
+    const lastSeen = marker.lastSeenDate || (license ? license.updatedAt : null);
+    const effectiveNow = lastSeen && lastSeen > now ? lastSeen : now;
+
+    if (effectiveNow > now) {
+      logger.warn('System clock backdating detected. Using last-seen time for verification.', {
+        systemNow: now.toISOString(),
+        lastSeen: lastSeen?.toISOString(),
+      });
+    }
+
+    // 1. If Paid License exists in DB
     if (license && license.licenseKey && license.licenseKey !== '' && !license.isTrial) {
-      const isHardwareMatch = license.deviceId === machineFingerprint;
+      try {
+        let authoritativeExpiresOn: Date;
 
-      const hardLockDate = new Date(license.expiresOn);
-      hardLockDate.setDate(hardLockDate.getDate() + this.GRACE_DAYS);
+        // AUTHORITATIVE CHECK: Re-verify signature and hardware binding first
+        const cleanKey = license.licenseKey.replace(/-/g, '').toUpperCase();
+        if (cleanKey.startsWith('KRN') || cleanKey.length === 12) {
+          // Short Key logic (without throwing on expiry yet, we handle that in status)
+          const dataPart = cleanKey.replace(/^KRN/, '');
+          const bits = this._decodeBase32(dataPart);
+          const expiryDays = Number((bits >> 46n) & 0x3fffn);
+          const deviceHashID = Number((bits >> 24n) & 0x3fffffn);
+          const signature = Number(bits & 0xffffffn);
 
-      const isExpired = license.expiresOn < now;
-      const isLocked = !isHardwareMatch || now > hardLockDate;
-      const isGracePeriod = isExpired && !isLocked;
+          // 1a. Signature match check
+          const expectedSignature = this._generateShortSignature(expiryDays, deviceHashID);
+          if (signature !== expectedSignature) {
+            throw new Error('INVALID_SIGNATURE');
+          }
 
-      const daysRemaining = Math.max(
-        0,
-        Math.floor((license.expiresOn.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      );
+          // 1b. Hardware binding check
+          const localDeviceHashID = this._getTruncatedHash(machineFingerprint, 22);
+          if (deviceHashID !== localDeviceHashID) {
+            throw new Error('MACHINE_MISMATCH');
+          }
 
-      const graceDaysRemaining = isGracePeriod
-        ? Math.max(0, Math.ceil((hardLockDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
-        : undefined;
+          // Derive expiry (authoritative)
+          const epoch = new Date('2026-01-01T00:00:00Z').getTime();
+          authoritativeExpiresOn =
+            expiryDays === 0
+              ? new Date('9999-12-31T23:59:59Z')
+              : new Date(epoch + expiryDays * 24 * 60 * 60 * 1000);
+        } else {
+          // Legacy/JSON activation re-verification
+          const decoded = this._decodeLicenseKey(license.licenseKey);
+          if (!this._verifySignature(decoded.payload, decoded.signature)) {
+            throw new Error('INVALID_SIGNATURE');
+          }
+          const data = JSON.parse(decoded.payload);
 
-      return {
-        type: 'PAID',
-        isExpired,
-        isLocked,
-        isGracePeriod,
-        graceDaysRemaining,
-        expiresOn: license.expiresOn,
-        daysRemaining,
-        maxBills: Infinity,
-        maxDays: Infinity,
-        activated: true,
-        deviceId: machineFingerprint,
-      };
+          // Check machine binding if present in payload
+          if (data.machineFingerprint && data.machineFingerprint !== machineFingerprint) {
+            throw new Error('MACHINE_MISMATCH');
+          }
+          authoritativeExpiresOn = new Date(data.expiresAt);
+        }
+
+        // 2. Use the authoritative date from the CRYPTOGRAPHICALLY SIGNED key
+        // Even if someone changes the DB column, this 'authoritativeExpiresOn' remains secure.
+        const hardLockDate = new Date(authoritativeExpiresOn);
+        hardLockDate.setDate(hardLockDate.getDate() + this.GRACE_DAYS);
+
+        const isExpired = authoritativeExpiresOn < effectiveNow;
+        const isLocked = effectiveNow > hardLockDate;
+        const isGracePeriod = isExpired && !isLocked;
+
+        const daysRemaining = Math.max(
+          0,
+          Math.floor(
+            (authoritativeExpiresOn.getTime() - effectiveNow.getTime()) / (1000 * 60 * 60 * 24)
+          )
+        );
+
+        const graceDaysRemaining = isGracePeriod
+          ? Math.max(
+              0,
+              Math.ceil((hardLockDate.getTime() - effectiveNow.getTime()) / (1000 * 60 * 60 * 24))
+            )
+          : undefined;
+
+        return {
+          type: 'PAID',
+          isExpired,
+          isLocked,
+          isGracePeriod,
+          graceDaysRemaining,
+          expiresOn: authoritativeExpiresOn,
+          daysRemaining,
+          maxBills: Infinity,
+          maxDays: Infinity,
+          activated: true,
+          deviceId: machineFingerprint,
+        };
+      } catch (error) {
+        // If verification fails (e.g. signature tampered, wrong machine), we treat it as no license
+        logger.error('License key verification failed - falling back to trial', {
+          error: error instanceof Error ? error.message : 'Unknown',
+        });
+        // Fall through to trial logic
+      }
     }
 
     // 2. Trial Logic
     this.initializeTrial(); // Ensure trial is initialized
     const licenseFromRepo = this.licenseRepo.get();
-    const updatedLicense = licenseFromRepo || { trialStartedOn: now };
-    const trialStart = updatedLicense.trialStartedOn || now;
+    const updatedLicense = licenseFromRepo || { trialStartedOn: effectiveNow };
+    const trialStart = updatedLicense.trialStartedOn || effectiveNow;
 
     const trialExpiryDate = new Date(trialStart);
     trialExpiryDate.setDate(trialExpiryDate.getDate() + this.TRIAL_DAYS);
 
     const daysRemaining = Math.max(
       0,
-      Math.floor((trialExpiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      Math.floor((trialExpiryDate.getTime() - effectiveNow.getTime()) / (1000 * 60 * 60 * 24))
     );
 
     const billsRemaining = Math.max(0, this.TRIAL_BILLS - currentBills);
@@ -424,12 +616,15 @@ export class LicenseService extends BaseService {
     const hardLockDate = new Date(trialExpiryDate);
     hardLockDate.setDate(hardLockDate.getDate() + this.GRACE_DAYS);
 
-    const isLocked = (daysRemaining <= 0 && now > hardLockDate) || billsRemaining <= 0;
+    const isLocked = (daysRemaining <= 0 && effectiveNow > hardLockDate) || billsRemaining <= 0;
     const isGracePeriod = isExpired && !isLocked;
 
     const graceDaysRemaining =
       isGracePeriod && daysRemaining <= 0
-        ? Math.max(0, Math.ceil((hardLockDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+        ? Math.max(
+            0,
+            Math.ceil((hardLockDate.getTime() - effectiveNow.getTime()) / (1000 * 60 * 60 * 24))
+          )
         : undefined;
 
     return {
