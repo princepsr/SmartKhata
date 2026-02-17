@@ -6,10 +6,13 @@
  */
 
 import { IPCHandler } from '../ipc-handler';
+import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { BillingService, FinalizeBillInput, BillItemInput } from '../../services/billing-service';
 import { BillRepository } from '../../repositories/bill-repository';
 import { PrintService } from '../../services/print-service'; // Import
 import { LicenseService } from '../../services/license-service';
+import { SettingsService } from '../../services/settings-service';
+import { logger } from '../../utils/logger';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 
 /**
@@ -18,7 +21,7 @@ import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 export function registerBillHandlers(): void {
   const billingService = new BillingService();
   const billRepo = new BillRepository();
-  const printService = new PrintService(); // Instantiate
+  const printService = PrintService.getInstance(); // Use singleton
 
   // ============================================
   // CALCULATE BILL (PREVIEW)
@@ -65,6 +68,16 @@ export function registerBillHandlers(): void {
 
       const result = billingService.finalizeBill(billInput);
 
+      // 1. Auto-print if enabled in settings
+      const settings = new SettingsService().getConfig();
+      if (settings.autoPrint) {
+        // We trigger print and log any errors, but we don't block the return
+        // as the bill creation was successful.
+        printService.printBill(result).catch((err) => {
+          logger.error('Auto-print failed', err);
+        });
+      }
+
       return {
         bill: {
           id: result.bill.id,
@@ -110,27 +123,14 @@ export function registerBillHandlers(): void {
 
       // Handle both number (legacy) and object payload
       const billId = typeof payload === 'number' ? payload : payload.billId;
-      const printerName = typeof payload === 'number' ? '' : payload.printerName;
+      const printerName = typeof payload === 'number' ? undefined : payload.printerName;
 
-      // 1. Fetch full bill details to ensure we print accurate data
-      const billData = billRepo.findByIdWithItems(billId);
+      // 1. Send to print service - Detached to fulfill < 300ms trigger requirement
+      printService.printBill(billId, printerName).catch((err) => {
+        logger.error(`Detached print failed for bill #${billId}`, err);
+      });
 
-      if (!billData) {
-        throw new Error('Bill not found for printing');
-      }
-
-      // 2. Send to print service
-      // We pass the raw DB objects, PrintService handles formatting
-      return await printService.printBill(
-        {
-          bill: {
-            ...billData.bill,
-            createdAt: billData.bill.createdAt, // Date object is preserved in main process
-          },
-          items: billData.items,
-        },
-        printerName
-      );
+      return true;
     },
     {
       transformError: (err) => getUserFriendlyMessage(err),
@@ -140,10 +140,47 @@ export function registerBillHandlers(): void {
   // ============================================
   // GET PRINTERS
   // ============================================
-  IPCHandler.handle<void, Electron.PrinterInfo[]>(
+  IPCHandler.handle<void, any[]>(
     'printer:list',
     async () => {
-      return await printService.getPrinters();
+      const printers = await printService.getPrinters();
+      // Electron PrinterInfo has 'isDefault' on most platforms.
+      // We map it to ensure consistent output for the UI.
+      return printers.map((p) => ({
+        name: p.name,
+        displayName: p.displayName || p.name,
+        description: p.description || '',
+        status: p.status,
+        isDefault: p.isDefault,
+        options: p.options,
+      }));
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
+
+  // ============================================
+  // REPRINT LAST BILL
+  // ============================================
+  IPCHandler.handle<void, boolean>(
+    IPC_CHANNELS.BILL_REPRINT_LAST,
+    async () => {
+      // 0. License check
+      const licenseStatus = new LicenseService().getLicenseStatus();
+      if (licenseStatus.isLocked) {
+        throw new Error('License expired. Please activate to reprint.');
+      }
+
+      // 1. Get last bill
+      const lastBill = billingService.getLastBill();
+
+      // 2. Print it - Detached for performance
+      printService.printBill(lastBill).catch((err) => {
+        logger.error('Detached reprint failed', err);
+      });
+
+      return true;
     },
     {
       transformError: (err) => getUserFriendlyMessage(err),

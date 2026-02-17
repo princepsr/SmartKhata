@@ -12,6 +12,7 @@ import { migrationRunner } from './database/migrations';
 import { LicenseService } from './services/license-service';
 import { SettingsService } from './services/settings-service';
 import { StabilityService } from './services/stability-service';
+import { PrintService } from './services/print-service';
 
 /**
  * Main Electron Process Entry Point
@@ -211,6 +212,13 @@ app.whenReady().then(async () => {
         StabilityService.getInstance().startMonitoring();
       } catch (e) {
         logger.error('Stability monitor failed to start', e);
+      }
+    })(),
+    (async () => {
+      try {
+        await new PrintService().initialize();
+      } catch (e) {
+        logger.error('Print service init failed', e);
       }
     })(),
     (async () => {

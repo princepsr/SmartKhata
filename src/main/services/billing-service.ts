@@ -275,6 +275,21 @@ export class BillingService extends BaseService {
   }
 
   /**
+   * Get a bill by ID with its items
+   *
+   * Central entry point for services to retrieve bill data.
+   */
+  public getBillById(billId: number): BillWithItems {
+    const billData = this.billRepo.findByIdWithItems(billId);
+
+    if (!billData) {
+      throw new NotFoundError('Bill', billId);
+    }
+
+    return billData;
+  }
+
+  /**
    * Generate next bill number
    *
    * Format: BILL-YYYYMMDD-NNNN
@@ -334,5 +349,18 @@ export class BillingService extends BaseService {
     if (billNumber.length > 50) {
       throw new ValidationError('Bill number is too long (max 50 characters)', 'billNumber');
     }
+  }
+
+  /**
+   * Get the latest bill with its items
+   */
+  public getLastBill(): BillWithItems {
+    const billData = this.billRepo.findLatestWithItems();
+
+    if (!billData) {
+      throw new NotFoundError('Bill', 'latest');
+    }
+
+    return billData;
   }
 }

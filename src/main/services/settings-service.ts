@@ -49,6 +49,8 @@ export class SettingsService extends BaseService {
         printer: config.printerName || 'Default',
         paperSize: config.paperSize,
         gstEnabled: config.gstEnabled,
+        autoPrint: config.autoPrint,
+        printCopies: config.printCopies,
       });
     } catch (error) {
       this.logError('Failed to initialize settings service', error);
@@ -168,6 +170,22 @@ export class SettingsService extends BaseService {
     // Footer Message validation
     if (config.footerMessage !== undefined && config.footerMessage.length > 200) {
       throw new ValidationError('Footer message is too long (max 200 chars)', 'footerMessage');
+    }
+
+    // Print Copies validation
+    if (config.printCopies !== undefined) {
+      if (
+        !Number.isInteger(config.printCopies) ||
+        config.printCopies < 1 ||
+        config.printCopies > 5
+      ) {
+        throw new ValidationError('Print copies must be between 1 and 5', 'printCopies');
+      }
+    }
+
+    // Auto-Print validation
+    if (config.autoPrint !== undefined && typeof config.autoPrint !== 'boolean') {
+      throw new ValidationError('Auto-print must be a boolean value', 'autoPrint');
     }
   }
 }

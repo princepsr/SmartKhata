@@ -27,6 +27,8 @@ export interface AppConfig {
   showLogo: boolean;
   showCustomerDetails: boolean;
   footerMessage: string;
+  printCopies: number;
+  autoPrint: boolean;
   updatedAt: Date;
 }
 
@@ -279,6 +281,8 @@ export class SettingsRepository extends BaseRepository {
       show_logo: number;
       show_customer_details: number;
       footer_message: string;
+      print_copies: number;
+      auto_print: number;
       updated_at: string;
     }>(sql);
 
@@ -299,6 +303,8 @@ export class SettingsRepository extends BaseRepository {
         showLogo: false,
         showCustomerDetails: true,
         footerMessage: 'Thank you! Visit Again',
+        printCopies: 1,
+        autoPrint: true,
         updatedAt: new Date(),
       };
     }
@@ -330,6 +336,8 @@ export class SettingsRepository extends BaseRepository {
       showLogo: 'show_logo',
       showCustomerDetails: 'show_customer_details',
       footerMessage: 'footer_message',
+      printCopies: 'print_copies',
+      autoPrint: 'auto_print',
     };
 
     Object.entries(config).forEach(([key, value]) => {
@@ -389,6 +397,8 @@ export class SettingsRepository extends BaseRepository {
     show_logo: number;
     show_customer_details: number;
     footer_message: string;
+    print_copies: number;
+    auto_print: number;
     updated_at: string;
   }): AppConfig {
     return {
@@ -405,6 +415,8 @@ export class SettingsRepository extends BaseRepository {
       showLogo: row.show_logo === 1,
       showCustomerDetails: row.show_customer_details === 1,
       footerMessage: row.footer_message,
+      printCopies: row.print_copies,
+      autoPrint: row.auto_print === 1,
       updatedAt: this.parseDate(row.updated_at),
     };
   }

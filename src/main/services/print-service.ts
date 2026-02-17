@@ -2,9 +2,23 @@ import { BrowserWindow, dialog } from 'electron';
 import fs from 'fs';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import { logger } from '../utils/logger';
+import { PrinterError } from './errors/service-errors';
 import { SettingsService } from './settings-service';
 import { StabilityService } from './stability-service';
+import { BaseService } from './base-service';
 import { BillWithItems } from '../repositories/bill-repository';
+import { BillingService } from './billing-service';
+import {
+  DailySalesSummary,
+  PaymentModeSummary,
+  GstReport,
+  StockSummary,
+} from '@shared/types/report.types';
+
+type ReportData =
+  | { summary: DailySalesSummary; modes: PaymentModeSummary[] }
+  | GstReport
+  | StockSummary;
 
 /**
  * Print Service
@@ -20,18 +34,34 @@ const printLogger = logger.forModule('PRINT');
  * Handles silent thermal printing using a hidden BrowserWindow.
  * Generates HTML receipt and sends it to the default system printer.
  */
-export class PrintService {
-  /**
-   * Print a bill by ID
-   * @param billData Complete bill with items (rupee values)
-   * @param printerName Target printer name
-   */
-  async printBill(billData: BillWithItems, printerName: string = ''): Promise<boolean> {
-    printLogger.info(
-      `Starting print job for bill #${billData.bill.billNumber} on printer: ${printerName || 'Default'}`
-    );
+export class PrintService extends BaseService {
+  private static instance: PrintService;
+  private static poolWindow: BrowserWindow | null = null;
+  private static isPrinting = false;
 
-    const printWindow: BrowserWindow | null = new BrowserWindow({
+  constructor() {
+    super();
+  }
+
+  /**
+   * Get Singleton Instance
+   */
+  public static getInstance(): PrintService {
+    if (!PrintService.instance) {
+      PrintService.instance = new PrintService();
+    }
+    return PrintService.instance;
+  }
+
+  /**
+   * Helper to get or create the pooled print window
+   */
+  private _getPrintWindow(): BrowserWindow {
+    if (PrintService.poolWindow && !PrintService.poolWindow.isDestroyed()) {
+      return PrintService.poolWindow;
+    }
+
+    PrintService.poolWindow = new BrowserWindow({
       show: false,
       width: 400,
       height: 600,
@@ -44,10 +74,50 @@ export class PrintService {
     });
 
     // Track for leak prevention
-    StabilityService.getInstance().trackWindow(printWindow);
+    StabilityService.getInstance().trackWindow(PrintService.poolWindow);
+
+    return PrintService.poolWindow;
+  }
+
+  /**
+   * Helper to get printable width based on paper size
+   */
+  private _getPaperWidth(paperSize: '58mm' | '80mm'): string {
+    return paperSize === '80mm' ? '78mm' : '54mm';
+  }
+
+  /**
+   * Print a bill by ID or data
+   * @param billInput Bill ID (number) or complete bill data (BillWithItems)
+   * @param printerName Optional target printer override
+   */
+  async printBill(billInput: number | BillWithItems, printerName?: string): Promise<boolean> {
+    // 1. Resolve data if ID is passed
+    let billData: BillWithItems;
+    if (typeof billInput === 'number') {
+      const billingService = new BillingService();
+      billData = billingService.getBillById(billInput);
+    } else {
+      billData = billInput;
+    }
+
+    const config = SettingsService.getInstance().getConfig();
+    const targetPrinter = printerName || config.printerName || '';
+    const paperSize = config.paperSize || '58mm';
+
+    printLogger.info(
+      `Starting print job for bill #${billData.bill.billNumber} on printer: ${targetPrinter || 'Default'} (${paperSize})`
+    );
+
+    if (PrintService.isPrinting) {
+      throw new PrinterError('Printer is busy with another job');
+    }
+
+    PrintService.isPrinting = true;
+    const printWindow: BrowserWindow = this._getPrintWindow();
 
     try {
-      const htmlContent = this.generateReceiptHtml(billData);
+      const htmlContent = this.generateReceiptHtml(billData, paperSize);
 
       // Add a safety timeout for the entire print operation (30s)
       await new Promise<void>((resolve, reject) => {
@@ -56,40 +126,139 @@ export class PrintService {
         }, 30000);
 
         const runPrint = async (): Promise<void> => {
-          try {
-            if (!printWindow || printWindow.isDestroyed()) {
-              return reject(new Error('Window lost or destroyed'));
+          if (printWindow.isDestroyed()) {
+            throw new Error('Window lost or destroyed');
+          }
+
+          await printWindow.loadURL(
+            `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`
+          );
+
+          // Minimal delay for layout engine (reduced for performance)
+          await new Promise((r) => setTimeout(r, 100));
+
+          const copies = config.printCopies || 1;
+          printLogger.info(`Printing ${copies} copies...`);
+
+          for (let i = 0; i < copies; i++) {
+            if (printWindow.isDestroyed()) {
+              throw new Error(`Window destroyed during copy ${i + 1}`);
             }
 
-            await printWindow.loadURL(
-              `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`
-            );
+            await new Promise<void>((resolveCopy, rejectCopy) => {
+              printWindow.webContents.print(
+                {
+                  silent: true,
+                  printBackground: true,
+                  deviceName: targetPrinter,
+                  color: false,
+                  margins: { marginType: 'printableArea' },
+                },
+                (success, failureReason) => {
+                  if (success) {
+                    printLogger.info(`Copy ${i + 1}/${copies} sent to spooler`);
+                    resolveCopy();
+                  } else {
+                    rejectCopy(new PrinterError(failureReason || 'Print failed'));
+                  }
+                }
+              );
+            });
 
-            // Small delay for layout engine
-            await new Promise((r) => setTimeout(r, 800));
+            // Small gap between copies to prevent spooler congestion
+            if (i < copies - 1) {
+              await new Promise((r) => setTimeout(r, 500));
+            }
+          }
+        };
 
-            if (!printWindow || printWindow.isDestroyed()) {
-              return reject(new Error('Window destroyed before print'));
+        runPrint()
+          .then(() => {
+            clearTimeout(timeoutId);
+            resolve();
+          })
+          .catch((err) => {
+            clearTimeout(timeoutId);
+            reject(err);
+          });
+      });
+
+      return true;
+    } catch (error) {
+      const billNum = billData?.bill?.billNumber || 'Unknown';
+      printLogger.error(`Error in print service for bill #${billNum}`, error);
+      throw error;
+    } finally {
+      PrintService.isPrinting = false;
+      // Do NOT destroy the pooled window.
+      // Instead, clear it for the next job if it's still healthy.
+      if (PrintService.poolWindow && !PrintService.poolWindow.isDestroyed()) {
+        PrintService.poolWindow.loadURL('about:blank').catch(() => {});
+      }
+    }
+  }
+
+  /**
+   * Print a report (Sales, GST, Stock)
+   */
+  async printReport(
+    type: 'sales' | 'gst' | 'stock',
+    data: unknown,
+    dateRange: string,
+    printerName?: string
+  ): Promise<boolean> {
+    const config = SettingsService.getInstance().getConfig();
+    const targetPrinter = printerName || config.printerName || '';
+    const paperSize = config.paperSize || '58mm';
+
+    printLogger.info(
+      `Starting print job for report: ${type} on printer: ${targetPrinter || 'Default'} (${paperSize})`
+    );
+
+    if (PrintService.isPrinting) {
+      throw new PrinterError('Printer is busy with another job');
+    }
+
+    PrintService.isPrinting = true;
+    const printWindow: BrowserWindow = this._getPrintWindow();
+
+    try {
+      const htmlContent = this.generateReportHtml(type, data as ReportData, dateRange, paperSize);
+
+      await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+
+      await new Promise<void>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Report print timed out after 30 seconds'));
+        }, 30000);
+
+        const runPrint = async (): Promise<void> => {
+          try {
+            // Minimal delay for layout engine (reduced for performance)
+            await new Promise((r) => setTimeout(r, 100));
+
+            if (printWindow.isDestroyed()) {
+              clearTimeout(timeoutId);
+              return reject(new Error('Window destroyed before report print'));
             }
 
             printWindow.webContents.print(
               {
                 silent: true,
                 printBackground: true,
-                deviceName: printerName,
-                pageSize: 'A4',
-                margins: {
-                  marginType: 'printableArea',
-                },
+                deviceName: targetPrinter,
+                color: false, // Essential for thermal printers
+                margins: { marginType: 'printableArea' },
               },
               (success, failureReason) => {
                 clearTimeout(timeoutId);
                 if (success) {
-                  printLogger.info('Print job sent to printer');
+                  printLogger.info(`Report print job (${type}) sent successfully`);
                   resolve();
                 } else {
-                  printLogger.error(`Print failed: ${failureReason}`);
-                  reject(new Error(failureReason));
+                  printLogger.error(`Report print failed: ${failureReason}`);
+                  // Wrap in PrinterError so IPC layer can map it correctly
+                  reject(new PrinterError(failureReason || 'Report print failed'));
                 }
               }
             );
@@ -107,89 +276,12 @@ export class PrintService {
 
       return true;
     } catch (error) {
-      printLogger.error('Error in print service', error);
+      printLogger.error(`Error in print service for report: ${type}`, error);
       throw error;
     } finally {
-      if (printWindow && !printWindow.isDestroyed()) {
-        printWindow.destroy(); // Stronger than close() for background windows
-      }
-    }
-  }
-
-  /**
-   * Print a report (Sales, GST, Stock)
-   */
-  async printReport(
-    type: 'sales' | 'gst' | 'stock',
-    data: unknown,
-    dateRange: string,
-    printerName: string = ''
-  ): Promise<boolean> {
-    printLogger.info(
-      `Starting print job for report: ${type} on printer: ${printerName || 'Default'}`
-    );
-
-    const printWindow: BrowserWindow = new BrowserWindow({
-      show: false,
-      width: 400,
-      height: 600,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        spellcheck: false,
-        sandbox: true,
-      },
-    });
-
-    // Track for leak prevention
-    StabilityService.getInstance().trackWindow(printWindow);
-
-    try {
-      const htmlContent = this.generateReportHtml(type, data, dateRange);
-
-      await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
-
-      await new Promise<void>((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('Report print timed out'));
-        }, 30000);
-
-        const timerId = setTimeout(() => {
-          if (printWindow.isDestroyed()) {
-            clearTimeout(timeoutId);
-            return reject(new Error('Window closed'));
-          }
-
-          printWindow.webContents.print(
-            {
-              silent: true,
-              printBackground: true,
-              deviceName: printerName,
-              pageSize: 'A4',
-              margins: { marginType: 'printableArea' },
-            },
-            (success, failureReason) => {
-              clearTimeout(timeoutId);
-              clearTimeout(timerId);
-              if (success) {
-                printLogger.info('Report print job sent');
-                resolve();
-              } else {
-                printLogger.error(`Report print failed: ${failureReason}`);
-                reject(new Error(failureReason));
-              }
-            }
-          );
-        }, 1000);
-      });
-
-      return true;
-    } catch (error) {
-      printLogger.error('Error in print service (report)', error);
-      throw error;
-    } finally {
-      if (!printWindow.isDestroyed()) {
-        printWindow.destroy();
+      PrintService.isPrinting = false;
+      if (PrintService.poolWindow && !PrintService.poolWindow.isDestroyed()) {
+        PrintService.poolWindow.loadURL('about:blank').catch(() => {});
       }
     }
   }
@@ -217,7 +309,9 @@ export class PrintService {
     StabilityService.getInstance().trackWindow(printWindow);
 
     try {
-      const htmlContent = this.generateReportHtml(type, data, dateRange);
+      const config = SettingsService.getInstance().getConfig();
+      const paperSize = config.paperSize || '80mm';
+      const htmlContent = this.generateReportHtml(type, data as ReportData, dateRange, paperSize);
 
       await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
 
@@ -260,67 +354,132 @@ export class PrintService {
   }
 
   /**
-   * Get list of available printers
+   * Get list of available printers with default flag
    */
   async getPrinters(): Promise<Electron.PrinterInfo[]> {
     const window = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
     if (window) {
-      return await window.webContents.getPrintersAsync();
+      const printers = await window.webContents.getPrintersAsync();
+      return printers;
     }
     return [];
   }
 
   /**
+   * Validate that the saved printer in settings exists in the system.
+   * If not found, log a warning and return false.
+   */
+  async validateSavedPrinter(): Promise<{
+    isValid: boolean;
+    configuredPrinter: string | null;
+    availablePrinters: string[];
+  }> {
+    const config = SettingsService.getInstance().getConfig();
+    const savedPrinter = config.printerName;
+
+    if (!savedPrinter) {
+      printLogger.info('No printer configured in settings');
+      return { isValid: true, configuredPrinter: null, availablePrinters: [] };
+    }
+
+    const printers = await this.getPrinters();
+    const printerNames = printers.map((p) => p.name);
+    const exists = printerNames.includes(savedPrinter);
+
+    if (!exists) {
+      printLogger.warn(`CONFIGURED PRINTER NOT FOUND: "${savedPrinter}"`, {
+        available: printerNames,
+      });
+      return {
+        isValid: false,
+        configuredPrinter: savedPrinter,
+        availablePrinters: printerNames,
+      };
+    }
+
+    printLogger.info(`Printer validation successful: "${savedPrinter}"`);
+    return {
+      isValid: true,
+      configuredPrinter: savedPrinter,
+      availablePrinters: printerNames,
+    };
+  }
+
+  /**
+   * Initialize Print Service and run startup checks
+   */
+  async initialize(): Promise<void> {
+    printLogger.info('Initializing Print Service...');
+
+    // Warm up the print window pool
+    this._getPrintWindow();
+
+    const validation = await this.validateSavedPrinter();
+
+    if (!validation.isValid && validation.configuredPrinter) {
+      // In a real kirana shop, the printer might be switched off.
+      // We don't block the app, but we log it clearly.
+      printLogger.warn(
+        `Printer "${validation.configuredPrinter}" is missing. Printing will fail until reconnected or reconfigured.`
+      );
+    }
+  }
+
+  /**
    * Test Print
    */
-  async testPrint(printerName: string = '', paperSize: '58mm' | '80mm' = '58mm'): Promise<boolean> {
-    printLogger.info(`Starting test print on printer: ${printerName || 'Default'} (${paperSize})`);
+  async testPrint(printerName?: string, paperSize?: '58mm' | '80mm'): Promise<boolean> {
+    const config = SettingsService.getInstance().getConfig();
+    const targetPrinter = printerName || config.printerName || '';
+    const targetSize = paperSize || config.paperSize || '58mm';
 
-    let printWindow: BrowserWindow | null = new BrowserWindow({
-      show: false,
-      width: 400,
-      height: 600,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        sandbox: true,
-      },
-    });
+    printLogger.info(
+      `Starting test print on printer: ${targetPrinter || 'Default'} (${targetSize})`
+    );
+
+    if (PrintService.isPrinting) {
+      throw new Error('Printer is busy with another job');
+    }
+
+    PrintService.isPrinting = true;
+    const printWindow: BrowserWindow = this._getPrintWindow();
 
     try {
-      const htmlContent = this.generateTestReceiptHtml(paperSize);
+      const htmlContent = this.generateTestReceiptHtml(targetSize);
 
       await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
 
       await new Promise<void>((resolve, reject) => {
-        if (!printWindow) {
-          return reject(new Error('Window closed'));
-        }
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Test print timed out after 30 seconds'));
+        }, 30000);
 
         setTimeout(() => {
-          if (!printWindow) {
-            return reject(new Error('Window closed'));
+          if (printWindow.isDestroyed()) {
+            clearTimeout(timeoutId);
+            return reject(new Error('Window destroyed before test print'));
           }
 
           printWindow.webContents.print(
             {
               silent: true,
               printBackground: true,
-              deviceName: printerName,
-              pageSize: 'A4', // Electron print pageSize is often ignored for custom widths, but we set margins
+              deviceName: targetPrinter,
+              pageSize: 'A4',
               margins: { marginType: 'printableArea' },
             },
             (success, failureReason) => {
+              clearTimeout(timeoutId);
               if (success) {
                 printLogger.info('Test print sent successfully');
                 resolve();
               } else {
                 printLogger.error(`Test print failed: ${failureReason}`);
-                reject(new Error(failureReason));
+                reject(new Error(failureReason || 'unknown-error'));
               }
             }
           );
-        }, 500);
+        }, 100);
       });
 
       return true;
@@ -328,9 +487,9 @@ export class PrintService {
       printLogger.error('Error in test print', error);
       throw error;
     } finally {
-      if (printWindow) {
-        printWindow.close();
-        printWindow = null;
+      PrintService.isPrinting = false;
+      if (PrintService.poolWindow && !PrintService.poolWindow.isDestroyed()) {
+        PrintService.poolWindow.loadURL('about:blank').catch(() => {});
       }
     }
   }
@@ -339,9 +498,8 @@ export class PrintService {
    * Generates HTML for a test receipt
    */
   private generateTestReceiptHtml(paperSize: '58mm' | '80mm'): string {
-    const width = paperSize === '80mm' ? '78mm' : '54mm';
+    const width = this._getPaperWidth(paperSize);
     const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-
     const settings = SettingsService.getInstance().getConfig();
 
     return `
@@ -352,44 +510,37 @@ export class PrintService {
         <style>
           body { 
             font-family: 'Courier New', monospace; 
-            font-size: 12px; 
+            font-size: 11px; 
             margin: 0; 
-            padding: 5px; 
+            padding: 2px; 
             width: ${width}; 
             color: #000; 
             background: #fff; 
           }
-          .header { text-align: center; margin-bottom: 10px; }
-          .logo-placeholder { 
-            border: 1px dashed #ccc; 
-            padding: 10px; 
-            margin-bottom: 10px; 
-            display: ${settings.showLogo ? 'block' : 'none'}; 
-            font-size: 10px;
-            color: #666;
-          }
-          .header h1 { margin: 0; font-size: 18px; }
-          .divider { border-top: 1px dashed #000; margin: 10px 0; }
-          .content { text-align: center; }
-          .footer { text-align: center; margin-top: 15px; font-size: 10px; }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+          .header h1 { margin: 0; font-size: 16px; text-transform: uppercase; }
+          .divider { border-top: 1px dashed #000; margin: 5px 0; }
+          .footer { margin-top: 15px; font-size: 10px; }
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="logo-placeholder">LOGO SPACE</div>
+        <div class="header center">
           <h1>TEST PRINT</h1>
-          <p>${settings.shopName || 'SmartKhata POS'}</p>
+          <p>${settings.shopName}</p>
+          ${settings.address ? `<p>${settings.address}</p>` : ''}
+          ${settings.gstNumber ? `<p>GSTIN: ${settings.gstNumber}</p>` : ''}
         </div>
         <div class="divider"></div>
-        <div class="content">
-          <p>Printer: Standard Thermal</p>
+        <div class="content center">
+          <p class="bold">Printer: Standard Thermal</p>
           <p>Paper Size: ${paperSize}</p>
-          <p>Status: ONLINE</p>
-          <p>If you can read this, your printer is correctly configured.</p>
+          <p>Status: <span class="bold">ONLINE</span></p>
+          <p style="margin: 10px 0;">If you can read this, your printer is correctly configured for SmartKhata.</p>
         </div>
         <div class="divider"></div>
-        <div class="footer">
-          <p>${settings.footerMessage}</p>
+        <div class="footer center">
+          <p>${settings.footerMessage || 'Thank you! Visit Again'}</p>
           <p>${timestamp}</p>
           <p>-- End of Test --</p>
         </div>
@@ -399,11 +550,12 @@ export class PrintService {
   }
 
   /**
-   * Generates the HTML for a 3-inch (80mm) thermal receipt
+   * Generates the HTML for a thermal receipt
    */
-  private generateReceiptHtml(data: BillWithItems): string {
+  private generateReceiptHtml(data: BillWithItems, paperSize: '58mm' | '80mm'): string {
     const { bill, items } = data;
     const settings = SettingsService.getInstance().getConfig();
+    const width = this._getPaperWidth(paperSize);
 
     const date = new Date(bill.createdAt).toLocaleDateString('en-IN', {
       day: '2-digit',
@@ -418,6 +570,102 @@ export class PrintService {
       timeZone: 'Asia/Kolkata',
     });
 
+    // 58mm specialized layout (Condensed)
+    if (paperSize === '58mm') {
+      return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { 
+              font-family: 'Courier New', Courier, monospace; 
+              font-size: 11px; 
+              margin: 0; 
+              padding: 2px; 
+              width: ${width}; 
+              color: #000; 
+              background: #fff; 
+              overflow: hidden;
+              line-height: 1.2;
+            }
+            .center { text-align: center; }
+            .right { text-align: right; }
+            .bold { font-weight: bold; }
+            .header h1 { margin: 0; font-size: 15px; text-transform: uppercase; }
+            .header p { margin: 1px 0; font-size: 10px; }
+            .divider { border-top: 1px dashed #000; margin: 4px 0; }
+            .info-row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 1px; }
+            
+            /* Item Layout: 2 lines for 58mm */
+            .item-container { margin-bottom: 5px; }
+            .item-name { display: block; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
+            .item-details { display: flex; justify-content: space-between; }
+            
+            .totals { margin-top: 5px; }
+            .total-row { display: flex; justify-content: space-between; margin-bottom: 1px; }
+            .grand-total { font-size: 14px; margin-top: 4px; border-top: 1px dashed #000; padding-top: 4px; }
+            .footer { margin-top: 10px; font-size: 9px; line-height: 1.1; }
+          </style>
+        </head>
+        <body>
+          <div class="header center">
+            <h1>${settings.shopName}</h1>
+            ${settings.address ? `<p>${settings.address}</p>` : ''}
+            ${settings.phone ? `<p>PH: ${settings.phone}</p>` : ''}
+            ${settings.gstNumber ? `<p>GSTIN: ${settings.gstNumber}</p>` : ''}
+          </div>
+          <div class="divider"></div>
+          <div class="info-row">
+            <span>#${bill.billNumber}</span>
+            <span>${date} ${time}</span>
+          </div>
+          <div class="divider"></div>
+          
+          <div class="items">
+            ${items
+              .map(
+                (item) => `
+              <div class="item-container">
+                <span class="item-name">${item.productNameSnapshot}</span>
+                <div class="item-details">
+                  <span>${item.quantity} x ${item.unitPrice.toFixed(2)}</span>
+                  <span class="bold">${item.lineTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+          
+          <div class="divider"></div>
+          <div class="totals">
+            <div class="total-row"><span>Subtotal:</span><span>${bill.subtotal.toFixed(2)}</span></div>
+            <div class="total-row"><span>GST:</span><span>${bill.gstTotal.toFixed(2)}</span></div>
+            ${
+              bill.discountAmount > 0
+                ? `<div class="total-row"><span>Discount:</span><span>-${bill.discountAmount.toFixed(2)}</span></div>`
+                : ''
+            }
+            <div class="total-row bold grand-total">
+              <span>TOTAL:</span>
+              <span>₹${bill.grandTotal.toFixed(2)}</span>
+            </div>
+            <div class="total-row" style="font-size: 9px; margin-top: 2px;">
+              <span>Mode: ${bill.paymentMode.toUpperCase()}</span>
+            </div>
+          </div>
+          
+          <div class="footer center">
+            <p>${settings.footerMessage || 'Thank you! Visit Again'}</p>
+            <p>SmartKhata POS</p>
+          </div>
+        </body>
+        </html>
+      `;
+    }
+
+    // 80mm standard layout (Professional Single-line)
     return `
       <!DOCTYPE html>
       <html>
@@ -425,43 +673,73 @@ export class PrintService {
         <meta charset="UTF-8">
         <title>${bill.billNumber}</title>
         <style>
-          body { font-family: 'Courier New', monospace; font-size: 12px; margin: 0; padding: 5px; width: 78mm; color: #000; background: #fff; }
-          .header { text-align: center; margin-bottom: 10px; }
-          .header h1 { margin: 0; font-size: 18px; font-weight: bold; }
-          .divider { border-top: 1px dashed #000; margin: 5px 0; }
-          .meta-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          th { text-align: left; border-bottom: 1px dashed #000; padding: 2px 0; }
-          td { padding: 2px 0; vertical-align: top; }
-          .qty { width: 15%; text-align: center; }
-          .item { width: 55%; }
-          .price { width: 30%; text-align: right; }
-          .totals { margin-top: 10px; text-align: right; }
-          .totals-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-          .grand-total { font-size: 16px; font-weight: bold; margin-top: 5px; border-top: 1px dashed #000; padding-top: 5px; }
-          .footer { text-align: center; margin-top: 15px; font-size: 10px; }
+          body { 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 13px; 
+            margin: 0; 
+            padding: 5px; 
+            width: ${width}; 
+            color: #000; 
+            background: #fff; 
+            overflow: hidden;
+            line-height: 1.4;
+          }
+          .center { text-align: center; }
+          .right { text-align: right; }
+          .bold { font-weight: bold; }
+          
+          .header h1 { margin: 0; font-size: 20px; font-weight: bold; text-transform: uppercase; }
+          .header p { margin: 2px 0; font-size: 12px; }
+          .divider { border-top: 1px dashed #000; margin: 8px 0; }
+          .meta-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px; }
+          
+          /* Table Layout for 80mm (Spacious) */
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+          th { text-align: left; border-bottom: 1px dashed #000; padding: 4px 0; font-size: 12px; }
+          td { padding: 6px 0; vertical-align: top; font-size: 13px; }
+          
+          .col-name { width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .col-qty { width: 12%; text-align: center; }
+          .col-rate { width: 18%; text-align: right; }
+          .col-total { width: 25%; text-align: right; }
+
+          .totals { margin-top: 15px; }
+          .total-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
+          .grand-total { font-size: 18px; font-weight: bold; margin-top: 8px; border-top: 1px dashed #000; padding-top: 8px; }
+          
+          .footer { text-align: center; margin-top: 25px; font-size: 11px; }
+          .logo-placeholder { 
+            border: 1px dashed #ccc; padding: 10px; margin-bottom: 10px; 
+            display: ${settings.showLogo ? 'block' : 'none'}; font-size: 10px;
+          }
         </style>
       </head>
       <body>
-        <div class="header">
+        <div class="header center">
           <div class="logo-placeholder">LOGO SPACE</div>
           <h1>${settings.shopName}</h1>
-          <p>General Store & Provisions</p>
-          <p>Phone: ${settings.phone || '-'}</p>
+          <p>${settings.address || 'SmartKhata Retail Solution'}</p>
+          <p>PH: ${settings.phone || '-'}</p>
+          ${settings.gstNumber ? `<p>GSTIN: ${settings.gstNumber}</p>` : ''}
         </div>
+        
         <div class="divider"></div>
+        
         <div class="meta-row">
           <span>Bill No: ${bill.billNumber}</span>
           <span>${date} ${time}</span>
         </div>
-        ${bill.customerId && settings.showCustomerDetails ? `<div class="meta-row"><span>Customer ID: ${bill.customerId}</span></div>` : ''}
+        ${bill.customerId && settings.showCustomerDetails ? `<div class="meta-row"><span>Customer: ${bill.customerId}</span></div>` : ''}
+        
         <div class="divider"></div>
+        
         <table>
           <thead>
             <tr>
-              <th class="item">Item</th>
-              <th class="qty">Qty</th>
-              <th class="price">Amt</th>
+              <th class="col-name">ITEM</th>
+              <th class="col-qty">QTY</th>
+              <th class="col-rate">RATE</th>
+              <th class="col-total">TOTAL</th>
             </tr>
           </thead>
           <tbody>
@@ -469,46 +747,51 @@ export class PrintService {
               .map(
                 (item) => `
               <tr>
-                <td class="item">${item.productNameSnapshot}</td>
-                <td class="qty">${item.quantity}</td>
-                <td class="price">${item.lineTotal.toFixed(2)}</td>
+                <td class="col-name">${item.productNameSnapshot}</td>
+                <td class="col-qty">${item.quantity}</td>
+                <td class="col-rate">${item.unitPrice.toFixed(2)}</td>
+                <td class="col-total bold">${item.lineTotal.toFixed(2)}</td>
               </tr>
             `
               )
               .join('')}
           </tbody>
         </table>
+        
         <div class="divider"></div>
+        
         <div class="totals">
-          <div class="totals-row">
+          <div class="total-row">
             <span>Subtotal:</span>
             <span>${bill.subtotal.toFixed(2)}</span>
           </div>
-          <div class="totals-row">
+          <div class="total-row">
             <span>GST:</span>
             <span>${bill.gstTotal.toFixed(2)}</span>
           </div>
           ${
             bill.discountAmount > 0
               ? `
-            <div class="totals-row">
+            <div class="total-row">
               <span>Discount:</span>
-              <span>-${bill.discountAmount.toFixed(2)}</span>
+              <span style="color: #000;">-${bill.discountAmount.toFixed(2)}</span>
             </div>
           `
               : ''
           }
-          <div class="totals-row grand-total">
-            <span>Total:</span>
-            <span>${bill.grandTotal.toFixed(2)}</span>
+          <div class="total-row grand-total">
+            <span>NET TOTAL:</span>
+            <span>₹${bill.grandTotal.toFixed(2)}</span>
           </div>
-          <div class="totals-row" style="margin-top:2px; font-size:10px;">
-            <span>Mode: ${bill.paymentMode.toUpperCase()}</span>
+          <div class="total-row" style="margin-top:4px; font-size:11px;">
+            <span>Payment Mode: ${bill.paymentMode.toUpperCase()}</span>
           </div>
         </div>
+        
         <div class="footer">
-          <p>${settings.footerMessage}</p>
-          <p>No Exchange / No Refund</p>
+          <p>${settings.footerMessage || 'Thank you for shopping with us!'}</p>
+          <p>Visit again!</p>
+          <p style="font-size: 9px; margin-top: 10px;">Generated by SmartKhata POS</p>
         </div>
       </body>
       </html>
@@ -518,21 +801,31 @@ export class PrintService {
   /**
    * Generates HTML for Reports
    */
-  private generateReportHtml(type: string, data: any, dateRange: string): string {
+  private generateReportHtml(
+    type: string,
+    data: ReportData,
+    dateRange: string,
+    paperSize: '58mm' | '80mm'
+  ): string {
     const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+    const width = this._getPaperWidth(paperSize);
+    const fontSize = paperSize === '80mm' ? '12px' : '10px';
+    const headerSize = paperSize === '80mm' ? '18px' : '14px';
 
     let content = '';
     let title = '';
 
     if (type === 'sales') {
       title = 'SALES SUMMARY';
-      content = this.generateSalesContent(data);
+      content = this.generateSalesContent(
+        data as { summary: DailySalesSummary; modes: PaymentModeSummary[] }
+      );
     } else if (type === 'gst') {
       title = 'GST REPORT';
-      content = this.generateGstContent(data);
+      content = this.generateGstContent(data as GstReport);
     } else if (type === 'stock') {
       title = 'STOCK SUMMARY';
-      content = this.generateStockContent(data);
+      content = this.generateStockContent(data as StockSummary);
     }
 
     return `
@@ -542,18 +835,27 @@ export class PrintService {
         <meta charset="UTF-8">
         <title>${title}</title>
         <style>
-          body { font-family: 'Courier New', monospace; font-size: 12px; margin: 0; padding: 5px; width: 78mm; color: #000; background: #fff; }
+          body { 
+            font-family: 'Courier New', monospace; 
+            font-size: ${fontSize}; 
+            margin: 0; 
+            padding: 5px; 
+            width: ${width}; 
+            color: #000; 
+            background: #fff; 
+            overflow: hidden;
+          }
           .header { text-align: center; margin-bottom: 10px; }
-          .header h1 { margin: 0; font-size: 18px; font-weight: bold; }
+          .header h1 { margin: 0; font-size: ${headerSize}; font-weight: bold; }
           .divider { border-top: 1px dashed #000; margin: 5px 0; }
           .meta-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
           .section-title { font-weight: bold; margin-top: 10px; margin-bottom: 5px; text-decoration: underline; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          table { width: 100%; border-collapse: collapse; font-size: ${fontSize}; }
           th { text-align: left; border-bottom: 1px dashed #000; padding: 2px 0; }
           td { padding: 2px 0; vertical-align: top; }
           .right { text-align: right; }
           .center { text-align: center; }
-          .footer { text-align: center; margin-top: 20px; font-size: 10px; }
+          .footer { text-align: center; margin-top: 20px; font-size: calc(${fontSize} - 2px); }
         </style>
       </head>
       <body>
@@ -580,7 +882,10 @@ export class PrintService {
     `;
   }
 
-  private generateSalesContent(data: any): string {
+  private generateSalesContent(data: {
+    summary: DailySalesSummary;
+    modes: PaymentModeSummary[];
+  }): string {
     const { summary, modes } = data;
     return `
       <div class="section-title">Overview</div>
@@ -594,19 +899,29 @@ export class PrintService {
       <table>
         <thead><tr><th>Mode</th><th class="right">Count</th><th class="right">Amount</th></tr></thead>
         <tbody>
-          ${modes.map((m: any) => `<tr><td>${m.mode.toUpperCase()}</td><td class="right">${m.count}</td><td class="right">${m.totalAmount.toFixed(2)}</td></tr>`).join('')}
+          ${modes
+            .map(
+              (m: PaymentModeSummary) =>
+                `<tr><td>${m.mode.toUpperCase()}</td><td class="right">${m.count}</td><td class="right">${m.totalAmount.toFixed(2)}</td></tr>`
+            )
+            .join('')}
         </tbody>
       </table>
     `;
   }
 
-  private generateGstContent(data: any): string {
+  private generateGstContent(data: GstReport): string {
     return `
       <div class="section-title">GST Summary</div>
       <table>
         <thead><tr><th>Rate</th><th class="right">Taxable</th><th class="right">GST</th><th class="right">Total</th></tr></thead>
         <tbody>
-          ${data.slabs.map((s: any) => `<tr><td>${s.gstPercent.toFixed(0)}%</td><td class="right">${s.taxableAmount.toFixed(2)}</td><td class="right">${s.gstAmount.toFixed(2)}</td><td class="right">${s.totalAmount.toFixed(2)}</td></tr>`).join('')}
+          ${data.slabs
+            .map(
+              (s) =>
+                `<tr><td>${s.gstPercent.toFixed(0)}%</td><td class="right">${s.taxableAmount.toFixed(2)}</td><td class="right">${s.gstAmount.toFixed(2)}</td><td class="right">${s.totalAmount.toFixed(2)}</td></tr>`
+            )
+            .join('')}
         </tbody>
       </table>
       <div class="divider"></div>
@@ -616,7 +931,7 @@ export class PrintService {
     `;
   }
 
-  private generateStockContent(data: any): string {
+  private generateStockContent(data: StockSummary): string {
     return `
       <div class="section-title">Stock Overview</div>
       <div class="meta-row"><span>Total Items:</span><span>${data.totalItems}</span></div>
@@ -633,7 +948,7 @@ export class PrintService {
             ${data.items
               .slice(0, 100)
               .map(
-                (item: any) =>
+                (item) =>
                   `<tr><td>${item.name.substring(0, 20)}</td><td class="right">${item.stockQty}</td></tr>`
               )
               .join('')}

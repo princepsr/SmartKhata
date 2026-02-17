@@ -45,6 +45,7 @@ export const IPC_CHANNELS = {
   BILL_TODAY: 'bill:today',
   BILL_SALES_SUMMARY: 'bill:salesSummary',
   BILL_PRINT: 'bill:print',
+  BILL_REPRINT_LAST: 'bill:reprint-last',
   PRINTER_LIST: 'printer:list',
   PRINTER_TEST_PRINT: 'printer:testPrint',
 
@@ -177,6 +178,7 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.BILL_TODAY,
     IPC_CHANNELS.BILL_SALES_SUMMARY,
     IPC_CHANNELS.BILL_PRINT,
+    IPC_CHANNELS.BILL_REPRINT_LAST,
     IPC_CHANNELS.PRINTER_LIST,
     IPC_CHANNELS.PRINTER_TEST_PRINT,
   ],

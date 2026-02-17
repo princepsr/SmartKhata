@@ -225,6 +225,21 @@ export class LicenseError extends BusinessError {
 }
 
 /**
+ * Printer Error
+ *
+ * Thrown when thermal printing fails.
+ */
+export class PrinterError extends BusinessError {
+  constructor(message: string, code: string = 'PRINTER_ERROR') {
+    super(message, code);
+  }
+
+  public getUserMessage(): string {
+    return this.message;
+  }
+}
+
+/**
  * Check if error is a service error
  */
 export function isServiceError(error: any): error is ServiceError {
@@ -237,6 +252,37 @@ export function isServiceError(error: any): error is ServiceError {
 export function getUserFriendlyMessage(error: any): string {
   if (isServiceError(error)) {
     return error.getUserMessage();
+  }
+
+  const errorMessage = error instanceof Error ? error.message : String(error);
+
+  // Map common Electron printing failure reasons
+  if (errorMessage.includes('printer-not-found')) {
+    return 'Printer not found. Please check if it is switched on and connected.';
+  }
+  if (errorMessage.includes('no-available-printers')) {
+    return 'No printers detected. Please install a printer driver and try again.';
+  }
+  if (errorMessage.includes('job-cancelled')) {
+    return 'Printing was cancelled by the user or system.';
+  }
+  if (errorMessage.includes('offline')) {
+    return 'The printer is offline. Please check the cable or network connection.';
+  }
+  if (errorMessage.includes('out-of-paper')) {
+    return 'Printer is out of paper. Please refill it and retry.';
+  }
+  if (errorMessage.includes('io-error')) {
+    return 'Printer communication error (I/O). Please restart the printer.';
+  }
+  if (errorMessage.includes('busy')) {
+    return 'Printer is busy processing another job. Please wait a moment.';
+  }
+  if (errorMessage.includes('access-denied')) {
+    return 'Printer access denied. Please check your system permissions.';
+  }
+  if (errorMessage.includes('not-found')) {
+    return 'Resource not found.';
   }
 
   if (error instanceof Error) {

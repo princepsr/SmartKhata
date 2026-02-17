@@ -41,7 +41,9 @@ export const IPC_CHANNELS = {
   // Bill module
   BILL_CREATE: 'bill:create',
   BILL_PRINT: 'bill:print',
+  BILL_REPRINT_LAST: 'bill:reprint-last',
   PRINTER_LIST: 'printer:list',
+  PRINTER_TEST_PRINT: 'printer:testPrint',
 
   // Report module
   REPORT_DAILY_SALES: 'report:sales',

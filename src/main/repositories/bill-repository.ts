@@ -222,12 +222,31 @@ export class BillRepository extends BaseRepository {
       return null;
     }
 
-    const items = this.findItemsByBillId(bill.id);
+    const items = this.findItemsByBillId(id);
+    return { bill, items };
+  }
 
-    return {
-      bill,
-      items,
-    };
+  /**
+   * Find the latest bill with its items
+   */
+  public findLatestWithItems(): BillWithItems | null {
+    const row = this.db
+      .prepare(
+        `
+      SELECT * FROM bills 
+      ORDER BY created_at DESC, id DESC 
+      LIMIT 1
+    `
+      )
+      .get();
+
+    if (!row) {
+      return null;
+    }
+
+    const bill = this._mapToBill(row);
+    const items = this.findItemsByBillId(bill.id);
+    return { bill, items };
   }
 
   /**
