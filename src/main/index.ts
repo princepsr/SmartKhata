@@ -13,6 +13,7 @@ import { LicenseService } from './services/license-service';
 import { SettingsService } from './services/settings-service';
 import { StabilityService } from './services/stability-service';
 import { PrintService } from './services/print-service';
+import { UpdateService } from './services/update-service';
 
 /**
  * Main Electron Process Entry Point
@@ -219,6 +220,13 @@ app.whenReady().then(async () => {
         await new PrintService().initialize();
       } catch (e) {
         logger.error('Print service init failed', e);
+      }
+    })(),
+    (async () => {
+      try {
+        UpdateService.getInstance().initialize();
+      } catch (e) {
+        logger.error('Update service init failed', e);
       }
     })(),
     (async () => {

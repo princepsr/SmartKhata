@@ -1,6 +1,6 @@
 /**
  * Application Constants
- * 
+ *
  * These are compile-time constants that don't change between environments.
  * For runtime configuration, see src/main/config/app-config.ts
  */
@@ -8,8 +8,8 @@
 export const APP_CONSTANTS = {
   // Application metadata
   APP_NAME: 'SmartKhata',
-  APP_VERSION: '0.1.0',
-  APP_ID: 'com.smartkhata.pos',
+  APP_VERSION: '1.0.0',
+  APP_ID: 'com.smartkhata',
 
   // Database
   DB_NAME: 'smartkhata.db',
@@ -48,7 +48,7 @@ export const APP_CONSTANTS = {
 
 /**
  * IPC Event Channel Names
- * 
+ *
  * Centralized IPC channel names to avoid typos and ensure consistency
  * between main and renderer processes.
  */

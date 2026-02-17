@@ -1,6 +1,6 @@
 {
   "name": "smartkhata",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Local-first Kirana POS application for Windows",
   "main": "dist/main/src/main/index.js",
   "scripts": {
@@ -10,13 +10,14 @@
     "start:electron": "tsc-alias -p tsconfig.main.json && electron .",
     "build": "pnpm build:renderer && pnpm build:main",
     "build:renderer": "tsc --project tsconfig.renderer.json && vite build",
-    "build:main": "rimraf dist/main && tsc --project tsconfig.main.json && tsc-alias -p tsconfig.main.json && pnpm copy:migrations && javascript-obfuscator ./dist/main --output ./dist/main --compact true --self-defending true --string-array true --string-array-encoding 'base64' --string-array-threshold 0.75",
+    "build:main": "rimraf dist/main && tsc --project tsconfig.main.json && tsc-alias -p tsconfig.main.json && pnpm copy:migrations && javascript-obfuscator ./dist/main --output ./dist/main --compact true --self-defending true --string-array true --string-array-encoding base64 --string-array-threshold 0.75",
     "copy:migrations": "copyfiles -u 0 src/main/database/migrations/*.sql dist/main",
-    "build:win": "pnpm build && electron-builder --win --x64",
+    "build:win": "pnpm build && electron-builder --win",
     "build:win:portable": "pnpm build && electron-builder --win portable",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
+    "release:check": "pnpm lint && pnpm type-check && pnpm test:run",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,css,md}\"",
     "type-check": "tsc --noEmit",
@@ -50,6 +51,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^1.1.0",
     "@vitest/ui": "^1.1.0",
+    "app-builder-bin": "^4.2.0",
     "concurrently": "^9.1.2",
     "copyfiles": "^2.4.1",
     "electron": "^34.0.0",
@@ -75,6 +77,7 @@
   "dependencies": {
     "adm-zip": "^0.5.16",
     "better-sqlite3": "^12.6.2",
+    "electron-updater": "^6.3.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.13.0",
@@ -82,8 +85,19 @@
     "zustand": "^5.0.11"
   },
   "build": {
-    "appId": "com.smartkhata.pos",
+    "appId": "com.smartkhata",
     "productName": "SmartKhata",
+    "copyright": "Copyright © 2026 SmartKhata Team",
+    "publisherName": "SmartKhata Team",
+    "artifactName": "SmartKhata Setup ${version}.exe",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "SmartKhata",
+        "repo": "smartkhata"
+      }
+    ],
+    "compression": "maximum",
     "directories": {
       "output": "release",
       "buildResources": "resources"
@@ -94,26 +108,25 @@
     ],
     "win": {
       "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
+        "nsis",
+        "portable"
       ],
-      "icon": "resources/icons/icon.ico"
+      "icon": "resources/icons/icon.ico",
+      "sign": false,
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,
+      "deleteAppDataOnUninstall": false,
+      "perMachine": true,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "shortcutName": "SmartKhata",
+      "runAfterFinish": true
+    },
+    "portable": {
+      "artifactName": "SmartKhata_Portable_${version}.exe"
     }
   }
 }

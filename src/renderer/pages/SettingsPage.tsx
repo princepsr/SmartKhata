@@ -6,6 +6,7 @@ import { DataManagement } from '../components/Settings/DataManagement';
 import { useLicense } from '../hooks/useLicense';
 import LicenseActivationModal from '../components/modals/LicenseActivationModal';
 import LicenseSettings from '../components/Settings/LicenseSettings';
+import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import './SettingsPage.css';
 
 /**
@@ -479,6 +480,9 @@ function SettingsPage() {
             >
               System Debug
             </button>
+          </div>
+          <div className="settings-sidebar-footer">
+            <span className="app-version-tag">Version {APP_CONSTANTS.APP_VERSION}</span>
           </div>
         </div>
 

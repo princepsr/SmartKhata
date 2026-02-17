@@ -11,6 +11,10 @@ import {
   UpdateProductSchema,
   ProductIdSchema,
   ProductSearchSchema,
+  ProductImportSchema,
+  ProductAdjustStockSchema,
+  ProductToggleStatusSchema,
+  CreateProductSchema,
   type CreateProductRequest,
   type UpdateProductRequest,
 } from '@shared/validation/schemas';
@@ -124,6 +128,7 @@ export function registerProductHandlers(): void {
       };
     },
     {
+      schema: CreateProductSchema,
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );
@@ -169,8 +174,7 @@ export function registerProductHandlers(): void {
       }));
     },
     {
-      // Schema validation for array is tricky with Zod Bridge if not explicitly supported
-      // For now, we rely on Service validation or add ArraySchema
+      schema: ProductImportSchema,
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );
@@ -285,6 +289,7 @@ export function registerProductHandlers(): void {
       productService.adjustStock({ productId, deltaQty, reason, notes });
     },
     {
+      schema: ProductAdjustStockSchema,
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );
@@ -346,6 +351,7 @@ export function registerProductHandlers(): void {
       productService.updateProduct(id, { isActive });
     },
     {
+      schema: ProductToggleStatusSchema,
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );

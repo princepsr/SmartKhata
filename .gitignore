@@ -9,6 +9,7 @@ node_modules/
 
 # Development data
 dev-data/
+test-data/
 
 # Build outputs
 dist/
@@ -65,6 +66,7 @@ coverage/
 *.db-wal
 *.sqlite
 *.sqlite3
+*.bak
 
 # Temporary files
 *.tmp

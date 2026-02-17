@@ -170,10 +170,31 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       FOREIGN KEY (product_id) REFERENCES products(id)
     );
 
-    -- Settings table
+    -- Settings table (key-value)
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- App Config table (structured)
+    CREATE TABLE IF NOT EXISTS app_config (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      shop_name TEXT NOT NULL,
+      owner_name TEXT,
+      address TEXT,
+      phone TEXT,
+      gst_number TEXT,
+      printer_name TEXT,
+      paper_size TEXT DEFAULT '58mm',
+      gst_enabled INTEGER DEFAULT 1,
+      round_off_enabled INTEGER DEFAULT 1,
+      gst_percentage INTEGER DEFAULT 18,
+      show_logo INTEGER DEFAULT 0,
+      show_customer_details INTEGER DEFAULT 1,
+      footer_message TEXT,
+      print_copies INTEGER DEFAULT 1,
+      auto_print INTEGER DEFAULT 1,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -206,6 +227,7 @@ export function resetTestDatabase(db: any): void {
   // Clear all tables in correct order (respecting foreign keys)
   try {
     db.exec(`
+      DELETE FROM app_config;
       DELETE FROM bill_items;
       DELETE FROM bills;
       DELETE FROM inventory_logs;
@@ -249,6 +271,11 @@ export function seedTestData(db: any): void {
         ('Ramesh Kumar', '9876543210', 0, 1),
         ('Suresh Patel', '9876543211', 50000, 1),
         ('Inactive Customer', '0000000000', 0, 0);
+    `);
+
+    db.exec(`
+      INSERT INTO app_config (id, shop_name, paper_size, gst_enabled, gst_percentage)
+      VALUES (1, 'Test Shop', '58mm', 1, 18);
     `);
 
     db.exec(`

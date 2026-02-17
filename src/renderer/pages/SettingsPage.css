@@ -407,3 +407,22 @@
     transform: translateY(0);
   }
 }
+
+.settings-sidebar-footer {
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--border-color, #e2e8f0);
+  margin-left: 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.app-version-tag {
+  font-size: 0.8rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-secondary, #64748b);
+  background: var(--bg-app, #f1f5f9);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  letter-spacing: 0.025em;
+  font-weight: 600;
+}

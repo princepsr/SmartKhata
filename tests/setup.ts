@@ -65,19 +65,35 @@ vi.mock('@main/database/migrations', () => ({
 }));
 
 // Mock logger to avoid file system operations in tests
+const mockLoggerInstance = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  forModule: vi.fn().mockReturnThis(),
+  getLogsDirectory: vi.fn().mockReturnValue('./test-data/logs'),
+};
+
 vi.mock('@main/utils/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
+  logger: mockLoggerInstance,
+  Logger: vi.fn().mockImplementation(() => mockLoggerInstance),
+  LogLevel: {
+    DEBUG: 'DEBUG',
+    INFO: 'INFO',
+    WARN: 'WARN',
+    ERROR: 'ERROR',
   },
-  Logger: vi.fn().mockImplementation(() => ({
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  })),
+}));
+
+vi.mock('../src/main/utils/logger', () => ({
+  logger: mockLoggerInstance,
+  Logger: vi.fn().mockImplementation(() => mockLoggerInstance),
+  LogLevel: {
+    DEBUG: 'DEBUG',
+    INFO: 'INFO',
+    WARN: 'WARN',
+    ERROR: 'ERROR',
+  },
 }));
 
 // Global setup

@@ -122,13 +122,29 @@ export const ProductIdSchema = z
   .positive('Invalid product ID');
 
 // Product Search Schema
-// Product Search Schema
 export const ProductSearchSchema = z.object({
   query: z
     .string()
     .min(2, 'Search query must be at least 2 characters')
     .max(100, 'Search query is too long'),
   includeInactive: z.boolean().optional(),
+});
+
+// Create Product Array (for Import)
+export const ProductImportSchema = z.array(CreateProductSchema);
+
+// Adjust Stock Request
+export const ProductAdjustStockSchema = z.object({
+  productId: z.number().int().positive('Invalid product ID'),
+  deltaQty: z.number(),
+  reason: z.enum(['MANUAL', 'ADJUSTMENT']),
+  notes: z.string().max(500).optional(),
+});
+
+// Toggle Status Request
+export const ProductToggleStatusSchema = z.object({
+  id: z.number().int().positive('Invalid product ID'),
+  isActive: z.boolean(),
 });
 
 /**

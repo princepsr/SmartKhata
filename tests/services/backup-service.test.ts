@@ -7,8 +7,8 @@ import AdmZip from 'adm-zip';
 // Standard project imports (relative paths for compatibility)
 import { backupService } from '../../src/main/services/backup-service';
 import { databaseManager } from '../../src/main/database';
-import { migrationRunner } from '@main/database/migrations';
-import { createTestDatabase, BetterSqliteCompatibleDatabase } from '../utils/test-db';
+import { migrationRunner } from '../../src/main/database/migrations';
+import { createTestDatabase, BetterSqliteCompatibleDatabase, seedTestData } from '../utils/test-db';
 
 describe('BackupService', () => {
   let db: BetterSqliteCompatibleDatabase;
@@ -27,6 +27,7 @@ describe('BackupService', () => {
     }
 
     db = await createTestDatabase();
+    seedTestData(db);
 
     // We rely on tests/setup.ts to mock databaseManager globally.
     // However, we can further customize the mock behavior for specific tests.
@@ -68,7 +69,7 @@ describe('BackupService', () => {
     expect(meta.appName).toBe('SmartKhata');
     expect(meta.version).toBe('0.1.0-test'); // From setup.ts mock
     expect(meta.schemaVersion).toBe(1);
-    expect(meta.shopName).toBe('My Shop'); // Default mock value
+    expect(meta.shopName).toBe('Test Shop'); // From seed data in test-db.ts
   });
 
   it('should restore from a valid structured ZIP backup', async () => {
@@ -302,15 +303,16 @@ describe('BackupService', () => {
       // Ensure activeDbPath exists for path logic tests
       fs.writeFileSync(activeDbPath, 'dummy original db');
 
-      // Spy on updateSettings via private access
-      const settingsService = (backupService as any).settingsService;
-      const spy = vi.spyOn(settingsService, 'updateSettings').mockImplementation(() => {});
+      // Spy on updateConfig via private access
+      const settingsService = (backupService as unknown as { settingsService: SettingsService })
+        .settingsService;
+      const spy = vi.spyOn(settingsService, 'updateConfig').mockImplementation(() => {});
 
       await backupService.restoreFromBackup(testBackupPath);
 
       expect(spy).toHaveBeenCalled();
       // Verify it was called with settings
-      expect(spy.mock.calls[0][0]).toHaveProperty('shop_name');
+      expect(spy.mock.calls[0][0]).toHaveProperty('shopName');
 
       spy.mockRestore();
       mockPragma.mockRestore(); // Restore db.pragma mock

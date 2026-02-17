@@ -35,7 +35,7 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, 'dist/renderer'),
     emptyOutDir: true,
-    sourcemap: true,
+    sourcemap: false,
     // Optimize for Electron (no code splitting needed)
     rollupOptions: {
       output: {

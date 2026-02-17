@@ -35,7 +35,7 @@ export interface IPCHandlerOptions<TRequest> {
    * Zod schema for request validation (recommended)
    * Automatically validates and provides type-safe data
    */
-  schema?: { safeParse: (data: unknown) => { success: boolean; data: any; error: any } };
+  schema?: { safeParse: (data: unknown) => { success: boolean; data?: any; error?: any } };
 
   /**
    * Custom validation function called before handler

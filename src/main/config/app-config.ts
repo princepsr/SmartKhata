@@ -4,7 +4,7 @@ import fs from 'fs';
 
 /**
  * Application Configuration
- * 
+ *
  * Runtime configuration that varies between development and production.
  * Loads from environment variables and provides sensible defaults.
  */
@@ -48,8 +48,8 @@ class ConfigManager {
       // In development, use a dev database in the project root
       return path.join(process.cwd(), 'dev-data', 'smartkhata.db');
     } else {
-      // In production, use user data directory
-      return path.join(userDataPath, 'data', 'smartkhata.db');
+      // In production, use user data directory directly
+      return path.join(userDataPath, 'database.db');
     }
   }
 
@@ -59,7 +59,6 @@ class ConfigManager {
   private ensureDirectories(userDataPath: string): void {
     const dirs = [
       userDataPath,
-      path.join(userDataPath, 'data'),
       path.join(userDataPath, 'logs'),
       path.join(userDataPath, 'backups'),
     ];
@@ -74,6 +73,40 @@ class ConfigManager {
         fs.mkdirSync(dir, { recursive: true });
       }
     });
+
+    // Initialize required files
+    this.ensureFiles(userDataPath);
+  }
+
+  /**
+   * Ensure required files exist
+   */
+  private ensureFiles(userDataPath: string): void {
+    const settingsPath = path.join(userDataPath, 'settings.json');
+    const databasePath = this.getDatabasePath(userDataPath, process.env.NODE_ENV !== 'production');
+
+    // Create empty database.db if it doesn't exist (production only)
+    if (process.env.NODE_ENV === 'production' && !fs.existsSync(databasePath)) {
+      try {
+        fs.writeFileSync(databasePath, '');
+      } catch (e) {
+        console.error('Failed to create initial database file', e);
+      }
+    }
+
+    // Create default settings.json if it doesn't exist
+    if (!fs.existsSync(settingsPath)) {
+      try {
+        const defaultSettings = {
+          version: app.getVersion(),
+          firstRun: new Date().toISOString(),
+          setupComplete: false,
+        };
+        fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 2));
+      } catch (e) {
+        console.error('Failed to create settings.json', e);
+      }
+    }
   }
 
   /**

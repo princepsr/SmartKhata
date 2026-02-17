@@ -1,8 +1,8 @@
-# SmartKhata POS
+# SmartKhata
 
-**Local-first Kirana POS application for Windows**
+**Local-first Kirana application for Windows**
 
-A fast, offline-first point-of-sale system built for Indian kirana shops. No cloud dependency, no subscriptions—just reliable local billing with optional cloud sync later.
+A fast, offline-first point-of-sale system built for Indian kirana shops.
 
 ---
 

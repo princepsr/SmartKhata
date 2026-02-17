@@ -104,7 +104,7 @@ class BackupService {
       await db.backup(tempDbPath);
 
       // 2. Prepare metadata and settings
-      const settings = this.settingsService.getAllSettings();
+      const settings = this.settingsService.getConfig();
       const meta = {
         appName: 'SmartKhata',
         version: app.getVersion(),
