@@ -107,6 +107,7 @@ export const IPC_CHANNELS = {
   APP_CONFIG: 'app:config',
   APP_LOGS: 'app:logs',
   APP_RESTART: 'app:restart',
+  APP_REPORT_ERROR: 'app:report-error',
 
   // ============================================
   // LICENSE MODULE

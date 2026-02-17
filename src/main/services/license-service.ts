@@ -69,6 +69,7 @@ export class LicenseService extends BaseService {
 
   constructor() {
     super();
+    this.logger = logger.forModule('LICENSE');
     this.licenseRepo = new LicenseRepository();
     this.billRepo = new BillRepository();
   }
@@ -100,7 +101,7 @@ export class LicenseService extends BaseService {
         try {
           fs.mkdirSync(dir, { recursive: true });
         } catch (error) {
-          logger.error('Failed to create marker directory', { dir, error });
+          this.logger.error('Failed to create marker directory', { error, dir });
         }
       }
     });
@@ -144,7 +145,7 @@ export class LicenseService extends BaseService {
             }
           }
         } catch (error) {
-          logger.error('Failed to read trial marker', { markerPath, error });
+          this.logger.error('Failed to read trial marker', { error, markerPath });
         }
       }
     }
@@ -192,7 +193,7 @@ export class LicenseService extends BaseService {
         return { trialStartedOn: json.t || null, updatedAt: json.u || null };
       }
     } catch {
-      logger.debug('Registry read failed (likely key not found yet)');
+      this.logger.debug('Registry read failed (likely key not found yet)');
     }
     return { trialStartedOn: null, updatedAt: null };
   }
@@ -217,7 +218,7 @@ export class LicenseService extends BaseService {
       try {
         fs.writeFileSync(markerPath, payloadStr, { mode: 0o600 });
       } catch (error) {
-        logger.error('Failed to write trial marker', { markerPath, error });
+        this.logger.error('Failed to write trial marker', { error, markerPath });
       }
     });
 
@@ -243,9 +244,7 @@ export class LicenseService extends BaseService {
 
       execSync(command, { stdio: 'ignore' });
     } catch (error) {
-      logger.error('Failed to write to Registry', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      this.logger.error('Failed to write to Registry', error);
     }
   }
 
@@ -505,7 +504,7 @@ export class LicenseService extends BaseService {
     const effectiveNow = lastSeen && lastSeen > now ? lastSeen : now;
 
     if (effectiveNow > now) {
-      logger.warn('System clock backdating detected. Using last-seen time for verification.', {
+      this.logger.warn('System clock backdating detected. Using last-seen time for verification.', {
         systemNow: now.toISOString(),
         lastSeen: lastSeen?.toISOString(),
       });
@@ -597,9 +596,7 @@ export class LicenseService extends BaseService {
         };
       } catch (error) {
         // If verification fails (e.g. signature tampered, wrong machine), we treat it as no license
-        logger.error('License key verification failed - falling back to trial', {
-          error: error instanceof Error ? error.message : 'Unknown',
-        });
+        this.logger.error('License key verification failed - falling back to trial', error);
         // Fall through to trial logic
       }
     }
@@ -731,7 +728,7 @@ export class LicenseService extends BaseService {
         .filter((l) => l && l !== 'SerialNumber');
       diskSerial = lines[0] || '';
     } catch {
-      logger.warn('Failed to retrieve disk serial number, using fallback');
+      this.logger.warn('Failed to retrieve disk serial number, using fallback');
     }
 
     // Combine multiple hardware identifiers

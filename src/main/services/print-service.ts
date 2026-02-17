@@ -3,6 +3,16 @@ import fs from 'fs';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import { logger } from '../utils/logger';
 import { SettingsService } from './settings-service';
+import { StabilityService } from './stability-service';
+import { BillWithItems } from '../repositories/bill-repository';
+
+/**
+ * Print Service
+ *
+ * Handles silent thermal printing using a hidden BrowserWindow.
+ * Generates HTML receipt and sends it to the default system printer.
+ */
+const printLogger = logger.forModule('PRINT');
 
 /**
  * Print Service
@@ -16,12 +26,12 @@ export class PrintService {
    * @param billData Complete bill with items (rupee values)
    * @param printerName Target printer name
    */
-  async printBill(billData: any, printerName: string = ''): Promise<boolean> {
-    logger.info(
+  async printBill(billData: BillWithItems, printerName: string = ''): Promise<boolean> {
+    printLogger.info(
       `Starting print job for bill #${billData.bill.billNumber} on printer: ${printerName || 'Default'}`
     );
 
-    let printWindow: BrowserWindow | null = new BrowserWindow({
+    const printWindow: BrowserWindow | null = new BrowserWindow({
       show: false,
       width: 400,
       height: 600,
@@ -33,52 +43,75 @@ export class PrintService {
       },
     });
 
+    // Track for leak prevention
+    StabilityService.getInstance().trackWindow(printWindow);
+
     try {
       const htmlContent = this.generateReceiptHtml(billData);
 
-      await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
-
+      // Add a safety timeout for the entire print operation (30s)
       await new Promise<void>((resolve, reject) => {
-        if (!printWindow) {
-          return reject(new Error('Print window failed to initialize'));
-        }
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Print operation timed out after 30 seconds'));
+        }, 30000);
 
-        setTimeout(() => {
-          if (!printWindow) {
-            return reject(new Error('Print window closed unexpectedly'));
-          }
-
-          printWindow.webContents.print(
-            {
-              silent: true,
-              printBackground: true,
-              deviceName: printerName,
-              pageSize: 'A4',
-              margins: {
-                marginType: 'printableArea',
-              },
-            },
-            (success, failureReason) => {
-              if (success) {
-                logger.info('Print job sent to printer');
-                resolve();
-              } else {
-                logger.error(`Print failed: ${failureReason}`);
-                reject(new Error(failureReason));
-              }
+        const runPrint = async (): Promise<void> => {
+          try {
+            if (!printWindow || printWindow.isDestroyed()) {
+              return reject(new Error('Window lost or destroyed'));
             }
-          );
-        }, 500);
+
+            await printWindow.loadURL(
+              `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`
+            );
+
+            // Small delay for layout engine
+            await new Promise((r) => setTimeout(r, 800));
+
+            if (!printWindow || printWindow.isDestroyed()) {
+              return reject(new Error('Window destroyed before print'));
+            }
+
+            printWindow.webContents.print(
+              {
+                silent: true,
+                printBackground: true,
+                deviceName: printerName,
+                pageSize: 'A4',
+                margins: {
+                  marginType: 'printableArea',
+                },
+              },
+              (success, failureReason) => {
+                clearTimeout(timeoutId);
+                if (success) {
+                  printLogger.info('Print job sent to printer');
+                  resolve();
+                } else {
+                  printLogger.error(`Print failed: ${failureReason}`);
+                  reject(new Error(failureReason));
+                }
+              }
+            );
+          } catch (err) {
+            clearTimeout(timeoutId);
+            reject(err as Error);
+          }
+        };
+
+        runPrint().catch((err) => {
+          clearTimeout(timeoutId);
+          reject(err);
+        });
       });
 
       return true;
     } catch (error) {
-      logger.error('Error in print service', { error });
+      printLogger.error('Error in print service', error);
       throw error;
     } finally {
-      if (printWindow) {
-        printWindow.close();
-        printWindow = null;
+      if (printWindow && !printWindow.isDestroyed()) {
+        printWindow.destroy(); // Stronger than close() for background windows
       }
     }
   }
@@ -88,13 +121,15 @@ export class PrintService {
    */
   async printReport(
     type: 'sales' | 'gst' | 'stock',
-    data: any,
+    data: unknown,
     dateRange: string,
     printerName: string = ''
   ): Promise<boolean> {
-    logger.info(`Starting print job for report: ${type} on printer: ${printerName || 'Default'}`);
+    printLogger.info(
+      `Starting print job for report: ${type} on printer: ${printerName || 'Default'}`
+    );
 
-    let printWindow: BrowserWindow | null = new BrowserWindow({
+    const printWindow: BrowserWindow = new BrowserWindow({
       show: false,
       width: 400,
       height: 600,
@@ -106,19 +141,23 @@ export class PrintService {
       },
     });
 
+    // Track for leak prevention
+    StabilityService.getInstance().trackWindow(printWindow);
+
     try {
       const htmlContent = this.generateReportHtml(type, data, dateRange);
 
       await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
 
       await new Promise<void>((resolve, reject) => {
-        if (!printWindow) {
-          return reject('Window closed');
-        }
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Report print timed out'));
+        }, 30000);
 
-        setTimeout(() => {
-          if (!printWindow) {
-            return reject('Window closed');
+        const timerId = setTimeout(() => {
+          if (printWindow.isDestroyed()) {
+            clearTimeout(timeoutId);
+            return reject(new Error('Window closed'));
           }
 
           printWindow.webContents.print(
@@ -130,38 +169,39 @@ export class PrintService {
               margins: { marginType: 'printableArea' },
             },
             (success, failureReason) => {
+              clearTimeout(timeoutId);
+              clearTimeout(timerId);
               if (success) {
-                logger.info('Report print job sent');
+                printLogger.info('Report print job sent');
                 resolve();
               } else {
-                logger.error(`Report print failed: ${failureReason}`);
+                printLogger.error(`Report print failed: ${failureReason}`);
                 reject(new Error(failureReason));
               }
             }
           );
-        }, 500);
+        }, 1000);
       });
 
       return true;
     } catch (error) {
-      logger.error('Error in print service (report)', { error });
+      printLogger.error('Error in print service (report)', error);
       throw error;
     } finally {
-      if (printWindow) {
-        printWindow.close();
-        printWindow = null;
+      if (!printWindow.isDestroyed()) {
+        printWindow.destroy();
       }
     }
   }
 
   async exportReportPdf(
     type: 'sales' | 'gst' | 'stock',
-    data: any,
+    data: unknown,
     dateRange: string
   ): Promise<boolean> {
-    logger.info(`Starting PDF export for report: ${type}`);
+    printLogger.info(`Starting PDF export for report: ${type}`);
 
-    let printWindow: BrowserWindow | null = new BrowserWindow({
+    const printWindow: BrowserWindow = new BrowserWindow({
       show: false,
       width: 800,
       height: 600,
@@ -173,13 +213,20 @@ export class PrintService {
       },
     });
 
+    // Track for leak prevention
+    StabilityService.getInstance().trackWindow(printWindow);
+
     try {
       const htmlContent = this.generateReportHtml(type, data, dateRange);
 
       await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
 
       // Wait a bit for layout
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      if (printWindow.isDestroyed()) {
+        throw new Error('Window destroyed during PDF generation');
+      }
 
       const pdfBuffer = await printWindow.webContents.printToPDF({
         margins: {
@@ -197,18 +244,17 @@ export class PrintService {
 
       if (filePath) {
         fs.writeFileSync(filePath, pdfBuffer);
-        logger.info(`PDF saved successfully to: ${filePath}`);
+        printLogger.info(`PDF saved successfully to: ${filePath}`);
         return true;
       }
 
       return false;
     } catch (error) {
-      logger.error('Error in PDF export service', { error });
+      printLogger.error('Error in PDF export service', error);
       throw error;
     } finally {
-      if (printWindow) {
-        printWindow.close();
-        printWindow = null;
+      if (!printWindow.isDestroyed()) {
+        printWindow.destroy();
       }
     }
   }
@@ -228,7 +274,7 @@ export class PrintService {
    * Test Print
    */
   async testPrint(printerName: string = '', paperSize: '58mm' | '80mm' = '58mm'): Promise<boolean> {
-    logger.info(`Starting test print on printer: ${printerName || 'Default'} (${paperSize})`);
+    printLogger.info(`Starting test print on printer: ${printerName || 'Default'} (${paperSize})`);
 
     let printWindow: BrowserWindow | null = new BrowserWindow({
       show: false,
@@ -266,10 +312,10 @@ export class PrintService {
             },
             (success, failureReason) => {
               if (success) {
-                logger.info('Test print sent successfully');
+                printLogger.info('Test print sent successfully');
                 resolve();
               } else {
-                logger.error(`Test print failed: ${failureReason}`);
+                printLogger.error(`Test print failed: ${failureReason}`);
                 reject(new Error(failureReason));
               }
             }
@@ -279,7 +325,7 @@ export class PrintService {
 
       return true;
     } catch (error) {
-      logger.error('Error in test print', { error });
+      printLogger.error('Error in test print', error);
       throw error;
     } finally {
       if (printWindow) {
@@ -355,7 +401,7 @@ export class PrintService {
   /**
    * Generates the HTML for a 3-inch (80mm) thermal receipt
    */
-  private generateReceiptHtml(data: { bill: any; items: any[] }): string {
+  private generateReceiptHtml(data: BillWithItems): string {
     const { bill, items } = data;
     const settings = SettingsService.getInstance().getConfig();
 

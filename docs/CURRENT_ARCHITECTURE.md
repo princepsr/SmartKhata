@@ -1,4 +1,4 @@
-# Current Architecture (As of 2026-02-11)
+# Current Architecture (As of 2026-02-17)
 
 ## Overview
 
@@ -11,7 +11,7 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                     UI Layer (Renderer)                       │
-│                  React + TypeScript + Zustand                 │
+│      React + TypeScript + Zustand + Error Boundary            │
 │                                                                │
 │  Components → Hooks → State Management → API Client          │
 └──────────────────────────────────────────────────────────────┘
@@ -27,39 +27,24 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
                             ↓
 ┌──────────────────────────────────────────────────────────────┐
 │                    IPC Layer (Main)                           │
-│         IPCHandler → Validation → Error Handling              │
+│         IPCHandler → Validation → Error Mapping               │
 │                                                                │
-│  Responsibilities:                                            │
-│  - Orchestrate service calls                                 │
-│  - Convert service errors to user-safe messages              │
-│  - Format responses                                           │
-│  - NO business logic                                          │
+│  Features:                                                    │
+│  - 30s Timeouts on all requests                              │
+│  - Automatic PII Sanitization in logs                        │
+│  - User-safe Error conversion                                 │
 └──────────────────────────────────────────────────────────────┘
                             ↓
                   Service Method Calls
                             ↓
 ┌──────────────────────────────────────────────────────────────┐
 │                   Service Layer (Main)                        │
-│         Business Logic + Validation + Orchestration           │
+│         Business Logic + Validation + Hardening               │
 │                                                                │
 │  Services:                                                    │
-│  - ProductService (CRUD, stock, validation)                  │
-│  - BillingService (calculations, finalization)               │
-│  - CustomerService (balance, phone validation)               │
-│  - InventoryService (stock rules, availability)              │
-│  - ReportService (aggregation, trends, comparisons)          │
-│  - ExportService (CSV generation, file handling)             │
-│  - PrintService (thermal printing, receipt formatting)       │
-│  - SettingsService (config, caching)                         │
-│  - LicenseService (validation, expiry)                       │
-│  - BackupService (archival, atomic restore)                  │
-│                                                                │
-│  Responsibilities:                                            │
-│  - Validate business rules                                    │
-│  - Perform calculations                                       │
-│  - Orchestrate multiple repositories                          │
-│  - Throw typed errors                                         │
-│  - NO SQL queries                                             │
+│  - StabilityService (Watchdog, Memory, Resource Tracking)     │
+│  - Support Services (Product, Billing, Customer, etc.)        │
+│  - PrintService (Hidden Windows + Cleanup Timeouts)           │
 └──────────────────────────────────────────────────────────────┘
                             ↓
                 Repository Method Calls
@@ -67,37 +52,13 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
 ┌──────────────────────────────────────────────────────────────┐
 │                 Repository Layer (Main)                       │
 │              SQL Queries + Domain Mapping                     │
-│                                                                │
-│  Repositories:                                                │
-│  - ProductRepository                                          │
-│  - BillRepository                                             │
-│  - CustomerRepository                                         │
-│  - InventoryRepository                                        │
-│  - ReportRepository                                           │
-│  - SettingsRepository                                         │
-│  - LicenseRepository                                          │
-│                                                                │
-│  Responsibilities:                                            │
-│  - Execute SQL queries                                        │
-│  - Map database rows to domain objects                        │
-│  - Handle transactions                                        │
-│  - NO business logic                                          │
 └──────────────────────────────────────────────────────────────┘
                             ↓
                     SQL Execution
                             ↓
 ┌──────────────────────────────────────────────────────────────┐
 │                    Database Layer                             │
-│                  SQLite (better-sqlite3)                      │
-│                                                                │
-│  Tables:                                                      │
-│  - products                                                   │
-│  - customers                                                  │
-│  - bills                                                      │
-│  - bill_items                                                 │
-│  - inventory_logs                                             │
-│  - settings                                                   │
-│  - license                                                    │
+│       SQLite + WAL Checkpointing + Integrity Checks           │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -310,10 +271,11 @@ export class ProductRepository extends BaseRepository {
 
 **Configuration:**
 
-- WAL mode (Write-Ahead Logging)
-- FULL synchronous mode
+- WAL mode (Write-Ahead Logging) with explicit `TRUNCATE` checkpointing on shutdown
+- FULL synchronous mode for ACID compliance
 - Foreign keys enabled
-- Busy timeout: 5000ms
+- Busy timeout: 5000ms with secondary app-level retry logic
+- Mandatory integrity checks on startup if "clean.exit" marker is missing
 
 **Schema:**
 
@@ -421,6 +383,13 @@ UI displays error to user
 | `InactiveEntityError`      | Entity is inactive    | "This product is inactive"                          |
 | `CreditLimitExceededError` | Credit limit exceeded | "Customer credit limit exceeded"                    |
 | `LicenseError`             | License issue         | "License has expired"                               |
+| `StabilityError`           | Resource limits       | "System memory limit exceeded"                      |
+
+### Global Hardening
+
+- **Main Process Boundary**: `uncaughtException` and `unhandledRejection` hooks trigger a controlled graceful shutdown.
+- **Renderer Boundary**: High-level React Error Boundary captures UI crashes and provides a "Click to Restore" recovery flow.
+- **IPC Timeout**: All IPC requests race against a 30s timeout to prevent UI hangs.
 
 ---
 

@@ -1,4 +1,4 @@
-import { BaseRepository, DatabaseError } from './base-repository';
+import { BaseRepository } from './base-repository';
 import { logger } from '../utils/logger';
 
 /**
@@ -124,16 +124,29 @@ export class BillRepository extends BaseRepository {
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
 
+      const createdItems: BillItem[] = [];
+
       items.forEach((item) => {
-        this.execute(itemSql, [
+        const itemResult = this.execute(itemSql, [
           billId,
           item.productId,
           item.productNameSnapshot,
           item.quantity,
           Math.round(item.unitPrice * 100), // Rupees → Paise
-          Math.round(item.gstPercent * 100), // Percent → Basis points (Keep 100?)
+          Math.round(item.gstPercent * 100), // Percent → Basis points
           Math.round(item.lineTotal * 100), // Rupees → Paise
         ]);
+
+        createdItems.push({
+          id: Number(itemResult.lastInsertRowid),
+          billId,
+          productId: item.productId,
+          productNameSnapshot: item.productNameSnapshot,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          gstPercent: item.gstPercent,
+          lineTotal: item.lineTotal,
+        });
       });
 
       logger.info('Bill created with items', {
@@ -142,17 +155,20 @@ export class BillRepository extends BaseRepository {
         itemCount: items.length,
       });
 
-      // 4. Fetch and return complete bill
-      const bill = this.findById(billId);
-      if (!bill) {
-        throw new Error('Failed to retrieve created bill');
-      }
-
-      const billItems = this.findItemsByBillId(billId);
-
+      // 4. Return complete bill (Pre-constructed to avoid re-querying)
       return {
-        bill,
-        items: billItems,
+        bill: {
+          id: billId,
+          billNumber: billData.billNumber,
+          customerId: billData.customerId || null,
+          subtotal: billData.subtotal,
+          gstTotal: billData.gstTotal,
+          discountAmount: billData.discountAmount || 0,
+          grandTotal: billData.grandTotal,
+          paymentMode: billData.paymentMode,
+          createdAt: new Date(), // Approximate current time
+        },
+        items: createdItems,
       };
     });
 
@@ -218,10 +234,11 @@ export class BillRepository extends BaseRepository {
    * List bills by date range
    */
   public findByDateRange(fromDate: Date, toDate: Date): Bill[] {
+    // Optimization: Use direct string comparison to utilize idx_bills_created_at
+    // Ensure we cover the full day by adjusting toDate if it's just a date
     const sql = `
       SELECT * FROM bills
-      WHERE date(created_at, 'localtime') >= date(?, 'localtime') 
-        AND date(created_at, 'localtime') <= date(?, 'localtime')
+      WHERE created_at >= ? AND created_at <= ?
       ORDER BY created_at DESC
     `;
 
@@ -285,12 +302,16 @@ export class BillRepository extends BaseRepository {
    * Get today's bills
    */
   public findToday(): Bill[] {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfToday = today.toISOString();
+
     const sql = `
       SELECT * FROM bills 
-      WHERE date(created_at, 'localtime') = date('now', 'localtime')
+      WHERE created_at >= ?
       ORDER BY created_at DESC
     `;
-    const rows = this.queryAll<any>(sql);
+    const rows = this.queryAll<any>(sql, [startOfToday]);
     return rows.map((row) => this._mapToBill(row));
   }
 

@@ -1,9 +1,9 @@
 /**
  * IPC Handler Framework
- * 
+ *
  * Base wrapper for all IPC handlers in the main process.
  * Provides automatic error handling, validation, and logging.
- * 
+ *
  * USAGE:
  * ```typescript
  * IPCHandler.handle<RequestType, ResponseType>(
@@ -35,7 +35,7 @@ export interface IPCHandlerOptions<TRequest> {
    * Zod schema for request validation (recommended)
    * Automatically validates and provides type-safe data
    */
-  schema?: any; // Using any here to avoid dragging in Zod types directly if not needed, or use ZodSchema
+  schema?: { safeParse: (data: unknown) => { success: boolean; data: any; error: any } };
 
   /**
    * Custom validation function called before handler
@@ -54,6 +54,16 @@ export interface IPCHandlerOptions<TRequest> {
    * Skip logging for this handler (for sensitive data)
    */
   skipLogging?: boolean;
+
+  /**
+   * Timeout in milliseconds (default: 30000ms)
+   */
+  timeout?: number;
+
+  /**
+   * Custom timeout message
+   */
+  timeoutMessage?: string;
 }
 
 /**
@@ -64,9 +74,11 @@ export type IPCHandlerFunction<TRequest, TResponse> = (
   event: IpcMainInvokeEvent
 ) => Promise<TResponse> | TResponse;
 
+const ipcLogger = logger.forModule('IPC');
+
 /**
  * IPC Handler Class
- * 
+ *
  * Provides a wrapper around ipcMain.handle with automatic:
  * - Error handling (try/catch)
  * - Validation
@@ -76,7 +88,7 @@ export type IPCHandlerFunction<TRequest, TResponse> = (
 export class IPCHandler {
   /**
    * Register a typed IPC handler
-   * 
+   *
    * @param channel - IPC channel name from registry
    * @param handler - Handler function
    * @param options - Optional configuration
@@ -91,12 +103,16 @@ export class IPCHandler {
       const requestId = this.generateRequestId();
 
       try {
-        // Log request
-        if (!options.skipLogging) {
-          logger.debug(`IPC Request: ${channel}`, {
-            requestId,
-            request: this.sanitizeForLog(request),
-          });
+        // Log request (Fail-safe)
+        try {
+          if (!options.skipLogging) {
+            ipcLogger.debug(`IPC Request: ${channel}`, {
+              requestId,
+              request,
+            });
+          }
+        } catch (logError) {
+          console.error('IPC Logging failed:', logError);
         }
 
         // Validate with Zod schema (if provided)
@@ -104,7 +120,6 @@ export class IPCHandler {
         if (options.schema) {
           const result = options.schema.safeParse(request);
           if (!result.success) {
-            // Throw the Zod error directly, sanitizeIPCError will handle it
             throw result.error;
           }
           validatedRequest = result.data;
@@ -115,39 +130,57 @@ export class IPCHandler {
           await options.validate(validatedRequest);
         }
 
-        // Execute handler with validated data
-        const data = await handler(validatedRequest, event);
+        // Execute handler with timeout support
+        const timeoutMs = options.timeout ?? 30000;
+        const handlerPromise = handler(validatedRequest, event);
 
-        // Log success
-        if (!options.skipLogging) {
-          const duration = Date.now() - startTime;
-          logger.debug(`IPC Response: ${channel}`, {
-            requestId,
-            success: true,
-            duration: `${duration}ms`,
-          });
+        const data = await Promise.race([
+          handlerPromise,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => {
+              reject(
+                new Error(options.timeoutMessage ?? `IPC Request timeout after ${timeoutMs}ms`)
+              );
+            }, timeoutMs)
+          ),
+        ]);
+
+        // Log success (Fail-safe)
+        try {
+          if (!options.skipLogging) {
+            const duration = Date.now() - startTime;
+            ipcLogger.debug(`IPC Response: ${channel}`, {
+              requestId,
+              success: true,
+              duration: `${duration}ms`,
+            });
+          }
+        } catch (logError) {
+          console.error('IPC Logging failed:', logError);
         }
-        
-        // logger.info(`Raw handler response for ${channel}:`, { data });
 
         // Return success response
         return {
           success: true,
           data,
         } as IPCResponse<TResponse>;
-
       } catch (error) {
-        // Log error using centralized utility
         const duration = Date.now() - startTime;
-        logIPCError(channel, error, requestId, duration);
+
+        // Log error using centralized utility (Fail-safe)
+        try {
+          logIPCError(channel, error, requestId, duration);
+        } catch (logError) {
+          console.error('IPC Error Logging failed:', logError, { channel, error, requestId });
+        }
 
         // Transform/Sanitize error message
         let errorMessage: string;
-        
+
         if (options.transformError && error instanceof Error) {
-           errorMessage = options.transformError(error);
+          errorMessage = options.transformError(error);
         } else {
-           errorMessage = sanitizeIPCError(error);
+          errorMessage = sanitizeIPCError(error);
         }
 
         // Return error response
@@ -159,35 +192,14 @@ export class IPCHandler {
     });
 
     // Log handler registration
-    logger.info(`IPC Handler registered: ${channel}`);
+    ipcLogger.info(`IPC Handler registered: ${channel}`);
   }
 
   /**
    * Generate unique request ID for tracking
    */
   private static generateRequestId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * Sanitize request data for logging
-   * Remove sensitive fields like passwords
-   */
-  private static sanitizeForLog(data: unknown): unknown {
-    if (!data || typeof data !== 'object') {
-      return data;
-    }
-
-    const sanitized = { ...data } as any;
-    const sensitiveFields = ['password', 'token', 'secret', 'apiKey'];
-
-    for (const field of sensitiveFields) {
-      if (field in sanitized) {
-        sanitized[field] = '***REDACTED***';
-      }
-    }
-
-    return sanitized;
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
 
   /**
@@ -195,7 +207,7 @@ export class IPCHandler {
    */
   static removeAllHandlers(): void {
     ipcMain.removeAllListeners();
-    logger.info('All IPC handlers removed');
+    ipcLogger.info('All IPC handlers removed');
   }
 
   /**
@@ -203,6 +215,6 @@ export class IPCHandler {
    */
   static removeHandler(channel: IPCChannel): void {
     ipcMain.removeHandler(channel);
-    logger.info(`IPC Handler removed: ${channel}`);
+    ipcLogger.info(`IPC Handler removed: ${channel}`);
   }
 }

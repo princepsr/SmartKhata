@@ -3,7 +3,7 @@ import './ErrorBoundary.css';
 
 /**
  * Error Boundary Component
- * 
+ *
  * Catches React component errors and displays a fallback UI.
  * Prevents the entire app from crashing due to component errors.
  */
@@ -28,22 +28,36 @@ class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
+  static getDerivedStateFromError(_error: Error): Partial<State> {
     // Update state so the next render will show the fallback UI
     return { hasError: true };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log error details (in production, send to error reporting service)
-    console.error('Error Boundary caught an error:', error, errorInfo);
-    
+    // Log to console locally
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+
     this.setState({
       error,
       errorInfo,
     });
 
-    // TODO: Send to error reporting service (e.g., Sentry)
-    // reportError(error, errorInfo);
+    // Report error to main process via IPC
+    if (window.api?.invoke) {
+      window.api
+        .invoke('app:report-error', {
+          error: {
+            message: error.message,
+            stack: error.stack,
+          },
+          errorInfo: {
+            componentStack: errorInfo.componentStack,
+          },
+        })
+        .catch((err) => {
+          console.error('Failed to report error to main process:', err);
+        });
+    }
   }
 
   handleReset = (): void => {
@@ -66,8 +80,7 @@ class ErrorBoundary extends Component<Props, State> {
             <div className="error-icon">⚠️</div>
             <h1 className="error-title">Something went wrong</h1>
             <p className="error-message">
-              The application encountered an unexpected error.
-              Don't worry, your data is safe.
+              The application encountered an unexpected error. Don't worry, your data is safe.
             </p>
 
             {/* Show error message (not stack trace) */}
@@ -79,16 +92,10 @@ class ErrorBoundary extends Component<Props, State> {
             )}
 
             <div className="error-actions">
-              <button 
-                onClick={this.handleReset}
-                className="btn btn-primary"
-              >
+              <button onClick={this.handleReset} className="btn btn-primary">
                 Try Again
               </button>
-              <button 
-                onClick={this.handleReload}
-                className="btn btn-secondary"
-              >
+              <button onClick={this.handleReload} className="btn btn-secondary">
                 Reload App
               </button>
             </div>

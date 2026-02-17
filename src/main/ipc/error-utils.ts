@@ -1,6 +1,6 @@
 /**
  * IPC Error Utilities
- * 
+ *
  * Centralized logic for handling, sanitizing, and logging IPC errors.
  * Ensures no sensitive information or stack traces leak to the renderer.
  */
@@ -21,7 +21,7 @@ export enum IPCErrorType {
 
 /**
  * Custom IPC Error Class
- * 
+ *
  * Use this to throw errors with specific types/codes from handlers
  */
 export class IPCError extends Error {
@@ -37,7 +37,7 @@ export class IPCError extends Error {
 
 /**
  * Sanitize error for renderer consumption
- * 
+ *
  * Rules:
  * 1. Zod errors -> Extract first validation message
  * 2. IPCError -> Pass through message
@@ -82,7 +82,7 @@ export function logIPCError(
   requestId: string,
   duration?: number
 ): void {
-  const errorDetails: Record<string, any> = {
+  const errorDetails: Record<string, unknown> = {
     requestId,
     channel,
     duration: duration ? `${duration}ms` : undefined,
@@ -92,7 +92,7 @@ export function logIPCError(
     errorDetails.message = error.message;
     errorDetails.stack = error.stack;
     errorDetails.name = error.name;
-    
+
     if (error instanceof ZodError) {
       errorDetails.validationIssues = error.issues;
     }

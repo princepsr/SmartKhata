@@ -9,19 +9,19 @@ SmartKhata implements graceful shutdown to ensure data integrity and prevent cor
 ## Architecture
 
 ```
-User closes app
+User closes app (X / Alt+F4)
     ↓
 app.on('before-quit')
     ↓
 shutdownManager.shutdown()
     ↓
-Execute hooks (LIFO order)
+Priority-Based Execution (ASC: 100 → 300)
     ↓
-1. Flush logs
-2. Trigger backup
-3. Close database
+1. NORMAL (100): General transient services
+2. HIGH (200): Resource trackers, Stability watchdog
+3. CRITICAL (300): Database Close, WAL Checkpoint, Exit Marker
     ↓
-app.quit() (allowed to proceed)
+app.quit() (Final exit)
 ```
 
 ---
@@ -45,7 +45,7 @@ class ShutdownManager {
   // Execute all hooks in reverse order (LIFO)
   public async shutdown(): Promise<void> {
     if (this.isShuttingDown) return;
-    
+
     this.isShuttingDown = true;
     const reversedHooks = [...this.hooks].reverse();
 
@@ -89,13 +89,17 @@ export function registerShutdownHooks(): void {
 }
 ```
 
-**Execution order:** LIFO (Last In, First Out)
-- Registered: 1 → 2 → 3
-- Executed: 3 → 2 → 1
+**Execution order:** Priority Groups (100 → 200 → 300)
 
-**Why LIFO?**
-- Close database last (other hooks may need it)
-- Flush logs last (to capture all shutdown activity)
+- Registered with Group 100 (NORMAL)
+- Registered with Group 200 (HIGH) - e.g. `StabilityService`
+- Registered with Group 300 (CRITICAL) - e.g. `DatabaseManager` + `Exit Marker`
+
+**Why priority?**
+
+- Stability Service must clean up windows _before_ the Database closes.
+- Database must commit and checkpoint WAL _before_ the Exit Marker is written.
+- Exit Marker must be the _absolute last_ byte written to signify a healthy shutdown.
 
 ---
 
@@ -109,7 +113,7 @@ export function registerShutdownHooks(): void {
 app.whenReady().then(() => {
   // Register shutdown hooks on startup
   registerShutdownHooks();
-  
+
   createWindow();
 });
 ```
@@ -121,10 +125,10 @@ app.on('before-quit', async (event) => {
   if (!shutdownManager.isShutdownInProgress()) {
     // Prevent immediate quit
     event.preventDefault();
-    
+
     logger.info('App quit requested, starting graceful shutdown');
     await shutdownManager.shutdown();
-    
+
     // Now allow quit
     app.quit();
   }
@@ -177,10 +181,12 @@ app.on('before-quit', async (event) => {
 ### Database Safety
 
 **Problem:**
+
 - User closes app mid-transaction
 - Database left in inconsistent state
 
 **Solution:**
+
 ```typescript
 shutdownManager.registerHook(async () => {
   // Close database gracefully
@@ -191,6 +197,7 @@ shutdownManager.registerHook(async () => {
 ```
 
 **Future implementation:**
+
 ```typescript
 // src/main/database/connection.ts
 export async function closeDatabase(): Promise<void> {
@@ -206,10 +213,12 @@ export async function closeDatabase(): Promise<void> {
 ### Backup Trigger
 
 **Problem:**
+
 - User closes app without recent backup
 - Data loss if file corrupts
 
 **Solution:**
+
 ```typescript
 shutdownManager.registerHook(async () => {
   // Trigger backup on shutdown
@@ -218,12 +227,13 @@ shutdownManager.registerHook(async () => {
 ```
 
 **Future implementation:**
+
 ```typescript
 // src/main/services/backup-service.ts
 export async function createBackup(): Promise<void> {
   const timestamp = new Date().toISOString();
   const backupPath = `backups/backup-${timestamp}.zip`;
-  
+
   await zipDatabase(config.databasePath, backupPath);
   logger.info('Backup created', { path: backupPath });
 }
@@ -234,10 +244,12 @@ export async function createBackup(): Promise<void> {
 ### Log Flushing
 
 **Problem:**
+
 - Logs buffered in memory
 - Lost on sudden shutdown
 
 **Solution:**
+
 ```typescript
 shutdownManager.registerHook(async () => {
   // Flush logs to disk
@@ -246,6 +258,7 @@ shutdownManager.registerHook(async () => {
 ```
 
 **Future implementation:**
+
 ```typescript
 // src/main/utils/logger.ts
 public async flush(): Promise<void> {
@@ -305,6 +318,7 @@ for (const hook of reversedHooks) {
 ```
 
 **Why continue on error?**
+
 - One failed hook shouldn't block entire shutdown
 - Log the error for debugging
 - Other hooks may still succeed
@@ -314,10 +328,7 @@ for (const hook of reversedHooks) {
 ### Timeout Protection (Future)
 
 ```typescript
-async function executeHookWithTimeout(
-  hook: ShutdownHook,
-  timeoutMs: number = 5000
-): Promise<void> {
+async function executeHookWithTimeout(hook: ShutdownHook, timeoutMs: number = 5000): Promise<void> {
   const timeoutPromise = new Promise((_, reject) =>
     setTimeout(() => reject(new Error('Hook timeout')), timeoutMs)
   );
@@ -363,12 +374,12 @@ createWindow(); // ❌ Registers again (duplicates!)
 
 // Don't throw errors from hooks
 shutdownManager.registerHook(async () => {
-  throw new Error('Failed!');  // ❌ Blocks other hooks
+  throw new Error('Failed!'); // ❌ Blocks other hooks
 });
 
 // Don't perform long operations
 shutdownManager.registerHook(async () => {
-  await longRunningTask();  // ❌ User waits too long
+  await longRunningTask(); // ❌ User waits too long
 });
 ```
 
@@ -405,14 +416,20 @@ cat dev-data/logs/app-*.log
 describe('Shutdown Manager', () => {
   it('should execute hooks in LIFO order', async () => {
     const order: number[] = [];
-    
-    shutdownManager.registerHook(async () => { order.push(1); });
-    shutdownManager.registerHook(async () => { order.push(2); });
-    shutdownManager.registerHook(async () => { order.push(3); });
-    
+
+    shutdownManager.registerHook(async () => {
+      order.push(1);
+    });
+    shutdownManager.registerHook(async () => {
+      order.push(2);
+    });
+    shutdownManager.registerHook(async () => {
+      order.push(3);
+    });
+
     await shutdownManager.shutdown();
-    
-    expect(order).toEqual([3, 2, 1]);  // LIFO
+
+    expect(order).toEqual([3, 2, 1]); // LIFO
   });
 });
 ```
@@ -462,18 +479,19 @@ if (didCrashLastTime()) {
 
 ## Summary
 
-| Aspect | Implementation |
-|--------|---------------|
-| **Shutdown Manager** | Centralized hook system |
-| **Hook Order** | LIFO (Last In, First Out) |
-| **Error Handling** | Continue on failure, log errors |
-| **Database** | Placeholder for graceful close |
-| **Backup** | Placeholder for shutdown backup |
-| **Logs** | Placeholder for flush |
+| Aspect               | Implementation                  |
+| -------------------- | ------------------------------- |
+| **Shutdown Manager** | Centralized hook system         |
+| **Hook Order**       | LIFO (Last In, First Out)       |
+| **Error Handling**   | Continue on failure, log errors |
+| **Database**         | Placeholder for graceful close  |
+| **Backup**           | Placeholder for shutdown backup |
+| **Logs**             | Placeholder for flush           |
 
 **Status:** ✅ Infrastructure ready, hooks are placeholders
 
 **Next steps:**
+
 1. Implement database connection management
 2. Implement backup service
 3. Add shutdown timeout protection

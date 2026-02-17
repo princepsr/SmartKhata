@@ -11,6 +11,7 @@ import { databaseManager } from './database';
 import { migrationRunner } from './database/migrations';
 import { LicenseService } from './services/license-service';
 import { SettingsService } from './services/settings-service';
+import { StabilityService } from './services/stability-service';
 
 /**
  * Main Electron Process Entry Point
@@ -136,65 +137,99 @@ function createWindow(): void {
 
 // App lifecycle
 app.whenReady().then(async () => {
+  const bootStart = performance.now();
+  const timings: Record<string, number> = {};
+
   const config = configManager.getConfig();
 
   logger.info('=== SmartKhata Starting ===');
-  logger.info('Environment', { isDevelopment: config.isDevelopment });
-  logger.info('Version', { version: config.appVersion });
-  logger.info('User Data Path', { path: config.userDataPath });
-  logger.info('Database Path', { path: config.databasePath });
-  logger.info('Logs Path', { path: config.logsPath });
 
   // Register shutdown hooks
   registerShutdownHooks();
 
   // Initialize database
+  const dbInitStart = performance.now();
   try {
-    logger.info('Initializing database...');
-    databaseManager.initialize();
-    logger.info('Database initialized successfully');
+    const markerPath = path.join(config.userDataPath, 'clean.exit');
+    const dbFileExists = fs.existsSync(config.databasePath);
+    const markerExists = fs.existsSync(markerPath);
+    let wasCrashDetected = false;
+
+    if (dbFileExists && !markerExists) {
+      wasCrashDetected = true;
+      logger.warn('CLEAN EXIT MARKER MISSING - Application probably crashed on last run');
+    }
+
+    if (markerExists) {
+      try {
+        fs.unlinkSync(markerPath);
+      } catch (e) {
+        logger.error('Failed to remove clean exit marker', e);
+      }
+    }
+
+    databaseManager.initialize(wasCrashDetected);
   } catch (error) {
     logger.error('Failed to initialize database', { error });
-    // Show error dialog and quit
-    dialog.showErrorBox(
-      'Database Initialization Failed',
-      `SmartKhata could not initialize the database.\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nThe application will now close.`
-    );
+    dialog.showErrorBox('Database Initialization Failed', 'The application will now close.');
     app.quit();
     return;
   }
+  timings.databaseInit = performance.now() - dbInitStart;
 
   // Run database migrations
+  const migrationStart = performance.now();
   try {
-    logger.info('Running database migrations...');
     await migrationRunner.runPendingMigrations();
-    logger.info('Database migrations completed');
   } catch (error) {
     logger.error('Failed to run migrations', { error });
-    dialog.showErrorBox(
-      'Database Migration Failed',
-      `SmartKhata could not apply database migrations.\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nThe application will now close.`
-    );
+    dialog.showErrorBox('Database Migration Failed', 'The application will now close.');
     app.quit();
     return;
   }
+  timings.migrations = performance.now() - migrationStart;
 
-  // Initialize Licensing/Trial
-  try {
-    new LicenseService().initializeTrial();
-    logger.info('Licensing/Trial system initialized');
-  } catch (error) {
-    logger.error('Failed to initialize license system', { error });
-    // Not critical enough to quit, but worth logging
-  }
+  // Initialize non-critical systems concurrently
+  const servicesStart = performance.now();
+  const initPromises = [
+    (async () => {
+      try {
+        new LicenseService().initializeTrial();
+      } catch (e) {
+        logger.error('License init failed', e);
+      }
+    })(),
+    (async () => {
+      try {
+        SettingsService.getInstance().initialize();
+      } catch (e) {
+        logger.error('Settings init failed', e);
+      }
+    })(),
+    (async () => {
+      try {
+        StabilityService.getInstance().startMonitoring();
+      } catch (e) {
+        logger.error('Stability monitor failed to start', e);
+      }
+    })(),
+    (async () => {
+      registerIPCHandlers();
+    })(),
+  ];
 
-  // Register IPC handlers
-  registerIPCHandlers();
+  await Promise.all(initPromises);
+  timings.services = performance.now() - servicesStart;
 
-  // Initialize Settings Service (loads defaults/cache)
-  SettingsService.getInstance().initialize();
-
+  const windowStart = performance.now();
   createWindow();
+  timings.windowCreation = performance.now() - windowStart;
+
+  const totalTime = performance.now() - bootStart;
+  logger.info('=== Startup Profile ===', {
+    ...timings,
+    total: `${totalTime.toFixed(2)}ms`,
+  });
 
   // Register Zoom Shortcuts
 
@@ -282,23 +317,19 @@ app.on('will-quit', () => {
 // Graceful shutdown handling
 app.on('before-quit', async (event) => {
   if (!shutdownManager.isShutdownInProgress()) {
-    // Prevent immediate quit, run shutdown hooks first
+    // Prevent immediate quit and start graceful shutdown
     event.preventDefault();
-
     logger.info('App quit requested, starting graceful shutdown');
 
-    // Close database connection
     try {
-      databaseManager.close();
-      logger.info('Database connection closed');
+      await shutdownManager.shutdown();
     } catch (error) {
-      logger.error('Error closing database', { error });
+      logger.error('Graceful shutdown failed', error);
+    } finally {
+      // Force exit after shutdown hooks are done
+      logger.info('Exiting application');
+      app.quit();
     }
-
-    await shutdownManager.shutdown();
-
-    // Now allow the app to quit
-    app.quit();
   }
 });
 

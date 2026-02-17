@@ -4,7 +4,7 @@ import { configManager } from '../config/app-config';
 
 /**
  * Simple file-based logger for Electron main process
- * 
+ *
  * Features:
  * - Writes to daily log files
  * - Auto-rotates logs (keeps last 7 days)
@@ -19,24 +19,42 @@ export enum LogLevel {
   ERROR = 'ERROR',
 }
 
+/**
+ * Structured Data for Logging
+ */
+export interface LogData {
+  [key: string]: unknown;
+}
+
 class Logger {
   private logsPath: string;
   private currentLogFile: string;
   private isDevelopment: boolean;
+  private moduleName: string;
 
-  constructor() {
+  constructor(moduleName: string = 'MAIN') {
     const config = configManager.getConfig();
     this.logsPath = config.logsPath;
     this.isDevelopment = config.isDevelopment;
+    this.moduleName = moduleName;
     this.currentLogFile = this.getCurrentLogFilePath();
 
-    // Ensure logs directory exists
-    if (!fs.existsSync(this.logsPath)) {
+    // Ensure logs directory exists (only once)
+    if (this.moduleName === 'MAIN' && !fs.existsSync(this.logsPath)) {
       fs.mkdirSync(this.logsPath, { recursive: true });
     }
 
-    // Clean old logs on startup
-    this.cleanOldLogs();
+    // Clean old logs on startup (only once)
+    if (this.moduleName === 'MAIN') {
+      this.cleanOldLogs();
+    }
+  }
+
+  /**
+   * Create a child logger for a specific module
+   */
+  public forModule(module: string): Logger {
+    return new Logger(module);
   }
 
   /**
@@ -49,11 +67,51 @@ class Logger {
 
   /**
    * Format log message
+   * Output: [TIMESTAMP][LEVEL][MODULE] Message | {JSON}
    */
-  private formatMessage(level: LogLevel, message: string, data?: any): string {
+  private formatMessage(level: LogLevel, message: string, data?: LogData): string {
     const timestamp = new Date().toISOString();
-    const dataStr = data ? ` | ${JSON.stringify(data)}` : '';
-    return `[${timestamp}] [${level}] ${message}${dataStr}`;
+    const sanitizedData = data ? this.sanitizeData(data) : null;
+    const dataStr =
+      sanitizedData && Object.keys(sanitizedData).length > 0
+        ? ` | ${JSON.stringify(sanitizedData)}`
+        : '';
+
+    return `[${timestamp}][${level}][${this.moduleName}] ${message}${dataStr}`;
+  }
+
+  /**
+   * Sanitize log data to prevent PII leakage
+   * Redacts sensitive fields like names, emails, and bill items
+   */
+  private sanitizeData(data: LogData): LogData {
+    if (!data || typeof data !== 'object') {
+      return data;
+    }
+
+    const sensitiveFields = [
+      'customerName',
+      'customerPhone',
+      'customerEmail',
+      'clientName',
+      'items',
+      'lineItems',
+      'password',
+      'token',
+      'secret',
+    ];
+
+    const sanitized = { ...data };
+
+    for (const key in sanitized) {
+      if (sensitiveFields.includes(key)) {
+        sanitized[key] = '[REDACTED]';
+      } else if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
+        sanitized[key] = this.sanitizeData(sanitized[key] as LogData);
+      }
+    }
+
+    return sanitized;
   }
 
   /**
@@ -63,7 +121,6 @@ class Logger {
     try {
       fs.appendFileSync(this.currentLogFile, message + '\n', 'utf8');
     } catch (error) {
-      // Fallback to console if file write fails
       console.error('Failed to write to log file:', error);
     }
   }
@@ -73,22 +130,21 @@ class Logger {
    */
   private cleanOldLogs(): void {
     try {
+      if (!fs.existsSync(this.logsPath)) {
+        return;
+      }
       const files = fs.readdirSync(this.logsPath);
       const now = Date.now();
-      const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+      const maxAge = 7 * 24 * 60 * 60 * 1000;
 
       files.forEach((file) => {
         if (!file.startsWith('app-') || !file.endsWith('.log')) {
           return;
         }
-
         const filePath = path.join(this.logsPath, file);
         const stats = fs.statSync(filePath);
-        const age = now - stats.mtimeMs;
-
-        if (age > maxAge) {
+        if (now - stats.mtimeMs > maxAge) {
           fs.unlinkSync(filePath);
-          this.info(`Deleted old log file: ${file}`);
         }
       });
     } catch (error) {
@@ -99,82 +155,57 @@ class Logger {
   /**
    * Log message
    */
-  private log(level: LogLevel, message: string, data?: any): void {
+  private log(level: LogLevel, message: string, data?: LogData): void {
     const formattedMessage = this.formatMessage(level, message, data);
 
-    // Always write to file in production (except DEBUG)
-    if (!this.isDevelopment && level !== LogLevel.DEBUG) {
+    // File output (always in production, or if level >= INFO in dev)
+    if (!this.isDevelopment || level !== LogLevel.DEBUG) {
       this.writeToFile(formattedMessage);
     }
 
     // Console output
-    switch (level) {
-      case LogLevel.DEBUG:
-        if (this.isDevelopment) {
+    if (this.isDevelopment) {
+      switch (level) {
+        case LogLevel.DEBUG:
+          // eslint-disable-next-line no-console
           console.debug(formattedMessage);
-        }
-        break;
-      case LogLevel.INFO:
-        console.log(formattedMessage);
-        break;
-      case LogLevel.WARN:
-        console.warn(formattedMessage);
-        break;
-      case LogLevel.ERROR:
-        console.error(formattedMessage);
-        // Always write errors to file, even in dev
-        if (this.isDevelopment) {
-          this.writeToFile(formattedMessage);
-        }
-        break;
+          break;
+        case LogLevel.INFO:
+          // eslint-disable-next-line no-console
+          console.log(formattedMessage);
+          break;
+        case LogLevel.WARN:
+          console.warn(formattedMessage);
+          break;
+        case LogLevel.ERROR:
+          console.error(formattedMessage);
+          break;
+      }
     }
   }
 
-  /**
-   * Debug level (dev only)
-   */
-  public debug(message: string, data?: any): void {
+  public debug(message: string, data?: LogData): void {
     this.log(LogLevel.DEBUG, message, data);
   }
 
-  /**
-   * Info level
-   */
-  public info(message: string, data?: any): void {
+  public info(message: string, data?: LogData): void {
     this.log(LogLevel.INFO, message, data);
   }
 
-  /**
-   * Warning level
-   */
-  public warn(message: string, data?: any): void {
+  public warn(message: string, data?: LogData): void {
     this.log(LogLevel.WARN, message, data);
   }
 
-  /**
-   * Error level
-   */
-  public error(message: string, error?: Error | any): void {
-    const errorData = error instanceof Error
-      ? { message: error.message, stack: error.stack }
-      : error;
+  public error(message: string, error?: Error | unknown): void {
+    const errorData =
+      error instanceof Error ? { message: error.message, stack: error.stack } : (error as LogData);
     this.log(LogLevel.ERROR, message, errorData);
   }
 
-  /**
-   * Get path to current log file
-   */
-  public getLogFilePath(): string {
-    return this.currentLogFile;
-  }
-
-  /**
-   * Get path to logs directory
-   */
   public getLogsDirectory(): string {
     return this.logsPath;
   }
 }
 
-// Singleton instance
-export const logger = new Logger();
+// Singleton instance (default MAIN module)
+export const logger = new Logger('MAIN');

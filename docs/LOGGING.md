@@ -14,18 +14,22 @@ SmartKhata uses a simple file-based logging system for the Electron main process
 ✅ **Production mode** - File output for all logs  
 ✅ **Error tracking** - Always writes errors to file (even in dev)  
 ✅ **Structured logging** - JSON data support  
+✅ **PII Sanitization** - Automatic redaction of sensitive fields (phones, items, etc.)  
+✅ **Module Scoping** - Tagged logs (e.g., `[DB]`, `[IPC]`, `[LICENSE]`)
 
 ---
 
 ## Log File Locations
 
 ### Development
+
 ```
 SmartKhata/dev-data/logs/
 └── app-2026-02-08.log
 ```
 
 ### Production
+
 ```
 C:\Users\<Username>\AppData\Roaming\SmartKhata\logs\
 ├── app-2026-02-08.log
@@ -40,20 +44,13 @@ C:\Users\<Username>\AppData\Roaming\SmartKhata\logs\
 ### Basic Logging
 
 ```typescript
-import { logger } from '@main/utils/logger';
+// Module-specific logger (Recommended)
+const dbLogger = logger.forModule('DB');
+dbLogger.info('Query executed', { sql: 'SELECT...', duration: 5 });
 
-// Info level (general information)
+// Standard Logging
 logger.info('Application started');
-logger.info('User logged in', { userId: 123 });
-
-// Warning level (potential issues)
-logger.warn('Low stock detected', { productId: 456, stock: 5 });
-
-// Error level (errors and exceptions)
 logger.error('Failed to save sale', new Error('Database locked'));
-
-// Debug level (development only)
-logger.debug('Processing payment', { amount: 100, method: 'cash' });
 ```
 
 ### With Structured Data
@@ -64,7 +61,7 @@ logger.info('Sale completed', {
   saleId: 789,
   total: 1500,
   items: 5,
-  customer: 'Rajesh Kumar'
+  customer: 'Rajesh Kumar',
 });
 
 // Log errors with stack traces
@@ -79,25 +76,26 @@ try {
 
 ## Log Levels
 
-| Level | When to Use | Dev Output | Prod Output |
-|-------|-------------|------------|-------------|
-| `DEBUG` | Detailed debugging info | Console | ❌ Not logged |
-| `INFO` | General information | Console | File |
-| `WARN` | Potential issues | Console | File |
-| `ERROR` | Errors and exceptions | Console + File | File |
+| Level   | When to Use             | Dev Output     | Prod Output   |
+| ------- | ----------------------- | -------------- | ------------- |
+| `DEBUG` | Detailed debugging info | Console        | ❌ Not logged |
+| `INFO`  | General information     | Console        | File          |
+| `WARN`  | Potential issues        | Console        | File          |
+| `ERROR` | Errors and exceptions   | Console + File | File          |
 
 ---
 
 ## Log Format
 
 ```
-[2026-02-08T01:30:45.123Z] [INFO] Application started
-[2026-02-08T01:30:46.456Z] [INFO] User logged in | {"userId":123}
-[2026-02-08T01:30:50.789Z] [WARN] Low stock detected | {"productId":456,"stock":5}
-[2026-02-08T01:31:00.012Z] [ERROR] Failed to save sale | {"message":"Database locked","stack":"Error: Database locked\n    at ..."}
+[2026-02-17T10:00:00.000Z] [INFO][MAIN] Application started
+[2026-02-17T10:00:02.000Z] [DEBUG][DB] Query executed | {"sql":"SELECT...","duration":5}
+[2026-02-17T10:00:05.000Z] [INFO][IPC] Sale completed | {"customerPhone":"[REDACTED]","total":1500}
+[2026-02-17T10:00:10.000Z] [ERROR][MAIN] Unhandled crash | {"message":"Something broke","stack":"..."}
 ```
 
 **Format:**
+
 ```
 [ISO Timestamp] [LEVEL] Message | {"optional":"data"}
 ```
@@ -117,7 +115,7 @@ app.whenReady().then(() => {
   logger.info('Environment', { isDevelopment: config.isDevelopment });
   logger.info('Version', { version: config.appVersion });
   logger.info('Database Path', { path: config.databasePath });
-  
+
   createWindow();
 });
 ```
@@ -144,7 +142,7 @@ import { logger } from '@main/utils/logger';
 export class ProductService {
   async createProduct(data: Product): Promise<Product> {
     logger.info('Creating product', { name: data.name });
-    
+
     try {
       const product = await this.repository.create(data);
       logger.info('Product created', { id: product.id });
@@ -230,11 +228,13 @@ shell.openPath(logger.getLogsDirectory());
 ### Logs not being written
 
 **Check:**
+
 1. Logs directory exists: `C:\Users\<User>\AppData\Roaming\SmartKhata\logs\`
 2. App has write permissions
 3. Disk space available
 
 **Fix:**
+
 ```typescript
 // Logger auto-creates directory, but you can manually verify:
 import fs from 'fs';
@@ -253,6 +253,7 @@ console.log('Logs dir exists:', fs.existsSync(logsDir));
 **Fix:** Auto-cleanup runs on startup. Restart the app.
 
 **Manual cleanup:**
+
 ```typescript
 // Delete all logs older than 7 days
 import fs from 'fs';
@@ -262,7 +263,7 @@ const logsDir = logger.getLogsDirectory();
 const files = fs.readdirSync(logsDir);
 const maxAge = 7 * 24 * 60 * 60 * 1000;
 
-files.forEach(file => {
+files.forEach((file) => {
   const filePath = path.join(logsDir, file);
   const stats = fs.statSync(filePath);
   if (Date.now() - stats.mtimeMs > maxAge) {
@@ -334,16 +335,17 @@ logger.onError((message, error) => {
 
 ## Summary
 
-| Aspect | Solution |
-|--------|----------|
-| **Storage** | Daily files in `AppData/Roaming/SmartKhata/logs/` |
-| **Rotation** | Auto-delete logs older than 7 days |
-| **Dev mode** | Console output (errors also to file) |
-| **Prod mode** | All logs to file |
-| **Format** | `[timestamp] [level] message \| {data}` |
-| **Usage** | `logger.info()`, `logger.warn()`, `logger.error()` |
+| Aspect        | Solution                                           |
+| ------------- | -------------------------------------------------- |
+| **Storage**   | Daily files in `AppData/Roaming/SmartKhata/logs/`  |
+| **Rotation**  | Auto-delete logs older than 7 days                 |
+| **Dev mode**  | Console output (errors also to file)               |
+| **Prod mode** | All logs to file                                   |
+| **Format**    | `[timestamp] [level] message \| {data}`            |
+| **Usage**     | `logger.info()`, `logger.warn()`, `logger.error()` |
 
 **Philosophy:**
+
 - ✅ Simple file-based logging
 - ✅ No external dependencies
 - ✅ Automatic rotation

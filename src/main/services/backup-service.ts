@@ -18,6 +18,8 @@ import { SettingsService } from './settings-service';
 import { logger } from '@main/utils/logger';
 import { BackupMeta } from '@shared/types/ipc';
 
+const backupLogger = logger.forModule('BACKUP');
+
 class BackupService {
   private _settingsService: SettingsService | null = null;
 
@@ -95,7 +97,7 @@ class BackupService {
     const tempDbPath = path.join(app.getPath('temp'), `smartkhata_temp_${Date.now()}.db`);
 
     try {
-      logger.info('Starting structured backup...', { destinationPath: finalPath });
+      backupLogger.info('Starting structured backup...', { destinationPath: finalPath });
 
       // 1. Backup SQLite DB to a temporary file
       const db = databaseManager.getDatabase();
@@ -122,10 +124,10 @@ class BackupService {
       // 4. Save ZIP to destination
       zip.writeZip(finalPath);
 
-      logger.info('Structured backup completed successfully', { destinationPath: finalPath });
+      backupLogger.info('Structured backup completed successfully', { destinationPath: finalPath });
       return finalPath;
     } catch (error) {
-      logger.error('Database backup failed', { error });
+      backupLogger.error('Database backup failed', error);
 
       let userMessage = 'Backup failed: An unexpected error occurred.';
       if (error instanceof Error) {
@@ -146,7 +148,7 @@ class BackupService {
         try {
           fs.unlinkSync(tempDbPath);
         } catch {
-          logger.warn('Failed to cleanup temp database file', { path: tempDbPath });
+          backupLogger.warn('Failed to cleanup temp database file', { path: tempDbPath });
         }
       }
     }
@@ -166,7 +168,7 @@ class BackupService {
     let didMoveToSafety = false;
 
     try {
-      logger.info('Starting database restore from ZIP...', { sourcePath });
+      backupLogger.info('Starting database restore from ZIP...', { sourcePath });
 
       // 0. Validate Backup First (Fail Fast)
       await this.validateBackup(sourcePath);
@@ -189,12 +191,12 @@ class BackupService {
       const extractedSettingsPath = path.join(tempExtractDir, 'settings.json');
       if (fs.existsSync(extractedSettingsPath)) {
         try {
-          logger.debug('Restoring application settings');
+          backupLogger.debug('Restoring application settings');
           const settingsContent = fs.readFileSync(extractedSettingsPath, 'utf8');
           const settings = JSON.parse(settingsContent);
           this.settingsService.updateConfig(settings);
         } catch (settingsError) {
-          logger.warn('Failed to restore settings, continuing with database restore', {
+          backupLogger.warn('Failed to restore settings, continuing with database restore', {
             settingsError,
           });
         }
@@ -203,18 +205,18 @@ class BackupService {
       // 2. Atomic Restore Process
 
       // Step A: Close current connection
-      logger.debug('Closing active database connection');
+      backupLogger.debug('Closing active database connection');
       databaseManager.close();
 
       // Step B: Rename current database to safety backup (Atomic Move)
       // This is faster and safer than copy
-      logger.debug('Moving active database to safety backup', { safetyBackupPath });
+      backupLogger.debug('Moving active database to safety backup', { safetyBackupPath });
       if (fs.existsSync(activeDbPath)) {
         try {
           fs.renameSync(activeDbPath, safetyBackupPath);
           didMoveToSafety = true;
         } catch (renameError) {
-          logger.error('Failed to move active DB to safety', { renameError });
+          backupLogger.error('Failed to move active DB to safety', renameError);
           throw new Error(
             'Failed to prepare for restore. Please check folder permissions and try again.'
           );
@@ -222,11 +224,11 @@ class BackupService {
       }
 
       // Step C: Perform the restore (copy extracted data.db to active location)
-      logger.debug('Copying backup data to active database location');
+      backupLogger.debug('Copying backup data to active database location');
       try {
         fs.copyFileSync(extractedDbPath, activeDbPath);
       } catch (copyError) {
-        logger.error('Failed to copy extracted DB to active', { copyError });
+        backupLogger.error('Failed to copy extracted DB to active', copyError);
         throw new Error(
           'Not enough space or permission to restore the data. Please check your disk space.'
         );
@@ -243,11 +245,11 @@ class BackupService {
       }
 
       // Step E: Re-initialize to verify the new file is loadable
-      logger.debug('Re-initializing database');
+      backupLogger.debug('Re-initializing database');
       databaseManager.initialize();
 
       // Step F: Integrity Check
-      logger.debug('Running PRAGMA integrity_check');
+      backupLogger.debug('Running PRAGMA integrity_check');
       const db = databaseManager.getDatabase();
       const integrity = db.pragma('integrity_check') as [{ integrity_check: string }];
 
@@ -257,14 +259,14 @@ class BackupService {
         );
       }
 
-      logger.info('Database restored and verified successfully');
+      backupLogger.info('Database restored and verified successfully');
 
       // Success! Clean up safety backup
       if (fs.existsSync(safetyBackupPath)) {
         fs.unlinkSync(safetyBackupPath);
       }
     } catch (error) {
-      logger.error('Database restore failed', { error });
+      backupLogger.error('Database restore failed', error);
 
       // ROLLBACK ATTEMPT
       try {
@@ -284,20 +286,20 @@ class BackupService {
 
           // Restore safety backup
           if (fs.existsSync(safetyBackupPath)) {
-            logger.warn('Rolling back to safety backup...', { safetyBackupPath });
+            backupLogger.warn('Rolling back to safety backup...', { safetyBackupPath });
             fs.renameSync(safetyBackupPath, activeDbPath);
           } else {
-            logger.error('CRITICAL: Safety backup missing, cannot roll back');
+            backupLogger.error('CRITICAL: Safety backup missing, cannot roll back');
           }
         }
 
         // Re-initialize (either the restored original or the untouched original)
         databaseManager.initialize();
         if (didMoveToSafety) {
-          logger.info('Rollback to safety backup successful');
+          backupLogger.info('Rollback to safety backup successful');
         }
       } catch (rollbackError) {
-        logger.error('CRITICAL: Rollback failed', { rollbackError });
+        backupLogger.error('CRITICAL: Rollback failed', rollbackError);
       }
 
       throw new Error(
@@ -309,7 +311,9 @@ class BackupService {
         try {
           fs.rmSync(tempExtractDir, { recursive: true, force: true });
         } catch {
-          logger.warn('Failed to cleanup temporary extraction directory', { path: tempExtractDir });
+          backupLogger.warn('Failed to cleanup temporary extraction directory', {
+            path: tempExtractDir,
+          });
         }
       }
 
@@ -319,7 +323,7 @@ class BackupService {
         try {
           databaseManager.initialize();
         } catch {
-          logger.error('System left in uninitialized state after restore failure');
+          backupLogger.error('System left in uninitialized state after restore failure');
         }
       }
     }
@@ -399,7 +403,7 @@ class BackupService {
       const metaContent = metaEntry.getData().toString('utf8');
       return JSON.parse(metaContent);
     } catch (error) {
-      logger.error('Failed to read backup metadata', { error, sourcePath });
+      backupLogger.error('Failed to read backup metadata', { error, sourcePath });
       throw error instanceof Error ? error : new Error('Failed to read backup information.');
     }
   }

@@ -47,9 +47,13 @@ export function registerSystemHandlers(): void {
       schemaVersion: number;
       tableCount: number;
       isReady: boolean;
+      integrityOk: boolean;
+      wasCrashDetected: boolean;
+      error?: string;
     }
   >(IPC_CHANNELS.SYSTEM_DB_STATUS, async () => {
     const db = databaseManager.getDatabase();
+    const status = databaseManager.getStatus();
 
     // Get schema version
     const schemaVersion = migrationRunner.getCurrentVersion();
@@ -71,6 +75,9 @@ export function registerSystemHandlers(): void {
       schemaVersion,
       tableCount: tables.count,
       isReady: databaseManager.isReady(),
+      integrityOk: status.integrityOk,
+      wasCrashDetected: status.wasCrashDetected,
+      error: status.error,
     };
   });
 

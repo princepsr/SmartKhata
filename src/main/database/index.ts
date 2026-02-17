@@ -4,12 +4,14 @@ import fs from 'fs';
 import { configManager } from '@main/config/app-config';
 import { logger } from '@main/utils/logger';
 
+const dbLogger = logger.forModule('DB');
+
 /**
  * Database Manager
- * 
+ *
  * Handles SQLite database initialization, connection management,
  * and graceful error recovery.
- * 
+ *
  * RULES:
  * - Singleton pattern (one connection per app lifecycle)
  * - Synchronous API only (better-sqlite3)
@@ -21,6 +23,8 @@ class DatabaseManager {
   private db: Database.Database | null = null;
   private dbPath: string;
   private isInitialized = false;
+  private wasCrashDetected = false;
+  private lastIntegrityCheck: { ok: boolean; message?: string } | null = null;
 
   constructor() {
     this.dbPath = configManager.get('databasePath');
@@ -28,18 +32,22 @@ class DatabaseManager {
 
   /**
    * Initialize database connection
-   * 
-   * Creates database file if it doesn't exist,
-   * sets up WAL mode, and verifies integrity.
+   *
+   * @param wasCrashDetected - Whether a crash was detected on startup
    */
-  public initialize(): void {
+  public initialize(wasCrashDetected = false): void {
     if (this.isInitialized) {
-      logger.warn('Database already initialized');
+      dbLogger.warn('Database already initialized');
       return;
     }
 
+    this.wasCrashDetected = wasCrashDetected;
+
     try {
-      logger.info('Initializing database...', { path: this.dbPath });
+      dbLogger.info('Initializing database...', {
+        path: this.dbPath,
+        crashDetected: this.wasCrashDetected,
+      });
 
       // Step 1: Ensure database directory exists
       this.ensureDatabaseDirectory();
@@ -53,22 +61,27 @@ class DatabaseManager {
       // Step 4: Configure database
       this.configureDatabase();
 
-      // Step 5: Verify integrity
+      // Step 5: Verify integrity (Always on startup for now, but explicit on crash)
+      if (this.wasCrashDetected) {
+        dbLogger.warn('Crash detected on previous exit - performing mandatory integrity check');
+      }
       this.verifyIntegrity();
 
       // Step 6: Run migrations (if needed)
       if (isFirstRun) {
-        logger.info('First run detected - database will be initialized by migrations');
+        dbLogger.info('First run detected - database will be initialized by migrations');
       }
 
       this.isInitialized = true;
-      logger.info('Database initialized successfully', {
+      dbLogger.info('Database initialized successfully', {
         path: this.dbPath,
         firstRun: isFirstRun,
       });
     } catch (error) {
-      logger.error('Failed to initialize database', { error });
-      throw new Error(`Database initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      dbLogger.error('Failed to initialize database', error);
+      throw new Error(
+        `Database initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -80,7 +93,7 @@ class DatabaseManager {
 
     try {
       if (!fs.existsSync(dbDir)) {
-        logger.info('Creating database directory', { path: dbDir });
+        dbLogger.info('Creating database directory', { path: dbDir });
         fs.mkdirSync(dbDir, { recursive: true });
       }
 
@@ -89,12 +102,13 @@ class DatabaseManager {
       try {
         fs.writeFileSync(testFile, 'test');
         fs.unlinkSync(testFile);
-        logger.debug('Database directory is writable');
-      } catch (permError) {
+        dbLogger.debug('Database directory is writable');
+      } catch (error) {
+        dbLogger.error('Permission test failed', error);
         throw new Error(`Database directory is not writable: ${dbDir}`);
       }
     } catch (error) {
-      logger.error('Failed to create database directory', { error, path: dbDir });
+      dbLogger.error('Failed to create database directory', { error, path: dbDir });
       throw error;
     }
   }
@@ -105,15 +119,15 @@ class DatabaseManager {
   private openDatabase(): Database.Database {
     try {
       const db = new Database(this.dbPath, {
-        verbose: configManager.get('isDevelopment') ? logger.debug.bind(logger) : undefined,
+        verbose: configManager.get('isDevelopment') ? dbLogger.debug.bind(dbLogger) : undefined,
       });
 
-      logger.info('Database connection opened', { path: this.dbPath });
+      dbLogger.info('Database connection opened', { path: this.dbPath });
       return db;
     } catch (error) {
       // Handle corruption
       if (error instanceof Error && error.message.includes('corrupt')) {
-        logger.error('Database corruption detected', { error });
+        dbLogger.error('Database corruption detected', error);
         return this.handleCorruption();
       }
 
@@ -123,7 +137,7 @@ class DatabaseManager {
 
   /**
    * Configure database settings
-   * 
+   *
    * - WAL mode for better concurrency
    * - Foreign keys enabled
    * - Busy timeout for lock handling
@@ -135,33 +149,33 @@ class DatabaseManager {
 
     try {
       // Enable WAL mode (Write-Ahead Logging)
-      // Benefits: Better concurrency, faster writes, crash recovery
       this.db.pragma('journal_mode = WAL');
-      logger.debug('WAL mode enabled');
+      dbLogger.debug('WAL mode enabled');
 
       // Enable foreign key constraints
       this.db.pragma('foreign_keys = ON');
-      logger.debug('Foreign keys enabled');
+      dbLogger.debug('Foreign keys enabled');
 
       // Set busy timeout (wait up to 5 seconds for locks)
+      // This is the built-in SQLite retry mechanism
       this.db.pragma('busy_timeout = 5000');
-      logger.debug('Busy timeout set to 5000ms');
+      dbLogger.debug('Busy timeout set to 5000ms');
 
-      // Synchronous mode: FULL (maximum safety, data loss prevention)
-      // Ensures data is written to disk before commit
-      // Priority: Data safety > raw speed
+      // Synchronous mode: FULL (maximum safety)
       this.db.pragma('synchronous = FULL');
-      logger.debug('Synchronous mode set to FULL');
+      dbLogger.debug('Synchronous mode set to FULL');
     } catch (error) {
-      logger.error('Failed to configure database', { error });
+      dbLogger.error('Failed to configure database', error);
       throw error;
     }
   }
 
   /**
    * Verify database integrity
-   * 
-   * Runs SQLite's integrity_check to detect corruption
+   *
+   * Runs SQLite's check to detect corruption.
+   * Optimized: Runs deep 'integrity_check' ONLY on crash.
+   * Runs faster 'quick_check' on normal startup.
    */
   private verifyIntegrity(): void {
     if (!this.db) {
@@ -169,37 +183,37 @@ class DatabaseManager {
     }
 
     try {
-      const result = this.db.pragma('integrity_check') as Array<{ integrity_check: string }>;
-      
-      if (result.length === 1 && result[0].integrity_check === 'ok') {
-        logger.debug('Database integrity check passed');
+      // Use quick_check for normal startup, integrity_check for crash recovery
+      const pragma = this.wasCrashDetected ? 'integrity_check' : 'quick_check';
+      const result = this.db.pragma(pragma) as Array<{ [key: string]: string }>;
+
+      const status =
+        result[0][pragma] || (result[0] as any).integrity_check || (result[0] as any).quick_check;
+
+      if (status === 'ok') {
+        dbLogger.info(`Database ${pragma} passed`);
+        this.lastIntegrityCheck = { ok: true };
       } else {
-        logger.error('Database integrity check failed', { result });
-        throw new Error('Database integrity check failed');
+        const message = `Database ${pragma} failed: ${JSON.stringify(result)}`;
+        dbLogger.error(message);
+        this.lastIntegrityCheck = { ok: false, message };
+
+        // If check fails, attempt recovery
+        this.handleCorruption();
       }
     } catch (error) {
-      logger.error('Integrity check error', { error });
-      
-      // If integrity check fails, attempt recovery
-      if (error instanceof Error && error.message.includes('integrity')) {
-        this.handleCorruption();
-      } else {
-        throw error;
-      }
+      const message = error instanceof Error ? error.message : 'Unknown integrity error';
+      dbLogger.error('Integrity check error', error);
+      this.lastIntegrityCheck = { ok: false, message };
+      throw error;
     }
   }
 
   /**
    * Handle database corruption
-   * 
-   * Strategy:
-   * 1. Close current connection
-   * 2. Backup corrupted file
-   * 3. Create new database
-   * 4. Log incident for user notification
    */
   private handleCorruption(): Database.Database {
-    logger.error('Attempting to recover from database corruption');
+    dbLogger.error('Attempting to recover from database corruption');
 
     try {
       // Close existing connection if any
@@ -211,7 +225,7 @@ class DatabaseManager {
       const backupPath = `${this.dbPath}.corrupted.${Date.now()}.bak`;
       if (fs.existsSync(this.dbPath)) {
         fs.copyFileSync(this.dbPath, backupPath);
-        logger.info('Corrupted database backed up', { backupPath });
+        dbLogger.info('Corrupted database backed up', { backupPath });
       }
 
       // Delete corrupted database and WAL files
@@ -223,19 +237,19 @@ class DatabaseManager {
 
       // Create new database
       const newDb = new Database(this.dbPath);
-      logger.info('New database created after corruption recovery');
+      this.db = newDb;
+      this.configureDatabase();
+      dbLogger.info('New database created after corruption recovery');
 
       return newDb;
     } catch (error) {
-      logger.error('Failed to recover from corruption', { error });
+      dbLogger.error('Failed to recover from corruption', error);
       throw new Error('Database corruption recovery failed');
     }
   }
 
   /**
    * Get database instance
-   * 
-   * @throws Error if database not initialized
    */
   public getDatabase(): Database.Database {
     if (!this.db || !this.isInitialized) {
@@ -247,8 +261,6 @@ class DatabaseManager {
 
   /**
    * Close database connection
-   * 
-   * Should be called on app shutdown
    */
   public close(): void {
     if (this.db) {
@@ -256,9 +268,9 @@ class DatabaseManager {
         // Checkpoint WAL file before closing
         this.db.pragma('wal_checkpoint(TRUNCATE)');
         this.db.close();
-        logger.info('Database connection closed');
+        dbLogger.info('Database connection closed');
       } catch (error) {
-        logger.error('Error closing database', { error });
+        dbLogger.error('Error closing database', error);
       } finally {
         this.db = null;
         this.isInitialized = false;
@@ -267,14 +279,70 @@ class DatabaseManager {
   }
 
   /**
-   * Execute a function within a transaction
-   * 
-   * Automatically rolls back on error
+   * Execute a function within a transaction with retries for "database is locked"
    */
   public transaction<T>(fn: () => T): T {
-    const db = this.getDatabase();
-    const transaction = db.transaction(fn);
-    return transaction();
+    return this.runWithRetry(() => {
+      const db = this.getDatabase();
+      const transaction = db.transaction(fn);
+      return transaction();
+    });
+  }
+
+  /**
+   * Wrapper to run database operations with a simple retry mechanism for SQLITE_BUSY
+   */
+  public runWithRetry<T>(operation: () => T, maxRetries = 3, delayMs = 100): T {
+    let lastError: Error | unknown;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return operation();
+      } catch (error) {
+        lastError = error;
+
+        // Check if error is "database is locked" (SQLITE_BUSY)
+        const isLocked =
+          error instanceof Error &&
+          ((error as { code?: string }).code === 'SQLITE_BUSY' || error.message.includes('locked'));
+
+        if (isLocked) {
+          dbLogger.warn(
+            `Database busy (attempt ${attempt}/${maxRetries}), retrying in ${delayMs}ms...`
+          );
+
+          if (attempt < maxRetries) {
+            // Synchronous wait (since better-sqlite3 is synchronous)
+            const start = Date.now();
+            while (Date.now() - start < delayMs) {
+              /* wait */
+            }
+            continue;
+          }
+        }
+
+        throw error;
+      }
+    }
+
+    throw lastError;
+  }
+
+  /**
+   * Get database status for health monitoring
+   */
+  public getStatus(): {
+    initialized: boolean;
+    integrityOk: boolean;
+    wasCrashDetected: boolean;
+    error?: string;
+  } {
+    return {
+      initialized: this.isInitialized,
+      integrityOk: this.lastIntegrityCheck?.ok ?? false,
+      wasCrashDetected: this.wasCrashDetected,
+      error: this.lastIntegrityCheck?.message,
+    };
   }
 
   /**
