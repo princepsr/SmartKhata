@@ -21,6 +21,8 @@ The module is divided into four functional areas:
 
 - **Shop Info**: Store profile, contact details, and branding.
 - **Inventory**: Stock alert thresholds and management rules.
+- **Printing**: Thermal printer selection, paper size (58mm/80mm), and receipt formatting.
+- **Licensing**: Activation, machine binding, and license status tracking.
 - **Data Management**: Backup, Restore, and Reset operations.
 - **System Debug**: Real-time IPC diagnostics and database status.
 
@@ -54,5 +56,5 @@ The Debug tab uses a specific row-based grid system for displaying technical met
 
 ---
 
-**Last updated:** 2026-02-11  
-**Version:** 1.0
+**Last updated:** 2026-02-18 (Phase 1 Complete)  
+**Status:** ✅ Unified configuration hub verified

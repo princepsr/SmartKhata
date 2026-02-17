@@ -9,6 +9,7 @@ Successfully installed all core dependencies for the SmartKhata Electron project
 ## Installed Packages
 
 ### Core Dependencies (Production)
+
 ```json
 {
   "react": "^18.3.1",
@@ -17,6 +18,7 @@ Successfully installed all core dependencies for the SmartKhata Electron project
 ```
 
 ### Development Dependencies
+
 ```json
 {
   "electron": "^34.0.0",
@@ -43,6 +45,7 @@ Successfully installed all core dependencies for the SmartKhata Electron project
 ## Installation Steps
 
 ### 1. Install pnpm (if not already installed)
+
 ```bash
 npm install -g pnpm
 ```
@@ -50,6 +53,7 @@ npm install -g pnpm
 **Result:** pnpm v10.29.1 installed globally
 
 ### 2. Install project dependencies
+
 ```bash
 pnpm install
 ```
@@ -61,6 +65,7 @@ pnpm install
 ## Verification
 
 ### Check Electron version
+
 ```bash
 pnpm electron --version
 ```
@@ -68,6 +73,7 @@ pnpm electron --version
 **Expected output:** `v34.0.0`
 
 ### Check pnpm version
+
 ```bash
 pnpm --version
 ```
@@ -75,6 +81,7 @@ pnpm --version
 **Expected output:** `10.29.1`
 
 ### Verify TypeScript
+
 ```bash
 pnpm tsc --version
 ```
@@ -86,6 +93,7 @@ pnpm tsc --version
 ## Package Manager Choice: pnpm
 
 **Why pnpm?**
+
 - ✅ **Faster installs** (~2x faster than npm on Windows)
 - ✅ **Disk efficient** (symlinks to global store)
 - ✅ **Strict dependencies** (prevents phantom dependencies)
@@ -117,6 +125,7 @@ Already configured in `package.json`:
 ```
 
 **Why electron-builder?**
+
 - ✅ Most popular Electron packaging tool
 - ✅ Supports NSIS installer + portable exe
 - ✅ Auto-update support (for future)
@@ -126,70 +135,52 @@ Already configured in `package.json`:
 
 ---
 
-## Next Steps
+## Production Build & Distribution
 
-### 1. Verify Electron launches
+Once development is complete, follow these steps to generate the production-ready installer for Windows.
+
+### 1. Pre-Build Verification
+
+Run the automated quality gates to ensure the code is stable:
+
 ```bash
-# This will fail until we create the entry point files
-pnpm dev
+pnpm release:check
 ```
 
-**Expected error:** Cannot find module (because src files don't exist yet)
+### 2. Generate Installer
 
-### 2. Create minimal entry point files
-- `src/main/index.ts` ✅ (already created)
-- `src/preload/index.ts` (needs creation)
-- `src/renderer/index.tsx` (needs creation)
-- `src/renderer/index.html` (needs creation)
+Run the distribution build command:
 
-### 3. Test development mode
 ```bash
-pnpm dev
+pnpm build:win
 ```
+
+### 3. Distribution Artifacts
+
+The build process generates artifacts in the `release/` directory:
+
+| Artifact            | File Name                    | Purpose                                             |
+| ------------------- | ---------------------------- | --------------------------------------------------- |
+| **NSIS Installer**  | `SmartKhata Setup 1.0.0.exe` | Full installer for permanent PC setup.              |
+| **Portable**        | `SmartKhata 1.0.0.exe`       | Single-file executable (no installation needed).    |
+| **Update Metadata** | `latest.yml`                 | Used by auto-updater for background version checks. |
 
 ---
 
-## Troubleshooting
+## Post-Installation Verification
 
-### pnpm not found after installation
+### AppData Directory
 
-**Fix (Windows):**
-```bash
-# Close and reopen terminal
-# Or add to PATH manually
-```
+After the first launch on a clean system, verify the local data directory:
+**Path:** `%APPDATA%\SmartKhata\`
 
-### Electron download fails
+**Expected Files:**
 
-**Fix:**
-```bash
-# Use npm mirror (if needed)
-pnpm config set electron_mirror https://npmmirror.com/mirrors/electron/
-pnpm install
-```
-
-### TypeScript errors
-
-**Expected:** TypeScript errors are normal until we run `pnpm install`
-**Fix:** Already resolved by installing dependencies
+- `database/smartkhata.db` (Initialized with migrations)
+- `logs/APP.log` (Boot sequence records)
+- `backups/` (Empty directory for auto-backups)
 
 ---
 
-## Installation Summary
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| **electron** | 34.0.0 | Desktop framework |
-| **electron-builder** | 25.1.8 | Packaging & distribution |
-| **react** | 18.3.1 | UI framework |
-| **vite** | 6.0.5 | Build tool & dev server |
-| **typescript** | 5.7.2 | Type safety |
-| **pnpm** | 10.29.1 | Package manager |
-
-**Status:** ✅ All core dependencies installed and ready
-
----
-
-**Completed:** 2026-02-08  
-**Time taken:** ~2 minutes  
-**Next task:** Create minimal React entry point files
+**Last updated:** 2026-02-18 (Phase 1 Complete)
+**Status:** ✅ Production distribution pipeline verified

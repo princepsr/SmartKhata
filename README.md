@@ -4,6 +4,8 @@
 
 A fast, offline-first point-of-sale system built for Indian kirana shops.
 
+**[Phase 1 Completion Summary](docs/PHASE1_COMPLETION_SUMMARY.md)** | **[Changelog](CHANGELOG.md)** | **[Installation Guide](docs/INSTALLATION.md)**
+
 ---
 
 ## Tech Stack
@@ -111,6 +113,7 @@ pnpm lint             # Check linting errors
 pnpm lint:fix         # Auto-fix linting errors
 pnpm format           # Format code with Prettier
 pnpm type-check       # TypeScript type checking
+pnpm release:check    # Quality gates (Lint + Types + Tests)
 
 # Testing
 pnpm test             # Run all tests
@@ -243,8 +246,8 @@ pnpm build:win
 
 ```
 release/
-├── SmartKhata Setup 0.1.0.exe    # Installer
-└── SmartKhata 0.1.0.exe          # Portable
+├── SmartKhata Setup 1.0.0.exe    # Installer
+└── SmartKhata 1.0.0.exe          # Portable
 ```
 
 ### Portable Only (faster for testing)
@@ -257,62 +260,62 @@ pnpm build:win:portable
 
 ---
 
-## Team Structure
+## Documentation Index
 
-| Developer | Responsibility                       |
-| --------- | ------------------------------------ |
-| **Dev 1** | Electron main process, IPC, printing |
-| **Dev 2** | React UI, UX, components             |
-| **Dev 3** | Database, services, business logic   |
-
-**Workflow:** See [GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)
-
----
-
-## Documentation
-
-### Core Architecture
+### 🏗️ Architecture & Core Logic
 
 | Document                                                    | Purpose                               |
-| ----------------------------------------------------------- | ------------------------------------- |
-| [CURRENT_ARCHITECTURE.md](docs/CURRENT_ARCHITECTURE.md)     | **Complete architecture overview**    |
-| [ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md) | Tech choices, service layer, patterns |
-| [FOLDER_STRUCTURE.md](docs/FOLDER_STRUCTURE.md)             | Complete folder breakdown             |
+| :---------------------------------------------------------- | :------------------------------------ |
+| [CURRENT_ARCHITECTURE.md](docs/CURRENT_ARCHITECTURE.md)     | **High-level architecture overview**  |
+| [ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md) | Technical choices and design patterns |
+| [FOLDER_STRUCTURE.md](docs/FOLDER_STRUCTURE.md)             | Detailed file/folder responsibilities |
+| [BILLING_SERVICE_FLOW.md](docs/BILLING_SERVICE_FLOW.md)     | State machine for atomic billing      |
+| [PRINT_SERVICE.md](docs/PRINT_SERVICE.md)                   | Thermal printing & window pooling     |
+| [REPORTS_ARCHITECTURE.md](docs/REPORTS_ARCHITECTURE.md)     | Analytics & multi-format exports      |
 
-### Service Layer
+### �️ System Reliability
 
-| Document                                                  | Purpose                                |
-| --------------------------------------------------------- | -------------------------------------- |
-| [SERVICE_LAYER_RULES.md](docs/SERVICE_LAYER_RULES.md)     | Service layer responsibilities & rules |
-| [SERVICE_ERROR_FLOW.md](docs/SERVICE_ERROR_FLOW.md)       | Error handling & typed errors          |
-| [IPC_SERVICE_MAPPING.md](docs/IPC_SERVICE_MAPPING.md)     | IPC to service communication           |
-| [SERVICE_LAYER_TESTING.md](docs/SERVICE_LAYER_TESTING.md) | Testing strategy                       |
-| [TESTING_GUIDE.md](docs/TESTING_GUIDE.md)                 | How to run and write tests             |
+| Document                                                              | Purpose                               |
+| :-------------------------------------------------------------------- | :------------------------------------ |
+| [SERVICE_ERROR_FLOW.md](docs/SERVICE_ERROR_FLOW.md)                   | Standardized error mapping (Ipc/Main) |
+| [GRACEFUL_SHUTDOWN.md](docs/GRACEFUL_SHUTDOWN.md)                     | WAL checkpointing & shutdown hooks    |
+| [ERROR_HANDLING.md](docs/ERROR_HANDLING.md)                           | Global crash recovery & logging       |
+| [DATABASE_PERFORMANCE_SAFETY.md](docs/DATABASE_PERFORMANCE_SAFETY.md) | WAL mode & query optimization         |
 
-### Database & Repository
+### �📂 Data & Persistence
 
-| Document                                                  | Purpose                       |
-| --------------------------------------------------------- | ----------------------------- |
-| [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)             | Complete schema documentation |
-| [REPOSITORY_RULES.md](docs/REPOSITORY_RULES.md)           | Repository pattern & rules    |
-| [DATABASE_TRANSACTIONS.md](docs/DATABASE_TRANSACTIONS.md) | Transaction handling          |
+| Document                                                  | Purpose                            |
+| :-------------------------------------------------------- | :--------------------------------- |
+| [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)             | Product, Bill, and Customer tables |
+| [REPOSITORY_RULES.md](docs/REPOSITORY_RULES.md)           | SQL query & domain mapping rules   |
+| [DATABASE_TRANSACTIONS.md](docs/DATABASE_TRANSACTIONS.md) | ACID compliance & error recovery   |
+| [BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md)               | Atomic ZIP-based data archival     |
 
-### Development
+### 🔐 Security & Operations
 
-| Document                                            | Purpose                           |
-| --------------------------------------------------- | --------------------------------- |
-| [TYPESCRIPT_SETUP.md](docs/TYPESCRIPT_SETUP.md)     | TypeScript configs, path aliases  |
-| [LINTING_FORMATTING.md](docs/LINTING_FORMATTING.md) | ESLint + Prettier setup           |
-| [DEV_SCRIPTS.md](docs/DEV_SCRIPTS.md)               | Development workflow, HMR, builds |
-| [ENVIRONMENT_CONFIG.md](docs/ENVIRONMENT_CONFIG.md) | Config management, file paths     |
-| [LOGGING.md](docs/LOGGING.md)                       | Logging system usage              |
-| [GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)             | Branching, PRs, merge strategy    |
+| Document                                                | Purpose                                 |
+| :------------------------------------------------------ | :-------------------------------------- |
+| [LICENSING_STRATEGY.md](docs/LICENSING_STRATEGY.md)     | Trials, hardware binding, & anti-tamper |
+| [ADMIN_KEY_GENERATION.md](docs/ADMIN_KEY_GENERATION.md) | Internal license key generation guide   |
+| [APP_METADATA.md](docs/APP_METADATA.md)                 | Versioning, icons, & branding config    |
+| [LOGGING.md](docs/LOGGING.md)                           | Structured auditing & sanitized logs    |
+| [ENVIRONMENT_CONFIG.md](docs/ENVIRONMENT_CONFIG.md)     | Dev/Prod path management                |
+
+### 🛠️ Developer Guides
+
+| Document                                        | Purpose                              |
+| :---------------------------------------------- | :----------------------------------- |
+| [INSTALLATION.md](docs/INSTALLATION.md)         | **Setup & production build guide**   |
+| [DEV_SCRIPTS.md](docs/DEV_SCRIPTS.md)           | Full CLI script documentation        |
+| [TESTING_GUIDE.md](docs/TESTING_GUIDE.md)       | Unit, integration & hardware testing |
+| [TYPESCRIPT_SETUP.md](docs/TYPESCRIPT_SETUP.md) | Path aliases & TS configuration      |
+| [GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)         | Branching & merge protocols          |
 
 ---
 
 ## Roadmap
 
-### Phase 1 (Current) - Local-First MVP
+### Phase 1 (Completed) - Local-First MVP
 
 - Windows desktop app
 - SQLite database
@@ -371,7 +374,7 @@ MIT
 
 ## Support
 
-- **Issues:** [GitHub Issues](https://github.com/your-org/SmartKhata/issues)
+- **Issues:** [GitHub Issues](https://github.com/princepsr/SmartKhata/issues)
 - **Docs:** [docs/](docs/)
 - **Logs:** `C:\Users\<User>\AppData\Roaming\SmartKhata\logs\`
 

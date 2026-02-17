@@ -15,7 +15,8 @@ SmartKhata uses a simple file-based logging system for the Electron main process
 ✅ **Error tracking** - Always writes errors to file (even in dev)  
 ✅ **Structured logging** - JSON data support  
 ✅ **PII Sanitization** - Automatic redaction of sensitive fields (phones, items, etc.)  
-✅ **Module Scoping** - Tagged logs (e.g., `[DB]`, `[IPC]`, `[LICENSE]`)
+✅ **Module Scoping** - Tagged logs (e.g., `[DB]`, `[IPC]`, `[LICENSE]`, `[AUDIT]`)  
+✅ **Rotate-on-Start** - Ensures current log is always clean and archival is handled.
 
 ---
 
@@ -76,12 +77,15 @@ try {
 
 ## Log Levels
 
-| Level   | When to Use             | Dev Output     | Prod Output   |
-| ------- | ----------------------- | -------------- | ------------- |
-| `DEBUG` | Detailed debugging info | Console        | ❌ Not logged |
-| `INFO`  | General information     | Console        | File          |
-| `WARN`  | Potential issues        | Console        | File          |
-| `ERROR` | Errors and exceptions   | Console + File | File          |
+| Level      | When to Use              | Dev Output     | Prod Output   |
+| ---------- | ------------------------ | -------------- | ------------- |
+| `DEBUG`    | Detailed debugging info  | Console        | ❌ Not logged |
+| `INFO`     | General information      | Console        | File          |
+| `AUDIT`    | User actions (Sale, Del) | Console        | File          |
+| `DATABASE` | SQL/Migration events     | Console        | File          |
+| `UPDATE`   | Auto-update cycles       | Console        | File          |
+| `WARN`     | Potential issues         | Console        | File          |
+| `ERROR`    | Errors and exceptions    | Console + File | File          |
 
 ---
 
@@ -354,4 +358,5 @@ logger.onError((message, error) => {
 
 ---
 
-**Last updated:** 2026-02-08
+**Last updated:** 2026-02-18 (Phase 1 Complete)  
+**Status:** ✅ Professional grade auditing enabled

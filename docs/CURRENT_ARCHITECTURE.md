@@ -1,4 +1,4 @@
-# Current Architecture (As of 2026-02-17)
+# Current Architecture (As of 2026-02-18 - Phase 1 Complete)
 
 ## Overview
 
@@ -188,6 +188,7 @@ IPCHandler.handle('product:create', async (request) => {
 | **PrintService**     | Thermal receipt formatting, printer driver communication, status checks                                        |
 | **SettingsService**  | Configuration management, caching, validation                                                                  |
 | **LicenseService**   | License validation, expiry checking, machine binding, redundant marker persistence, and anti-time-tamper logic |
+| **UpdateService**    | Background version checking, `autoUpdater` event handling, and update log integration                          |
 | **BackupService**    | Atomic database archival and ZIP-based restoration flow                                                        |
 
 **Example:**

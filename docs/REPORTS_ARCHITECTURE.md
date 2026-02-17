@@ -54,4 +54,13 @@ Reports are fetched via the following IPC channels:
 
 ## Exporting
 
-Data from any report can be exported via `ExportService`, which generates a CSV file and prompts the user for a save location using Electron's `dialog.showSaveDialog`.
+Data from any report can be exported via **`ExportService`**, which generates high-quality distribution documents:
+
+- **Excel (.xlsx)**: Full data grid with optimized column widths.
+- **PDF (.pdf)**: Formal business documents with shop branding, headers, and footer notes.
+- **CSV (.csv)**: Raw data for external processing.
+
+---
+
+**Last updated:** 2026-02-18 (Phase 1 Complete)  
+**Status:** ✅ Advanced analytics and multi-format exports verified

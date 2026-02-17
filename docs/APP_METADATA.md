@@ -15,20 +15,20 @@ SmartKhata's app metadata is configured in multiple files to ensure consistency 
 ```json
 {
   "name": "smartkhata",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Local-first Kirana POS application for Windows",
   "author": "SmartKhata Team",
   "license": "MIT"
 }
 ```
 
-| Field | Value | Purpose |
-|-------|-------|---------|
-| `name` | `smartkhata` | npm package name (lowercase, no spaces) |
-| `version` | `0.1.0` | Semantic versioning (major.minor.patch) |
-| `description` | POS app description | Shown in package managers |
-| `author` | SmartKhata Team | Copyright holder |
-| `license` | MIT | Open source license |
+| Field         | Value               | Purpose                                 |
+| ------------- | ------------------- | --------------------------------------- |
+| `name`        | `smartkhata`        | npm package name (lowercase, no spaces) |
+| `version`     | `0.1.0`             | Semantic versioning (major.minor.patch) |
+| `description` | POS app description | Shown in package managers               |
+| `author`      | SmartKhata Team     | Copyright holder                        |
+| `license`     | MIT                 | Open source license                     |
 
 ---
 
@@ -39,19 +39,20 @@ SmartKhata's app metadata is configured in multiple files to ensure consistency 
 ```typescript
 export const APP_CONSTANTS = {
   APP_NAME: 'SmartKhata',
-  APP_VERSION: '0.1.0',
+  APP_VERSION: '1.0.0',
   APP_ID: 'com.smartkhata.pos',
   // ...
 };
 ```
 
-| Constant | Value | Purpose |
-|----------|-------|---------|
-| `APP_NAME` | SmartKhata | Display name (with proper casing) |
-| `APP_VERSION` | 0.1.0 | Runtime version (must match package.json) |
-| `APP_ID` | com.smartkhata.pos | Unique app identifier (reverse domain) |
+| Constant      | Value              | Purpose                                   |
+| ------------- | ------------------ | ----------------------------------------- |
+| `APP_NAME`    | SmartKhata         | Display name (with proper casing)         |
+| `APP_VERSION` | 0.1.0              | Runtime version (must match package.json) |
+| `APP_ID`      | com.smartkhata.pos | Unique app identifier (reverse domain)    |
 
 **Why duplicate version?**
+
 - `package.json` is for build tools
 - `APP_CONSTANTS` is for runtime (UI, logs, etc.)
 - Keep them in sync manually (or use a script)
@@ -71,10 +72,7 @@ export const APP_CONSTANTS = {
       "output": "release",
       "buildResources": "resources"
     },
-    "files": [
-      "dist/**/*",
-      "package.json"
-    ],
+    "files": ["dist/**/*", "package.json"],
     "win": {
       "target": ["nsis", "portable"],
       "icon": "resources/icons/icon.ico"
@@ -100,16 +98,19 @@ com.{company}.{product}
 ```
 
 **SmartKhata:**
+
 ```
 com.smartkhata.pos
 ```
 
 **Why this format?**
+
 - Standard across platforms (Windows, macOS, Linux)
 - Ensures global uniqueness
 - Used by Windows for app data directory
 
 **Where it's used:**
+
 - User data path: `C:\Users\<User>\AppData\Roaming\SmartKhata\`
 - Windows registry (for uninstall info)
 - App shortcuts
@@ -126,18 +127,20 @@ MAJOR.MINOR.PATCH
 
 **SmartKhata:** `0.1.0`
 
-| Part | Meaning | When to increment |
-|------|---------|-------------------|
-| MAJOR | Breaking changes | API changes, major rewrites |
-| MINOR | New features | New features, backward compatible |
-| PATCH | Bug fixes | Bug fixes, small improvements |
+| Part  | Meaning          | When to increment                 |
+| ----- | ---------------- | --------------------------------- |
+| MAJOR | Breaking changes | API changes, major rewrites       |
+| MINOR | New features     | New features, backward compatible |
+| PATCH | Bug fixes        | Bug fixes, small improvements     |
 
 **Examples:**
+
 - `0.1.0` → `0.1.1` (bug fix)
 - `0.1.1` → `0.2.0` (new feature: cloud sync)
 - `0.2.0` → `1.0.0` (first stable release)
 
 **Pre-1.0.0:**
+
 - `0.x.x` indicates beta/development
 - Breaking changes allowed in MINOR version
 
@@ -150,11 +153,13 @@ MAJOR.MINOR.PATCH
 **File:** `resources/icons/icon.ico`
 
 **Requirements:**
+
 - Format: `.ico` (Windows icon format)
 - Sizes: 16x16, 32x32, 48x48, 64x64, 128x128, 256x256
 - Color depth: 32-bit (with alpha channel)
 
 **Configuration:**
+
 ```json
 {
   "build": {
@@ -166,15 +171,16 @@ MAJOR.MINOR.PATCH
 ```
 
 **Where it's used:**
+
 - Taskbar icon
 - Desktop shortcut
 - Executable file icon
 - Start menu shortcut
 - Alt+Tab switcher
 
-**Status:** ⚠️ Placeholder needed (currently using default Electron icon)
+**Status:** ✅ Configured with official SmartKhata branding
 
-**See:** `resources/icons/README.md` for creation instructions
+**See:** `resources/icons/icon.ico`
 
 ---
 
@@ -185,6 +191,7 @@ MAJOR.MINOR.PATCH
 Prevents multiple instances of SmartKhata from running simultaneously.
 
 **Why it matters:**
+
 - Prevents database conflicts (SQLite doesn't handle concurrent writes well)
 - Avoids user confusion (multiple windows)
 - Windows best practice for desktop apps
@@ -207,7 +214,7 @@ if (!gotTheLock) {
   // This is the first instance
   app.on('second-instance', (event, commandLine, workingDirectory) => {
     logger.info('Second instance attempted to start');
-    
+
     // Focus the existing window
     if (mainWindow) {
       if (mainWindow.isMinimized()) {
@@ -250,6 +257,7 @@ if (!gotTheLock) {
 ```
 
 **User experience:**
+
 - User double-clicks app icon
 - Existing window comes to front
 - No error message needed (seamless)
@@ -259,11 +267,13 @@ if (!gotTheLock) {
 ### Windows-Specific Behavior
 
 **How it works on Windows:**
+
 - Uses Windows mutex (mutual exclusion)
 - Mutex name based on `appId` (`com.smartkhata.pos`)
 - Mutex released when app quits
 
 **Edge cases handled:**
+
 - App crashes → Mutex auto-released by OS
 - App force-quit → Mutex auto-released by OS
 - Multiple users → Each user has separate mutex
@@ -285,14 +295,15 @@ if (!gotTheLock) {
 }
 ```
 
-| Option | Value | Why |
-|--------|-------|-----|
-| `oneClick` | `false` | Allows user to choose install location |
-| `allowToChangeInstallationDirectory` | `true` | User can pick install folder |
-| `createDesktopShortcut` | `true` | Adds desktop icon |
-| `createStartMenuShortcut` | `true` | Adds Start menu entry |
+| Option                               | Value   | Why                                    |
+| ------------------------------------ | ------- | -------------------------------------- |
+| `oneClick`                           | `false` | Allows user to choose install location |
+| `allowToChangeInstallationDirectory` | `true`  | User can pick install folder           |
+| `createDesktopShortcut`              | `true`  | Adds desktop icon                      |
+| `createStartMenuShortcut`            | `true`  | Adds Start menu entry                  |
 
 **Windows best practices:**
+
 - ✅ Allow install directory choice (some users have C: drive restrictions)
 - ✅ Create desktop shortcut (easy access for shop owners)
 - ✅ Create Start menu entry (standard Windows behavior)
@@ -313,18 +324,21 @@ if (!gotTheLock) {
 ```
 
 **NSIS Installer:**
+
 - Full installer with uninstaller
 - Adds to Windows Programs & Features
 - Creates shortcuts
 - Best for permanent installation
 
 **Portable:**
+
 - Single .exe file
 - No installation required
 - Runs from USB drive
 - Best for testing or temporary use
 
 **Architecture:**
+
 - `x64` only (64-bit Windows)
 - No `ia32` (32-bit) support (Windows 10+ is 64-bit)
 
@@ -337,10 +351,12 @@ if (!gotTheLock) {
 **Path:** `C:\Users\<User>\AppData\Roaming\SmartKhata\`
 
 **Determined by:**
+
 - `app.getPath('userData')`
 - Uses `productName` from package.json
 
 **Contains:**
+
 ```
 SmartKhata/
 ├── data/
@@ -360,6 +376,7 @@ SmartKhata/
 **User can change during installation** (if `allowToChangeInstallationDirectory: true`)
 
 **Contains:**
+
 ```
 SmartKhata/
 ├── SmartKhata.exe
@@ -374,6 +391,7 @@ SmartKhata/
 ### When Releasing a New Version
 
 **1. Update version in package.json:**
+
 ```json
 {
   "version": "0.2.0"
@@ -381,16 +399,19 @@ SmartKhata/
 ```
 
 **2. Update version in app-constants.ts:**
+
 ```typescript
 APP_VERSION: '0.2.0',
 ```
 
 **3. Build:**
+
 ```bash
 pnpm build:win
 ```
 
 **4. Installer will have new version:**
+
 ```
 SmartKhata Setup 0.2.0.exe
 ```
@@ -400,6 +421,7 @@ SmartKhata Setup 0.2.0.exe
 ### Automated Version Sync (Future)
 
 **Option 1: npm script**
+
 ```json
 {
   "scripts": {
@@ -409,6 +431,7 @@ SmartKhata Setup 0.2.0.exe
 ```
 
 **Option 2: Build-time replacement**
+
 - Use Vite/Webpack to inject version from package.json
 - No manual sync needed
 
@@ -421,10 +444,10 @@ SmartKhata Setup 0.2.0.exe
 ```typescript
 // Use constants
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
-console.log(APP_CONSTANTS.APP_NAME);  // 'SmartKhata'
+console.log(APP_CONSTANTS.APP_NAME); // 'SmartKhata'
 
 // Use app.getVersion() for runtime version
-const version = app.getVersion();  // Reads from package.json
+const version = app.getVersion(); // Reads from package.json
 
 // Implement single-instance lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -434,10 +457,10 @@ const gotTheLock = app.requestSingleInstanceLock();
 
 ```typescript
 // Don't hardcode app name
-const appName = 'SmartKhata';  // ❌ Use APP_CONSTANTS
+const appName = 'SmartKhata'; // ❌ Use APP_CONSTANTS
 
 // Don't hardcode version
-const version = '0.1.0';  // ❌ Use app.getVersion()
+const version = '0.1.0'; // ❌ Use app.getVersion()
 
 // Don't allow multiple instances (for POS apps)
 // Missing: app.requestSingleInstanceLock()  // ❌ Database conflicts!
@@ -447,18 +470,18 @@ const version = '0.1.0';  // ❌ Use app.getVersion()
 
 ## Summary
 
-| Aspect | Configuration | Location |
-|--------|--------------|----------|
-| **App Name** | `SmartKhata` | package.json, app-constants.ts |
-| **App ID** | `com.smartkhata.pos` | package.json (build.appId) |
-| **Version** | `0.1.0` | package.json, app-constants.ts |
-| **Icon** | `resources/icons/icon.ico` | package.json (build.win.icon) |
-| **Single-Instance** | Enabled | src/main/index.ts |
-| **Installer** | NSIS + Portable | package.json (build.win.target) |
+| Aspect              | Configuration              | Location                        |
+| ------------------- | -------------------------- | ------------------------------- |
+| **App Name**        | `SmartKhata`               | package.json, app-constants.ts  |
+| **App ID**          | `com.smartkhata.pos`       | package.json (build.appId)      |
+| **Version**         | `0.1.0`                    | package.json, app-constants.ts  |
+| **Icon**            | `resources/icons/icon.ico` | package.json (build.win.icon)   |
+| **Single-Instance** | Enabled                    | src/main/index.ts               |
+| **Installer**       | NSIS + Portable            | package.json (build.win.target) |
 
 **Status:** ✅ Configured for Windows best practices
 
 ---
 
-**Last updated:** 2026-02-08  
+**Last updated:** 2026-02-18 (Phase 1 Complete)
 **Files:** `package.json`, `src/shared/constants/app-constants.ts`, `src/main/index.ts`
