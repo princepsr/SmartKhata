@@ -14,6 +14,7 @@ interface Product {
   stockQty: number;
   lowStockAlert?: number;
   isActive: boolean;
+  trackInventory: boolean;
 }
 
 interface ProductFormModalProps {
@@ -33,6 +34,7 @@ interface FormData {
   stockQty: string;
   lowStockAlert: string;
   isActive: boolean;
+  trackInventory: boolean;
 }
 
 const INITIAL_STATE: FormData = {
@@ -45,6 +47,7 @@ const INITIAL_STATE: FormData = {
   stockQty: '0',
   lowStockAlert: '5',
   isActive: true,
+  trackInventory: true,
 };
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
@@ -106,6 +109,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           stockQty: initialData.stockQty?.toString() || '0',
           lowStockAlert: initialData.lowStockAlert?.toString() || '5',
           isActive: initialData.isActive ?? true,
+          trackInventory: initialData.trackInventory ?? true,
         });
       } else {
         setFormData(INITIAL_STATE);
@@ -206,6 +210,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       stockQty: parseFloat(formData.stockQty || '0'),
       lowStockAlert: parseFloat(formData.lowStockAlert || '0'),
       isActive: formData.isActive,
+      trackInventory: formData.trackInventory,
     };
 
     try {
@@ -336,7 +341,32 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             </div>
           </div>
 
-          {!isEditMode && (
+          <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <label
+              style={{
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontWeight: '500',
+              }}
+            >
+              <input
+                type="checkbox"
+                name="trackInventory"
+                checked={formData.trackInventory}
+                onChange={handleChange}
+                disabled={isLoading}
+                style={{ width: 'auto' }}
+              />
+              Track Inventory
+            </label>
+            <small style={{ color: '#666', marginLeft: '1.5rem', display: 'block' }}>
+              Uncheck for services or items where stock doesn't matter.
+            </small>
+          </div>
+
+          {!isEditMode && formData.trackInventory && (
             <div className="form-row">
               <div className="form-group">
                 <label>Opening Stock</label>
@@ -353,17 +383,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           )}
 
           <div className="form-row">
-            <div className="form-group">
-              <label>Low Stock Alert Qty</label>
-              <input
-                type="number"
-                name="lowStockAlert"
-                value={formData.lowStockAlert}
-                onChange={handleChange}
-                placeholder="e.g. 5"
-                disabled={isLoading}
-              />
-            </div>
+            {formData.trackInventory && (
+              <div className="form-group">
+                <label>Low Stock Alert Qty</label>
+                <input
+                  type="number"
+                  name="lowStockAlert"
+                  value={formData.lowStockAlert}
+                  onChange={handleChange}
+                  placeholder="e.g. 5"
+                  disabled={isLoading}
+                />
+              </div>
+            )}
 
             {isEditMode && (
               <div className="form-group" style={{ justifyContent: 'center' }}>

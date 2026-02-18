@@ -10,6 +10,7 @@ interface StockAdjustmentModalProps {
     id: number;
     name: string;
     stockQty: number;
+    trackInventory: boolean;
   } | null;
 }
 
@@ -26,11 +27,16 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
   const [quantity, setQuantity] = useState<string>('');
   const [reason, setReason] = useState<ReasonType>('');
   const [notes, setNotes] = useState<string>('');
+  const [trackInventory, setTrackInventory] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   const qtyInputRef = useRef<HTMLInputElement>(null);
 
-  const { execute: adjustStock, loading, error: ipcError } = useIPCMutation('product:adjustStock');
+  const { execute: adjustStock, loading: adjusting, error: adjustError } = useIPCMutation('product:adjustStock');
+  const { execute: updateProduct, loading: updating, error: updateError } = useIPCMutation('product:update');
+
+  const loading = adjusting || updating;
+  const ipcError = adjustError || updateError;
 
   useEffect(() => {
     if (isOpen) {
@@ -38,6 +44,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
       setQuantity('');
       setReason('');
       setNotes('');
+      setTrackInventory(product.trackInventory);
       setError(null);
       setTimeout(() => qtyInputRef.current?.focus(), 50);
     }
@@ -61,6 +68,30 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!product) return;
+
+    // 1. If tracking status changed, update product first
+    if (trackInventory !== product.trackInventory) {
+      try {
+        await updateProduct({
+          id: product.id,
+          data: { trackInventory },
+        });
+      } catch (err) {
+        console.error('Failed to update tracking status:', err);
+        return; // Stop if update fails
+      }
+    }
+
+    // 2. If tracking is OFF, we don't adjust stock (conceptually)
+    // But if the user entered a quantity, maybe they expect it to do something?
+    // For now, if tracking is OFF, we just close. Stock adjustment is irrelevant.
+    if (!trackInventory) {
+      onSuccess();
+      onClose();
+      return;
+    }
+
     if (!validate()) {
       return;
     }
@@ -141,7 +172,24 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
         {error && <div className="error-banner">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="adjustment-type-selector">
+          {/* Tracking Toggle */}
+          <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+            <input
+              type="checkbox"
+              id="trackInventory"
+              checked={trackInventory}
+              onChange={(e) => setTrackInventory(e.target.checked)}
+              disabled={loading}
+              style={{ width: 'auto', margin: 0 }}
+            />
+            <label htmlFor="trackInventory" style={{ margin: 0, fontWeight: 500, cursor: 'pointer' }}>
+              Track Inventory for this Item
+            </label>
+          </div>
+
+          {trackInventory ? (
+            <>
+              <div className="adjustment-type-selector">
             <label className={`type-option ${adjustmentType === 'add' ? 'active add' : ''}`}>
               <input
                 type="radio"
@@ -219,6 +267,12 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
             <span>New Stock Level:</span>
             <span className={`new-stock-value ${newStock < 0 ? 'negative' : ''}`}>{newStock}</span>
           </div>
+          </>
+          ) : (
+            <div className="info-message" style={{ padding: '1rem', background: '#f3f4f6', borderRadius: '4px', marginBottom: '1rem', color: '#666' }}>
+              Inventory tracking is disabled for this item. Stock quantity will not be tracked or updated.
+            </div>
+          )}
 
           <div className="modal-actions">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={loading}>

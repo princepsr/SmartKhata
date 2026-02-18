@@ -34,6 +34,7 @@ export interface AddProductInput {
   gstPercent?: number;
   stockQty?: number;
   lowStockAlert?: number;
+  trackInventory?: boolean;
 }
 
 /**
@@ -48,6 +49,7 @@ export interface UpdateProductData {
   gstPercent?: number;
   lowStockAlert?: number;
   isActive?: boolean;
+  trackInventory?: boolean;
 }
 
 /**
@@ -105,6 +107,7 @@ export class ProductService extends BaseService {
       gstPercent: input.gstPercent ?? 18, // Default 18% GST
       stockQty: input.stockQty ?? 0,
       lowStockAlert: input.lowStockAlert,
+      trackInventory: input.trackInventory,
     };
 
     try {
@@ -150,6 +153,7 @@ export class ProductService extends BaseService {
       gstPercent: input.gstPercent ?? 18,
       stockQty: input.stockQty ?? 0,
       lowStockAlert: input.lowStockAlert,
+      trackInventory: input.trackInventory,
     }));
 
     // 3. Execute batch create
@@ -217,6 +221,7 @@ export class ProductService extends BaseService {
       gstPercent: updates.gstPercent,
       lowStockAlert: updates.lowStockAlert,
       isActive: updates.isActive,
+      trackInventory: updates.trackInventory,
     };
 
     try {

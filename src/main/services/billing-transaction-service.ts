@@ -8,6 +8,7 @@ import {
   BillWithItems,
 } from '../repositories/bill-repository';
 import { InventoryRepository } from '../repositories/inventory-repository';
+import { SettingsService } from './settings-service';
 import { logger } from '../utils/logger';
 
 /**
@@ -81,6 +82,8 @@ export class BillingTransactionService extends BaseRepository {
       let subtotal = 0;
       let gstTotal = 0;
 
+      const config = SettingsService.getInstance().getConfig();
+
       saleData.items.forEach((item) => {
         // Get product details
         const product = this.productRepo.findById(item.productId);
@@ -92,8 +95,10 @@ export class BillingTransactionService extends BaseRepository {
           throw new Error(`Product is inactive: ${product.name}`);
         }
 
-        // Check stock availability (with row lock)
-        this.productRepo.updateStock(item.productId, -item.quantity);
+        // Check stock availability and deduct (skip in billing-only mode OR if product doesn't track inventory)
+        if (!config.billingOnly && product.trackInventory) {
+          this.productRepo.updateStock(item.productId, -item.quantity);
+        }
         // Note: updateStock() validates stock and throws if insufficient
 
         // Calculate line totals
@@ -143,19 +148,30 @@ export class BillingTransactionService extends BaseRepository {
       });
 
       // ============================================
-      // STEP 4: Log inventory changes
+      // STEP 4: Log inventory changes (skip in billing-only mode)
       // ============================================
-      saleData.items.forEach((item) => {
-        this.inventoryRepo.logChange({
-          productId: item.productId,
-          changeQty: -item.quantity,
-          reason: 'SALE',
-          referenceId: billWithItems.bill.id,
-          notes: `Bill #${saleData.billNumber}`,
+      if (!config.billingOnly) {
+        let loggedCount = 0;
+        saleData.items.forEach((item) => {
+          // Check if product tracks inventory (need to fetch again or could cache)
+          const product = this.productRepo.findById(item.productId);
+          
+          if (product && product.trackInventory) {
+            this.inventoryRepo.logChange({
+              productId: item.productId,
+              changeQty: -item.quantity,
+              reason: 'SALE',
+              referenceId: billWithItems.bill.id,
+              notes: `Bill #${saleData.billNumber}`,
+            });
+            loggedCount++;
+          }
         });
-      });
 
-      logger.info('Inventory changes logged', { itemCount: saleData.items.length });
+        logger.info('Inventory changes logged', { itemCount: loggedCount });
+      } else {
+        logger.info('Billing-only mode: skipped inventory changes', { itemCount: saleData.items.length });
+      }
 
       // ============================================
       // STEP 5: Update customer balance (if applicable)
@@ -237,14 +253,16 @@ export class BillingTransactionService extends BaseRepository {
         throw new Error(`Product is inactive: ${product.name}`);
       }
 
-      if (product.stockQty < item.quantity) {
+      if (item.quantity <= 0) {
+        throw new Error(`Invalid quantity for ${product.name}: ${item.quantity}`);
+      }
+
+      // Skip stock check in billing-only mode OR if product doesn't track inventory
+      const validateConfig = SettingsService.getInstance().getConfig();
+      if (!validateConfig.billingOnly && product.trackInventory && product.stockQty < item.quantity) {
         throw new Error(
           `Insufficient stock for ${product.name}. Available: ${product.stockQty}, Required: ${item.quantity}`
         );
-      }
-
-      if (item.quantity <= 0) {
-        throw new Error(`Invalid quantity for ${product.name}: ${item.quantity}`);
       }
     });
 

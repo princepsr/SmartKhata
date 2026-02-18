@@ -34,6 +34,7 @@ export interface Product {
   stockQty: number;
   lowStockAlert: number | null;
   isActive: boolean;
+  trackInventory: boolean;
   createdAt: string; // ISO date string over IPC
   updatedAt: string; // ISO date string over IPC
 }

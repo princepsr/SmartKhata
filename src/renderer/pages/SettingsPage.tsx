@@ -183,6 +183,21 @@ function SettingsPage() {
             <label className="checkbox-label">
               <input
                 type="checkbox"
+                checked={settings.billingOnly}
+                onChange={(e) => updateSettings({ billingOnly: e.target.checked })}
+              />
+              Billing Only Mode (Skip Inventory)
+            </label>
+            <p className="help-text">
+              When enabled, billing will not check or update product stock levels.
+              Useful if you only need billing without inventory management.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
                 checked={settings.gstEnabled}
                 onChange={(e) => updateSettings({ gstEnabled: e.target.checked })}
               />

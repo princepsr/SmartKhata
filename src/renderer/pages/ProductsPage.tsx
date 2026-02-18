@@ -20,6 +20,7 @@ interface Product {
   stockQty: number;
   lowStockAlert?: number;
   isActive: boolean;
+  trackInventory: boolean;
 }
 
 const SkeletonRows: React.FC = () => (
@@ -296,19 +297,25 @@ const ProductsPage: React.FC = () => {
                     <div className="col-name">{product.name}</div>
                     <div className="col-sku">{product.sku || product.barcode || '-'}</div>
                     <div className="col-price">{formatCurrency(product.salePrice)}</div>
-                    <div className="col-stock">
-                      <span
-                        className={
-                          product.stockQty <= 0
-                            ? 'stock-out'
-                            : product.stockQty <= (product.lowStockAlert || 0)
-                              ? 'stock-low'
-                              : ''
-                        }
-                      >
-                        {product.stockQty}
-                      </span>
-                    </div>
+                      <div className="col-stock">
+                        {product.trackInventory ? (
+                          <span
+                            className={
+                              product.stockQty <= 0
+                                ? 'stock-out'
+                                : product.stockQty <= (product.lowStockAlert || 0)
+                                  ? 'stock-low'
+                                  : ''
+                            }
+                          >
+                            {product.stockQty}
+                          </span>
+                        ) : (
+                          <span className="text-muted" title="Not Tracked">
+                            -
+                          </span>
+                        )}
+                      </div>
                     <div className="col-status">
                       <span className={`status-badge ${product.isActive ? 'active' : 'inactive'}`}>
                         {product.isActive ? 'Active' : 'Inactive'}

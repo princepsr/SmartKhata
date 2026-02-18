@@ -218,6 +218,8 @@ export class BillingService extends BaseService {
     }
 
     // 7. Validate products and stock availability
+    const config = SettingsService.getInstance().getConfig();
+
     input.items.forEach((item, index) => {
       // Validate quantity
       if (!item.quantity || item.quantity <= 0) {
@@ -237,7 +239,8 @@ export class BillingService extends BaseService {
         throw new InactiveEntityError('Product', item.productId);
       }
 
-      if (product.stockQty < item.quantity) {
+      // Skip stock check in billing-only mode OR if product doesn't track inventory
+      if (!config.billingOnly && product.trackInventory && (product.stockQty < item.quantity)) {
         throw new InsufficientStockError(product.id, product.name, product.stockQty, item.quantity);
       }
     });
