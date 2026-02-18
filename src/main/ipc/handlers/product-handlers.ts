@@ -49,6 +49,7 @@ export function registerProductHandlers(): void {
         stockQty: p.stockQty,
         lowStockAlert: p.lowStockAlert,
         isActive: p.isActive,
+        trackInventory: p.trackInventory,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
       }));
@@ -77,6 +78,7 @@ export function registerProductHandlers(): void {
         stockQty: product.stockQty,
         lowStockAlert: product.lowStockAlert,
         isActive: product.isActive,
+        trackInventory: product.trackInventory,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
       };
@@ -123,6 +125,7 @@ export function registerProductHandlers(): void {
         stockQty: product.stockQty,
         lowStockAlert: product.lowStockAlert,
         isActive: product.isActive,
+        trackInventory: product.trackInventory,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
       };
@@ -169,6 +172,7 @@ export function registerProductHandlers(): void {
         stockQty: product.stockQty,
         lowStockAlert: product.lowStockAlert,
         isActive: product.isActive,
+        trackInventory: product.trackInventory,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
       }));
@@ -200,6 +204,7 @@ export function registerProductHandlers(): void {
         gstPercent: request.data.gstPercent,
         lowStockAlert: request.data.lowStockAlert,
         isActive: request.data.isActive,
+        trackInventory: request.data.trackInventory,
       };
 
       const product = productService.updateProduct(request.id, updates);
@@ -215,6 +220,7 @@ export function registerProductHandlers(): void {
         stockQty: product.stockQty,
         lowStockAlert: product.lowStockAlert,
         isActive: product.isActive,
+        trackInventory: product.trackInventory,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
       };
@@ -244,6 +250,7 @@ export function registerProductHandlers(): void {
         stockQty: p.stockQty,
         lowStockAlert: p.lowStockAlert,
         isActive: p.isActive,
+        trackInventory: p.trackInventory,
       }));
     },
     {

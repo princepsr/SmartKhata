@@ -29,6 +29,7 @@ export interface AppConfig {
   footerMessage: string;
   printCopies: number;
   autoPrint: boolean;
+  billingOnly: boolean;
   updatedAt: Date;
 }
 
@@ -283,6 +284,7 @@ export class SettingsRepository extends BaseRepository {
       footer_message: string;
       print_copies: number;
       auto_print: number;
+      billing_only: number;
       updated_at: string;
     }>(sql);
 
@@ -305,6 +307,7 @@ export class SettingsRepository extends BaseRepository {
         footerMessage: 'Thank you! Visit Again',
         printCopies: 1,
         autoPrint: true,
+        billingOnly: false,
         updatedAt: new Date(),
       };
     }
@@ -338,6 +341,7 @@ export class SettingsRepository extends BaseRepository {
       footerMessage: 'footer_message',
       printCopies: 'print_copies',
       autoPrint: 'auto_print',
+      billingOnly: 'billing_only',
     };
 
     Object.entries(config).forEach(([key, value]) => {
@@ -399,6 +403,7 @@ export class SettingsRepository extends BaseRepository {
     footer_message: string;
     print_copies: number;
     auto_print: number;
+    billing_only: number;
     updated_at: string;
   }): AppConfig {
     return {
@@ -417,6 +422,7 @@ export class SettingsRepository extends BaseRepository {
       footerMessage: row.footer_message,
       printCopies: row.print_copies,
       autoPrint: row.auto_print === 1,
+      billingOnly: row.billing_only === 1,
       updatedAt: this.parseDate(row.updated_at),
     };
   }

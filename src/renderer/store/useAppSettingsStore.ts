@@ -21,6 +21,7 @@ export interface AppSettings {
   showLogo: boolean;
   showCustomerDetails: boolean;
   footerMessage: string;
+  billingOnly: boolean;
   updatedAt?: string;
 }
 
@@ -48,6 +49,7 @@ const defaultSettings: AppSettings = {
   showLogo: false,
   showCustomerDetails: true,
   footerMessage: 'Thank you! Visit Again',
+  billingOnly: false,
 };
 
 export const useAppSettingsStore = create<AppSettingsState>()(

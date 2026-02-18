@@ -20,6 +20,7 @@ interface Product {
   stockQty: number;
   lowStockAlert?: number;
   isActive: boolean;
+  trackInventory: boolean;
 }
 
 const SkeletonRows: React.FC = () => (
@@ -40,12 +41,23 @@ const ProductsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
 
   const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
-  const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
+  const [adjustingProductId, setAdjustingProductId] = useState<number | null>(null);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+
+  // Derived state to catch updates after refresh
+  const editingProduct = useMemo(
+    () => (editingProductId && products ? products.find((p) => p.id === editingProductId) || null : null),
+    [products, editingProductId]
+  );
+
+  const adjustingProduct = useMemo(
+    () => (adjustingProductId && products ? products.find((p) => p.id === adjustingProductId) || null : null),
+    [products, adjustingProductId]
+  );
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
@@ -72,18 +84,18 @@ const ProductsPage: React.FC = () => {
   }, [fetchProducts, includeInactive]);
 
   const handleAddProduct = () => {
-    setEditingProduct(null);
+    setEditingProductId(null);
     setIsFormOpen(true);
   };
 
   const handleEditProduct = (product: Product) => {
-    setEditingProduct(product);
+    setEditingProductId(product.id);
     setIsFormOpen(true);
   };
 
   const handleAdjustStock = (e: React.MouseEvent, product: Product) => {
     e.stopPropagation(); // Prevent row selection
-    setAdjustingProduct(product);
+    setAdjustingProductId(product.id);
     setIsAdjustmentOpen(true);
   };
 
@@ -296,19 +308,25 @@ const ProductsPage: React.FC = () => {
                     <div className="col-name">{product.name}</div>
                     <div className="col-sku">{product.sku || product.barcode || '-'}</div>
                     <div className="col-price">{formatCurrency(product.salePrice)}</div>
-                    <div className="col-stock">
-                      <span
-                        className={
-                          product.stockQty <= 0
-                            ? 'stock-out'
-                            : product.stockQty <= (product.lowStockAlert || 0)
-                              ? 'stock-low'
-                              : ''
-                        }
-                      >
-                        {product.stockQty}
-                      </span>
-                    </div>
+                      <div className="col-stock">
+                        {product.trackInventory ? (
+                          <span
+                            className={
+                              product.stockQty <= 0
+                                ? 'stock-out'
+                                : product.stockQty <= (product.lowStockAlert || 0)
+                                  ? 'stock-low'
+                                  : ''
+                            }
+                          >
+                            {product.stockQty}
+                          </span>
+                        ) : (
+                          <span className="text-muted" title="Not Tracked">
+                            -
+                          </span>
+                        )}
+                      </div>
                     <div className="col-status">
                       <span className={`status-badge ${product.isActive ? 'active' : 'inactive'}`}>
                         {product.isActive ? 'Active' : 'Inactive'}
@@ -349,14 +367,20 @@ const ProductsPage: React.FC = () => {
 
       <ProductFormModal
         isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
+        onClose={() => {
+          setIsFormOpen(false);
+          setEditingProductId(null);
+        }}
         onSuccess={handleFormSuccess}
         initialData={editingProduct}
       />
 
       <StockAdjustmentModal
         isOpen={isAdjustmentOpen}
-        onClose={() => setIsAdjustmentOpen(false)}
+        onClose={() => {
+          setIsAdjustmentOpen(false);
+          setAdjustingProductId(null);
+        }}
         onSuccess={handleFormSuccess}
         product={adjustingProduct}
       />

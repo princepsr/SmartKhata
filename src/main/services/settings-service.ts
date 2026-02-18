@@ -187,5 +187,10 @@ export class SettingsService extends BaseService {
     if (config.autoPrint !== undefined && typeof config.autoPrint !== 'boolean') {
       throw new ValidationError('Auto-print must be a boolean value', 'autoPrint');
     }
+
+    // Billing Only validation
+    if (config.billingOnly !== undefined && typeof config.billingOnly !== 'boolean') {
+      throw new ValidationError('Billing only must be a boolean value', 'billingOnly');
+    }
   }
 }

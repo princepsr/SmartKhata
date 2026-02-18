@@ -14,6 +14,7 @@ import {
 import './BillingPage.css';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { RichSelect } from '../components/ui/RichSelect';
+import { useAppSettingsStore } from '../store';
 
 /**
  * Billing Page
@@ -60,6 +61,9 @@ interface Customer {
 }
 
 function BillingPage() {
+  // Settings (for billing-only mode)
+  const { settings } = useAppSettingsStore();
+
   // State
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -333,7 +337,8 @@ function BillingPage() {
     const existingItem = cart.find((item) => item.product.id === product.id);
     const currentQtyInCart = existingItem ? existingItem.quantity : 0;
 
-    if (currentQtyInCart + 1 > product.stockQty) {
+    // Skip stock check in billing-only mode OR if product doesn't track inventory
+    if (!settings.billingOnly && product.trackInventory && currentQtyInCart + 1 > product.stockQty) {
       setAlertState({
         isOpen: true,
         title: 'Out of Stock',
@@ -630,7 +635,10 @@ function BillingPage() {
                       >
                         <span className="product-name">{product.name}</span>
                         <span className="product-meta">
-                          Stock: {product.stockQty} • SKU: {product.sku}
+                          {!settings.billingOnly && product.trackInventory && (
+                            <>Stock: {product.stockQty} • </>
+                          )}
+                          SKU: {product.sku || product.barcode || '-'}
                         </span>
                         <span className="product-price">{formatCurrency(product.salePrice)}</span>
                       </div>

@@ -16,6 +16,7 @@ export interface Product {
   stockQty: number;
   lowStockAlert: number | null;
   isActive: boolean;
+  trackInventory: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +33,7 @@ export interface CreateProductInput {
   gstPercent?: number; // As decimal (default 18%)
   stockQty?: number;
   lowStockAlert?: number;
+  trackInventory?: boolean;
 }
 
 /**
@@ -47,6 +49,7 @@ export interface UpdateProductInput {
   stockQty?: number;
   lowStockAlert?: number;
   isActive?: boolean;
+  trackInventory?: boolean;
 }
 
 /**
@@ -63,8 +66,8 @@ export class ProductRepository extends BaseRepository {
     const sql = `
       INSERT INTO products (
         name, sku, barcode, sale_price, purchase_price, gst_percent, 
-        stock_qty, low_stock_alert
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        stock_qty, low_stock_alert, track_inventory
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const result = this.execute(sql, [
@@ -76,6 +79,7 @@ export class ProductRepository extends BaseRepository {
       Math.round((data.gstPercent || 18) * 100), // Percent → Basis points
       data.stockQty || 0,
       data.lowStockAlert || null,
+      data.trackInventory !== undefined ? (data.trackInventory ? 1 : 0) : 1, // Default true
     ]);
 
     logger.info('Product created', { id: result.lastInsertRowid, name: data.name });
@@ -139,6 +143,10 @@ export class ProductRepository extends BaseRepository {
     if (data.isActive !== undefined) {
       fields.push('is_active = ?');
       values.push(data.isActive ? 1 : 0);
+    }
+    if (data.trackInventory !== undefined) {
+      fields.push('track_inventory = ?');
+      values.push(data.trackInventory ? 1 : 0);
     }
 
     if (fields.length === 0) {
@@ -328,6 +336,7 @@ export class ProductRepository extends BaseRepository {
       stockQty: row.stock_qty,
       lowStockAlert: row.low_stock_alert,
       isActive: row.is_active === 1, // INTEGER → boolean
+      trackInventory: row.track_inventory === 1,
       createdAt: this.parseDate(row.created_at), // TEXT → Date
       updatedAt: this.parseDate(row.updated_at),
     };

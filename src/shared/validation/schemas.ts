@@ -54,6 +54,8 @@ export const CreateProductSchema = z.object({
     .int('Low stock alert must be a whole number')
     .nonnegative('Low stock alert cannot be negative')
     .optional(),
+
+  trackInventory: z.boolean().optional(),
 });
 
 // Infer TypeScript type from schema
@@ -105,6 +107,8 @@ export const UpdateProductSchema = z.object({
         .int('Low stock alert must be a whole number')
         .nonnegative('Low stock alert cannot be negative')
         .optional(),
+
+      trackInventory: z.boolean().optional(),
 
       isActive: z.boolean().optional(),
     })
