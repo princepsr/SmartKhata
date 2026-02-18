@@ -34,6 +34,7 @@ export interface CreateProductInput {
   stockQty?: number;
   lowStockAlert?: number;
   trackInventory?: boolean;
+  isActive?: boolean;
 }
 
 /**
@@ -63,23 +64,28 @@ export class ProductRepository extends BaseRepository {
    * Create a new product
    */
   public create(data: CreateProductInput): Product {
+    const now = new Date();
     const sql = `
       INSERT INTO products (
         name, sku, barcode, sale_price, purchase_price, gst_percent, 
-        stock_qty, low_stock_alert, track_inventory
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        stock_qty, low_stock_alert, track_inventory, is_active,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const result = this.execute(sql, [
       data.name,
-      data.sku || null,
-      data.barcode || null,
+      data.sku ?? null,
+      data.barcode ?? null,
       Math.round(data.salePrice * 100), // Rupees → Paise
       data.purchasePrice ? Math.round(data.purchasePrice * 100) : null,
-      Math.round((data.gstPercent || 18) * 100), // Percent → Basis points
-      data.stockQty || 0,
-      data.lowStockAlert || null,
-      data.trackInventory !== undefined ? (data.trackInventory ? 1 : 0) : 1, // Default true
+      Math.round((data.gstPercent ?? 18) * 100), // Percent → Basis points (Fixed 0% bug)
+      data.stockQty ?? 0,
+      data.lowStockAlert ?? null,
+      data.trackInventory === false ? 0 : 1, // Explicitly handle false (Default true)
+      data.isActive !== false ? 1 : 0, // Default active
+      now.toISOString(),
+      now.toISOString(),
     ]);
 
     logger.info('Product created', { id: result.lastInsertRowid, name: data.name });

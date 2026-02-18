@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useIPCMutation } from '../../hooks/useIPC';
+import { IPC_CHANNELS } from '@shared/ipc/channels';
 import './StockAdjustmentModal.css';
 
 interface StockAdjustmentModalProps {
@@ -32,14 +33,22 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
 
   const qtyInputRef = useRef<HTMLInputElement>(null);
 
-  const { execute: adjustStock, loading: adjusting, error: adjustError } = useIPCMutation('product:adjustStock');
-  const { execute: updateProduct, loading: updating, error: updateError } = useIPCMutation('product:update');
+  const {
+    execute: adjustStock,
+    loading: adjusting,
+    error: adjustError,
+  } = useIPCMutation(IPC_CHANNELS.PRODUCT_ADJUST_STOCK);
+  const {
+    execute: updateProduct,
+    loading: updating,
+    error: updateError,
+  } = useIPCMutation(IPC_CHANNELS.PRODUCT_UPDATE);
 
   const loading = adjusting || updating;
   const ipcError = adjustError || updateError;
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && product) {
       setAdjustmentType('add');
       setQuantity('');
       setReason('');
@@ -53,12 +62,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
   // Parse server errors
   useEffect(() => {
     if (ipcError) {
-      if (ipcError.toLowerCase().includes('not enough stock')) {
-        setError(ipcError); // This will show in the banner, which is fine
-        // Optionally could set a specific quantity error if we had that state
-      } else {
-        setError(ipcError);
-      }
+      setError(ipcError);
     }
   }, [ipcError]);
 
@@ -68,7 +72,9 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product) return;
+    if (!product) {
+      return;
+    }
 
     const hasTrackingChanged = trackInventory !== product.trackInventory;
     const hasAdjustment = quantity && parseInt(quantity, 10) > 0;
@@ -90,7 +96,6 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     }
 
     // Case 2: Changing tracking AND adjusting stock (or just adjusting)
-    // First, update tracking if changed
     if (hasTrackingChanged) {
       try {
         await updateProduct({
@@ -103,32 +108,18 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
       }
     }
 
-    // If tracking is now OFF, we don't adjust stock (conceptually)
-    // This covers cases where tracking was turned off, or was already off and no adjustment was made.
     if (!trackInventory) {
       onSuccess();
       onClose();
       return;
     }
 
-    // If tracking is ON, proceed with stock adjustment validation
     if (!validate()) {
       return;
     }
 
     const qty = parseInt(quantity, 10);
     const deltaQty = adjustmentType === 'add' ? qty : -qty;
-
-    // Map UI reasons to backend expected values if needed,
-    // but for now we'll send the raw string or map to 'MANUAL'/'ADJUSTMENT' as per service definition.
-    // The service expects 'MANUAL' | 'ADJUSTMENT' in the strict type,
-    // but typically we'd want more granular reasons logged.
-    // Looking at ProductHandlers: reason: 'MANUAL' | 'ADJUSTMENT'
-    // We will use 'MANUAL' for Purchase/Return and 'ADJUSTMENT' for Correction/Damage for now,
-    // and put the specific reason in notes or strictly follow the type.
-
-    // Let's refine: The IPC handler strictly expects 'MANUAL' | 'ADJUSTMENT'.
-    // We should probably append the real reason to notes.
     const serviceReason = 'MANUAL';
     const finalNotes = `[${reason}] ${notes}`.trim();
 
@@ -189,124 +180,164 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
           </span>
         </div>
 
-        {error && <div className="error-banner">{error}</div>}
+        <form id="stock-adjustment-form" onSubmit={handleSubmit}>
+          <div className="modal-body">
+            {error && <div className="error-banner">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
-          {/* Tracking Toggle */}
-          <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-            <input
-              type="checkbox"
-              id="trackInventory"
-              checked={trackInventory}
-              onChange={(e) => setTrackInventory(e.target.checked)}
-              disabled={loading}
-              style={{ width: 'auto', margin: 0 }}
-            />
-            <label htmlFor="trackInventory" style={{ margin: 0, fontWeight: 500, cursor: 'pointer' }}>
-              Track Inventory for this Item
-            </label>
-          </div>
+            <div className="form-row" style={{ alignItems: 'flex-end', gap: '1.5rem' }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label>Quantity *</label>
+                <input
+                  ref={qtyInputRef}
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  placeholder="0"
+                  min="1"
+                  disabled={loading || !trackInventory}
+                  className="qty-input"
+                />
+              </div>
 
-          {trackInventory ? (
-            <>
-              <div className="adjustment-type-selector">
-            <label className={`type-option ${adjustmentType === 'add' ? 'active add' : ''}`}>
-              <input
-                type="radio"
-                name="type"
-                checked={adjustmentType === 'add'}
-                onChange={() => setAdjustmentType('add')}
-              />
-              <span>+ Add Stock</span>
-            </label>
-            <label className={`type-option ${adjustmentType === 'remove' ? 'active remove' : ''}`}>
-              <input
-                type="radio"
-                name="type"
-                checked={adjustmentType === 'remove'}
-                onChange={() => setAdjustmentType('remove')}
-              />
-              <span>- Remove Stock</span>
-            </label>
-          </div>
-
-          <div className="form-group">
-            <label>Quantity *</label>
-            <input
-              ref={qtyInputRef}
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="0"
-              min="1"
-              disabled={loading}
-              className="qty-input"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Reason *</label>
-            <select
-              value={reason}
-              onChange={(e) => setReason(e.target.value as ReasonType)}
-              disabled={loading}
-              className={!reason ? 'placeholder' : ''}
-            >
-              <option value="" disabled>
-                Select a reason...
-              </option>
-              {adjustmentType === 'add' ? (
-                <>
-                  <option value="PURCHASE">New Purchase / Stock In</option>
-                  <option value="RETURN">Customer Return</option>
-                  <option value="ADJUSTMENT">Inventory Correction (Found)</option>
-                </>
-              ) : (
-                <>
-                  <option value="DAMAGE">Damaged / Expired</option>
-                  <option value="THEFT">Theft / Lost</option>
-                  <option value="ADJUSTMENT">Inventory Correction (Missing)</option>
-                  <option value="USE">Internal Use</option>
-                </>
-              )}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>Notes (Optional)</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add details..."
-              rows={2}
-              disabled={loading}
-            />
-          </div>
-
-          <div className="stock-preview">
-            <span>New Stock Level:</span>
-            <span className={`new-stock-value ${newStock < 0 ? 'negative' : ''}`}>{newStock}</span>
-          </div>
-          </>
-          ) : (
-            <div className="info-message" style={{ padding: '1rem', background: '#f3f4f6', borderRadius: '4px', marginBottom: '1rem', color: '#666' }}>
-              Inventory tracking is disabled for this item. Stock quantity will not be tracked or updated.
+              <div
+                className="form-group"
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  paddingBottom: '0.6rem',
+                  flex: '0 0 auto',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  id="trackInventory"
+                  checked={trackInventory}
+                  onChange={(e) => setTrackInventory(e.target.checked)}
+                  disabled={loading}
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    margin: 0,
+                    cursor: 'pointer',
+                    transform: 'scale(1.1)',
+                  }}
+                />
+                <label
+                  htmlFor="trackInventory"
+                  style={{ margin: 0, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  Track Inventory
+                </label>
+              </div>
             </div>
-          )}
 
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={loading}>
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className={`btn-primary ${adjustmentType === 'remove' && trackInventory ? 'danger' : ''}`}
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : trackInventory !== product?.trackInventory && (!quantity || parseInt(quantity) <= 0) ? 'Save Changes' : 'Confirm Adjustment'}
-            </button>
+            {trackInventory ? (
+              <>
+                <div className="adjustment-type-selector">
+                  <label className={`type-option ${adjustmentType === 'add' ? 'active add' : ''}`}>
+                    <input
+                      type="radio"
+                      name="type"
+                      checked={adjustmentType === 'add'}
+                      onChange={() => setAdjustmentType('add')}
+                    />
+                    <span>+ Add Stock</span>
+                  </label>
+                  <label
+                    className={`type-option ${adjustmentType === 'remove' ? 'active remove' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="type"
+                      checked={adjustmentType === 'remove'}
+                      onChange={() => setAdjustmentType('remove')}
+                    />
+                    <span>- Remove Stock</span>
+                  </label>
+                </div>
+
+                <div className="form-group">
+                  <label>Reason *</label>
+                  <select
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value as ReasonType)}
+                    disabled={loading}
+                    className={!reason ? 'placeholder' : ''}
+                  >
+                    <option value="" disabled>
+                      Select a reason...
+                    </option>
+                    {adjustmentType === 'add' ? (
+                      <>
+                        <option value="PURCHASE">New Purchase / Stock In</option>
+                        <option value="RETURN">Customer Return</option>
+                        <option value="ADJUSTMENT">Inventory Correction (Found)</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="DAMAGE">Damaged / Expired</option>
+                        <option value="THEFT">Theft / Lost</option>
+                        <option value="ADJUSTMENT">Inventory Correction (Missing)</option>
+                        <option value="USE">Internal Use</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Notes (Optional)</label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add details..."
+                    rows={2}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="stock-preview">
+                  <span>New Stock Level:</span>
+                  <span className={`new-stock-value ${newStock < 0 ? 'negative' : ''}`}>
+                    {newStock}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div
+                className="info-message"
+                style={{
+                  padding: '1rem',
+                  background: '#f3f4f6',
+                  borderRadius: '4px',
+                  marginBottom: '1rem',
+                  color: '#666',
+                }}
+              >
+                Inventory tracking is disabled for this item. Stock quantity will not be tracked or
+                updated.
+              </div>
+            )}
           </div>
         </form>
+
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="stock-adjustment-form"
+            className={`btn-primary ${adjustmentType === 'remove' && trackInventory ? 'danger' : ''}`}
+            disabled={loading}
+          >
+            {loading
+              ? 'Saving...'
+              : trackInventory !== product?.trackInventory && (!quantity || parseInt(quantity) <= 0)
+                ? 'Save Changes'
+                : 'Confirm Adjustment'}
+          </button>
+        </div>
       </div>
     </div>
   );

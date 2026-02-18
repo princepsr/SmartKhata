@@ -35,6 +35,7 @@ export interface AddProductInput {
   stockQty?: number;
   lowStockAlert?: number;
   trackInventory?: boolean;
+  isActive?: boolean;
 }
 
 /**

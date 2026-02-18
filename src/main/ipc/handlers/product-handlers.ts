@@ -110,6 +110,8 @@ export function registerProductHandlers(): void {
         gstPercent: request.gstPercent,
         stockQty: request.stockQty,
         lowStockAlert: request.lowStockAlert,
+        trackInventory: request.trackInventory,
+        isActive: request.isActive,
       };
 
       const product = productService.addProduct(input);
@@ -157,6 +159,7 @@ export function registerProductHandlers(): void {
         gstPercent: req.gstPercent,
         stockQty: req.stockQty,
         lowStockAlert: req.lowStockAlert,
+        trackInventory: req.trackInventory,
       }));
 
       const products = productService.importProducts(inputs);

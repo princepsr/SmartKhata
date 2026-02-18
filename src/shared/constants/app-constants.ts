@@ -28,6 +28,13 @@ export const APP_CONSTANTS = {
     CURRENCY: 'INR',
     CURRENCY_SYMBOL: '₹',
     TAX_RATE: 0, // No GST for now, can be configured later
+    GST_RATES: [
+      { value: 0, label: '0% (Exempted)' },
+      { value: 5, label: '5% (Basic)' },
+      { value: 12, label: '12% (Standard)' },
+      { value: 18, label: '18% (Premium)' },
+      { value: 28, label: '28% (Luxury)' },
+    ],
     LOW_STOCK_THRESHOLD: 10,
   },
 

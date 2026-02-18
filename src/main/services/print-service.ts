@@ -102,11 +102,18 @@ export class PrintService extends BaseService {
     }
 
     const config = SettingsService.getInstance().getConfig();
-    const targetPrinter = printerName || config.printerName || '';
+    let targetPrinter = printerName || config.printerName || '';
     const paperSize = config.paperSize || '58mm';
 
+    // Normalize "Default" to empty string for Electron to use system default
+    printLogger.debug(`DEBUG: Raw targetPrinter before normalization: "${targetPrinter}"`);
+    if (targetPrinter && targetPrinter.toLowerCase().trim() === 'default') {
+      printLogger.debug('DEBUG: Normalizing "default" printer name to ""');
+      targetPrinter = '';
+    }
+
     printLogger.info(
-      `Starting print job for bill #${billData.bill.billNumber} on printer: ${targetPrinter || 'Default'} (${paperSize})`
+      `Starting print job for bill #${billData.bill.billNumber} on printer: ${targetPrinter || 'System Default'} (${paperSize})`
     );
 
     if (PrintService.isPrinting) {
@@ -114,11 +121,13 @@ export class PrintService extends BaseService {
     }
 
     PrintService.isPrinting = true;
-    const printWindow: BrowserWindow = this._getPrintWindow();
+    let printWindow: BrowserWindow;
 
     try {
+      printWindow = this._getPrintWindow();
       const htmlContent = this.generateReceiptHtml(billData, paperSize);
 
+      printLogger.info(`Awaiting print promise (30s timeout)...`);
       // Add a safety timeout for the entire print operation (30s)
       await new Promise<void>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
@@ -130,12 +139,20 @@ export class PrintService extends BaseService {
             throw new Error('Window lost or destroyed');
           }
 
+          printLogger.info(`Loading bill HTML (length: ${htmlContent.length})...`);
           await printWindow.loadURL(
             `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`
           );
+          printLogger.info('Bill HTML loaded successfully');
 
-          // Minimal delay for layout engine (reduced for performance)
-          await new Promise((r) => setTimeout(r, 100));
+          // Wait for DOM to be fully ready and layout to stabilize
+          // Increased delay significantly for virtual/PDF printers
+          await new Promise((r) => setTimeout(r, 500));
+
+          // Ensure window is still alive
+          if (printWindow.isDestroyed()) {
+            throw new Error('Window destroyed during layout wait');
+          }
 
           const copies = config.printCopies || 1;
           printLogger.info(`Printing ${copies} copies...`);
@@ -146,23 +163,27 @@ export class PrintService extends BaseService {
             }
 
             await new Promise<void>((resolveCopy, rejectCopy) => {
-              printWindow.webContents.print(
-                {
-                  silent: true,
-                  printBackground: true,
-                  deviceName: targetPrinter,
-                  color: false,
-                  margins: { marginType: 'printableArea' },
-                },
-                (success, failureReason) => {
-                  if (success) {
-                    printLogger.info(`Copy ${i + 1}/${copies} sent to spooler`);
-                    resolveCopy();
-                  } else {
-                    rejectCopy(new PrinterError(failureReason || 'Print failed'));
-                  }
+              const printOptions: any = {
+                silent: true,
+                printBackground: true,
+                deviceName: targetPrinter,
+                color: false,
+                margins: { marginType: targetPrinter ? 'printableArea' : 'default' },
+              };
+
+              // Virtual/Default printers often fail with "empty content" if pageSize is omitted
+              if (!targetPrinter || targetPrinter.toLowerCase().includes('pdf')) {
+                printOptions.pageSize = 'A4';
+              }
+
+              printWindow.webContents.print(printOptions, (success, failureReason) => {
+                if (success) {
+                  printLogger.info(`Copy ${i + 1}/${copies} sent to spooler`);
+                  resolveCopy();
+                } else {
+                  rejectCopy(new PrinterError(failureReason || 'Print failed'));
                 }
-              );
+              });
             });
 
             // Small gap between copies to prevent spooler congestion
@@ -175,14 +196,25 @@ export class PrintService extends BaseService {
         runPrint()
           .then(() => {
             clearTimeout(timeoutId);
+            printLogger.info('Print operation completed successfully');
             resolve();
           })
           .catch((err) => {
             clearTimeout(timeoutId);
+            printLogger.error('Print operation failed or timed out', err);
+            // If it's a timeout, destroy the window to be safe
+            if (err.message && err.message.includes('timeout')) {
+              printLogger.warn('Destroying pooled window due to timeout/hang');
+              if (PrintService.poolWindow && !PrintService.poolWindow.isDestroyed()) {
+                PrintService.poolWindow.destroy();
+                PrintService.poolWindow = null;
+              }
+            }
             reject(err);
           });
       });
 
+      printLogger.info('Print promise resolved, returning true');
       return true;
     } catch (error) {
       const billNum = billData?.bill?.billNumber || 'Unknown';
@@ -430,11 +462,15 @@ export class PrintService extends BaseService {
    */
   async testPrint(printerName?: string, paperSize?: '58mm' | '80mm'): Promise<boolean> {
     const config = SettingsService.getInstance().getConfig();
-    const targetPrinter = printerName || config.printerName || '';
+    let targetPrinter = printerName || config.printerName || '';
     const targetSize = paperSize || config.paperSize || '58mm';
 
+    if (targetPrinter.toLowerCase() === 'default') {
+      targetPrinter = '';
+    }
+
     printLogger.info(
-      `Starting test print on printer: ${targetPrinter || 'Default'} (${targetSize})`
+      `Starting test print on printer: ${targetPrinter || 'System Default'} (${targetSize})`
     );
 
     if (PrintService.isPrinting) {
@@ -454,19 +490,21 @@ export class PrintService extends BaseService {
           reject(new Error('Test print timed out after 30 seconds'));
         }, 30000);
 
+        // Wait for layout
         setTimeout(() => {
           if (printWindow.isDestroyed()) {
             clearTimeout(timeoutId);
             return reject(new Error('Window destroyed before test print'));
           }
 
+          printLogger.info('Sending test print command...');
           printWindow.webContents.print(
             {
               silent: true,
               printBackground: true,
               deviceName: targetPrinter,
               pageSize: 'A4',
-              margins: { marginType: 'printableArea' },
+              margins: { marginType: targetPrinter ? 'printableArea' : 'default' },
             },
             (success, failureReason) => {
               clearTimeout(timeoutId);
@@ -479,7 +517,7 @@ export class PrintService extends BaseService {
               }
             }
           );
-        }, 100);
+        }, 500); // Increased from 100ms
       });
 
       return true;
@@ -514,6 +552,7 @@ export class PrintService extends BaseService {
             margin: 0; 
             padding: 2px; 
             width: ${width}; 
+            min-height: 100px;
             color: #000; 
             background: #fff; 
           }
@@ -584,6 +623,7 @@ export class PrintService extends BaseService {
               margin: 0; 
               padding: 2px; 
               width: ${width}; 
+              min-height: 100px;
               color: #000; 
               background: #fff; 
               overflow: hidden;
@@ -679,6 +719,7 @@ export class PrintService extends BaseService {
             margin: 0; 
             padding: 5px; 
             width: ${width}; 
+            min-height: 100px;
             color: #000; 
             background: #fff; 
             overflow: hidden;

@@ -3,6 +3,7 @@ import { useIPC, useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../../utils/billing-math';
 import { BillDetailModal } from './BillDetailModal';
+import { useAppSettingsStore } from '../../store';
 import './BillHistoryModal.css';
 
 interface BillSummary {
@@ -16,10 +17,11 @@ interface BillSummary {
 
 interface BillHistoryModalProps {
   onClose: () => void;
-  printerName: string;
 }
 
-export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose, printerName }) => {
+export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) => {
+  const { settings } = useAppSettingsStore();
+  const printerName = settings.printerName || '';
   // Fetch Today's Bills
   const {
     data: bills,
@@ -66,10 +68,15 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose, pri
 
   const handleReprint = async (billId: number) => {
     try {
-      await reprintBill({ billId, printerName });
-      showNotification('Reprint command sent!', 'success');
-    } catch (err) {
-      showNotification('Reprint failed. Check printer.', 'error');
+      const success = await reprintBill({ billId, printerName });
+      if (success) {
+        showNotification('Reprint command sent!', 'success');
+      } else {
+        showNotification('Reprint failed. Check printer.', 'error');
+      }
+    } catch (err: any) {
+      const msg = err.message || 'Reprint failed';
+      showNotification(msg, 'error');
       console.error(err);
     }
   };
@@ -98,68 +105,70 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose, pri
 
         {/* Body */}
         <div className="modal-body">
-          {loading && <div className="loading">Loading history...</div>}
+          <div className="bill-history-scroll-area">
+            {loading && <div className="loading">Loading history...</div>}
 
-          {error && <div className="error-banner">Error loading history: {error}</div>}
+            {error && <div className="error-banner">Error loading history: {error}</div>}
 
-          {!loading && !error && (!bills || bills.length === 0) && (
-            <div className="no-results">No sales recorded today.</div>
-          )}
+            {!loading && !error && (!bills || bills.length === 0) && (
+              <div className="no-results">No sales recorded today.</div>
+            )}
 
-          {!loading && bills && bills.length > 0 && (
-            <table className="history-table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Bill No</th>
-                  <th>Mode</th>
-                  <th className="text-right">Amount</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bills.map((bill) => (
-                  <tr key={bill.id}>
-                    <td>
-                      {(() => {
-                        const date = new Date(bill.createdAt);
-                        return isNaN(date.getTime())
-                          ? 'Invalid Date'
-                          : date.toLocaleTimeString('en-IN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true,
-                              timeZone: 'Asia/Kolkata',
-                            });
-                      })()}
-                    </td>
-                    <td>
-                      <button
-                        className="bill-link-btn"
-                        onClick={() => setSelectedBillNumber(bill.billNumber)}
-                        title="View Full Details"
-                      >
-                        {bill.billNumber}
-                      </button>
-                    </td>
-                    <td>
-                      <span className={`mode-badge ${bill.paymentMode}`}>{bill.paymentMode}</span>
-                    </td>
-                    <td className="text-right font-bold">{formatCurrency(bill.grandTotal)}</td>
-                    <td className="text-right">
-                      <button
-                        className="btn-sm btn-secondary"
-                        onClick={() => handleReprint(bill.id)}
-                        disabled={reprinting}
-                      >
-                        {reprinting ? '...' : 'Reprint'}
-                      </button>
-                    </td>
+            {!loading && bills && bills.length > 0 && (
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Bill No</th>
+                    <th>Mode</th>
+                    <th className="text-right">Amount</th>
+                    <th className="text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {bills.map((bill) => (
+                    <tr key={bill.id}>
+                      <td>
+                        {(() => {
+                          const date = new Date(bill.createdAt);
+                          return isNaN(date.getTime())
+                            ? 'Invalid Date'
+                            : date.toLocaleTimeString('en-IN', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true,
+                                timeZone: 'Asia/Kolkata',
+                              });
+                        })()}
+                      </td>
+                      <td>
+                        <button
+                          className="bill-link-btn"
+                          onClick={() => setSelectedBillNumber(bill.billNumber)}
+                          title="View Full Details"
+                        >
+                          {bill.billNumber}
+                        </button>
+                      </td>
+                      <td>
+                        <span className={`mode-badge ${bill.paymentMode}`}>{bill.paymentMode}</span>
+                      </td>
+                      <td className="text-right font-bold">{formatCurrency(bill.grandTotal)}</td>
+                      <td className="text-right">
+                        <button
+                          className="btn-sm btn-secondary"
+                          onClick={() => handleReprint(bill.id)}
+                          disabled={reprinting}
+                        >
+                          {reprinting ? '...' : 'Reprint'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
 
         {/* Footer */}

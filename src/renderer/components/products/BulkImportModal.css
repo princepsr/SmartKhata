@@ -1,21 +1,39 @@
 .bulk-import-modal {
-  width: 700px;
-  max-width: 95vw;
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  border-radius: var(--radius-lg);
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 50;
-  overflow: hidden; /* Ensure children don't bleed over rounded corners */
+  width: 800px;
+}
+
+.bulk-import-modal .modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 2px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--color-bg) !important;
+  z-index: 100;
+  position: relative;
+  flex-shrink: 0;
 }
 
 .import-body {
-  padding: 1.5rem;
-  min-height: 300px;
+  padding: 0 !important;
+  min-height: 400px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.import-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  position: relative;
+}
+
+.import-upload-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
 }
 
 .upload-zone {

@@ -1,4 +1,4 @@
-import { BaseRepository, DatabaseError } from './base-repository';
+import { BaseRepository } from './base-repository';
 import { logger } from '../utils/logger';
 
 /**
@@ -66,7 +66,7 @@ export class LicenseRepository extends BaseRepository {
         updated_at = datetime('now')
     `;
 
-    this.execute(sql, [data.licenseKey, data.expiresOn.toISOString(), data.deviceId]);
+    this.execute(sql, [data.licenseKey, this.formatDateForSql(data.expiresOn), data.deviceId]);
 
     logger.info('License saved');
 
@@ -116,13 +116,13 @@ export class LicenseRepository extends BaseRepository {
           updated_at = datetime('now')
         WHERE id = 1
       `;
-      this.execute(sql, [date.toISOString()]);
+      this.execute(sql, [this.formatDateForSql(date)]);
     } else {
       const sql = `
         INSERT INTO license (id, license_key, expires_on, device_id, trial_started_on, is_trial)
         VALUES (1, '', '9999-12-31', '', ?, 1)
       `;
-      this.execute(sql, [date.toISOString()]);
+      this.execute(sql, [this.formatDateForSql(date)]);
     }
     logger.info('Trial start date updated');
   }

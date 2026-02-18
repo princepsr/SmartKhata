@@ -189,8 +189,23 @@ function SettingsPage() {
               Billing Only Mode (Skip Inventory)
             </label>
             <p className="help-text">
-              When enabled, billing will not check or update product stock levels.
-              Useful if you only need billing without inventory management.
+              When enabled, billing will not check or update product stock levels. Useful if you
+              only need billing without inventory management.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.customersEnabled}
+                onChange={(e) => updateSettings({ customersEnabled: e.target.checked })}
+              />
+              Enable Customers & Udhaar Tracking
+            </label>
+            <p className="help-text">
+              Toggle the visibility of the Customers page and related features like balance (Udhaar)
+              tracking.
             </p>
           </div>
 
@@ -228,9 +243,11 @@ function SettingsPage() {
               onChange={(e) => updateSettings({ gstPercentage: parseInt(e.target.value, 10) })}
               className="form-input"
             >
-              <option value={5}>5% (Basic)</option>
-              <option value={12}>12% (Standard)</option>
-              <option value={18}>18% (Premium/Luxury)</option>
+              {APP_CONSTANTS.BUSINESS.GST_RATES.filter((r) => r.value !== 0).map((rate) => (
+                <option key={rate.value} value={rate.value}>
+                  {rate.label}
+                </option>
+              ))}
             </select>
             <p className="help-text">Default rate used for tax calculations when enabled.</p>
           </div>
@@ -287,6 +304,37 @@ function SettingsPage() {
               ))}
             </select>
             <p className="help-text">Select the thermal printer for receipt printing.</p>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.autoPrint}
+                onChange={(e) => updateSettings({ autoPrint: e.target.checked })}
+              />
+              Auto-Print Bill after Checkout
+            </label>
+            <p className="help-text">
+              Automatically trigger printing as soon as a sale is confirmed.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="printCopies">Number of Copies</label>
+            <select
+              id="printCopies"
+              value={settings.printCopies}
+              onChange={(e) => updateSettings({ printCopies: parseInt(e.target.value, 10) })}
+              className="form-input"
+            >
+              {[1, 2, 3, 4, 5].map((num) => (
+                <option key={num} value={num}>
+                  {num} {num === 1 ? 'Copy' : 'Copies'}
+                </option>
+              ))}
+            </select>
+            <p className="help-text">How many identical receipts should be printed per sale.</p>
           </div>
 
           <div className="divider full-width" style={{ margin: '1rem 0' }}></div>

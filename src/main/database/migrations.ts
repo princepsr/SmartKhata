@@ -7,10 +7,10 @@ import type { Database } from 'better-sqlite3';
 
 /**
  * Migration System
- * 
+ *
  * Handles database schema migrations with version tracking,
  * checksums, and idempotent execution.
- * 
+ *
  * RULES:
  * - Migrations run in order (001, 002, 003...)
  * - Each migration runs exactly once
@@ -34,7 +34,7 @@ interface AppliedMigration {
   execution_time_ms: number;
 }
 
-class MigrationRunner {
+export class MigrationRunner {
   private migrationsDir: string;
 
   constructor() {
@@ -43,7 +43,7 @@ class MigrationRunner {
 
   /**
    * Run all pending migrations
-   * 
+   *
    * Called on app startup after database initialization
    */
   public async runPendingMigrations(): Promise<void> {
@@ -60,12 +60,10 @@ class MigrationRunner {
 
       // Step 3: Get already applied migrations
       const appliedMigrations = this.getAppliedMigrations(db);
-      const appliedVersions = new Set(appliedMigrations.map(m => m.version));
+      const appliedVersions = new Set(appliedMigrations.map((m) => m.version));
 
       // Step 4: Find pending migrations
-      const pendingMigrations = allMigrations.filter(
-        m => !appliedVersions.has(m.version)
-      );
+      const pendingMigrations = allMigrations.filter((m) => !appliedVersions.has(m.version));
 
       if (pendingMigrations.length === 0) {
         logger.info('No pending migrations');
@@ -73,7 +71,7 @@ class MigrationRunner {
       }
 
       logger.info(`Found ${pendingMigrations.length} pending migration(s)`, {
-        versions: pendingMigrations.map(m => m.version),
+        versions: pendingMigrations.map((m) => m.version),
       });
 
       // Step 5: Run each pending migration
@@ -84,7 +82,9 @@ class MigrationRunner {
       logger.info('All migrations completed successfully');
     } catch (error) {
       logger.error('Migration failed', { error });
-      throw new Error(`Migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -110,8 +110,9 @@ class MigrationRunner {
       return [];
     }
 
-    const files = fs.readdirSync(this.migrationsDir)
-      .filter(f => f.endsWith('.sql') && f !== '000_schema_migrations.sql')
+    const files = fs
+      .readdirSync(this.migrationsDir)
+      .filter((f) => f.endsWith('.sql') && f !== '000_schema_migrations.sql')
       .sort(); // Alphabetical = version order
 
     const migrations: Migration[] = [];
@@ -182,12 +183,7 @@ class MigrationRunner {
 
         const executionTime = Date.now() - startTime;
 
-        stmt.run(
-          migration.version,
-          migration.name,
-          migration.checksum,
-          executionTime
-        );
+        stmt.run(migration.version, migration.name, migration.checksum, executionTime);
       });
 
       const executionTime = Date.now() - startTime;
@@ -206,7 +202,7 @@ class MigrationRunner {
 
   /**
    * Calculate SHA-256 checksum of migration SQL
-   * 
+   *
    * Prevents accidental modification of applied migrations
    */
   private calculateChecksum(sql: string): string {
@@ -215,7 +211,7 @@ class MigrationRunner {
 
   /**
    * Verify checksums of applied migrations
-   * 
+   *
    * Ensures migration files haven't been modified after being applied
    */
   public verifyMigrationIntegrity(): boolean {
@@ -226,7 +222,7 @@ class MigrationRunner {
       const currentMigrations = this.loadMigrationFiles();
 
       for (const applied of appliedMigrations) {
-        const current = currentMigrations.find(m => m.version === applied.version);
+        const current = currentMigrations.find((m) => m.version === applied.version);
 
         if (!current) {
           logger.error('Applied migration file missing', { version: applied.version });

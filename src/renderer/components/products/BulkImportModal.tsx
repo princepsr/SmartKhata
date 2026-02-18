@@ -21,6 +21,8 @@ interface ColumnMapping {
   sku: string;
   barcode: string;
   gstPercent: string;
+  isActive: string;
+  trackInventory: string;
 }
 
 const SYSTEM_FIELDS: { key: keyof ColumnMapping; label: string; required: boolean }[] = [
@@ -31,6 +33,8 @@ const SYSTEM_FIELDS: { key: keyof ColumnMapping; label: string; required: boolea
   { key: 'sku', label: 'SKU', required: false },
   { key: 'barcode', label: 'Barcode', required: false },
   { key: 'gstPercent', label: 'GST %', required: false },
+  { key: 'isActive', label: 'Active Status (true/false/1/0)', required: false },
+  { key: 'trackInventory', label: 'Track Inventory (true/false/1/0)', required: false },
 ];
 
 export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClose, onSuccess }) => {
@@ -45,6 +49,8 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
     sku: '',
     barcode: '',
     gstPercent: '',
+    isActive: '',
+    trackInventory: '',
   });
   const [importErrors, setImportErrors] = useState<string[]>([]);
 
@@ -130,6 +136,12 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
           if (['gst', 'tax', 'vat'].includes(lowerHeader)) {
             newMapping.gstPercent = index.toString();
           }
+          if (['active', 'isactive', 'status'].includes(lowerHeader)) {
+            newMapping.isActive = index.toString();
+          }
+          if (['trackinventory', 'track', 'inventorytracking'].includes(lowerHeader)) {
+            newMapping.trackInventory = index.toString();
+          }
         });
         setMapping(newMapping);
       } catch (err) {
@@ -182,6 +194,17 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
             }
           }
 
+          if (field.key === 'isActive' || field.key === 'trackInventory') {
+            if (value !== undefined && value !== null && value !== '') {
+              const strVal = String(value).toLowerCase().trim();
+              value = strVal === 'true' || strVal === '1' || strVal === 'yes';
+            } else if (field.key === 'trackInventory') {
+              value = true; // Default track inventory to true
+            } else if (field.key === 'isActive') {
+              value = true; // Default active to true
+            }
+          }
+
           p[field.key] = value;
         }
       });
@@ -230,97 +253,99 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
           </button>
         </div>
 
-        <div className="import-body">
-          {stage === 'UPLOAD' && (
-            <div className="upload-zone" onClick={() => fileInputRef.current?.click()}>
-              <div className="upload-icon">📂</div>
-              <p>Click to upload CSV or PDF or Drag & Drop</p>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept=".csv,.txt,.pdf"
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-              />
-              <p className="hint">Supported formats: CSV, PDF (Simple Tables)</p>
-            </div>
-          )}
-
-          {stage === 'MAP' && parsedData && (
-            <div className="mapping-zone">
-              <p className="instruction">
-                Map columns from <strong>{file?.name}</strong> to System Fields
-              </p>
-
-              <div className="mapping-grid">
-                {SYSTEM_FIELDS.map((field) => (
-                  <div key={field.key} className="mapping-row">
-                    <label>
-                      {field.label} {field.required && <span className="req">*</span>}
-                    </label>
-                    <select
-                      value={mapping[field.key]}
-                      onChange={(e) => mapField(field.key, e.target.value)}
-                      className={!mapping[field.key] && field.required ? 'invalid' : ''}
-                    >
-                      <option value="">-- Ignore --</option>
-                      {parsedData.headers.map((h, i) => (
-                        <option key={i} value={i}>
-                          {h}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
+        <div className="modal-body import-body">
+          <div className={stage === 'UPLOAD' ? 'import-upload-container' : 'import-scroll-area'}>
+            {stage === 'UPLOAD' && (
+              <div className="upload-zone" onClick={() => fileInputRef.current?.click()}>
+                <div className="upload-icon">📂</div>
+                <p>Click to upload CSV or PDF or Drag & Drop</p>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".csv,.txt,.pdf"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+                <p className="hint">Supported formats: CSV, PDF (Simple Tables)</p>
               </div>
+            )}
 
-              <div className="preview-table-wrapper">
-                <h4>Preview (First 5 rows)</h4>
-                <table className="preview-table">
-                  <thead>
-                    <tr>
-                      {SYSTEM_FIELDS.map((f) => (
-                        <th key={f.key}>{f.label}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previewData.map((row, i) => (
-                      <tr key={i}>
+            {stage === 'MAP' && parsedData && (
+              <div className="mapping-zone">
+                <p className="instruction">
+                  Map columns from <strong>{file?.name}</strong> to System Fields
+                </p>
+
+                <div className="mapping-grid">
+                  {SYSTEM_FIELDS.map((field) => (
+                    <div key={field.key} className="mapping-row">
+                      <label>
+                        {field.label} {field.required && <span className="req">*</span>}
+                      </label>
+                      <select
+                        value={mapping[field.key]}
+                        onChange={(e) => mapField(field.key, e.target.value)}
+                        className={!mapping[field.key] && field.required ? 'invalid' : ''}
+                      >
+                        <option value="">-- Ignore --</option>
+                        {parsedData.headers.map((h, i) => (
+                          <option key={i} value={i}>
+                            {h}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="preview-table-wrapper">
+                  <h4>Preview (First 5 rows)</h4>
+                  <table className="preview-table">
+                    <thead>
+                      <tr>
                         {SYSTEM_FIELDS.map((f) => (
-                          <td key={f.key}>{row[f.key] || '-'}</td>
+                          <th key={f.key}>{f.label}</th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {previewData.map((row, i) => (
+                        <tr key={i}>
+                          {SYSTEM_FIELDS.map((f) => (
+                            <td key={f.key}>{row[f.key] || '-'}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {stage === 'IMPORTING' && (
-            <div className="loading-state">
-              <div className="spinner"></div>
-              <p>Importing products...</p>
-            </div>
-          )}
+            {stage === 'IMPORTING' && (
+              <div className="loading-state">
+                <div className="spinner"></div>
+                <p>Importing products...</p>
+              </div>
+            )}
 
-          {stage === 'DONE' && (
-            <div className="success-state">
-              <div className="success-icon">✅</div>
-              <p>Import Successful!</p>
-            </div>
-          )}
+            {stage === 'DONE' && (
+              <div className="success-state">
+                <div className="success-icon">✅</div>
+                <p>Import Successful!</p>
+              </div>
+            )}
 
-          {importErrors.length > 0 && (
-            <div className="error-banner">
-              {importErrors.map((e, i) => (
-                <div key={i}>{e}</div>
-              ))}
-              {ipcError && <div>{ipcError}</div>}
-              {loading && <div>Wait...</div>}
-            </div>
-          )}
+            {importErrors.length > 0 && (
+              <div className="error-banner">
+                {importErrors.map((e, i) => (
+                  <div key={i}>{e}</div>
+                ))}
+                {ipcError && <div>{ipcError}</div>}
+                {loading && <div>Wait...</div>}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="modal-actions">

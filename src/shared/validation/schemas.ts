@@ -56,6 +56,7 @@ export const CreateProductSchema = z.object({
     .optional(),
 
   trackInventory: z.boolean().optional(),
+  isActive: z.boolean().optional(),
 });
 
 // Infer TypeScript type from schema

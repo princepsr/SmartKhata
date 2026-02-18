@@ -1,26 +1,5 @@
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000; /* High z-index to stay on top */
-}
-
 .confirm-modal {
-  background-color: var(--color-bg);
-  border-radius: var(--radius-lg);
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  width: 400px;
-  max-width: 90vw;
-  overflow: hidden;
-  animation: modal-slide-up 0.3s ease-out;
+  width: 450px;
 }
 
 .confirm-header {
@@ -59,24 +38,6 @@
   justify-content: flex-end;
   gap: 0.75rem;
   background-color: var(--color-bg-secondary);
-}
-
-.confirm-footer .btn-primary {
-  padding: 0.6rem 1.2rem;
-}
-
-.confirm-footer .btn-secondary {
-  padding: 0.6rem 1.2rem;
-}
-
-.confirm-footer .btn-danger {
-  padding: 0.6rem 1.2rem;
-  background-color: var(--color-error);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  cursor: pointer;
 }
 
 @keyframes modal-slide-up {

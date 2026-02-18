@@ -201,6 +201,26 @@ export abstract class BaseRepository {
     const utcStr = dateStr.replace(' ', 'T') + 'Z';
     return new Date(utcStr);
   }
+
+  /**
+   * Format Date object for SQLite comparison (UTC)
+   *
+   * Converts Date to 'YYYY-MM-DD HH:MM:SS' format.
+   * This matches SQLite's default datetime() format and avoids
+   * lexicographical comparison issues with ISO 8601 strings.
+   */
+  protected formatDateForSql(date: Date): string {
+    const pad = (num: number) => num.toString().padStart(2, '0');
+
+    const year = date.getUTCFullYear();
+    const month = pad(date.getUTCMonth() + 1);
+    const day = pad(date.getUTCDate());
+    const hours = pad(date.getUTCHours());
+    const minutes = pad(date.getUTCMinutes());
+    const seconds = pad(date.getUTCSeconds());
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
 }
 
 /**

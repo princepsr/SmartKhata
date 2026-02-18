@@ -1,4 +1,6 @@
 import { BrowserWindow } from 'electron';
+import fs from 'fs';
+import { databaseManager } from '../database';
 import { logger } from '../utils/logger';
 import { shutdownManager, ShutdownPriority } from '../utils/shutdown-manager';
 
@@ -9,6 +11,10 @@ import { shutdownManager, ShutdownPriority } from '../utils/shutdown-manager';
  * Designed for 8+ hour long-run stability.
  */
 const stabilityLogger = logger.forModule('STABILITY');
+
+// Thresholds for warnings
+const MEMORY_THRESHOLD_MB = 512;
+const DB_SIZE_THRESHOLD_MB = 1024; // 1GB
 
 export class StabilityService {
   private static instance: StabilityService;
@@ -68,6 +74,18 @@ export class StabilityService {
     const memory = process.memoryUsage();
     const windowCount = BrowserWindow.getAllWindows().length;
 
+    // Check DB size
+    let dbSizeMB = 0;
+    try {
+      const dbPath = databaseManager.getDatabasePath();
+      if (fs.existsSync(dbPath)) {
+        const stats = fs.statSync(dbPath);
+        dbSizeMB = stats.size / 1024 / 1024;
+      }
+    } catch (err) {
+      stabilityLogger.error('Failed to check database size', err);
+    }
+
     stabilityLogger.info('System Health Report:', {
       memory: {
         rss: `${(memory.rss / 1024 / 1024).toFixed(2)} MB`,
@@ -79,12 +97,24 @@ export class StabilityService {
         active: windowCount,
         tracked: this.trackedWindows.size,
       },
+      db: {
+        size: `${dbSizeMB.toFixed(2)} MB`,
+      },
       uptime: `${(process.uptime() / 3600).toFixed(2)} hours`,
     });
 
-    // Alert if heap used is unusually high (> 512MB for this small app)
-    if (memory.heapUsed > 512 * 1024 * 1024) {
-      stabilityLogger.warn('High memory usage detected! Potential leak in progress.');
+    // Alert if heap used is unusually high
+    if (memory.heapUsed > MEMORY_THRESHOLD_MB * 1024 * 1024) {
+      stabilityLogger.warn(
+        `High memory usage detected (> ${MEMORY_THRESHOLD_MB}MB)! Potential leak in progress.`
+      );
+    }
+
+    // Alert if DB is growing too fast
+    if (dbSizeMB > DB_SIZE_THRESHOLD_MB) {
+      stabilityLogger.warn(
+        `Large database detected (> ${DB_SIZE_THRESHOLD_MB}MB)! Optimization or archiving recommended.`
+      );
     }
   }
 

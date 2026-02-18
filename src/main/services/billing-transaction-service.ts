@@ -1,5 +1,4 @@
 import { BaseRepository } from '../repositories/base-repository';
-import { ProductRepository } from '../repositories/product-repository';
 import { CustomerRepository } from '../repositories/customer-repository';
 import {
   BillRepository,
@@ -8,7 +7,13 @@ import {
   BillWithItems,
 } from '../repositories/bill-repository';
 import { InventoryRepository } from '../repositories/inventory-repository';
+import { ProductRepository, Product } from '../repositories/product-repository';
 import { SettingsService } from './settings-service';
+import {
+  NotFoundError,
+  InactiveEntityError,
+  InsufficientStockError,
+} from './errors/service-errors';
 import { logger } from '../utils/logger';
 
 /**
@@ -79,6 +84,7 @@ export class BillingTransactionService extends BaseRepository {
       // STEP 1: Validate and prepare bill items
       // ============================================
       const billItems: CreateBillItemInput[] = [];
+      const fetchedProducts: Map<number, Product> = new Map(); // Cache products for later steps
       let subtotal = 0;
       let gstTotal = 0;
 
@@ -88,15 +94,26 @@ export class BillingTransactionService extends BaseRepository {
         // Get product details
         const product = this.productRepo.findById(item.productId);
         if (!product) {
-          throw new Error(`Product not found: ${item.productId}`);
+          throw new NotFoundError('Product', item.productId);
         }
 
         if (!product.isActive) {
-          throw new Error(`Product is inactive: ${product.name}`);
+          throw new InactiveEntityError('Product', item.productId);
         }
+
+        // Cache for reuse in inventory logging step
+        fetchedProducts.set(item.productId, product);
 
         // Check stock availability and deduct (skip in billing-only mode OR if product doesn't track inventory)
         if (!config.billingOnly && product.trackInventory) {
+          if (product.stockQty < item.quantity) {
+            throw new InsufficientStockError(
+              product.id,
+              product.name,
+              product.stockQty,
+              item.quantity
+            );
+          }
           this.productRepo.updateStock(item.productId, -item.quantity);
         }
         // Note: updateStock() validates stock and throws if insufficient
@@ -153,9 +170,8 @@ export class BillingTransactionService extends BaseRepository {
       if (!config.billingOnly) {
         let loggedCount = 0;
         saleData.items.forEach((item) => {
-          // Check if product tracks inventory (need to fetch again or could cache)
-          const product = this.productRepo.findById(item.productId);
-          
+          const product = fetchedProducts.get(item.productId);
+
           if (product && product.trackInventory) {
             this.inventoryRepo.logChange({
               productId: item.productId,
@@ -170,7 +186,9 @@ export class BillingTransactionService extends BaseRepository {
 
         logger.info('Inventory changes logged', { itemCount: loggedCount });
       } else {
-        logger.info('Billing-only mode: skipped inventory changes', { itemCount: saleData.items.length });
+        logger.info('Billing-only mode: skipped inventory changes', {
+          itemCount: saleData.items.length,
+        });
       }
 
       // ============================================
@@ -202,79 +220,5 @@ export class BillingTransactionService extends BaseRepository {
     // - All operations succeed OR all are rolled back
     // - No partial bills, stock changes, or balance updates
     // - Atomic operation with full consistency
-  }
-
-  /**
-   * Validate sale before processing (optional pre-check)
-   *
-   * This can be called before createSale() to validate without
-   * starting a transaction. Useful for UI validation.
-   *
-   * @param saleData - Sale input data
-   * @throws Error if validation fails
-   */
-  public validateSale(saleData: CreateSaleInput): void {
-    // Validate items exist
-    if (!saleData.items || saleData.items.length === 0) {
-      throw new Error('Sale must have at least one item');
-    }
-
-    // Validate bill number
-    if (!saleData.billNumber || saleData.billNumber.trim() === '') {
-      throw new Error('Bill number is required');
-    }
-
-    // Check for duplicate bill number
-    const existingBill = this.billRepo.findByBillNumber(saleData.billNumber);
-    if (existingBill) {
-      throw new Error(`Bill number already exists: ${saleData.billNumber}`);
-    }
-
-    // Validate customer exists (if provided)
-    if (saleData.customerId) {
-      const customer = this.customerRepo.findById(saleData.customerId);
-      if (!customer) {
-        throw new Error(`Customer not found: ${saleData.customerId}`);
-      }
-      if (!customer.isActive) {
-        throw new Error(`Customer is inactive: ${customer.name}`);
-      }
-    }
-
-    // Validate products and stock
-    saleData.items.forEach((item) => {
-      const product = this.productRepo.findById(item.productId);
-
-      if (!product) {
-        throw new Error(`Product not found: ${item.productId}`);
-      }
-
-      if (!product.isActive) {
-        throw new Error(`Product is inactive: ${product.name}`);
-      }
-
-      if (item.quantity <= 0) {
-        throw new Error(`Invalid quantity for ${product.name}: ${item.quantity}`);
-      }
-
-      // Skip stock check in billing-only mode OR if product doesn't track inventory
-      const validateConfig = SettingsService.getInstance().getConfig();
-      if (!validateConfig.billingOnly && product.trackInventory && product.stockQty < item.quantity) {
-        throw new Error(
-          `Insufficient stock for ${product.name}. Available: ${product.stockQty}, Required: ${item.quantity}`
-        );
-      }
-    });
-
-    // Validate payment mode
-    const validPaymentModes = ['cash', 'upi', 'mixed'];
-    if (!validPaymentModes.includes(saleData.paymentMode)) {
-      throw new Error(`Invalid payment mode: ${saleData.paymentMode}`);
-    }
-
-    // Validate discount
-    if (saleData.discountAmount && saleData.discountAmount < 0) {
-      throw new Error('Discount amount cannot be negative');
-    }
   }
 }

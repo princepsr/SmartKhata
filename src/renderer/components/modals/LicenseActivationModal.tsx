@@ -63,7 +63,7 @@ const LicenseActivationModal: React.FC<LicenseActivationModalProps> = ({ isOpen,
 
   return (
     <div className="modal-overlay">
-      <div className="modal-container license-modal">
+      <div className="modal-content license-modal">
         <div className="modal-header">
           <h2>License Verification</h2>
           <button className="close-btn" onClick={onClose}>
@@ -113,20 +113,21 @@ const LicenseActivationModal: React.FC<LicenseActivationModalProps> = ({ isOpen,
             </div>
 
             {message && <div className={`message ${message.type}`}>{message.text}</div>}
-
-            <div className="form-actions">
-              <button type="button" className="btn-secondary" onClick={onClose}>
-                Later
-              </button>
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={activating || segments.join('').length !== 12}
-              >
-                {activating ? 'Verifying...' : 'Verify License'}
-              </button>
-            </div>
           </form>
+        </div>
+
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Later
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={activating || segments.join('').length !== 12}
+            onClick={(e: any) => handleActivate(e)}
+          >
+            {activating ? 'Verifying...' : 'Verify License'}
+          </button>
         </div>
       </div>
     </div>

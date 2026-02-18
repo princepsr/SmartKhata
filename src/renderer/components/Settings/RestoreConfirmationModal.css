@@ -1,23 +1,5 @@
-﻿.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content.restore-modal {
-  background-color: var(--color-surface, #fff);
-  padding: 2rem;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+﻿.modal-content.restore-modal {
+  width: 400px;
 }
 
 .modal-header h3 {

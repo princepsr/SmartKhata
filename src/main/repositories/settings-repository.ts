@@ -30,6 +30,7 @@ export interface AppConfig {
   printCopies: number;
   autoPrint: boolean;
   billingOnly: boolean;
+  customersEnabled: boolean;
   updatedAt: Date;
 }
 
@@ -285,6 +286,7 @@ export class SettingsRepository extends BaseRepository {
       print_copies: number;
       auto_print: number;
       billing_only: number;
+      customers_enabled: number;
       updated_at: string;
     }>(sql);
 
@@ -308,6 +310,7 @@ export class SettingsRepository extends BaseRepository {
         printCopies: 1,
         autoPrint: true,
         billingOnly: false,
+        customersEnabled: true,
         updatedAt: new Date(),
       };
     }
@@ -342,6 +345,7 @@ export class SettingsRepository extends BaseRepository {
       printCopies: 'print_copies',
       autoPrint: 'auto_print',
       billingOnly: 'billing_only',
+      customersEnabled: 'customers_enabled',
     };
 
     Object.entries(config).forEach(([key, value]) => {
@@ -404,6 +408,7 @@ export class SettingsRepository extends BaseRepository {
     print_copies: number;
     auto_print: number;
     billing_only: number;
+    customers_enabled: number;
     updated_at: string;
   }): AppConfig {
     return {
@@ -423,6 +428,7 @@ export class SettingsRepository extends BaseRepository {
       printCopies: row.print_copies,
       autoPrint: row.auto_print === 1,
       billingOnly: row.billing_only === 1,
+      customersEnabled: row.customers_enabled === 1,
       updatedAt: this.parseDate(row.updated_at),
     };
   }

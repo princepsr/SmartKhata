@@ -1,49 +1,63 @@
 .bill-detail-modal {
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   width: 650px;
-  max-width: 95vw;
-  height: 80vh; /* Fixed height to match history modal */
+}
+
+.bill-detail-modal .modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 2px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--color-bg) !important;
+  z-index: 100;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.bill-detail-modal .modal-body {
+  padding: 0 !important;
+  overflow: hidden;
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.modal-body {
+.bill-detail-scroll-area {
   flex: 1;
   overflow-y: auto;
   padding: 0 1.5rem 1.5rem 1.5rem;
+  position: relative;
 }
 
 .bill-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
   padding: 1rem;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
-.bill-meta strong {
-  color: #64748b;
-  margin-right: 0.5rem;
+.mode-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
-.payment-badge {
-  padding: 0.35rem 0.85rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  background-color: var(--color-primary);
-  color: white;
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+.mode-badge.cash {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.mode-badge.upi,
+.mode-badge.card {
+  background-color: #f3e8ff;
+  color: #6b21a8;
 }
 
 .items-table {
@@ -54,23 +68,29 @@
 
 .items-table th {
   text-align: left;
-  padding: 0.75rem 1rem;
-  border-bottom: 2px solid #f1f5f9;
-  color: #64748b;
-  font-size: 0.8rem;
+  padding: 1rem;
+  border-bottom: 2px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.05em;
+  background-color: var(--color-bg) !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 1px 0 var(--color-border);
 }
 
 .items-table td {
-  padding: 1rem;
+  padding: 0.85rem 1rem;
   border-bottom: 1px solid #f1f5f9;
   font-size: 0.95rem;
   color: #1e293b;
 }
 
 .text-right {
-  text-align: right;
+  text-align: right !important;
 }
 
 .bill-summary {

@@ -61,61 +61,65 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
         </div>
 
         <div className="modal-body">
-          {loading && <div className="loading">Loading bill details...</div>}
-          {error && <div className="error">Error: {error}</div>}
+          <div className="bill-detail-scroll-area">
+            {loading && <div className="loading">Loading bill details...</div>}
+            {error && <div className="error">Error: {error}</div>}
 
-          {data && (
-            <div className="bill-info">
-              <div className="bill-meta">
-                <span>
-                  <strong>Date:</strong> {new Date(data.bill.createdAt).toLocaleString('en-IN')}
-                </span>
-                <span className="payment-badge">{data.bill.paymentMode.toUpperCase()}</span>
-              </div>
+            {data && (
+              <div className="bill-info">
+                <div className="bill-meta">
+                  <span>
+                    <strong>Date:</strong> {new Date(data.bill.createdAt).toLocaleString('en-IN')}
+                  </span>
+                  <span className={`mode-badge ${data.bill.paymentMode.toLowerCase()}`}>
+                    {data.bill.paymentMode.toUpperCase()}
+                  </span>
+                </div>
 
-              <table className="items-table">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th className="text-right">Qty</th>
-                    <th className="text-right">Price</th>
-                    <th className="text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.items.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.productNameSnapshot}</td>
-                      <td className="text-right">{item.quantity}</td>
-                      <td className="text-right">{formatCurrency(item.unitPrice)}</td>
-                      <td className="text-right">{formatCurrency(item.lineTotal)}</td>
+                <table className="items-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th className="text-right">Qty</th>
+                      <th className="text-right">Price</th>
+                      <th className="text-right">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.items.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.productNameSnapshot}</td>
+                        <td className="text-right">{item.quantity}</td>
+                        <td className="text-right">{formatCurrency(item.unitPrice)}</td>
+                        <td className="text-right">{formatCurrency(item.lineTotal)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-              <div className="bill-summary">
-                <div className="summary-row">
-                  <span>Subtotal:</span>
-                  <span>{formatCurrency(data.bill.subtotal)}</span>
-                </div>
-                <div className="summary-row">
-                  <span>GST:</span>
-                  <span>{formatCurrency(data.bill.gstTotal)}</span>
-                </div>
-                {data.bill.discountAmount > 0 && (
-                  <div className="summary-row discount">
-                    <span>Discount:</span>
-                    <span>-{formatCurrency(data.bill.discountAmount)}</span>
+                <div className="bill-summary">
+                  <div className="summary-row">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(data.bill.subtotal)}</span>
                   </div>
-                )}
-                <div className="summary-row grand-total">
-                  <span>Grand Total:</span>
-                  <span>{formatCurrency(data.bill.grandTotal)}</span>
+                  <div className="summary-row">
+                    <span>GST:</span>
+                    <span>{formatCurrency(data.bill.gstTotal)}</span>
+                  </div>
+                  {data.bill.discountAmount > 0 && (
+                    <div className="summary-row discount">
+                      <span>Discount:</span>
+                      <span>-{formatCurrency(data.bill.discountAmount)}</span>
+                    </div>
+                  )}
+                  <div className="summary-row grand-total">
+                    <span>Grand Total:</span>
+                    <span>{formatCurrency(data.bill.grandTotal)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div className="modal-footer">

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import GlobalMessages from './GlobalMessages';
 import LicenseBanner from './layout/LicenseBanner';
 import LicenseActivationModal from './modals/LicenseActivationModal';
+import { useAppSettingsStore } from '../store';
 import './Layout.css';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 
@@ -16,6 +17,7 @@ import { IPC_CHANNELS } from '@shared/ipc/channels';
 function Layout() {
   const [appVersion, setAppVersion] = useState<string>('');
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+  const { settings } = useAppSettingsStore();
 
   const navigate = useNavigate();
 
@@ -47,8 +49,10 @@ function Layout() {
           navigate('/products');
           break;
         case 'F4':
-          e.preventDefault();
-          navigate('/customers');
+          if (settings.customersEnabled) {
+            e.preventDefault();
+            navigate('/customers');
+          }
           break;
         case 'F5':
           e.preventDefault();
@@ -65,7 +69,7 @@ function Layout() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate]);
+  }, [navigate, settings.customersEnabled]);
 
   return (
     <div className="app-container">
@@ -102,11 +106,13 @@ function Layout() {
               <kbd className="nav-shortcut">F3</kbd>
             </NavLink>
 
-            <NavLink to="/customers" className="nav-item">
-              <span className="nav-icon">👥</span>
-              <span className="nav-label">Customers</span>
-              <kbd className="nav-shortcut">F4</kbd>
-            </NavLink>
+            {settings.customersEnabled && (
+              <NavLink to="/customers" className="nav-item">
+                <span className="nav-icon">👥</span>
+                <span className="nav-label">Customers</span>
+                <kbd className="nav-shortcut">F4</kbd>
+              </NavLink>
+            )}
 
             <NavLink to="/reports" className="nav-item">
               <span className="nav-icon">📊</span>

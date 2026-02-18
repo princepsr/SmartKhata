@@ -1,76 +1,33 @@
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
 .bill-history-modal {
-  background-color: var(--color-bg);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   width: 900px;
-  max-width: 95vw;
-  height: 80vh; /* Fixed height as requested */
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  height: 80vh;
 }
 
-.modal-header {
+.bill-history-modal .modal-header {
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 2px solid var(--color-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--color-bg);
+  background-color: var(--color-bg) !important;
+  z-index: 100;
+  position: relative;
+  flex-shrink: 0;
 }
 
-.modal-header h2 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.75rem;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  line-height: 1;
-  padding: 0.25rem;
-  transition: color 0.2s;
-}
-
-.close-btn:hover {
-  color: var(--color-error);
-}
-
-.modal-body {
-  padding: 0 1.5rem 1.5rem 1.5rem; /* No top padding to allow header to stick to top */
-  overflow-y: auto;
+.bill-history-modal .modal-body {
+  padding: 0 !important;
+  overflow: hidden;
   flex: 1;
-}
-
-.modal-footer {
-  padding: 1.25rem 1.5rem;
-  border-top: 1px solid var(--color-border);
   display: flex;
-  justify-content: flex-end;
-  background-color: var(--color-bg-secondary);
+  flex-direction: column;
 }
 
-.history-table {
-  width: 100%;
-  border-collapse: collapse;
+.bill-history-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  position: relative;
 }
 
 .history-table th {
@@ -79,10 +36,10 @@
   border-bottom: 2px solid var(--color-border);
   color: var(--color-text-secondary);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.025em;
-  background-color: #f8fafc; /* Solid opaque background */
+  letter-spacing: 0.05em;
+  background-color: var(--color-bg-secondary) !important;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -138,7 +95,7 @@
 }
 
 .text-right {
-  text-align: right;
+  text-align: right !important;
 }
 
 .font-bold {

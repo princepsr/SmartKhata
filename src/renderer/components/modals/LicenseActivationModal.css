@@ -1,42 +1,6 @@
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: flex-start; /* Move to top to avoid clipping at very top */
-  padding-top: 100px; /* Buffer from the top header */
-  z-index: 10000; /* Extremely high to stay above all panels */
-}
-
-.modal-container {
-  background-color: var(--color-bg);
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
 .license-modal {
-  max-width: 500px;
-  width: 90%;
-}
-
-.modal-header {
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: var(--color-bg-secondary);
-}
-
-.modal-body {
-  padding: var(--spacing-lg);
+  width: 550px;
+  max-width: 95vw;
 }
 
 .info-section {
@@ -63,17 +27,19 @@
 .system-id {
   font-family: 'Courier New', Courier, monospace;
   background: var(--color-bg-secondary);
-  padding: 6px 12px;
+  padding: 6px 10px; /* Slightly reduced padding */
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-primary-dark);
   font-weight: 600;
   flex-grow: 1;
-  word-break: break-all;
   border: 1px solid var(--color-border);
   min-height: 32px;
   display: flex;
   align-items: center;
+  white-space: nowrap; /* Use nowrap instead of pre for better ellipsis support */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .copy-btn {
@@ -177,47 +143,4 @@
   background-color: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.btn-primary {
-  background-color: var(--color-primary);
-  color: white;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-dark);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background-color: #94a3b8;
-}
-
-.btn-secondary {
-  background-color: white;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  padding: 10px 24px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-  background-color: var(--color-bg-secondary);
 }

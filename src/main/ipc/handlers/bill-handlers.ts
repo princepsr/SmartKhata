@@ -71,11 +71,12 @@ export function registerBillHandlers(): void {
       // 1. Auto-print if enabled in settings
       const settings = new SettingsService().getConfig();
       if (settings.autoPrint) {
-        // We trigger print and log any errors, but we don't block the return
-        // as the bill creation was successful.
-        printService.printBill(result).catch((err) => {
+        try {
+          await printService.printBill(result);
+        } catch (err) {
           logger.error('Auto-print failed', err);
-        });
+          // We don't throw here as the bill was successfully created
+        }
       }
 
       return {
@@ -125,12 +126,9 @@ export function registerBillHandlers(): void {
       const billId = typeof payload === 'number' ? payload : payload.billId;
       const printerName = typeof payload === 'number' ? undefined : payload.printerName;
 
-      // 1. Send to print service - Detached to fulfill < 300ms trigger requirement
-      printService.printBill(billId, printerName).catch((err) => {
-        logger.error(`Detached print failed for bill #${billId}`, err);
-      });
-
-      return true;
+      // 1. Send to print service - Now awaited for better UI feedback
+      const success = await printService.printBill(billId, printerName);
+      return success;
     },
     {
       transformError: (err) => getUserFriendlyMessage(err),
@@ -175,12 +173,9 @@ export function registerBillHandlers(): void {
       // 1. Get last bill
       const lastBill = billingService.getLastBill();
 
-      // 2. Print it - Detached for performance
-      printService.printBill(lastBill).catch((err) => {
-        logger.error('Detached reprint failed', err);
-      });
-
-      return true;
+      // 2. Print it - Now awaited
+      const success = await printService.printBill(lastBill);
+      return success;
     },
     {
       transformError: (err) => getUserFriendlyMessage(err),

@@ -261,7 +261,10 @@ export class BillRepository extends BaseRepository {
       ORDER BY created_at DESC
     `;
 
-    const rows = this.queryAll<any>(sql, [fromDate.toISOString(), toDate.toISOString()]);
+    const rows = this.queryAll<any>(sql, [
+      this.formatDateForSql(fromDate),
+      this.formatDateForSql(toDate),
+    ]);
 
     return rows.map((row) => this._mapToBill(row));
   }
@@ -321,16 +324,12 @@ export class BillRepository extends BaseRepository {
    * Get today's bills
    */
   public findToday(): Bill[] {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startOfToday = today.toISOString();
-
     const sql = `
       SELECT * FROM bills 
-      WHERE created_at >= ?
+      WHERE date(created_at, 'localtime') = date('now', 'localtime')
       ORDER BY created_at DESC
     `;
-    const rows = this.queryAll<any>(sql, [startOfToday]);
+    const rows = this.queryAll<any>(sql);
     return rows.map((row) => this._mapToBill(row));
   }
 
@@ -356,7 +355,10 @@ export class BillRepository extends BaseRepository {
       WHERE created_at >= ? AND created_at <= ?
     `;
 
-    const result = this.queryOne<any>(sql, [fromDate.toISOString(), toDate.toISOString()]);
+    const result = this.queryOne<any>(sql, [
+      this.formatDateForSql(fromDate),
+      this.formatDateForSql(toDate),
+    ]);
 
     return {
       totalBills: result?.total_bills || 0,

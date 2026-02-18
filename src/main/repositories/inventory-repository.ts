@@ -1,4 +1,4 @@
-import { BaseRepository, DatabaseError } from './base-repository';
+import { BaseRepository } from './base-repository';
 import { logger } from '../utils/logger';
 
 /**
@@ -139,7 +139,10 @@ export class InventoryRepository extends BaseRepository {
       ORDER BY created_at DESC
     `;
 
-    const rows = this.queryAll<any>(sql, [fromDate.toISOString(), toDate.toISOString()]);
+    const rows = this.queryAll<any>(sql, [
+      this.formatDateForSql(fromDate),
+      this.formatDateForSql(toDate),
+    ]);
 
     return rows.map((row) => this._mapToInventoryLog(row));
   }
@@ -197,7 +200,10 @@ export class InventoryRepository extends BaseRepository {
       ORDER BY reason
     `;
 
-    const rows = this.queryAll<any>(sql, [fromDate.toISOString(), toDate.toISOString()]);
+    const rows = this.queryAll<any>(sql, [
+      this.formatDateForSql(fromDate),
+      this.formatDateForSql(toDate),
+    ]);
 
     return rows.map((row) => ({
       reason: row.reason,

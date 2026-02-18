@@ -14,7 +14,6 @@ import { BillingTransactionService, CreateSaleInput } from './billing-transactio
 import {
   ValidationError,
   NotFoundError,
-  InsufficientStockError,
   InactiveEntityError,
   DuplicateEntryError,
   InvalidQuantityError,
@@ -216,34 +215,6 @@ export class BillingService extends BaseService {
     if (input.paymentReceived !== undefined && input.paymentReceived < 0) {
       throw new ValidationError('Payment received cannot be negative', 'paymentReceived');
     }
-
-    // 7. Validate products and stock availability
-    const config = SettingsService.getInstance().getConfig();
-
-    input.items.forEach((item, index) => {
-      // Validate quantity
-      if (!item.quantity || item.quantity <= 0) {
-        throw new InvalidQuantityError(
-          `Quantity must be positive for item ${index + 1}`,
-          item.quantity
-        );
-      }
-
-      // Get product
-      const product = this.productRepo.findById(item.productId);
-      if (!product) {
-        throw new NotFoundError('Product', item.productId);
-      }
-
-      if (!product.isActive) {
-        throw new InactiveEntityError('Product', item.productId);
-      }
-
-      // Skip stock check in billing-only mode OR if product doesn't track inventory
-      if (!config.billingOnly && product.trackInventory && (product.stockQty < item.quantity)) {
-        throw new InsufficientStockError(product.id, product.name, product.stockQty, item.quantity);
-      }
-    });
 
     // 8. Check for duplicate bill number
     const existingBill = this.billRepo.findByBillNumber(input.billNumber);

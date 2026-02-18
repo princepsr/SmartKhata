@@ -8,6 +8,7 @@
 import { logger } from '../utils/logger';
 import { registerProductHandlers } from './handlers/product-handlers';
 import { registerSystemHandlers } from './handlers/system-handlers';
+import { registerCustomerHandlers } from './handlers/customer-handlers';
 // import { registerSaleHandlers } from './handlers/sale-handlers';
 import { registerAppHandlers } from './handlers/app-handlers';
 import { registerBillHandlers } from './handlers/bill-handlers';
@@ -32,8 +33,8 @@ export function registerIPCHandlers(): void {
     registerReportHandlers();
     registerSettingsHandlers();
     registerLicenseHandlers();
-    // registerSaleHandlers();      // TODO: Implement
-    // registerCustomerHandlers(); // TODO: Implement
+    registerCustomerHandlers();
+    // registerSaleHandlers();      // TODO: Implement if needed (Bill handles most sales)
 
     logger.info('=== IPC Handlers Registered Successfully ===');
   } catch (error) {

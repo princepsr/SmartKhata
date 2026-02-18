@@ -248,6 +248,10 @@ class BackupService {
       backupLogger.debug('Re-initializing database');
       databaseManager.initialize();
 
+      // Step E.1: Run migrations (CRITICAL for older backups)
+      backupLogger.info('Running pending migrations on restored database');
+      await migrationRunner.runPendingMigrations();
+
       // Step F: Integrity Check
       backupLogger.debug('Running PRAGMA integrity_check');
       const db = databaseManager.getDatabase();

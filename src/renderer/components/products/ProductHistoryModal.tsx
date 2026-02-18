@@ -62,52 +62,54 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
           )}
 
           {!loading && !error && history && history.length > 0 && (
-            <div className="history-table-container">
-              <table className="history-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Change</th>
-                    <th>Reason</th>
-                    <th>Reference</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((log) => (
-                    <tr key={log.id}>
-                      <td className="col-date">
-                        {new Date(log.date).toLocaleString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </td>
-                      <td className={`col-qty ${log.changeQty >= 0 ? 'positive' : 'negative'}`}>
-                        {log.changeQty > 0 ? '+' : ''}
-                        {log.changeQty}
-                      </td>
-                      <td className="col-reason">{log.reason}</td>
-                      <td className="col-ref">
-                        {log.reason === 'SALE' ? (
-                          <button
-                            className="bill-link-btn"
-                            onClick={() => setSelectedBillNumber(log.reference)}
-                            title="View Bill Details"
-                          >
-                            {log.reference}
-                          </button>
-                        ) : (
-                          log.reference
-                        )}
-                      </td>
-                      <td className="col-notes">{log.notes}</td>
+            <div className="history-scroll-area">
+              <div className="history-table-container">
+                <table className="history-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Change</th>
+                      <th>Reason</th>
+                      <th>Reference</th>
+                      <th>Notes</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {history.map((log) => (
+                      <tr key={log.id}>
+                        <td className="col-date">
+                          {new Date(log.date).toLocaleString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </td>
+                        <td className={`col-qty ${log.changeQty >= 0 ? 'positive' : 'negative'}`}>
+                          {log.changeQty > 0 ? '+' : ''}
+                          {log.changeQty}
+                        </td>
+                        <td className="col-reason">{log.reason}</td>
+                        <td className="col-ref">
+                          {log.reason === 'SALE' ? (
+                            <button
+                              className="bill-link-btn"
+                              onClick={() => setSelectedBillNumber(log.reference)}
+                              title="View Bill Details"
+                            >
+                              {log.reference}
+                            </button>
+                          ) : (
+                            log.reference
+                          )}
+                        </td>
+                        <td className="col-notes">{log.notes}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

@@ -22,6 +22,9 @@ export interface AppSettings {
   showCustomerDetails: boolean;
   footerMessage: string;
   billingOnly: boolean;
+  customersEnabled: boolean;
+  autoPrint: boolean;
+  printCopies: number;
   updatedAt?: string;
 }
 
@@ -50,6 +53,9 @@ const defaultSettings: AppSettings = {
   showCustomerDetails: true,
   footerMessage: 'Thank you! Visit Again',
   billingOnly: false,
+  customersEnabled: true,
+  autoPrint: true,
+  printCopies: 1,
 };
 
 export const useAppSettingsStore = create<AppSettingsState>()(

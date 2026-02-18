@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
+import { useAppSettingsStore } from '../../store';
+import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import './ProductFormModal.css';
 
 interface Product {
@@ -44,7 +46,7 @@ const INITIAL_STATE: FormData = {
   salePrice: '',
   purchasePrice: '',
   gstPercent: '0',
-  stockQty: '0',
+  stockQty: '10',
   lowStockAlert: '5',
   isActive: true,
   trackInventory: true,
@@ -59,6 +61,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [formData, setFormData] = useState<FormData>(INITIAL_STATE);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const firstInputRef = useRef<HTMLInputElement>(null);
+  const { settings } = useAppSettingsStore();
 
   const isEditMode = !!initialData;
 
@@ -112,7 +115,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           trackInventory: initialData.trackInventory ?? true,
         });
       } else {
-        setFormData(INITIAL_STATE);
+        setFormData({
+          ...INITIAL_STATE,
+          gstPercent: (settings?.gstPercentage ?? 18).toString(),
+        });
       }
       setErrors({});
       // Focus name field only if creating, safely wait for render
@@ -120,7 +126,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         setTimeout(() => firstInputRef.current?.focus(), 50);
       }
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, settings]);
 
   // Keyboard Shortcuts for Modal
   useEffect(() => {
@@ -143,11 +149,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     return null;
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target;
+
+    let finalValue: string | boolean = value;
+    if (type === 'checkbox') {
+      finalValue = (e.target as HTMLInputElement).checked;
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: finalValue,
     }));
 
     // Clear error for this field
@@ -254,193 +268,228 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </button>
         </div>
 
-        {errorMsg && !Object.values(errors).some(Boolean) && (
-          <div className="error-banner">{errorMsg}</div>
-        )}
+        <form id="product-form" onSubmit={handleSubmit}>
+          <div className="modal-body">
+            {errorMsg && !Object.values(errors).some(Boolean) && (
+              <div className="error-banner">{errorMsg}</div>
+            )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Product Name {isEditMode ? '(Immutable)' : '*'}</label>
-            <input
-              ref={firstInputRef}
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="e.g. Maggi Masala Noodles"
-              className={errors.name ? 'error' : ''}
-              disabled={isLoading || isEditMode}
-            />
-            {errors.name && <span className="error-text">{errors.name}</span>}
-          </div>
-
-          <div className="form-row">
             <div className="form-group">
-              <label>SKU (Optional)</label>
+              <label>Product Name {isEditMode ? '(Immutable)' : '*'}</label>
               <input
+                ref={firstInputRef}
                 type="text"
-                name="sku"
-                value={formData.sku}
+                name="name"
+                value={formData.name}
                 onChange={handleChange}
-                placeholder="Unique Code"
-                disabled={isLoading}
+                placeholder="Product Name"
+                className={errors.name ? 'error' : ''}
+                disabled={isLoading || isEditMode}
               />
+              {errors.name && <span className="error-text">{errors.name}</span>}
             </div>
-            <div className="form-group">
-              <label>Barcode (Scan)</label>
-              <input
-                type="text"
-                name="barcode"
-                value={formData.barcode}
-                onChange={handleChange}
-                placeholder="Scan barcode"
-                disabled={isLoading}
-              />
-            </div>
-          </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>Sale Price (₹) *</label>
-              <input
-                type="number"
-                name="salePrice"
-                value={formData.salePrice}
-                onChange={handleChange}
-                placeholder="0.00"
-                step="0.01"
-                className={errors.salePrice ? 'error' : ''}
-                disabled={isLoading}
-              />
-              {errors.salePrice && <span className="error-text">{errors.salePrice}</span>}
-            </div>
-            <div className="form-group">
-              <label>Purchase Price (₹)</label>
-              <input
-                type="number"
-                name="purchasePrice"
-                value={formData.purchasePrice}
-                onChange={handleChange}
-                placeholder="0.00"
-                step="0.01"
-                disabled={isLoading}
-              />
-              {errors.purchasePrice && <span className="error-text">{errors.purchasePrice}</span>}
-            </div>
-            <div className="form-group sm">
-              <label>GST %</label>
-              <input
-                type="number"
-                name="gstPercent"
-                value={formData.gstPercent}
-                onChange={handleChange}
-                placeholder="0"
-                disabled={isLoading}
-              />
-              {errors.gstPercent && <span className="error-text">{errors.gstPercent}</span>}
-            </div>
-          </div>
-
-          <div className="form-group" style={{ marginBottom: '1rem' }}>
-            <label
-              style={{
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontWeight: '500',
-              }}
-            >
-              <input
-                type="checkbox"
-                name="trackInventory"
-                checked={formData.trackInventory}
-                onChange={handleChange}
-                disabled={isLoading}
-                style={{ width: 'auto' }}
-              />
-              Track Inventory
-            </label>
-            <small style={{ color: '#666', marginLeft: '1.5rem', display: 'block' }}>
-              Uncheck for services or items where stock doesn't matter.
-            </small>
-          </div>
-
-          {!isEditMode && formData.trackInventory && (
             <div className="form-row">
               <div className="form-group">
-                <label>Opening Stock</label>
+                <label>SKU (Optional)</label>
                 <input
-                  type="number"
-                  name="stockQty"
-                  value={formData.stockQty}
+                  type="text"
+                  name="sku"
+                  value={formData.sku}
                   onChange={handleChange}
-                  placeholder="0"
+                  placeholder="Unique Code"
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="form-group">
+                <label>Barcode (Scan)</label>
+                <input
+                  type="text"
+                  name="barcode"
+                  value={formData.barcode}
+                  onChange={handleChange}
+                  placeholder="Scan barcode"
                   disabled={isLoading}
                 />
               </div>
             </div>
-          )}
 
-          <div className="form-row">
-            {formData.trackInventory && (
+            <div className="form-row">
               <div className="form-group">
-                <label>Low Stock Alert Qty</label>
+                <label>Sale Price (₹) *</label>
                 <input
                   type="number"
-                  name="lowStockAlert"
-                  value={formData.lowStockAlert}
+                  name="salePrice"
+                  value={formData.salePrice}
                   onChange={handleChange}
-                  placeholder="e.g. 5"
+                  placeholder="0.00"
+                  step="0.01"
+                  className={errors.salePrice ? 'error' : ''}
                   disabled={isLoading}
                 />
+                {errors.salePrice && <span className="error-text">{errors.salePrice}</span>}
               </div>
-            )}
-
-            {isEditMode && (
-              <div className="form-group" style={{ justifyContent: 'center' }}>
-                <label
-                  style={{
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    name="isActive"
-                    checked={formData.isActive}
+              <div className="form-group">
+                <label>Purchase Price (₹)</label>
+                <input
+                  type="number"
+                  name="purchasePrice"
+                  value={formData.purchasePrice}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  disabled={isLoading}
+                />
+                {errors.purchasePrice && <span className="error-text">{errors.purchasePrice}</span>}
+              </div>
+              <div className="form-group gst-group">
+                <label>GST %</label>
+                <div className="gst-select-wrapper">
+                  <div className="gst-display-value">{formData.gstPercent}%</div>
+                  <select
+                    name="gstPercent"
+                    value={formData.gstPercent}
                     onChange={handleChange}
                     disabled={isLoading}
-                    style={{ width: 'auto' }}
+                    className="gst-select-overlay"
+                  >
+                    {APP_CONSTANTS.BUSINESS.GST_RATES.map((rate) => (
+                      <option key={rate.value} value={rate.value}>
+                        {rate.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {errors.gstPercent && <span className="error-text">{errors.gstPercent}</span>}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label
+                style={{
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontWeight: '500',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  name="trackInventory"
+                  checked={formData.trackInventory}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    cursor: 'pointer',
+                    transform: 'scale(1.1)',
+                    accentColor: 'var(--primary-color)',
+                  }}
+                />
+                Track Inventory
+              </label>
+              {!formData.trackInventory && (
+                <div
+                  className="info-message"
+                  style={{
+                    padding: '0.75rem',
+                    background: '#f3f4f6',
+                    borderRadius: '4px',
+                    marginTop: '0.5rem',
+                    color: '#666',
+                    fontSize: '0.85rem',
+                    borderLeft: '4px solid #d1d5db',
+                  }}
+                >
+                  Inventory tracking is disabled for this item. Stock quantity will not be tracked
+                  or updated.
+                </div>
+              )}
+            </div>
+
+            {formData.trackInventory && (
+              <div className="form-row">
+                {!isEditMode && (
+                  <div className="form-group">
+                    <label>Opening Stock</label>
+                    <input
+                      type="number"
+                      name="stockQty"
+                      value={formData.stockQty}
+                      onChange={handleChange}
+                      placeholder="0"
+                      disabled={isLoading}
+                    />
+                  </div>
+                )}
+                <div className="form-group">
+                  <label>Low Stock Alert Qty</label>
+                  <input
+                    type="number"
+                    name="lowStockAlert"
+                    value={formData.lowStockAlert}
+                    onChange={handleChange}
+                    placeholder="e.g. 5"
+                    disabled={isLoading}
                   />
-                  Active Product
-                </label>
+                </div>
+              </div>
+            )}
+
+            {isEditMode && (
+              <div className="form-row">
+                <div className="form-group" style={{ justifyContent: 'center' }}>
+                  <label
+                    style={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      checked={formData.isActive}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                        transform: 'scale(1.1)',
+                        accentColor: 'var(--primary-color)',
+                      }}
+                    />
+                    Active Product
+                  </label>
+                </div>
               </div>
             )}
           </div>
-
-          <div className="modal-actions">
-            {isEditMode && (
-              <button
-                type="button"
-                className="btn-danger"
-                onClick={handleDelete}
-                disabled={isLoading}
-                style={{ marginRight: 'auto' }}
-              >
-                {deleting ? 'Deleting...' : 'Delete Product'}
-              </button>
-            )}
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary" disabled={isLoading}>
-              {isLoading ? 'Saving...' : isEditMode ? 'Update Product' : 'Create Product'}
-            </button>
-          </div>
         </form>
+
+        <div className="modal-actions">
+          {isEditMode && (
+            <button
+              type="button"
+              className="btn-danger"
+              onClick={handleDelete}
+              disabled={isLoading}
+              style={{ marginRight: 'auto' }}
+            >
+              {deleting ? 'Deleting...' : 'Delete Product'}
+            </button>
+          )}
+          <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </button>
+          <button type="submit" form="product-form" className="btn-primary" disabled={isLoading}>
+            {isLoading ? 'Saving...' : isEditMode ? 'Update Product' : 'Create Product'}
+          </button>
+        </div>
       </div>
     </div>
   );
