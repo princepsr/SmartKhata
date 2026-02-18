@@ -24,10 +24,14 @@ export function registerCustomerHandlers(): void {
   // ============================================
   // LIST ALL ACTIVE CUSTOMERS
   // ============================================
-  IPCHandler.handle<void, Customer[]>(
+  IPCHandler.handle<{ includeInactive?: boolean } | void, Customer[]>(
     IPC_CHANNELS.CUSTOMER_LIST,
-    async () => {
-      const customers = customerService.getAllCustomers();
+    async (payload) => {
+      let includeInactive = false;
+      if (payload && typeof payload === 'object') {
+        includeInactive = !!payload.includeInactive;
+      }
+      const customers = customerService.getAllCustomers(includeInactive);
       return customers.map((c) => _mapToUI(c));
     },
     {
@@ -93,10 +97,20 @@ export function registerCustomerHandlers(): void {
   // ============================================
   // SEARCH CUSTOMERS
   // ============================================
-  IPCHandler.handle<string, Customer[]>(
+  IPCHandler.handle<{ query: string; includeInactive?: boolean } | string, Customer[]>(
     IPC_CHANNELS.CUSTOMER_SEARCH,
-    async (query) => {
-      const customers = customerService.searchCustomers(query);
+    async (payload) => {
+      let query: string;
+      let includeInactive = false;
+
+      if (typeof payload === 'string') {
+        query = payload;
+      } else {
+        query = payload.query;
+        includeInactive = !!payload.includeInactive;
+      }
+
+      const customers = customerService.searchCustomers(query, includeInactive);
       return customers.map((c) => _mapToUI(c));
     },
     {

@@ -132,10 +132,11 @@ export class CustomerRepository extends BaseRepository {
   /**
    * Find customer by phone number
    */
-  public findByPhone(phone: string): Customer | null {
+  public findByPhone(phone: string, includeInactive: boolean = false): Customer | null {
+    const statusFilter = includeInactive ? '' : 'AND is_active = 1';
     const sql = `
       SELECT * FROM customers
-      WHERE phone = ? AND is_active = 1
+      WHERE phone = ? ${statusFilter}
     `;
     const row = this.queryOne<any>(sql, [phone]);
     return row ? this._mapToCustomer(row) : null;
@@ -144,10 +145,11 @@ export class CustomerRepository extends BaseRepository {
   /**
    * List all active customers
    */
-  public findAll(): Customer[] {
+  public findAll(includeInactive: boolean = false): Customer[] {
+    const statusFilter = includeInactive ? '' : 'WHERE is_active = 1';
     const sql = `
       SELECT * FROM customers
-      WHERE is_active = 1
+      ${statusFilter}
       ORDER BY name ASC
     `;
     const rows = this.queryAll<any>(sql);
@@ -157,10 +159,11 @@ export class CustomerRepository extends BaseRepository {
   /**
    * Search customers by name
    */
-  public searchByName(query: string): Customer[] {
+  public searchByName(query: string, includeInactive: boolean = false): Customer[] {
+    const statusFilter = includeInactive ? '' : 'AND is_active = 1';
     const sql = `
       SELECT * FROM customers
-      WHERE name LIKE ? AND is_active = 1
+      WHERE name LIKE ? ${statusFilter}
       ORDER BY name ASC
       LIMIT 50
     `;
@@ -235,7 +238,7 @@ export class CustomerRepository extends BaseRepository {
       throw new DatabaseError('Customer not found', 'NOT_FOUND');
     }
 
-    logger.info('Customer soft deleted', { id });
+    logger.info('Customer soft deleted (deactivated)', { id });
   }
 
   /**

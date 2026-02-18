@@ -20,7 +20,7 @@
     "release:check": "pnpm lint && pnpm type-check && pnpm test:run",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,css,md}\"",
-    "type-check": "tsc --noEmit",
+    "type-check": "npm run type-check:main && npm run type-check:renderer",
     "type-check:main": "tsc --project tsconfig.main.json --noEmit",
     "type-check:renderer": "tsc --project tsconfig.renderer.json --noEmit",
     "clean": "rimraf dist build out release",

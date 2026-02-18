@@ -1,18 +1,22 @@
 /**
  * Customer Service
- * 
+ *
  * Business logic for customer management.
  * Handles validation, duplicate prevention, and balance tracking.
  */
 
 import { BaseService } from './base-service';
-import { CustomerRepository, CreateCustomerInput, UpdateCustomerInput } from '../repositories/customer-repository';
+import {
+  CustomerRepository,
+  CreateCustomerInput,
+  UpdateCustomerInput,
+} from '../repositories/customer-repository';
 import { BillRepository } from '../repositories/bill-repository';
-import { 
-  ValidationError, 
-  NotFoundError, 
+import {
+  ValidationError,
+  NotFoundError,
   DuplicateEntryError,
-  InactiveEntityError 
+  InactiveEntityError,
 } from './errors/service-errors';
 
 /**
@@ -58,7 +62,7 @@ export class CustomerService extends BaseService {
 
   /**
    * Create or get existing customer by phone
-   * 
+   *
    * If phone is provided and customer exists, return existing customer.
    * Otherwise, create new customer.
    */
@@ -70,10 +74,10 @@ export class CustomerService extends BaseService {
     if (input.phone) {
       const existing = this.customerRepo.findByPhone(input.phone);
       if (existing) {
-        this.logInfo('Existing customer found', { 
-          id: existing.id, 
+        this.logInfo('Existing customer found', {
+          id: existing.id,
           name: existing.name,
-          phone: existing.phone 
+          phone: existing.phone,
         });
         return existing;
       }
@@ -83,15 +87,15 @@ export class CustomerService extends BaseService {
     const customerInput: CreateCustomerInput = {
       name: input.name,
       phone: input.phone,
-      balanceDue: input.balanceDue ?? 0
+      balanceDue: input.balanceDue ?? 0,
     };
 
     const customer = this.customerRepo.create(customerInput);
-    
-    this.logInfo('Customer created', { 
-      id: customer.id, 
+
+    this.logInfo('Customer created', {
+      id: customer.id,
       name: customer.name,
-      phone: customer.phone 
+      phone: customer.phone,
     });
 
     return customer;
@@ -147,14 +151,14 @@ export class CustomerService extends BaseService {
     const updateInput: UpdateCustomerInput = {
       name: updates.name,
       phone: updates.phone,
-      isActive: updates.isActive
+      isActive: updates.isActive,
     };
 
     const updatedCustomer = this.customerRepo.update(id, updateInput);
-    
-    this.logInfo('Customer updated', { 
-      id: updatedCustomer.id, 
-      name: updatedCustomer.name 
+
+    this.logInfo('Customer updated', {
+      id: updatedCustomer.id,
+      name: updatedCustomer.name,
     });
 
     return updatedCustomer;
@@ -162,7 +166,7 @@ export class CustomerService extends BaseService {
 
   /**
    * Update customer balance (for udhaar tracking)
-   * 
+   *
    * @param customerId - Customer ID
    * @param deltaAmount - Change in balance (in rupees)
    *                      Positive = customer owes more
@@ -186,15 +190,15 @@ export class CustomerService extends BaseService {
 
     // 3. Update balance
     this.customerRepo.updateBalance(customerId, deltaAmount);
-    
+
     const newBalance = customer.balanceDue + deltaAmount;
-    
+
     this.logInfo('Customer balance updated', {
       customerId,
       customerName: customer.name,
       deltaAmount,
       oldBalance: customer.balanceDue,
-      newBalance
+      newBalance,
     });
   }
 
@@ -218,32 +222,27 @@ export class CustomerService extends BaseService {
       customer,
       bills,
       totalPurchases,
-      currentBalance: customer.balanceDue
+      currentBalance: customer.balanceDue,
     };
   }
 
   /**
    * Get all active customers
    */
-  public getAllCustomers(): any[] {
-    return this.customerRepo.findAll();
+  public getAllCustomers(includeInactive: boolean = false): any[] {
+    this.logInfo('Fetching customers list', { includeInactive });
+    return this.customerRepo.findAll(includeInactive);
   }
 
   /**
    * Search customers by name
    */
-  public searchCustomers(query: string): any[] {
+  public searchCustomers(query: string, includeInactive: boolean = false): any[] {
     if (!query || query.trim() === '') {
       throw new ValidationError('Search query cannot be empty', 'query');
     }
-
-    const customers = this.customerRepo.searchByName(query);
-    
-    this.logInfo('Customers searched', { 
-      query, 
-      resultCount: customers.length 
-    });
-
+    const customers = this.customerRepo.searchByName(query, includeInactive);
+    this.logInfo('Customers searched', { query, resultCount: customers.length, includeInactive });
     return customers;
   }
 
@@ -275,15 +274,15 @@ export class CustomerService extends BaseService {
       this.logWarning('Deactivating customer with outstanding balance', {
         id,
         name: customer.name,
-        balanceDue: customer.balanceDue
+        balanceDue: customer.balanceDue,
       });
     }
 
     this.customerRepo.delete(id);
-    
-    this.logInfo('Customer deactivated', { 
-      id, 
-      name: customer.name 
+
+    this.logInfo('Customer deactivated', {
+      id,
+      name: customer.name,
     });
   }
 

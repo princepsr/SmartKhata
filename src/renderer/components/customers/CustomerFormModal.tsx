@@ -61,9 +61,11 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
     error: updateError,
   } = useIPCMutation(IPC_CHANNELS.CUSTOMER_UPDATE);
 
-  const { execute: deleteCustomer, loading: deleting } = useIPCMutation(
-    IPC_CHANNELS.CUSTOMER_DELETE
-  );
+  const {
+    execute: deleteCustomer,
+    loading: deleting,
+    error: deleteError,
+  } = useIPCMutation(IPC_CHANNELS.CUSTOMER_DELETE);
 
   // Initialize form when opening
   useEffect(() => {
@@ -171,26 +173,8 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
     }
   };
 
-  const handleDelete = async () => {
-    if (
-      !initialData ||
-      !window.confirm(`Are you sure you want to deactivate "${initialData.name}"?`)
-    ) {
-      return;
-    }
-
-    try {
-      await deleteCustomer(initialData.id);
-      onSuccess();
-      onClose();
-    } catch (err) {
-      console.error('Failed to deactivate customer:', err);
-      alert('Failed to delete customer. Please try again.');
-    }
-  };
-
   const isLoading = creating || updating || deleting;
-  const errorMsg = createError || updateError;
+  const errorMsg = createError || updateError || deleteError;
 
   return (
     <div className="modal-overlay">
@@ -287,17 +271,6 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
         </form>
 
         <div className="modal-actions">
-          {isEditMode && (
-            <button
-              type="button"
-              className="btn-danger"
-              onClick={handleDelete}
-              disabled={isLoading}
-              style={{ marginRight: 'auto' }}
-            >
-              {deleting ? 'Deleting...' : 'Delete'}
-            </button>
-          )}
           <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
             Cancel
           </button>

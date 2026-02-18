@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useIPC } from '../hooks/useIPC';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../utils/billing-math';
 import { ProductFormModal } from '../components/products/ProductFormModal';
@@ -45,23 +46,27 @@ const ProductsPage: React.FC = () => {
 
   const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
   const [adjustingProductId, setAdjustingProductId] = useState<number | null>(null);
-  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const [showLowStockOnly, setShowLowStockOnly] = useLocalStorage('products_show_low_stock', false);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
   // Derived state to catch updates after refresh
   const editingProduct = useMemo(
-    () => (editingProductId && products ? products.find((p) => p.id === editingProductId) || null : null),
+    () =>
+      editingProductId && products ? products.find((p) => p.id === editingProductId) || null : null,
     [products, editingProductId]
   );
 
   const adjustingProduct = useMemo(
-    () => (adjustingProductId && products ? products.find((p) => p.id === adjustingProductId) || null : null),
+    () =>
+      adjustingProductId && products
+        ? products.find((p) => p.id === adjustingProductId) || null
+        : null,
     [products, adjustingProductId]
   );
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
-  const [includeInactive, setIncludeInactive] = useState(false);
+  const [includeInactive, setIncludeInactive] = useLocalStorage('products_show_inactive', false);
 
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -308,25 +313,25 @@ const ProductsPage: React.FC = () => {
                     <div className="col-name">{product.name}</div>
                     <div className="col-sku">{product.sku || product.barcode || '-'}</div>
                     <div className="col-price">{formatCurrency(product.salePrice)}</div>
-                      <div className="col-stock">
-                        {product.trackInventory ? (
-                          <span
-                            className={
-                              product.stockQty <= 0
-                                ? 'stock-out'
-                                : product.stockQty <= (product.lowStockAlert || 0)
-                                  ? 'stock-low'
-                                  : ''
-                            }
-                          >
-                            {product.stockQty}
-                          </span>
-                        ) : (
-                          <span className="text-muted" title="Not Tracked">
-                            -
-                          </span>
-                        )}
-                      </div>
+                    <div className="col-stock">
+                      {product.trackInventory ? (
+                        <span
+                          className={
+                            product.stockQty <= 0
+                              ? 'stock-out'
+                              : product.stockQty <= (product.lowStockAlert || 0)
+                                ? 'stock-low'
+                                : ''
+                          }
+                        >
+                          {product.stockQty}
+                        </span>
+                      ) : (
+                        <span className="text-muted" title="Not Tracked">
+                          -
+                        </span>
+                      )}
+                    </div>
                     <div className="col-status">
                       <span className={`status-badge ${product.isActive ? 'active' : 'inactive'}`}>
                         {product.isActive ? 'Active' : 'Inactive'}

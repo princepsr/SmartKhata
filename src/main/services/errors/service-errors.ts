@@ -281,8 +281,15 @@ export function getUserFriendlyMessage(error: any): string {
   if (errorMessage.includes('access-denied')) {
     return 'Printer access denied. Please check your system permissions.';
   }
-  if (errorMessage.includes('not-found')) {
+  if (errorMessage.includes('not-found') || errorMessage.includes('NOT_FOUND')) {
     return 'Resource not found.';
+  }
+
+  if (
+    errorMessage.includes('FOREIGN KEY constraint failed') ||
+    errorMessage.includes('FOREIGN_KEY_VIOLATION')
+  ) {
+    return 'Cannot delete this record because it is being used by other data (e.g. bills or history). Try deactivating it instead.';
   }
 
   if (error instanceof Error) {

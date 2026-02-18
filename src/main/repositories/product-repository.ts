@@ -318,7 +318,7 @@ export class ProductRepository extends BaseRepository {
       throw new DatabaseError('Product not found', 'NOT_FOUND');
     }
 
-    logger.info('Product soft deleted', { id });
+    logger.info('Product soft deleted (deactivated)', { id });
   }
 
   /**

@@ -113,9 +113,9 @@ function BillingPage() {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('click', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
   }, []);
 
@@ -138,10 +138,6 @@ function BillingPage() {
     execute: finalizeBill,
   } = useIPCMutation<FinalizeBillInput, { bill: { id: number; billNumber: string } }>(
     IPC_CHANNELS.BILL_CREATE
-  );
-
-  const { execute: printBill } = useIPCMutation<{ billId: number; printerName: string }, boolean>(
-    IPC_CHANNELS.BILL_PRINT
   );
 
   // Initial Load (Focus)
@@ -283,8 +279,6 @@ function BillingPage() {
     selectedCustomer,
     discountAmount,
     paymentMode,
-    settings.printerName,
-    finalizeBill,
     finalizeBill,
     resetBill,
   ]);
@@ -457,8 +451,75 @@ function BillingPage() {
         <header className="page-header">
           <h1 className="page-title">Billing - New Sale</h1>
 
-          {/* Customer Section in Header */}
+          {/* Actions & Customer Section (Right aligned) */}
           <div className="header-actions">
+            {/* 1. Search Section (Primary focus) */}
+            <div className="search-panel" ref={searchContainerRef}>
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="search-input"
+                placeholder="Search Item (F2) - Name / SKU / Barcode"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowProductSearch(true);
+                }}
+                onFocus={() => setShowProductSearch(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoFocus
+              />
+
+              {/* Absolute dropdown for results */}
+              <div
+                className="search-results-container"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {showProductSearch && searchQuery.length >= 2 && (
+                  <div className="search-results">
+                    {searching ? (
+                      <>
+                        {[1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className="skeleton"
+                            style={{
+                              height: '50px',
+                              width: '100%',
+                              marginBottom: '4px',
+                              borderRadius: 'var(--radius-md)',
+                            }}
+                          />
+                        ))}
+                      </>
+                    ) : searchResults && searchResults.length > 0 ? (
+                      searchResults.map((product, index) => (
+                        <div
+                          key={product.id}
+                          className={`product-item ${index === selectedResultIndex ? 'selected' : ''}`}
+                          onClick={() => addToCart(product)}
+                        >
+                          <span className="product-name">{product.name}</span>
+                          <span className="product-meta">
+                            {!settings.billingOnly && product.trackInventory && (
+                              <>Stock: {product.stockQty} • </>
+                            )}
+                            SKU: {product.sku || product.barcode || '-'}
+                          </span>
+                          <span className="product-price">{formatCurrency(product.salePrice)}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="no-results" style={{ padding: '1rem', textAlign: 'center' }}>
+                        No products found.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* History Button */}
             <button
               onClick={() => setShowHistory(true)}
@@ -469,158 +530,96 @@ function BillingPage() {
               <span>History</span>
             </button>
 
-            {selectedCustomer ? (
-              <div className="selected-customer-badge">
-                <span style={{ fontWeight: 600 }}>{selectedCustomer.name}</span>
-                <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>
-                  ({selectedCustomer.phone})
-                </span>
-                <button
-                  onClick={() => setSelectedCustomer(null)}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    color: 'inherit',
-                    fontWeight: 'bold',
-                    padding: '0 0.25rem',
-                    marginLeft: 'auto',
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-            ) : (
-              <div className="customer-search" style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  placeholder="Customer (Optional)"
-                  className="header-input"
-                  value={customerQuery}
-                  onChange={(e) => {
-                    setCustomerQuery(e.target.value);
-                    setShowCustomerSearch(true);
-                  }}
-                  onFocus={() => setShowCustomerSearch(true)}
-                  onBlur={() => setTimeout(() => setShowCustomerSearch(false), 200)}
-                />
-                {/* Customer Search Results Dropdown */}
-                {showCustomerSearch && customerQuery.length >= 2 && customerResults && (
-                  <div
-                    className="customer-results-dropdown"
+            {settings.customersEnabled &&
+              (selectedCustomer ? (
+                <div className="selected-customer-badge">
+                  <span style={{ fontWeight: 600 }}>{selectedCustomer.name}</span>
+                  <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>
+                    ({selectedCustomer.phone})
+                  </span>
+                  <button
+                    onClick={() => setSelectedCustomer(null)}
                     style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
-                      width: '300px',
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '0.5rem',
-                      boxShadow: '0 4px 6px -1px update(0, 0, 0, 0.1)',
-                      zIndex: 20,
-                      marginTop: '0.25rem',
-                      maxHeight: '200px',
-                      overflowY: 'auto',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      color: 'inherit',
+                      fontWeight: 'bold',
+                      padding: '0 0.25rem',
+                      marginLeft: 'auto',
                     }}
                   >
-                    {searchingCustomers ? (
-                      <div style={{ padding: '0.5rem', color: '#6b7280' }}>Searching...</div>
-                    ) : customerResults.length > 0 ? (
-                      customerResults.map((c) => (
-                        <div
-                          key={c.id}
-                          onClick={() => {
-                            setSelectedCustomer(c);
-                            setCustomerQuery('');
-                            setShowCustomerSearch(false);
-                          }}
-                          style={{
-                            padding: '0.5rem 0.75rem',
-                            cursor: 'pointer',
-                            borderBottom: '1px solid #f3f4f6',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                          }}
-                          className="hover:bg-gray-50"
-                        >
-                          <span style={{ fontWeight: 500 }}>{c.name}</span>
-                          <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>{c.phone}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ padding: '0.5rem', color: '#6b7280' }}>No customer found</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div className="customer-search" style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    placeholder="Customer (Optional)"
+                    className="header-input"
+                    value={customerQuery}
+                    onChange={(e) => {
+                      setCustomerQuery(e.target.value);
+                      setShowCustomerSearch(true);
+                    }}
+                    onFocus={() => setShowCustomerSearch(true)}
+                    onBlur={() => setTimeout(() => setShowCustomerSearch(false), 200)}
+                  />
+                  {/* Customer Search Results Dropdown */}
+                  {showCustomerSearch && customerQuery.length >= 2 && customerResults && (
+                    <div
+                      className="customer-results-dropdown"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        width: '300px',
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '0.5rem',
+                        boxShadow: '0 4px 6px -1px update(0, 0, 0, 0.1)',
+                        zIndex: 20,
+                        marginTop: '0.25rem',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                      }}
+                    >
+                      {searchingCustomers ? (
+                        <div style={{ padding: '0.5rem', color: '#6b7280' }}>Searching...</div>
+                      ) : customerResults.length > 0 ? (
+                        customerResults.map((c) => (
+                          <div
+                            key={c.id}
+                            onClick={() => {
+                              setSelectedCustomer(c);
+                              setCustomerQuery('');
+                              setShowCustomerSearch(false);
+                            }}
+                            style={{
+                              padding: '0.5rem 0.75rem',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid #f3f4f6',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                            }}
+                            className="hover:bg-gray-50"
+                          >
+                            <span style={{ fontWeight: 500 }}>{c.name}</span>
+                            <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>{c.phone}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: '0.5rem', color: '#6b7280' }}>No customer found</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
           </div>
         </header>
 
         <div className="billing-content">
-          {/* 1. Search Section (Full Width Top) */}
-          <div className="search-panel" ref={searchContainerRef}>
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="search-input"
-              placeholder="Search Item (F2) - Name / SKU / Barcode"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowProductSearch(true);
-              }}
-              onFocus={() => setShowProductSearch(true)}
-              onKeyDown={handleSearchKeyDown}
-              autoFocus
-            />
-
-            {/* Absolute dropdown for results */}
-            <div className="search-results-container">
-              {showProductSearch && searchQuery.length >= 2 && (
-                <div className="search-results">
-                  {searching ? (
-                    <>
-                      {[1, 2, 3].map((i) => (
-                        <div
-                          key={i}
-                          className="skeleton"
-                          style={{
-                            height: '50px',
-                            width: '100%',
-                            marginBottom: '4px',
-                            borderRadius: 'var(--radius-md)',
-                          }}
-                        />
-                      ))}
-                    </>
-                  ) : searchResults && searchResults.length > 0 ? (
-                    searchResults.map((product, index) => (
-                      <div
-                        key={product.id}
-                        className={`product-item ${index === selectedResultIndex ? 'selected' : ''}`}
-                        onClick={() => addToCart(product)}
-                      >
-                        <span className="product-name">{product.name}</span>
-                        <span className="product-meta">
-                          {!settings.billingOnly && product.trackInventory && (
-                            <>Stock: {product.stockQty} • </>
-                          )}
-                          SKU: {product.sku || product.barcode || '-'}
-                        </span>
-                        <span className="product-price">{formatCurrency(product.salePrice)}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="no-results" style={{ padding: '1rem', textAlign: 'center' }}>
-                      No products found.
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* 2. Bill Items List (Left Column) */}
           <div className="cart-panel">
             <BillItemList cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeFromCart} />

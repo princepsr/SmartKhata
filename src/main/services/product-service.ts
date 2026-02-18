@@ -348,7 +348,7 @@ export class ProductService extends BaseService {
       throw new NotFoundError('Product', id);
     }
 
-    this.productRepo.update(id, { isActive: false });
+    this.productRepo.delete(id);
 
     this.logInfo('Product deactivated', {
       id,

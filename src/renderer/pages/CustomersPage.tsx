@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useIPC } from '../hooks/useIPC';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../utils/billing-math';
 import { CustomerFormModal } from '../components/customers/CustomerFormModal';
@@ -23,7 +24,10 @@ const CustomersPage: React.FC = () => {
     execute: fetchCustomers,
   } = useIPC<Customer[]>(IPC_CHANNELS.CUSTOMER_LIST);
 
+  const { execute: updateCustomer } = useIPC(IPC_CHANNELS.CUSTOMER_UPDATE);
+
   const [searchQuery, setSearchQuery] = useState('');
+  const [showInactive, setShowInactive] = useLocalStorage('customers_show_inactive', false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<number | null>(null);
@@ -39,10 +43,10 @@ const CustomersPage: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
-  // Initial fetch
+  // Initial fetch and on toggle change
   useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+    fetchCustomers({ includeInactive: showInactive });
+  }, [fetchCustomers, showInactive]);
 
   const handleAddCustomer = () => {
     setEditingCustomerId(null);
@@ -55,8 +59,21 @@ const CustomersPage: React.FC = () => {
   };
 
   const handleFormSuccess = () => {
-    fetchCustomers();
+    fetchCustomers({ includeInactive: showInactive });
     setIsFormOpen(false);
+  };
+
+  const handleToggleStatus = async (customer: Customer, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await updateCustomer({
+        id: customer.id,
+        data: { isActive: !customer.isActive },
+      });
+      fetchCustomers({ includeInactive: showInactive });
+    } catch (err) {
+      console.error('Failed to toggle status:', err);
+    }
   };
 
   // Filter customers
@@ -142,6 +159,28 @@ const CustomersPage: React.FC = () => {
         <header className="page-header">
           <h1 className="page-title">Customers & Udhaar</h1>
           <div className="header-actions">
+            <div
+              className="filter-group"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: 'auto' }}
+            >
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  color: '#666',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={showInactive}
+                  onChange={(e) => setShowInactive(e.target.checked)}
+                />
+                Show Inactive
+              </label>
+            </div>
             <input
               ref={searchInputRef}
               type="text"
@@ -211,6 +250,14 @@ const CustomersPage: React.FC = () => {
                         }}
                       >
                         Edit
+                      </button>
+                      <button
+                        className={`btn-sm ${customer.isActive ? 'btn-secondary' : 'btn-success'}`}
+                        onClick={(e) => handleToggleStatus(customer, e)}
+                        title={customer.isActive ? 'Deactivate' : 'Activate'}
+                        style={{ marginLeft: '0.5rem' }}
+                      >
+                        {customer.isActive ? 'Off' : 'On'}
                       </button>
                     </div>
                   </div>

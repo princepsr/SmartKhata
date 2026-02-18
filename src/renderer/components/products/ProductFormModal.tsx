@@ -78,7 +78,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     error: updateError,
   } = useIPCMutation(IPC_CHANNELS.PRODUCT_UPDATE);
 
-  const { execute: deleteProduct, loading: deleting } = useIPCMutation(IPC_CHANNELS.PRODUCT_DELETE);
+  const {
+    execute: deleteProduct,
+    loading: deleting,
+    error: deleteError,
+  } = useIPCMutation(IPC_CHANNELS.PRODUCT_DELETE);
 
   // Parse server errors for field highlighting
   useEffect(() => {
@@ -246,17 +250,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
 
     try {
-      await deleteProduct(initialData.id);
-      onSuccess();
-      onClose();
+      const result = await deleteProduct(initialData.id);
+      if (result !== null) {
+        onSuccess();
+        onClose();
+      }
     } catch (err) {
-      console.error('Failed to deactivate product:', err);
+      console.error('Failed to delete product:', err);
       alert('Failed to delete product. Please try again.');
     }
   };
 
   const isLoading = creating || updating || deleting;
-  const errorMsg = createError || updateError;
+  const errorMsg = createError || updateError || deleteError;
 
   return (
     <div className="modal-overlay">
