@@ -19,6 +19,16 @@ export default defineConfig({
         stringArrayThreshold: 0.75,
       },
     }),
+    /**
+     * Custom plugin to remove 'crossorigin' attribute from index.html
+     * This fixes CORS errors when loading modules via file:// protocol in Electron production builds.
+     */
+    {
+      name: 'remove-crossorigin',
+      transformIndexHtml(html: string) {
+        return html.replace(/crossorigin/g, '');
+      },
+    },
   ],
 
   // Renderer entry point (index.html location)

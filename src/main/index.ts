@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, globalShortcut } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, protocol } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { configManager } from './config/app-config';
@@ -52,6 +52,21 @@ loadEnv();
 // Register global error handlers FIRST (before any other code)
 registerGlobalErrorHandlers();
 
+// Register privileges for custom protocol (must be done before app.ready)
+// This allows ES modules to load correctly across origins
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'smartkhata',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      bypassCSP: true,
+      corsEnabled: true,
+    },
+  },
+]);
+
 // Single-instance lock (Windows best practice)
 // Prevents multiple instances of the app from running
 const gotTheLock = app.requestSingleInstanceLock();
@@ -85,33 +100,33 @@ function createWindow(): void {
     height: APP_CONSTANTS.WINDOW.DEFAULT_HEIGHT,
     minWidth: APP_CONSTANTS.WINDOW.MIN_WIDTH,
     minHeight: APP_CONSTANTS.WINDOW.MIN_HEIGHT,
-    center: true, // Center window on screen
-    show: false, // Don't show until ready (prevents flash)
+    center: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
-      nodeIntegration: false, // Disable Node.js in renderer
-      contextIsolation: true, // Isolate preload context
-      sandbox: false, // Disable sandbox to allow require('../shared/...')
-      webSecurity: true, // Enable web security (default, but explicit)
-      allowRunningInsecureContent: false, // Block mixed content
-      experimentalFeatures: false, // Disable experimental features
-      devTools: config.isDevelopment, // Disable DevTools in production
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      experimentalFeatures: false,
+      // Keep devTools enabled for troubleshooting, but don't auto-open in production
+      devTools: true,
     },
     title: APP_CONSTANTS.APP_NAME,
-    autoHideMenuBar: true, // Hide menu bar (File, Edit, etc.)
+    autoHideMenuBar: true,
   });
 
-  // Remove the menu bar completely (optional: keep if you want Alt access, but 'removeMenu' clears it)
   mainWindow.removeMenu();
 
   // Show window when ready (prevents white flash)
   mainWindow.once('ready-to-show', () => {
     mainWindow?.maximize();
     mainWindow?.show();
-    logger.info('Main window shown (maximized)');
+    logger.info('Main window shown');
   });
 
-  // Prevent right-click context menu (Inspect Element) in production
+  // Prevent right-click context menu in production
   if (!config.isDevelopment) {
     mainWindow.webContents.on('context-menu', (e) => {
       e.preventDefault();
@@ -125,10 +140,13 @@ function createWindow(): void {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    // Production: load from built files
-    const indexPath = path.join(__dirname, '../renderer/index.html');
-    logger.info('Loading from built files', { path: indexPath });
-    mainWindow.loadFile(indexPath);
+    // Production: load via custom protocol
+    // Using hostname 'app' to ensure stable relative path resolution
+    logger.info('Loading from custom protocol: smartkhata://app/index.html');
+    mainWindow.loadURL('smartkhata://app/index.html');
+
+    // Auto-open DevTools is removed for final production build
+    // mainWindow.webContents.openDevTools();
   }
 
   mainWindow.on('closed', () => {
@@ -146,6 +164,105 @@ app.whenReady().then(async () => {
 
   logger.info('=== SmartKhata Starting ===');
 
+  // Register custom protocol for production
+  // This bypasses file:// CORS issues with ES modules and handles routing correctly
+  if (!config.isDevelopment) {
+    try {
+      protocol.handle('smartkhata', async (request) => {
+        // Strip protocol and hostname ('smartkhata://app/')
+        let urlPath = request.url.replace('smartkhata://', '');
+        if (urlPath.startsWith('app/')) {
+          urlPath = urlPath.substring(4);
+        }
+
+        try {
+          const decodedUrl = decodeURIComponent(urlPath);
+          const relativePath = decodedUrl === '' || decodedUrl === '/' ? 'index.html' : decodedUrl;
+
+          // Potential paths to search for assets inside the package
+          const possibleRoots = [
+            path.join(app.getAppPath(), 'dist/renderer'), // Primary ASAR path
+            path.join(__dirname, '../../../renderer'), // Legacy structure
+            path.join(__dirname, '../renderer'), // Flattened structure
+            path.join(process.resourcesPath, 'app.asar/dist/renderer'), // Explicit external ASAR
+          ];
+
+          let foundPath: string | null = null;
+
+          for (const root of possibleRoots) {
+            const candidate = path.join(root, relativePath);
+            const normalized = path.normalize(candidate);
+
+            try {
+              await fs.promises.access(normalized);
+              foundPath = normalized;
+              break;
+            } catch {
+              continue;
+            }
+          }
+
+          if (!foundPath) {
+            // If asset not found, it might be a React Router client-side route
+            // Check if it's an asset (has extension)
+            const ext = path.extname(relativePath).toLowerCase();
+            if (!ext) {
+              // Return index.html to allow React Router to handle the path
+              const indexPath = path.join(app.getAppPath(), 'dist/renderer/index.html');
+              try {
+                const data = await fs.promises.readFile(indexPath);
+                return new Response(data, { headers: { 'Content-Type': 'text/html' } });
+              } catch (e) {
+                logger.error('Failed to serve fallback index.html', {
+                  path: relativePath,
+                  error: e,
+                });
+                // Fall through to 404
+              }
+            }
+
+            logger.warn('Resource not found', { path: relativePath });
+            return new Response('Not Found', { status: 404 });
+          }
+
+          const data = await fs.promises.readFile(foundPath);
+          const ext = path.extname(foundPath).toLowerCase();
+
+          let mimeType = 'application/octet-stream';
+          if (ext === '.html') {
+            mimeType = 'text/html';
+          } else if (ext === '.js') {
+            mimeType = 'text/javascript';
+          } else if (ext === '.css') {
+            mimeType = 'text/css';
+          } else if (ext === '.json') {
+            mimeType = 'application/json';
+          } else if (ext === '.png') {
+            mimeType = 'image/png';
+          } else if (ext === '.jpg' || ext === '.jpeg') {
+            mimeType = 'image/jpeg';
+          } else if (ext === '.svg') {
+            mimeType = 'image/svg+xml';
+          } else if (ext === '.ico') {
+            mimeType = 'image/x-icon';
+          } else if (ext === '.woff2') {
+            mimeType = 'font/woff2';
+          }
+
+          return new Response(data, {
+            headers: { 'Content-Type': mimeType },
+          });
+        } catch (error) {
+          logger.error('Protocol handler error', { error, url: request.url });
+          return new Response('Internal Server Error', { status: 500 });
+        }
+      });
+      logger.info('Registered smartkhata:// protocol');
+    } catch (error) {
+      logger.error('Failed to register protocol', { error });
+    }
+  }
+
   // Register shutdown hooks
   registerShutdownHooks();
 
@@ -159,7 +276,7 @@ app.whenReady().then(async () => {
 
     if (dbFileExists && !markerExists) {
       wasCrashDetected = true;
-      logger.warn('CLEAN EXIT MARKER MISSING - Application probably crashed on last run');
+      logger.warn('Crash detected on startup');
     }
 
     if (markerExists) {
@@ -191,7 +308,7 @@ app.whenReady().then(async () => {
   }
   timings.migrations = performance.now() - migrationStart;
 
-  // Initialize non-critical systems concurrently
+  // Initialize services
   const servicesStart = performance.now();
   const initPromises = [
     (async () => {
@@ -212,7 +329,7 @@ app.whenReady().then(async () => {
       try {
         StabilityService.getInstance().startMonitoring();
       } catch (e) {
-        logger.error('Stability monitor failed to start', e);
+        logger.error('Stability monitor failed', e);
       }
     })(),
     (async () => {
@@ -230,16 +347,18 @@ app.whenReady().then(async () => {
       }
     })(),
     (async () => {
-      registerIPCHandlers();
+      try {
+        registerIPCHandlers();
+      } catch (e) {
+        logger.error('IPC init failed', e);
+      }
     })(),
   ];
 
   await Promise.all(initPromises);
   timings.services = performance.now() - servicesStart;
 
-  const windowStart = performance.now();
   createWindow();
-  timings.windowCreation = performance.now() - windowStart;
 
   const totalTime = performance.now() - bootStart;
   logger.info('=== Startup Profile ===', {
@@ -247,30 +366,21 @@ app.whenReady().then(async () => {
     total: `${totalTime.toFixed(2)}ms`,
   });
 
-  // Register Zoom Shortcuts
-
-  // Ctrl + = (Zoom In)
+  // Zoom Shortcuts
   globalShortcut.register('CommandOrControl+=', () => {
     const win = BrowserWindow.getFocusedWindow();
     if (win) {
-      const currentZoom = win.webContents.getZoomFactor();
-      win.webContents.setZoomFactor(currentZoom + 0.1);
+      win.webContents.setZoomFactor(win.webContents.getZoomFactor() + 0.1);
     }
   });
 
-  // Ctrl + - (Zoom Out)
   globalShortcut.register('CommandOrControl+-', () => {
     const win = BrowserWindow.getFocusedWindow();
-    if (win) {
-      const currentZoom = win.webContents.getZoomFactor();
-      // Prevent zooming out too much (e.g., < 50%)
-      if (currentZoom > 0.5) {
-        win.webContents.setZoomFactor(currentZoom - 0.1);
-      }
+    if (win && win.webContents.getZoomFactor() > 0.5) {
+      win.webContents.setZoomFactor(win.webContents.getZoomFactor() - 0.1);
     }
   });
 
-  // Ctrl + 0 (Reset Zoom)
   globalShortcut.register('CommandOrControl+0', () => {
     const win = BrowserWindow.getFocusedWindow();
     if (win) {
@@ -278,10 +388,18 @@ app.whenReady().then(async () => {
     }
   });
 
-  // Register Debug Shortcuts (ONLY in Development)
+  // DevTools Shortcuts
   if (config.isDevelopment) {
-    // Ctrl + Shift + I (Toggle DevTools)
+    // Standard Dev shortcut: Ctrl + Shift + I
     globalShortcut.register('CommandOrControl+Shift+I', () => {
+      const win = BrowserWindow.getFocusedWindow();
+      if (win) {
+        win.webContents.toggleDevTools();
+      }
+    });
+  } else {
+    // Secret Production shortcut: Ctrl + Shift + Alt + I
+    globalShortcut.register('CommandOrControl+Shift+Alt+I', () => {
       const win = BrowserWindow.getFocusedWindow();
       if (win) {
         win.webContents.toggleDevTools();
@@ -289,7 +407,7 @@ app.whenReady().then(async () => {
     });
   }
 
-  // F11 (Toggle Fullscreen)
+  // Fullscreen Shortcut
   globalShortcut.register('F11', () => {
     const win = BrowserWindow.getFocusedWindow();
     if (win) {
@@ -298,7 +416,6 @@ app.whenReady().then(async () => {
   });
 
   if (config.isDevelopment) {
-    // Ctrl + R / F5 (Reload)
     const reloadApp = () => {
       const win = BrowserWindow.getFocusedWindow();
       if (win) {
@@ -308,7 +425,6 @@ app.whenReady().then(async () => {
     globalShortcut.register('CommandOrControl+R', reloadApp);
     globalShortcut.register('F5', reloadApp);
 
-    // Ctrl + Shift + R (Hard Reload)
     globalShortcut.register('CommandOrControl+Shift+R', () => {
       const win = BrowserWindow.getFocusedWindow();
       if (win) {
@@ -319,40 +435,31 @@ app.whenReady().then(async () => {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      logger.info('Reactivating app (macOS)');
       createWindow();
     }
   });
 });
 
-// Unregister shortcuts on quit
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
 });
 
-// Graceful shutdown handling
 app.on('before-quit', async (event) => {
   if (!shutdownManager.isShutdownInProgress()) {
-    // Prevent immediate quit and start graceful shutdown
     event.preventDefault();
     logger.info('App quit requested, starting graceful shutdown');
-
     try {
       await shutdownManager.shutdown();
     } catch (error) {
       logger.error('Graceful shutdown failed', error);
     } finally {
-      // Force exit after shutdown hooks are done
-      logger.info('Exiting application');
       app.quit();
     }
   }
 });
 
 app.on('window-all-closed', () => {
-  // On Windows, quit when all windows are closed
   if (process.platform !== 'darwin') {
-    logger.info('All windows closed, quitting app');
     app.quit();
   }
 });

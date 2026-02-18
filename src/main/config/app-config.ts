@@ -23,7 +23,9 @@ class ConfigManager {
   private config: AppConfig;
 
   constructor() {
-    const isDevelopment = process.env.NODE_ENV !== 'production';
+    // Robust check: if packaged, it's definitely production.
+    // If not packaged, rely on NODE_ENV or default to dev.
+    const isDevelopment = !app.isPackaged;
     const userDataPath = app.getPath('userData');
 
     // Ensure directories exist

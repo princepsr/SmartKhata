@@ -14,6 +14,9 @@ importers:
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.6.2
+      electron-updater:
+        specifier: ^6.3.9
+        version: 6.7.3
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -1286,6 +1289,10 @@ packages:
     resolution: {integrity: sha512-6p/gfG1RJSQeIbz8TK5aPNkoztgY1q5TgmGFMAXcY8itsGW6Y2ld1ALsZ5UJn8rog7hKF3zHx5iQbNQ8uLcRlw==}
     engines: {node: '>=12.0.0'}
 
+  builder-util-runtime@9.5.1:
+    resolution: {integrity: sha512-qt41tMfgHTllhResqM5DcnHyDIWNgzHvuY2jDcYP9iaGpkWxTUzV6GQjDeLnlR1/DtdlcsWQbA7sByMpmJFTLQ==}
+    engines: {node: '>=12.0.0'}
+
   builder-util@25.1.7:
     resolution: {integrity: sha512-7jPjzBwEGRbwNcep0gGNpLXG9P94VA3CPAZQCzxkFXiV2GMQKlziMbY//rXPI7WKfhsvGgFXjTcXdBEwgXw9ww==}
 
@@ -1614,6 +1621,9 @@ packages:
 
   electron-to-chromium@1.5.286:
     resolution: {integrity: sha512-9tfDXhJ4RKFNerfjdCcZfufu49vg620741MNs26a9+bhLThdB+plgMeou98CAaHu/WATj2iHOOHTp1hWtABj2A==}
+
+  electron-updater@6.7.3:
+    resolution: {integrity: sha512-EgkT8Z9noqXKbwc3u5FkJA+r48jwZ5DTUiOkJMOTEEH//n5Am6wfQGz7nvSFEA2oIAMv9jRzn5JKTyWeSKOPgg==}
 
   electron@34.5.8:
     resolution: {integrity: sha512-vxLD65mabTzYmEVa9KceMHM0+zO+vqgrhcyNVlmTd0IGV5J7XZ8v/qElm0o4YQ4wPeq7olZkUjZkBQQEdr23/g==}
@@ -2302,8 +2312,15 @@ packages:
   lodash.difference@4.5.0:
     resolution: {integrity: sha512-dS2j+W26TQ7taQBGN8Lbbq04ssV3emRw4NY58WErlTO29pIqS0HmoT5aJ9+TUQ1N3G+JOZSji4eugsWwGp9yPA==}
 
+  lodash.escaperegexp@4.1.2:
+    resolution: {integrity: sha512-TM9YBvyC84ZxE3rgfefxUWiQKLilstD6k7PTGt6wfbtXF8ixIJLOL3VYyV/z+ZiPLsVxAsKAFVwWlWeb2Y8Yyw==}
+
   lodash.flatten@4.4.0:
     resolution: {integrity: sha512-C5N2Z3DgnnKr0LOpv/hKCgKdb7ZZwafIrsesve6lmzvZIRZRGaZ/l6Q8+2W7NaT+ZwO3fFlSCzCzrDCFdJfZ4g==}
+
+  lodash.isequal@4.5.0:
+    resolution: {integrity: sha512-pDo3lu8Jhfjqls6GkMgpahsF9kCyayhgykjyLMNFTKWrpVdAQtYyB4muAMWozBB4ig/dtWAmsMxLEI8wuz+DYQ==}
+    deprecated: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
 
   lodash.isplainobject@4.0.6:
     resolution: {integrity: sha512-oSXzaWypCMHkPC3NvBEaPHf0KsA5mvPrOPgQWDsbg8n7orZ290M0BmC/jgRZ4vcJ6DTAhjrsSYgdsW/F+MFOBA==}
@@ -3162,6 +3179,9 @@ packages:
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
+
+  tiny-typed-emitter@2.1.0:
+    resolution: {integrity: sha512-qVtvMxeXbVej0cQWKqVSSAHmKZEHAvxdF8HEUBFWts8h+xEo5m/lEiPakuyZ3BnCBjOD8i24kzNOiOLLgsSxhA==}
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -4702,6 +4722,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  builder-util-runtime@9.5.1:
+    dependencies:
+      debug: 4.4.3
+      sax: 1.4.4
+    transitivePeerDependencies:
+      - supports-color
+
   builder-util@25.1.7:
     dependencies:
       7zip-bin: 5.2.0
@@ -5134,6 +5161,19 @@ snapshots:
       - supports-color
 
   electron-to-chromium@1.5.286: {}
+
+  electron-updater@6.7.3:
+    dependencies:
+      builder-util-runtime: 9.5.1
+      fs-extra: 10.1.0
+      js-yaml: 4.1.1
+      lazy-val: 1.0.5
+      lodash.escaperegexp: 4.1.2
+      lodash.isequal: 4.5.0
+      semver: 7.7.4
+      tiny-typed-emitter: 2.1.0
+    transitivePeerDependencies:
+      - supports-color
 
   electron@34.5.8:
     dependencies:
@@ -5961,7 +6001,11 @@ snapshots:
 
   lodash.difference@4.5.0: {}
 
+  lodash.escaperegexp@4.1.2: {}
+
   lodash.flatten@4.4.0: {}
+
+  lodash.isequal@4.5.0: {}
 
   lodash.isplainobject@4.0.6: {}
 
@@ -6852,6 +6896,8 @@ snapshots:
       xtend: 4.0.2
 
   through@2.3.8: {}
+
+  tiny-typed-emitter@2.1.0: {}
 
   tinybench@2.9.0: {}
 
