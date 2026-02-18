@@ -70,8 +70,28 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     e.preventDefault();
     if (!product) return;
 
-    // 1. If tracking status changed, update product first
-    if (trackInventory !== product.trackInventory) {
+    const hasTrackingChanged = trackInventory !== product.trackInventory;
+    const hasAdjustment = quantity && parseInt(quantity, 10) > 0;
+
+    // Case 1: Just changing tracking status (no adjustment)
+    if (hasTrackingChanged && !hasAdjustment) {
+      try {
+        await updateProduct({
+          id: product.id,
+          data: { trackInventory },
+        });
+        onSuccess();
+        onClose();
+        return;
+      } catch (err) {
+        console.error('Failed to update tracking status:', err);
+        return;
+      }
+    }
+
+    // Case 2: Changing tracking AND adjusting stock (or just adjusting)
+    // First, update tracking if changed
+    if (hasTrackingChanged) {
       try {
         await updateProduct({
           id: product.id,
@@ -79,19 +99,19 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
         });
       } catch (err) {
         console.error('Failed to update tracking status:', err);
-        return; // Stop if update fails
+        return;
       }
     }
 
-    // 2. If tracking is OFF, we don't adjust stock (conceptually)
-    // But if the user entered a quantity, maybe they expect it to do something?
-    // For now, if tracking is OFF, we just close. Stock adjustment is irrelevant.
+    // If tracking is now OFF, we don't adjust stock (conceptually)
+    // This covers cases where tracking was turned off, or was already off and no adjustment was made.
     if (!trackInventory) {
       onSuccess();
       onClose();
       return;
     }
 
+    // If tracking is ON, proceed with stock adjustment validation
     if (!validate()) {
       return;
     }
@@ -280,10 +300,10 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
             </button>
             <button
               type="submit"
-              className={`btn-primary ${adjustmentType === 'remove' ? 'danger' : ''}`}
+              className={`btn-primary ${adjustmentType === 'remove' && trackInventory ? 'danger' : ''}`}
               disabled={loading}
             >
-              {loading ? 'Saving...' : 'Confirm Adjustment'}
+              {loading ? 'Saving...' : trackInventory !== product?.trackInventory && (!quantity || parseInt(quantity) <= 0) ? 'Save Changes' : 'Confirm Adjustment'}
             </button>
           </div>
         </form>

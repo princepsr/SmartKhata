@@ -204,6 +204,7 @@ export function registerProductHandlers(): void {
         gstPercent: request.data.gstPercent,
         lowStockAlert: request.data.lowStockAlert,
         isActive: request.data.isActive,
+        trackInventory: request.data.trackInventory,
       };
 
       const product = productService.updateProduct(request.id, updates);
