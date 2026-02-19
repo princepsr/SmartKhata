@@ -125,7 +125,7 @@ export function calculateDiscountAmount(
     const baseTotal = subtotal + gstTotal;
     return Math.round((baseTotal * val) / 100);
   } else {
-    // Fixed amount (convert Rupees to Paise)
-    return Math.round(val * 100);
+    // Fixed amount (Rupees)
+    return val;
   }
 }

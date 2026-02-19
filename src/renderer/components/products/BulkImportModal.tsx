@@ -186,11 +186,11 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
         if (!isNaN(colIdx) && row[colIdx] !== undefined) {
           let value: any = row[colIdx];
 
-          // Convert Price fields (Rupees -> Paise)
+          // Convert Price fields (Ensure valid number)
           if (field.key === 'salePrice' || field.key === 'purchasePrice') {
             const floatVal = parseFloat(value);
             if (!isNaN(floatVal)) {
-              value = Math.round(floatVal * 100);
+              value = floatVal;
             }
           }
 

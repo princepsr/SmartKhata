@@ -53,7 +53,7 @@ export class CustomerRepository extends BaseRepository {
     const result = this.execute(sql, [
       data.name,
       data.phone || null,
-      Math.round((data.balanceDue || 0) * 100), // Rupees → Paise
+      data.balanceDue || 0, // Direct Rupees
     ]);
 
     logger.info('Customer created', { id: result.lastInsertRowid, name: data.name });
@@ -83,7 +83,7 @@ export class CustomerRepository extends BaseRepository {
     }
     if (data.balanceDue !== undefined) {
       fields.push('balance_due = ?');
-      values.push(Math.round(data.balanceDue * 100)); // Rupees → Paise
+      values.push(data.balanceDue); // Direct Rupees
     }
     if (data.isActive !== undefined) {
       fields.push('is_active = ?');
@@ -186,8 +186,7 @@ export class CustomerRepository extends BaseRepository {
       WHERE id = ?
     `;
 
-    const deltaAmountPaise = Math.round(deltaAmount * 100); // Rupees → Paise
-    const result = this.execute(sql, [deltaAmountPaise, customerId]);
+    const result = this.execute(sql, [deltaAmount, customerId]);
 
     if (result.changes === 0) {
       throw new DatabaseError('Customer not found', 'NOT_FOUND');
@@ -254,7 +253,7 @@ export class CustomerRepository extends BaseRepository {
       id: row.id,
       name: row.name,
       phone: row.phone,
-      balanceDue: row.balance_due / 100, // Paise → Rupees
+      balanceDue: row.balance_due, // Direct Rupees
       isActive: row.is_active === 1, // INTEGER → boolean
       createdAt: this.parseDate(row.created_at), // TEXT → Date
       updatedAt: this.parseDate(row.updated_at),

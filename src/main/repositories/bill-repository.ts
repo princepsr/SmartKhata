@@ -105,10 +105,10 @@ export class BillRepository extends BaseRepository {
       const params = [
         billData.billNumber,
         billData.customerId || null,
-        Math.round(billData.subtotal * 100), // Rupees → Paise
-        Math.round(billData.gstTotal * 100),
-        Math.round((billData.discountAmount || 0) * 100),
-        Math.round(billData.grandTotal * 100),
+        billData.subtotal,
+        billData.gstTotal,
+        billData.discountAmount || 0,
+        billData.grandTotal,
         billData.paymentMode,
       ];
 
@@ -132,9 +132,9 @@ export class BillRepository extends BaseRepository {
           item.productId,
           item.productNameSnapshot,
           item.quantity,
-          Math.round(item.unitPrice * 100), // Rupees → Paise
-          Math.round(item.gstPercent * 100), // Percent → Basis points
-          Math.round(item.lineTotal * 100), // Rupees → Paise
+          item.unitPrice,
+          item.gstPercent,
+          item.lineTotal,
         ]);
 
         createdItems.push({
@@ -362,9 +362,9 @@ export class BillRepository extends BaseRepository {
 
     return {
       totalBills: result?.total_bills || 0,
-      totalSales: (result?.total_sales || 0) / 100, // Paise → Rupees
-      totalGst: (result?.total_gst || 0) / 100,
-      totalDiscount: (result?.total_discount || 0) / 100,
+      totalSales: result?.total_sales || 0, // Direct Rupees
+      totalGst: result?.total_gst || 0,
+      totalDiscount: result?.total_discount || 0,
     };
   }
 
@@ -396,10 +396,10 @@ export class BillRepository extends BaseRepository {
       id: row.id,
       billNumber: row.bill_number,
       customerId: row.customer_id,
-      subtotal: row.subtotal / 100, // Paise → Rupees
-      gstTotal: row.gst_total / 100,
-      discountAmount: row.discount_amount / 100,
-      grandTotal: row.grand_total / 100,
+      subtotal: row.subtotal, // Direct Rupees
+      gstTotal: row.gst_total,
+      discountAmount: row.discount_amount,
+      grandTotal: row.grand_total,
       paymentMode: row.payment_mode,
       createdAt: this.parseDate(row.created_at),
     };
@@ -415,9 +415,9 @@ export class BillRepository extends BaseRepository {
       productId: row.product_id,
       productNameSnapshot: row.product_name_snapshot,
       quantity: row.quantity,
-      unitPrice: row.unit_price / 100, // Paise → Rupees
-      gstPercent: row.gst_percent / 100, // Basis points → Percent
-      lineTotal: row.line_total / 100, // Paise → Rupees
+      unitPrice: row.unit_price, // Direct Rupees
+      gstPercent: row.gst_percent, // Direct Percent
+      lineTotal: row.line_total, // Direct Rupees
     };
   }
 }

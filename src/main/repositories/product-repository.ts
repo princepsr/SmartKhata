@@ -77,9 +77,9 @@ export class ProductRepository extends BaseRepository {
       data.name,
       data.sku ?? null,
       data.barcode ?? null,
-      Math.round(data.salePrice * 100), // Rupees → Paise
-      data.purchasePrice ? Math.round(data.purchasePrice * 100) : null,
-      Math.round((data.gstPercent ?? 18) * 100), // Percent → Basis points (Fixed 0% bug)
+      data.salePrice, // Direct Rupees
+      data.purchasePrice ?? null,
+      data.gstPercent ?? 18, // Direct Percent
       data.stockQty ?? 0,
       data.lowStockAlert ?? null,
       data.trackInventory === false ? 0 : 1, // Explicitly handle false (Default true)
@@ -128,15 +128,15 @@ export class ProductRepository extends BaseRepository {
     }
     if (data.salePrice !== undefined) {
       fields.push('sale_price = ?');
-      values.push(Math.round(data.salePrice * 100)); // Rupees → Paise
+      values.push(data.salePrice); // Direct Rupees
     }
     if (data.purchasePrice !== undefined) {
       fields.push('purchase_price = ?');
-      values.push(data.purchasePrice ? Math.round(data.purchasePrice * 100) : null);
+      values.push(data.purchasePrice ?? null);
     }
     if (data.gstPercent !== undefined) {
       fields.push('gst_percent = ?');
-      values.push(Math.round(data.gstPercent * 100)); // Percent → Basis points
+      values.push(data.gstPercent); // Direct Percent
     }
     if (data.stockQty !== undefined) {
       fields.push('stock_qty = ?');
@@ -336,9 +336,9 @@ export class ProductRepository extends BaseRepository {
       name: row.name,
       sku: row.sku,
       barcode: row.barcode,
-      salePrice: row.sale_price / 100, // Paise → Rupees
-      purchasePrice: row.purchase_price ? row.purchase_price / 100 : null,
-      gstPercent: row.gst_percent / 100, // Basis points → Percent (This stays 100 as per schema usually)
+      salePrice: row.sale_price, // Direct Rupees
+      purchasePrice: row.purchase_price,
+      gstPercent: row.gst_percent, // Direct Percent
       stockQty: row.stock_qty,
       lowStockAlert: row.low_stock_alert,
       isActive: row.is_active === 1, // INTEGER → boolean

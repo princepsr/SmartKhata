@@ -108,10 +108,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           name: initialData.name,
           sku: initialData.sku || '',
           barcode: initialData.barcode || '',
-          salePrice: (initialData.salePrice / 100).toFixed(2),
-          purchasePrice: initialData.purchasePrice
-            ? (initialData.purchasePrice / 100).toFixed(2)
-            : '',
+          salePrice: initialData.salePrice.toFixed(2),
+          purchasePrice: initialData.purchasePrice ? initialData.purchasePrice.toFixed(2) : '',
           gstPercent: initialData.gstPercent?.toString() || '0',
           stockQty: initialData.stockQty?.toString() || '0',
           lowStockAlert: initialData.lowStockAlert?.toString() || '5',

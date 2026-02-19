@@ -58,11 +58,11 @@ export class ReportRepository extends BaseRepository {
     return {
       date: startDate === endDate ? startDate : `${startDate} to ${endDate}`,
       billCount: result.billCount,
-      totalSales: result.totalSales / 100,
-      netSales: result.netSales / 100,
-      totalSubtotal: result.totalSubtotal / 100,
-      totalGst: result.totalGst / 100,
-      totalDiscount: result.totalDiscount / 100,
+      totalSales: result.totalSales,
+      netSales: result.netSales,
+      totalSubtotal: result.totalSubtotal,
+      totalGst: result.totalGst,
+      totalDiscount: result.totalDiscount,
       comparison: {
         totalSales: calculateTrend(result.totalSales, prevResult.totalSales),
         netSales: calculateTrend(result.netSales, prevResult.netSales),
@@ -91,7 +91,7 @@ export class ReportRepository extends BaseRepository {
     return results.map((row) => ({
       mode: row.mode,
       count: row.count,
-      totalAmount: row.totalAmount / 100, // Paise -> Rupees
+      totalAmount: row.totalAmount, // Direct Rupees
     }));
   }
 
@@ -127,13 +127,13 @@ export class ReportRepository extends BaseRepository {
     return {
       slabs: slabs.map((s) => ({
         ...s,
-        taxableAmount: s.taxableAmount / 100, // Paise -> Rupees
-        gstAmount: s.gstAmount / 100,
-        totalAmount: s.totalAmount / 100,
+        taxableAmount: s.taxableAmount, // Direct Rupees
+        gstAmount: s.gstAmount,
+        totalAmount: s.totalAmount,
       })),
-      totalTaxable: totalTaxable / 100,
-      totalGst: totalGst / 100,
-      totalAmount: totalAmount / 100,
+      totalTaxable: totalTaxable,
+      totalGst: totalGst,
+      totalAmount: totalAmount,
     };
   }
 
@@ -167,11 +167,11 @@ export class ReportRepository extends BaseRepository {
 
     return {
       totalItems: aggResult.totalItems,
-      totalStockValue: aggResult.totalStockValue / 100, // Paise -> Rupees
+      totalStockValue: aggResult.totalStockValue, // Direct Rupees
       lowStockCount: aggResult.lowStockCount || 0,
       items: items.map((item) => ({
         ...item,
-        salePrice: item.salePrice / 100,
+        salePrice: item.salePrice,
       })),
     };
   }
@@ -219,7 +219,7 @@ export class ReportRepository extends BaseRepository {
       date: row.date,
       customerName: row.customerName,
       itemCount: row.itemCount,
-      total: row.total / 100, // Paise -> Rupees
+      total: row.total, // Direct Rupees
       paymentMode: row.paymentMode,
     }));
 
@@ -300,8 +300,8 @@ export class ReportRepository extends BaseRepository {
       return {
         periodId: row.periodId,
         period: label,
-        totalSales: row.totalSales / 100,
-        netSales: row.netSales / 100,
+        totalSales: row.totalSales,
+        netSales: row.netSales,
         billCount: row.billCount,
         growth,
       };
@@ -311,8 +311,8 @@ export class ReportRepository extends BaseRepository {
       startDate,
       endDate,
       granularity,
-      totalSales: runningTotalSales / 100,
-      totalNet: runningNetSales / 100,
+      totalSales: runningTotalSales,
+      totalNet: runningNetSales,
       totalBills: runningBills,
       periods,
     };
