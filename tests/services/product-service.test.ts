@@ -230,12 +230,12 @@ describe('ProductService - Stock Adjustment', () => {
   it('should update product details correctly', () => {
     productService.updateProduct(1, {
       name: 'Updated Coke',
-      salePrice: 4500,
+      salePrice: 45,
     });
 
     const product = productRepo.findById(1);
     expect(product?.name).toBe('Updated Coke');
-    expect(product?.salePrice).toBe(4500);
+    expect(product?.salePrice).toBe(45);
   });
 
   it('should verify stock history consistency', () => {
@@ -250,15 +250,15 @@ describe('ProductService - Stock Adjustment', () => {
 
   it('should calculate margin correctly', () => {
     const margin = productService.calculateMargin(1);
-    // Sale: 4000, Purchase: 3000 (from seed data)
-    // Margin: (4000 - 3000) / 4000 * 100 = 25%
+    // Sale: 40, Purchase: 30 (from seed data)
+    // Margin: (40 - 30) / 40 * 100 = 25%
     expect(margin).toBe(25);
   });
 
   it('should handle margin calculation with zero purchase price', () => {
     const product = productService.addProduct({
       name: 'Free Item',
-      salePrice: 1000,
+      salePrice: 10,
       purchasePrice: 0,
     });
 

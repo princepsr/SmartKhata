@@ -139,6 +139,11 @@ export abstract class BaseRepository {
    * Converts database errors into application-friendly errors
    */
   private handleError(error: unknown, operation: string): Error {
+    // If it's already a structured error (BusinessError, DatabaseError) we want to preserve, re-throw as Error
+    if (error instanceof Error && (error as any).code) {
+      return error;
+    }
+
     if (error instanceof Error) {
       // SQLite error codes
       if (error.message.includes('UNIQUE constraint failed')) {

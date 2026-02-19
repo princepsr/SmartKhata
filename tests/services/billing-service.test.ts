@@ -5,10 +5,11 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { BillingService } from '../../src/main/services/billing-service';
-import { ProductRepository } from '../../src/main/repositories/product-repository';
-import { CustomerRepository } from '../../src/main/repositories/customer-repository';
-import { BillRepository } from '../../src/main/repositories/bill-repository';
+import { BillingService } from '@main/services/billing-service';
+import { ProductRepository } from '@main/repositories/product-repository';
+import { CustomerRepository } from '@main/repositories/customer-repository';
+import { BillRepository } from '@main/repositories/bill-repository';
+import { SettingsService } from '@main/services/settings-service';
 import {
   createTestDatabase,
   resetTestDatabase,
@@ -19,7 +20,7 @@ import {
   ValidationError,
   InsufficientStockError,
   DuplicateEntryError,
-} from '../../src/main/services/errors/service-errors';
+} from '@main/services/errors/service-errors';
 
 describe('BillingService - Calculations', () => {
   let db: BetterSqliteCompatibleDatabase;
@@ -28,6 +29,7 @@ describe('BillingService - Calculations', () => {
   beforeEach(async () => {
     db = await createTestDatabase();
     seedTestData(db);
+    SettingsService.getInstance().reloadCache();
     billingService = new BillingService();
   });
 
@@ -155,13 +157,16 @@ describe('BillingService - Finalize Bill', () => {
   });
 
   it('should throw error on insufficient stock', () => {
-    expect(() => {
+    try {
       billingService.finalizeBill({
         billNumber: 'BILL-001',
         items: [{ productId: 1, quantity: 200 }], // More than available
         paymentMode: 'cash',
       });
-    }).toThrow(InsufficientStockError);
+      throw new Error('Should have thrown InsufficientStockError');
+    } catch (err: any) {
+      expect(err.code || err.name).toMatch(/INSUFFICIENT_STOCK|InsufficientStockError/);
+    }
   });
 
   it('should throw error on duplicate bill number', () => {
@@ -185,7 +190,7 @@ describe('BillingService - Finalize Bill', () => {
     expect(product).toBeDefined();
     const initialStock = product?.stockQty || 0;
 
-    expect(() => {
+    try {
       billingService.finalizeBill({
         billNumber: 'BILL-001',
         items: [
@@ -194,7 +199,11 @@ describe('BillingService - Finalize Bill', () => {
         ],
         paymentMode: 'cash',
       });
-    }).toThrow(InsufficientStockError);
+      throw new Error('Should have thrown InsufficientStockError');
+    } catch (err: any) {
+      // Check code or message as instanceof might fail with Vitest module resolution
+      expect(err.code || err.name).toMatch(/INSUFFICIENT_STOCK|InsufficientStockError/);
+    }
 
     // Verify stock unchanged (rollback)
     const currentProduct = productRepo.findById(1);

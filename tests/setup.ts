@@ -48,7 +48,38 @@ const databaseMock = {
       };
     }
   }),
-  transaction: vi.fn((fn: () => unknown) => fn()),
+  transaction: (() => {
+    let depth = 0;
+    return vi.fn((fn: () => unknown) => {
+      const db = databaseMock.getDatabase();
+      if (!db || typeof db.exec !== 'function') {
+        return fn();
+      }
+
+      depth++;
+      try {
+        if (depth === 1) {
+          db.exec('BEGIN TRANSACTION');
+        }
+        const result = fn();
+        if (depth === 1) {
+          db.exec('COMMIT');
+        }
+        return result;
+      } catch (error) {
+        if (depth === 1) {
+          try {
+            db.exec('ROLLBACK');
+          } catch {
+            /* ignore */
+          }
+        }
+        throw error;
+      } finally {
+        depth--;
+      }
+    });
+  })(),
   isReady: vi.fn(() => true),
   getDatabasePath: vi.fn(() => './test-data/active.sqlite'),
 };
@@ -61,6 +92,7 @@ vi.mock('../src/main/database/index.ts', () => ({ databaseManager: databaseMock 
 vi.mock('@main/database/migrations', () => ({
   migrationRunner: {
     getCurrentVersion: vi.fn().mockReturnValue(1),
+    runPendingMigrations: vi.fn().mockResolvedValue(undefined),
   },
 }));
 

@@ -118,13 +118,14 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       name TEXT NOT NULL,
       brand TEXT,
       category TEXT,
-      mrp INTEGER DEFAULT 0 CHECK(mrp >= 0),
-      sale_price INTEGER NOT NULL CHECK(sale_price >= 0),
-      purchase_price INTEGER DEFAULT 0 CHECK(purchase_price >= 0),
-      gst_percent INTEGER NOT NULL DEFAULT 0 CHECK(gst_percent >= 0),
+      mrp REAL DEFAULT 0 CHECK(mrp >= 0),
+      sale_price REAL NOT NULL CHECK(sale_price >= 0),
+      purchase_price REAL DEFAULT 0 CHECK(purchase_price >= 0),
+      gst_percent REAL NOT NULL DEFAULT 0 CHECK(gst_percent >= 0),
       stock_qty INTEGER NOT NULL DEFAULT 0,
       low_stock_alert INTEGER DEFAULT 0 CHECK(low_stock_alert >= 0),
       is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
+      track_inventory INTEGER NOT NULL DEFAULT 1 CHECK(track_inventory IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -134,10 +135,10 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       bill_number TEXT UNIQUE NOT NULL,
       customer_id INTEGER,
-      subtotal INTEGER NOT NULL CHECK(subtotal >= 0),
-      gst_total INTEGER NOT NULL DEFAULT 0 CHECK(gst_total >= 0),
-      discount_amount INTEGER NOT NULL DEFAULT 0 CHECK(discount_amount >= 0),
-      grand_total INTEGER NOT NULL CHECK(grand_total >= 0),
+      subtotal REAL NOT NULL CHECK(subtotal >= 0),
+      gst_total REAL NOT NULL DEFAULT 0 CHECK(gst_total >= 0),
+      discount_amount REAL NOT NULL DEFAULT 0 CHECK(discount_amount >= 0),
+      grand_total REAL NOT NULL CHECK(grand_total >= 0),
       payment_mode TEXT NOT NULL DEFAULT 'cash' CHECK(payment_mode IN ('cash', 'upi', 'mixed')),
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (customer_id) REFERENCES customers(id)
@@ -150,9 +151,9 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       product_id INTEGER NOT NULL,
       product_name_snapshot TEXT NOT NULL,
       quantity INTEGER NOT NULL CHECK(quantity > 0),
-      unit_price INTEGER NOT NULL CHECK(unit_price >= 0),
-      gst_percent INTEGER NOT NULL DEFAULT 0,
-      line_total INTEGER NOT NULL CHECK(line_total >= 0),
+      unit_price REAL NOT NULL CHECK(unit_price >= 0),
+      gst_percent REAL NOT NULL DEFAULT 0,
+      line_total REAL NOT NULL CHECK(line_total >= 0),
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE,
       FOREIGN KEY (product_id) REFERENCES products(id)
@@ -195,6 +196,8 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       footer_message TEXT,
       print_copies INTEGER DEFAULT 1,
       auto_print INTEGER DEFAULT 1,
+      billing_only INTEGER DEFAULT 0,
+      customers_enabled INTEGER DEFAULT 1,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -257,25 +260,25 @@ export function getTestDatabase(): BetterSqliteCompatibleDatabase {
 export function seedTestData(db: any): void {
   try {
     db.exec(`
-      INSERT INTO products (barcode, sku, name, brand, category, mrp, sale_price, purchase_price, gst_percent, stock_qty, low_stock_alert, is_active)
+      INSERT INTO products (barcode, sku, name, brand, category, mrp, sale_price, purchase_price, gst_percent, stock_qty, low_stock_alert, is_active, track_inventory)
       VALUES 
-        ('8901234567890', 'COKE-500', 'Coca Cola 500ml', 'Coca Cola', 'Beverages', 4000, 4000, 3000, 1800, 100, 10, 1),
-        ('8901234567891', 'LAYS-001', 'Lays Chips', 'Lays', 'Snacks', 2000, 2000, 1500, 1200, 50, 5, 1),
-        ('8901234567892', 'MILK-1L', 'Amul Milk 1L', 'Amul', 'Dairy', 6000, 6000, 5500, 0, 30, 10, 1),
-        ('8901234567893', 'INACTIVE', 'Inactive Product', NULL, NULL, 1000, 1000, 800, 1800, 0, 0, 0);
+        ('8901234567890', 'COKE-500', 'Coca Cola 500ml', 'Coca Cola', 'Beverages', 40, 40, 30, 18, 100, 10, 1, 1),
+        ('8901234567891', 'LAYS-001', 'Lays Chips', 'Lays', 'Snacks', 20, 20, 15, 12, 50, 5, 1, 1),
+        ('8901234567892', 'MILK-1L', 'Amul Milk 1L', 'Amul', 'Dairy', 60, 60, 55, 0, 30, 10, 1, 1),
+        ('8901234567893', 'INACTIVE', 'Inactive Product', NULL, NULL, 10, 10, 8, 18, 0, 0, 0, 1);
     `);
 
     db.exec(`
       INSERT INTO customers (name, phone, balance_due, is_active)
       VALUES 
         ('Ramesh Kumar', '9876543210', 0, 1),
-        ('Suresh Patel', '9876543211', 50000, 1),
+        ('Suresh Patel', '9876543211', 500, 1),
         ('Inactive Customer', '0000000000', 0, 0);
     `);
 
     db.exec(`
-      INSERT INTO app_config (id, shop_name, paper_size, gst_enabled, gst_percentage)
-      VALUES (1, 'Test Shop', '58mm', 1, 18);
+      INSERT INTO app_config (id, shop_name, paper_size, gst_enabled, gst_percentage, billing_only, customers_enabled)
+      VALUES (1, 'Test Shop', '58mm', 1, 18, 0, 1);
     `);
 
     db.exec(`

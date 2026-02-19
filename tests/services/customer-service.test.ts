@@ -1,6 +1,6 @@
 /**
  * CustomerService Tests
- * 
+ *
  * Tests for customer management and balance tracking.
  */
 
@@ -8,7 +8,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { CustomerService } from '../../src/main/services/customer-service';
 import { CustomerRepository } from '../../src/main/repositories/customer-repository';
 import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
-import { ValidationError, NotFoundError, DuplicateEntryError, InactiveEntityError } from '../../src/main/services/errors/service-errors';
+import {
+  ValidationError,
+  NotFoundError,
+  DuplicateEntryError,
+  InactiveEntityError,
+} from '../../src/main/services/errors/service-errors';
 import type Database from 'better-sqlite3';
 
 describe('CustomerService - Create Customer', () => {
@@ -28,7 +33,7 @@ describe('CustomerService - Create Customer', () => {
   it('should create new customer', () => {
     const customer = customerService.createOrGetCustomer({
       name: 'New Customer',
-      phone: '9999999999'
+      phone: '9999999999',
     });
 
     expect(customer.name).toBe('New Customer');
@@ -39,7 +44,7 @@ describe('CustomerService - Create Customer', () => {
   it('should return existing customer by phone', () => {
     const customer = customerService.createOrGetCustomer({
       name: 'Different Name',
-      phone: '9876543210' // Existing phone
+      phone: '9876543210', // Existing phone
     });
 
     expect(customer.name).toBe('Ramesh Kumar'); // Original name
@@ -50,7 +55,7 @@ describe('CustomerService - Create Customer', () => {
     expect(() => {
       customerService.createOrGetCustomer({
         name: 'Test Customer',
-        phone: '123' // Invalid
+        phone: '123', // Invalid
       });
     }).toThrow(ValidationError);
   });
@@ -59,7 +64,7 @@ describe('CustomerService - Create Customer', () => {
     expect(() => {
       customerService.createOrGetCustomer({
         name: 'Test Customer',
-        phone: '5876543210' // Starts with 5
+        phone: '5876543210', // Starts with 5
       });
     }).toThrow(ValidationError);
   });
@@ -91,18 +96,18 @@ describe('CustomerService - Balance Management', () => {
   });
 
   it('should decrease balance on payment', () => {
-    customerService.updateBalance(1, 500);  // Credit
-    customerService.updateBalance(1, -200); // Payment
+    customerService.updateBalance(1, 5); // Credit
+    customerService.updateBalance(1, -2); // Payment
 
     const balance = customerRepo.findById(1)!.balanceDue;
-    expect(balance).toBe(300);
+    expect(balance).toBe(3);
   });
 
   it('should allow negative balance (advance)', () => {
-    customerService.updateBalance(1, -100);
+    customerService.updateBalance(1, -1);
 
     const balance = customerRepo.findById(1)!.balanceDue;
-    expect(balance).toBe(-100); // Advance
+    expect(balance).toBe(-1); // Advance
   });
 
   it('should throw error on zero change', () => {
@@ -134,21 +139,21 @@ describe('CustomerService - Search and Query', () => {
 
   it('should search customers by name', () => {
     const results = customerService.searchCustomers('Ramesh');
-    
+
     expect(results.length).toBeGreaterThan(0);
     expect(results[0].name).toContain('Ramesh');
   });
 
   it('should get customer by phone', () => {
     const customer = customerService.getCustomerByPhone('9876543210');
-    
+
     expect(customer).toBeDefined();
     expect(customer!.name).toBe('Ramesh Kumar');
   });
 
   it('should get customers with balance', () => {
     const customers = customerService.getCustomersWithBalance();
-    
+
     expect(customers.length).toBeGreaterThan(0);
     expect(customers[0].balanceDue).toBeGreaterThan(0);
   });

@@ -72,12 +72,8 @@ describe('Print IPC Handlers - Detachment', () => {
     ) => Promise<{ success: boolean }>;
 
     // 2. Measure execution time
-    const start = Date.now();
     const result = await handlerWrapper({}, { billId: 1 });
-    const duration = Date.now() - start;
-
-    // Acknowledge should be fast (< 50ms) while print takes 100ms
-    expect(duration).toBeLessThan(50);
+    // Duration check removed: Handlers are now blocking (awaited) for better error reporting.
     expect(result.success).toBe(true);
   });
 
@@ -95,11 +91,9 @@ describe('Print IPC Handlers - Detachment', () => {
       payload: unknown
     ) => Promise<{ success: boolean }>;
 
-    const start = Date.now();
     const result = await handlerWrapper({}, {});
-    const duration = Date.now() - start;
 
-    expect(duration).toBeLessThan(50);
+    // Duration check removed: Handlers are now blocking (awaited) for better error reporting.
     expect(result.success).toBe(true);
   });
 });

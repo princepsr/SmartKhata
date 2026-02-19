@@ -13,10 +13,10 @@ describe('Billing Math Utilities', () => {
     });
 
     it('should calculate fixed amount discount correctly', () => {
-      // 100 rupees discount -> 10000 paisa
-      expect(calculateDiscountAmount('amount', '100', 50000, 0)).toBe(10000);
-      // 50.50 rupees discount -> 5050 paisa
-      expect(calculateDiscountAmount('amount', '50.50', 50000, 0)).toBe(5050);
+      // 100 rupees discount
+      expect(calculateDiscountAmount('amount', '100', 500, 0)).toBe(100);
+      // 50.50 rupees discount
+      expect(calculateDiscountAmount('amount', '50.50', 500, 0)).toBe(50.5);
     });
 
     it('should calculate percentage discount correctly', () => {
@@ -29,7 +29,7 @@ describe('Billing Math Utilities', () => {
 
     it('should handle percentage calculation with rounding', () => {
       // 33.33% of 1000
-      expect(calculateDiscountAmount('percent', '33.33', 1000, 0)).toBe(333);
+      expect(calculateDiscountAmount('percent', '33.33', 1000, 0)).toBe(333.3);
     });
   });
 
@@ -38,7 +38,7 @@ describe('Billing Math Utilities', () => {
       id: 1,
       name: 'Test Product',
       description: '',
-      salePrice: price, // in paisa
+      salePrice: price, // in rupees
       costPrice: 0,
       stockQty: 100,
       gstPercent: gst,
@@ -50,39 +50,39 @@ describe('Billing Math Utilities', () => {
     });
 
     it('should calculate basic totals correctly', () => {
-      // 1 item, 100 rs (10000 paisa), 18% GST
-      const items = [{ product: mockProduct(10000, 18), quantity: 2 }];
+      // 1 item, 100 rs, 18% GST
+      const items = [{ product: mockProduct(100, 18), quantity: 2 }];
       const result = calculateBillPreview(items, 0);
 
-      expect(result.subtotal).toBe(20000); // 100 * 2
-      expect(result.gstTotal).toBe(3600); // 18% of 20000
-      expect(result.grandTotal).toBe(23600);
+      expect(result.subtotal).toBe(200); // 100 * 2
+      expect(result.gstTotal).toBe(36); // 18% of 200
+      expect(result.grandTotal).toBe(236);
       expect(result.items).toHaveLength(1);
-      expect(result.items[0].lineTotal).toBe(23600);
+      expect(result.items[0].lineTotal).toBe(236);
     });
 
     it('should handle zero quantity', () => {
-      const items = [{ product: mockProduct(10000, 18), quantity: 0 }];
+      const items = [{ product: mockProduct(100, 18), quantity: 0 }];
       const result = calculateBillPreview(items, 0);
       expect(result.subtotal).toBe(0);
       expect(result.grandTotal).toBe(0);
     });
 
     it('should deduct fixed discount from grand total', () => {
-      const items = [{ product: mockProduct(10000, 0), quantity: 1 }];
-      // Subtotal: 10000, Discount: 1000 -> Grand Total: 9000
-      const result = calculateBillPreview(items, 1000);
-      expect(result.grandTotal).toBe(9000);
+      const items = [{ product: mockProduct(100, 0), quantity: 1 }];
+      // Subtotal: 100, Discount: 10 -> Grand Total: 90
+      const result = calculateBillPreview(items, 10);
+      expect(result.grandTotal).toBe(90);
     });
 
     it('should deduct discount after GST addition', () => {
-      // Subtotal: 1000, GST: 180 -> Total: 1180
-      // Discount: 180 -> Grand Total: 1000
-      const items = [{ product: mockProduct(1000, 18), quantity: 1 }];
-      const result = calculateBillPreview(items, 180);
-      expect(result.subtotal).toBe(1000);
-      expect(result.gstTotal).toBe(180);
-      expect(result.grandTotal).toBe(1000);
+      // Subtotal: 10, GST: 1.8 -> Total: 11.8
+      // Discount: 1.8 -> Grand Total: 10
+      const items = [{ product: mockProduct(10, 18), quantity: 1 }];
+      const result = calculateBillPreview(items, 1.8);
+      expect(result.subtotal).toBe(10);
+      expect(result.gstTotal).toBe(1.8);
+      expect(result.grandTotal).toBe(10);
     });
 
     it('should not return negative grand total', () => {

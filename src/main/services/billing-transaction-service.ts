@@ -119,13 +119,13 @@ export class BillingTransactionService extends BaseRepository {
         // Note: updateStock() validates stock and throws if insufficient
 
         // Calculate line totals
-        const lineSubtotal = product.salePrice * item.quantity;
-        const lineGst = (lineSubtotal * product.gstPercent) / 100;
-        const lineTotal = lineSubtotal + lineGst;
+        const lineSubtotal = Math.round(product.salePrice * item.quantity * 100) / 100;
+        const lineGst = Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100;
+        const lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
 
         // Accumulate totals
-        subtotal += lineSubtotal;
-        gstTotal += lineGst;
+        subtotal = Math.round((subtotal + lineSubtotal) * 100) / 100;
+        gstTotal = Math.round((gstTotal + lineGst) * 100) / 100;
 
         // Prepare bill item
         billItems.push({
@@ -142,7 +142,7 @@ export class BillingTransactionService extends BaseRepository {
       // STEP 2: Calculate final totals
       // ============================================
       const discountAmount = saleData.discountAmount || 0;
-      const grandTotal = subtotal + gstTotal - discountAmount;
+      const grandTotal = Math.round((subtotal + gstTotal - discountAmount) * 100) / 100;
 
       // ============================================
       // STEP 3: Create bill with items
@@ -196,7 +196,7 @@ export class BillingTransactionService extends BaseRepository {
       // ============================================
       if (saleData.customerId) {
         const paymentReceived = saleData.paymentReceived || 0;
-        const balanceChange = grandTotal - paymentReceived;
+        const balanceChange = Math.round((grandTotal - paymentReceived) * 100) / 100;
 
         if (balanceChange !== 0) {
           this.customerRepo.updateBalance(saleData.customerId, balanceChange);

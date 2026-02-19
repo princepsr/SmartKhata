@@ -121,8 +121,8 @@ describe('PrintService - Core Logic', () => {
 
     const printPromise = service.printBill(mockBill);
 
-    // Process all steps: loadURL (async), layout delay (100ms), copy 1 print (50ms), gap (500ms), copy 2 print (50ms)
-    await vi.advanceTimersByTimeAsync(1000);
+    // Process all steps: loadURL (async), layout delay (500ms), copy 1 print (50ms), gap (500ms), copy 2 print (50ms)
+    await vi.advanceTimersByTimeAsync(1500);
 
     const result = await printPromise;
     expect(result).toBe(true);

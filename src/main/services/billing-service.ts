@@ -126,13 +126,15 @@ export class BillingService extends BaseService {
       const settings = SettingsService.getInstance().getConfig();
 
       // Calculate line totals
-      const lineSubtotal = product.salePrice * item.quantity;
-      const lineGst = settings.gstEnabled ? (lineSubtotal * product.gstPercent) / 100 : 0;
-      const lineTotal = lineSubtotal + lineGst;
+      const lineSubtotal = Math.round(product.salePrice * item.quantity * 100) / 100;
+      const lineGst = settings.gstEnabled
+        ? Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100
+        : 0;
+      const lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
 
       // Accumulate totals
-      subtotal += lineSubtotal;
-      gstTotal += lineGst;
+      subtotal = Math.round((subtotal + lineSubtotal) * 100) / 100;
+      gstTotal = Math.round((gstTotal + lineGst) * 100) / 100;
 
       // Add calculated item
       calculatedItems.push({
@@ -148,7 +150,7 @@ export class BillingService extends BaseService {
     });
 
     // 4. Calculate grand total
-    const grandTotal = subtotal + gstTotal - discountAmount;
+    const grandTotal = Math.round((subtotal + gstTotal - discountAmount) * 100) / 100;
 
     // 5. Validate grand total is positive
     if (grandTotal < 0) {

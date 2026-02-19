@@ -54,19 +54,17 @@ export function calculateBillPreview(
     // We should probably safeguard against NaN or negative inputs.
 
     const qty = Math.max(0, quantity);
-    const lineSubtotal = product.salePrice * qty; // salePrice is in paisa (integer)? or float?
-    // Types say 'number'. Usually DB stores integers for money.
-    // If salePrice is 10000 (100.00), then lineSubtotal is 20000.
+    const lineSubtotal = Math.round(product.salePrice * qty * 100) / 100;
 
     // Tax
-    const lineGst = (lineSubtotal * product.gstPercent) / 100;
+    const lineGst = Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100;
 
     // Total
-    const lineTotal = lineSubtotal + lineGst;
+    const lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
 
     // Accumulate
-    subtotal += lineSubtotal;
-    gstTotal += lineGst;
+    subtotal = Math.round((subtotal + lineSubtotal) * 100) / 100;
+    gstTotal = Math.round((gstTotal + lineGst) * 100) / 100;
 
     calculatedItems.push({
       productId: product.id,
@@ -81,7 +79,7 @@ export function calculateBillPreview(
   }
 
   // Final totals
-  const grandTotal = subtotal + gstTotal - discountAmount;
+  const grandTotal = Math.round((subtotal + gstTotal - discountAmount) * 100) / 100;
 
   return {
     items: calculatedItems,
@@ -123,7 +121,7 @@ export function calculateDiscountAmount(
   if (type === 'percent') {
     // Calculate percentage of Subtotal + GST
     const baseTotal = subtotal + gstTotal;
-    return Math.round((baseTotal * val) / 100);
+    return Math.round(((baseTotal * val) / 100) * 100) / 100;
   } else {
     // Fixed amount (Rupees)
     return val;

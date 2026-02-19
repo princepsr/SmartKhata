@@ -113,8 +113,8 @@ describe('ReportService Integration Tests', () => {
     expect(report.totalTaxable).toBe(600.0); // 400.00 + 200.00
     expect(report.totalGst).toBe(96.0); // 72.00 + 24.00
 
-    const slab18 = report.slabs.find((s) => s.gstPercent === 1800);
-    const slab12 = report.slabs.find((s) => s.gstPercent === 1200);
+    const slab18 = report.slabs.find((s) => s.gstPercent === 18);
+    const slab12 = report.slabs.find((s) => s.gstPercent === 12);
 
     expect(slab18).toBeDefined();
     expect(slab18?.taxableAmount).toBe(400.0);
