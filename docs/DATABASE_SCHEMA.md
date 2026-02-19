@@ -9,11 +9,11 @@ The initial schema (`001_initial_schema.sql`) defines 5 core tables for the Smar
 ## Money Storage Convention
 
 > [!IMPORTANT]
-> All monetary values (Prices, Totals, Discounts, Balances) are stored as **Integers in Paisa** (e.g., ₹1.00 is stored as `100`).
+> All monetary values (Prices, Totals, Discounts, Balances) are stored as **Decimals in Rupees** (e.g., ₹1.50 is stored as `1.50` in `REAL`/`DECIMAL` format).
 >
-> - **Why:** To prevent floating-point rounding errors during calculation.
-> - **Precision:** 100% precision for all financial transactions.
-> - **Formatting:** The renderer is responsible for converting Paisa to Rupees (`value / 100`) for display using the `formatCurrency` utility.
+> - **Why:** To improve consistency, prevent conversion bugs, and simplify the code across all layers.
+> - **Precision:** Calculations use standard floating-point arithmetic with rounding applied only at final totals for display.
+> - **Formatting:** The `formatCurrency` utility is used solely for visual presentation (adding symbols and locale-specific grouping).
 
 ---
 
@@ -31,9 +31,9 @@ erDiagram
         text name
         text barcode UK
         text sku UK
-        int sale_price       /* Stored in Paisa (Integer) */
-        int purchase_price   /* Stored in Paisa (Integer) */
-        int gst_percent      /* Stored in Basis Points (1800 = 18.00%) */
+        real sale_price       /* Stored in Rupees (Decimal) */
+        real purchase_price   /* Stored in Rupees (Decimal) */
+        real gst_percent      /* Stored as Percentage (e.g., 18.0) */
         int stock_qty
         int low_stock_alert
         int is_active
@@ -45,7 +45,7 @@ erDiagram
         int id PK
         text name
         text phone UK
-        int balance_due      /* Stored in Paisa (Integer) */
+        real balance_due      /* Stored in Rupees (Decimal) */
         int is_active
         text created_at
         text updated_at
@@ -55,10 +55,10 @@ erDiagram
         int id PK
         text bill_number UK
         int customer_id FK
-        int subtotal         /* Stored in Paisa (Integer) */
-        int gst_total        /* Stored in Paisa (Integer) */
-        int discount_amount  /* Stored in Paisa (Integer) */
-        int grand_total      /* Stored in Paisa (Integer) */
+        real subtotal         /* Stored in Rupees (Decimal) */
+        real gst_total        /* Stored in Rupees (Decimal) */
+        real discount_amount  /* Stored in Rupees (Decimal) */
+        real grand_total      /* Stored in Rupees (Decimal) */
         text payment_mode    /* 'cash', 'upi', 'mixed' */
         text created_at
     }
@@ -69,9 +69,9 @@ erDiagram
         int product_id FK
         text product_name_snapshot
         int quantity
-        int unit_price       /* Stored in Paisa (Integer) */
-        int gst_percent
-        int line_total       /* Stored in Paisa (Integer) */
+        real unit_price       /* Stored in Rupees (Decimal) */
+        real gst_percent      /* Stored as Percentage */
+        real line_total       /* Stored in Rupees (Decimal) */
     }
 
     inventory_logs {
@@ -114,9 +114,9 @@ erDiagram
 - `name`: Product name (required)
 - `brand`: Product brand (optional)
 - `category`: Product category (optional)
-- `sale_price`: Selling price in Paisa (required, ≥ 0)
-- `purchase_price`: Cost price in Paisa (optional, for profit tracking)
-- `gst_percent`: GST percentage in basis points (e.g., 1800 for 18%)
+- `sale_price`: Selling price in Rupees (required, ≥ 0)
+- `purchase_price`: Cost price in Rupees (optional, for profit tracking)
+- `gst_percent`: GST percentage (e.g., 18.0 for 18%)
 - `stock_qty`: Current inventory count (default: 0)
 - `low_stock_alert`: Threshold for low stock warning
 - `is_active`: Soft delete flag (1 = active, 0 = inactive)
@@ -132,7 +132,7 @@ erDiagram
 - `id`: Auto-incrementing primary key
 - `name`: Customer name (required)
 - `phone`: Phone number (unique)
-- `balance_due`: Current unpaid amount in Paisa (default: 0)
+- `balance_due`: Current unpaid amount in Rupees (default: 0)
 - `is_active`: Soft delete flag
 
 ---
@@ -146,10 +146,10 @@ erDiagram
 - `id`: Auto-incrementing primary key
 - `bill_number`: Unique bill number (e.g., SK-2025-0001)
 - `customer_id`: Foreign key to customers (optional)
-- `subtotal`: Sum of line items in Paisa (required)
-- `gst_total`: Total GST in Paisa
-- `discount_amount`: Total discount in Paisa
-- `grand_total`: Final amount in Paisa (required)
+- `subtotal`: Sum of line items in Rupees (required)
+- `gst_total`: Total GST in Rupees
+- `discount_amount`: Total discount in Rupees
+- `grand_total`: Final amount in Rupees (required)
 - `payment_mode`: Payment type ('cash', 'upi', 'mixed')
 - `created_at`: Transaction timestamp
 
@@ -166,9 +166,9 @@ erDiagram
 - `product_id`: Foreign key to products (required)
 - `product_name_snapshot`: Name at time of sale
 - `quantity`: Quantity sold (required, > 0)
-- `unit_price`: Price at time of sale in Paisa
-- `gst_percent`: GST rate at time of sale
-- `line_total`: Line total in Paisa
+- `unit_price`: Price at time of sale in Rupees
+- `gst_percent`: GST rate at time of sale in percentage
+- `line_total`: Line total in Rupees
 
 ---
 
@@ -316,8 +316,8 @@ FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
 
 ```sql
 -- 1. Insert sale header
-INSERT INTO sales (customer_id, subtotal, tax, discount, total, payment_method)
-VALUES (5, 1000, 180, 50, 1130, 'cash');
+INSERT INTO bills (customer_id, subtotal, gst_total, discount_amount, grand_total, payment_mode)
+VALUES (5, 1000.00, 180.00, 50.00, 1130.00, 'cash');
 -- Returns sale_id = 42
 
 -- 2. Insert sale items

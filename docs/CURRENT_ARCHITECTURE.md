@@ -254,8 +254,8 @@ export class ProductRepository extends BaseRepository {
 
     const result = this.execute(sql, [
       data.name,
-      Math.round(data.salePrice * 100), // Rupees → Paise
-      Math.round(data.gstPercent * 100), // Percent → Basis points
+      data.salePrice, // Direct Rupees
+      data.gstPercent, // Direct Percent
       data.stockQty,
     ]);
 
@@ -281,8 +281,8 @@ export class ProductRepository extends BaseRepository {
 **Schema:**
 
 - 8 tables (products, customers, bills, bill_items, inventory_logs, settings, license, schema_migrations)
-- Monetary values stored as integers (paise)
-- Percentages stored as basis points (1/100th of a percent)
+- Monetary values stored as decimals (rupees)
+- Percentages stored as percentage (e.g., 18.0)
 - Timestamps stored as ISO 8601 strings
 
 ---

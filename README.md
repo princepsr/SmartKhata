@@ -186,7 +186,7 @@ SQLite Database
 - `license` - License information
 - `schema_migrations` - Migration tracking
 
-**See [docs/schema/](docs/schema/) for complete schema documentation.**
+**See [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) for complete schema documentation.**
 
 ---
 

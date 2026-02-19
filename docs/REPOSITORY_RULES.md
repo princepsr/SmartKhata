@@ -9,16 +9,18 @@ Repositories are the **only** layer that interacts with the database. They encap
 ## Responsibilities
 
 **Repositories MUST:**
+
 - ✅ Encapsulate all SQL queries for their table/aggregate
 - ✅ Return domain objects (typed interfaces), not raw DB rows
 - ✅ Use `BaseRepository` for common operations
 - ✅ Be synchronous (no async/await)
 - ✅ Use transactions for multi-step writes
 - ✅ Handle database errors and throw meaningful errors
-- ✅ Convert between database types (INTEGER paise) and domain types (number rupees) when appropriate
+- ✅ Perform standard rounding for financial totals when appropriate
 - ✅ Validate input parameters
 
 **Repositories MUST NOT:**
+
 - ❌ Contain business logic (that belongs in services)
 - ❌ Call other repositories directly
 - ❌ Access the UI or IPC layer
@@ -31,12 +33,12 @@ Repositories are the **only** layer that interacts with the database. They encap
 
 ## Naming Conventions
 
-| Pattern | Example | Notes |
-|---------|---------|-------|
-| **Class Name** | `CustomerRepository` | Singular, ends with `Repository` |
-| **File Name** | `customer-repository.ts` | Kebab-case |
-| **Method Names** | `findById`, `findAll`, `create`, `update`, `delete` | Descriptive, verb-first |
-| **Private Methods** | `_mapToCustomer` | Prefix with underscore |
+| Pattern             | Example                                             | Notes                            |
+| ------------------- | --------------------------------------------------- | -------------------------------- |
+| **Class Name**      | `CustomerRepository`                                | Singular, ends with `Repository` |
+| **File Name**       | `customer-repository.ts`                            | Kebab-case                       |
+| **Method Names**    | `findById`, `findAll`, `create`, `update`, `delete` | Descriptive, verb-first          |
+| **Private Methods** | `_mapToCustomer`                                    | Prefix with underscore           |
 
 ---
 
@@ -65,17 +67,17 @@ Every repository should implement:
 ```typescript
 class XxxRepository extends BaseRepository {
   // Read operations
-  findById(id: number): Xxx | null
-  findAll(): Xxx[]
-  findBy(criteria: Partial<Xxx>): Xxx[]
-  
+  findById(id: number): Xxx | null;
+  findAll(): Xxx[];
+  findBy(criteria: Partial<Xxx>): Xxx[];
+
   // Write operations
-  create(data: CreateXxxInput): Xxx
-  update(id: number, data: UpdateXxxInput): Xxx
-  delete(id: number): void  // Or soft delete
-  
+  create(data: CreateXxxInput): Xxx;
+  update(id: number, data: UpdateXxxInput): Xxx;
+  delete(id: number): void; // Or soft delete
+
   // Private mapping
-  private _mapToXxx(row: any): Xxx
+  private _mapToXxx(row: any): Xxx;
 }
 ```
 
@@ -97,7 +99,7 @@ private _mapToCustomer(row: any): Customer {
     id: row.id,
     name: row.name,
     phone: row.phone,
-    balanceDue: row.balance_due / 100, // Convert paise to rupees
+    balanceDue: row.balance_due, // Direct Rupees
     isActive: row.is_active === 1,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at)
@@ -122,12 +124,12 @@ createBillWithItems(billData: CreateBillInput, items: CreateBillItemInput[]): Bi
   return this.transaction(() => {
     // 1. Create bill
     const billId = this.execute(`INSERT INTO bills (...) VALUES (...)`, [...]).lastInsertRowid;
-    
+
     // 2. Create bill items
     items.forEach(item => {
       this.execute(`INSERT INTO bill_items (...) VALUES (...)`, [...]);
     });
-    
+
     // 3. Return created bill
     return this.findById(billId)!;
   });
@@ -153,11 +155,11 @@ createBillWithItems(billData: CreateBillInput, items: CreateBillItemInput[]): Bi
 // ✅ GOOD: Descriptive error
 findById(id: number): Customer {
   const customer = this.queryOne(`SELECT * FROM customers WHERE id = ?`, [id]);
-  
+
   if (!customer) {
     throw new Error(`Customer not found: ${id}`);
   }
-  
+
   return this._mapToCustomer(customer);
 }
 
@@ -172,11 +174,13 @@ findById(id: number): Customer | null {
 ## IPC Handler Usage
 
 **IPC handlers should:**
+
 - ✅ Call repository methods
 - ✅ Handle repository errors
 - ✅ Return data to renderer
 
 **IPC handlers should NOT:**
+
 - ❌ Write SQL queries
 - ❌ Access database directly
 - ❌ Contain business logic
@@ -189,11 +193,11 @@ ipcMain.handle('customer:getById', async (event, customerId: number) => {
   try {
     const customerRepo = new CustomerRepository(DatabaseManager.getInstance());
     const customer = customerRepo.findById(customerId);
-    
+
     if (!customer) {
       return { success: false, error: 'Customer not found' };
     }
-    
+
     return { success: true, data: customer };
   } catch (error) {
     Logger.error('Failed to get customer', error);
@@ -218,8 +222,12 @@ ipcMain.handle('customer:getById', async (event, customerId: number) => {
 ```typescript
 // ✅ GOOD: Repository only handles data access
 class CustomerRepository {
-  findById(id: number): Customer | null { /* ... */ }
-  updateBalance(id: number, amount: number): void { /* ... */ }
+  findById(id: number): Customer | null {
+    /* ... */
+  }
+  updateBalance(id: number, amount: number): void {
+    /* ... */
+  }
 }
 
 // ✅ GOOD: Service handles business logic
@@ -228,12 +236,12 @@ class BillingService {
     // Business logic: validate, calculate totals, check stock
     this.validateBillData(billData);
     this.checkStockAvailability(items);
-    
+
     // Use repositories for data access
     const bill = this.billRepo.create(billData);
-    items.forEach(item => this.billItemRepo.create(item));
+    items.forEach((item) => this.billItemRepo.create(item));
     this.customerRepo.updateBalance(billData.customerId, billData.grandTotal);
-    
+
     return bill;
   }
 }
@@ -256,35 +264,35 @@ class CustomerRepository {
 **Convert database types to domain types:**
 
 ```typescript
-// Database stores INTEGER (paise), domain uses number (rupees)
+// Database and domain both use number (rupees)
 
-// ✅ GOOD: Convert in repository
+// ✅ GOOD: Simple mapping
 private _mapToProduct(row: any): Product {
   return {
     id: row.id,
     name: row.name,
-    salePrice: row.sale_price / 100,      // Paise → Rupees
-    purchasePrice: row.purchase_price / 100,
-    gstPercent: row.gst_percent / 100,    // Basis points → Percent
+    salePrice: row.sale_price,            // Direct Rupees
+    purchasePrice: row.purchase_price,
+    gstPercent: row.gst_percent,          // Direct Percent
     stockQty: row.stock_qty,
     isActive: row.is_active === 1,        // INTEGER → boolean
     createdAt: new Date(row.created_at)   // TEXT → Date
   };
 }
 
-// When saving, convert back
+// When saving, use direct values
 create(data: CreateProductInput): Product {
   const result = this.execute(`
     INSERT INTO products (name, sale_price, purchase_price, gst_percent, stock_qty)
     VALUES (?, ?, ?, ?, ?)
   `, [
     data.name,
-    Math.round(data.salePrice * 100),      // Rupees → Paise
-    Math.round(data.purchasePrice * 100),
-    Math.round(data.gstPercent * 100),     // Percent → Basis points
+    data.salePrice,      // Direct Rupees
+    data.purchasePrice,
+    data.gstPercent,     // Direct Percent
     data.stockQty
   ]);
-  
+
   return this.findById(result.lastInsertRowid)!;
 }
 ```
@@ -293,14 +301,14 @@ create(data: CreateProductInput): Product {
 
 ## Summary
 
-| Rule | Reason |
-|------|--------|
+| Rule                         | Reason                       |
+| ---------------------------- | ---------------------------- |
 | **One repository per table** | Clear separation of concerns |
-| **Extend BaseRepository** | Reuse common functionality |
-| **Return domain objects** | Type safety, abstraction |
-| **Use transactions** | Data consistency |
-| **No business logic** | Single responsibility |
-| **Synchronous only** | SQLite is synchronous |
-| **Map database types** | Clean domain model |
+| **Extend BaseRepository**    | Reuse common functionality   |
+| **Return domain objects**    | Type safety, abstraction     |
+| **Use transactions**         | Data consistency             |
+| **No business logic**        | Single responsibility        |
+| **Synchronous only**         | SQLite is synchronous        |
+| **Map database types**       | Clean domain model           |
 
 **Follow these rules strictly to maintain a clean, maintainable codebase!**
