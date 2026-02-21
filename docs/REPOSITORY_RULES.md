@@ -74,7 +74,7 @@ class XxxRepository extends BaseRepository {
   // Write operations
   create(data: CreateXxxInput): Xxx;
   update(id: number, data: UpdateXxxInput): Xxx;
-  delete(id: number): void; // Or soft delete
+  deactivate(id: number): void; // Soft delete
 
   // Private mapping
   private _mapToXxx(row: any): Xxx;
@@ -99,7 +99,7 @@ private _mapToCustomer(row: any): Customer {
     id: row.id,
     name: row.name,
     phone: row.phone,
-    balanceDue: row.balance_due, // Direct Rupees
+    balanceDue: row.balance_due, // Rupees
     isActive: row.is_active === 1,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at)
@@ -264,16 +264,16 @@ class CustomerRepository {
 **Convert database types to domain types:**
 
 ```typescript
-// Database and domain both use number (rupees)
+// Database and domain both use REAL (rupees)
 
 // ✅ GOOD: Simple mapping
 private _mapToProduct(row: any): Product {
   return {
     id: row.id,
     name: row.name,
-    salePrice: row.sale_price,            // Direct Rupees
+    salePrice: row.sale_price,            // Rupees
     purchasePrice: row.purchase_price,
-    gstPercent: row.gst_percent,          // Direct Percent
+    gstPercent: row.gst_percent,          // Percent (e.g., 18.0)
     stockQty: row.stock_qty,
     isActive: row.is_active === 1,        // INTEGER → boolean
     createdAt: new Date(row.created_at)   // TEXT → Date
@@ -287,9 +287,9 @@ create(data: CreateProductInput): Product {
     VALUES (?, ?, ?, ?, ?)
   `, [
     data.name,
-    data.salePrice,      // Direct Rupees
+    data.salePrice,      // Rupees
     data.purchasePrice,
-    data.gstPercent,     // Direct Percent
+    data.gstPercent,     // Percent
     data.stockQty
   ]);
 

@@ -24,13 +24,13 @@ CREATE TABLE products (
 
 ### Rationale
 
-| Reason | Explanation |
-|--------|-------------|
-| **SQLite optimization** | INTEGER PRIMARY KEY is an alias for ROWID, the fastest index in SQLite |
-| **Sequential IDs** | AUTOINCREMENT ensures IDs are never reused, critical for audit trails |
-| **Foreign key simplicity** | Single-column integer foreign keys are simple and performant |
-| **No UUID overhead** | UUIDs waste space (16 bytes vs 8 bytes) and slow down indexes |
-| **Offline-first safe** | No risk of ID conflicts (single database, no distributed sync) |
+| Reason                     | Explanation                                                            |
+| -------------------------- | ---------------------------------------------------------------------- |
+| **SQLite optimization**    | INTEGER PRIMARY KEY is an alias for ROWID, the fastest index in SQLite |
+| **Sequential IDs**         | AUTOINCREMENT ensures IDs are never reused, critical for audit trails  |
+| **Foreign key simplicity** | Single-column integer foreign keys are simple and performant           |
+| **No UUID overhead**       | UUIDs waste space (16 bytes vs 8 bytes) and slow down indexes          |
+| **Offline-first safe**     | No risk of ID conflicts (single database, no distributed sync)         |
 
 ### ❌ Don't
 
@@ -71,12 +71,12 @@ CREATE TABLE products (
 
 ### Rationale
 
-| Reason | Explanation |
-|--------|-------------|
-| **Audit trail** | Know when every record was created and last modified |
-| **Debugging** | Troubleshoot data issues by checking timestamps |
-| **Reporting** | Filter records by date ranges (e.g., "sales this month") |
-| **Sync readiness** | Future cloud sync will need timestamps for conflict resolution |
+| Reason              | Explanation                                                       |
+| ------------------- | ----------------------------------------------------------------- |
+| **Audit trail**     | Know when every record was created and last modified              |
+| **Debugging**       | Troubleshoot data issues by checking timestamps                   |
+| **Reporting**       | Filter records by date ranges (e.g., "sales this month")          |
+| **Sync readiness**  | Future cloud sync will need timestamps for conflict resolution    |
 | **ISO 8601 format** | SQLite's `datetime('now')` returns ISO 8601 (sortable, parseable) |
 
 ### Column Specifications
@@ -96,7 +96,7 @@ updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 For tables with frequent updates, consider a trigger:
 
 ```sql
-CREATE TRIGGER update_products_timestamp 
+CREATE TRIGGER update_products_timestamp
 AFTER UPDATE ON products
 FOR EACH ROW
 BEGIN
@@ -129,11 +129,11 @@ updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 
 ---
 
-## Rule 3: Soft Deletes
+## Rule 3: Soft Deletes (Deactivation)
 
 ### Rule
 
-**Use `is_active` for soft deletes on master data. Use `is_void` for transactional data.**
+**Use `is_active` for deactivation on master data. Use `is_void` for transactional data.**
 
 ```sql
 -- Master data (products, customers)
@@ -148,7 +148,7 @@ CREATE TABLE products (
 -- Transactional data (sales)
 CREATE TABLE sales (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  total INTEGER NOT NULL,
+  total REAL NOT NULL,
   is_void INTEGER NOT NULL DEFAULT 0 CHECK(is_void IN (0, 1)),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -157,22 +157,23 @@ CREATE TABLE sales (
 
 ### Rationale
 
-| Reason | Explanation |
-|--------|-------------|
-| **Audit compliance** | Never physically delete financial records (legal requirement) |
-| **Historical accuracy** | Voided sales still appear in reports with proper filtering |
-| **Referential integrity** | Foreign keys remain valid even after "deletion" |
-| **Undo capability** | Can reactivate products or unvoid sales if needed |
-| **Performance** | No need to cascade deletes through foreign keys |
+| Reason                    | Explanation                                                   |
+| ------------------------- | ------------------------------------------------------------- |
+| **Audit compliance**      | Never physically delete financial records (legal requirement) |
+| **Historical accuracy**   | Voided sales still appear in reports with proper filtering    |
+| **Referential integrity** | Foreign keys remain valid even after "deletion"               |
+| **Undo capability**       | Can reactivate products or unvoid sales if needed             |
+| **Performance**           | No need to cascade deletes through foreign keys               |
 
 ### Naming Convention
 
-| Data Type | Column Name | Meaning |
-|-----------|-------------|---------|
-| **Master data** | `is_active` | 1 = active, 0 = deleted/archived |
-| **Transactional data** | `is_void` | 1 = voided/cancelled, 0 = valid |
+| Data Type              | Column Name | Meaning                                |
+| ---------------------- | ----------- | -------------------------------------- |
+| **Master data**        | `is_active` | 1 = active, 0 = inactive (deactivated) |
+| **Transactional data** | `is_void`   | 1 = voided/cancelled, 0 = valid        |
 
 **Why different names?**
+
 - `is_active` implies the record can be reactivated
 - `is_void` implies the transaction is permanently cancelled (but kept for audit)
 
@@ -237,13 +238,13 @@ is_void INTEGER NOT NULL DEFAULT 0 CHECK(is_void IN (0, 1))
 
 ### Rule
 
-**All monetary values MUST be stored as INTEGER in paise (smallest currency unit).**
+**All monetary values MUST be stored as REAL in Rupees (Decimal).**
 
 ```sql
 CREATE TABLE products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  price INTEGER NOT NULL CHECK(price >= 0), -- Paise, not rupees
-  cost INTEGER CHECK(cost >= 0),             -- Paise, not rupees
+  price REAL NOT NULL CHECK(price >= 0), -- Rupees (Decimal)
+  cost REAL CHECK(cost >= 0),             -- Rupees (Decimal)
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -251,92 +252,87 @@ CREATE TABLE products (
 
 ### Rationale
 
-| Reason | Explanation |
-|--------|-------------|
+| Reason                 | Explanation                                              |
+| ---------------------- | -------------------------------------------------------- |
 | **No rounding errors** | Floating-point arithmetic is imprecise (0.1 + 0.2 ≠ 0.3) |
-| **Exact calculations** | Integer math is exact and fast |
-| **GST compliance** | Tax calculations require precision to the paisa |
-| **Industry standard** | Stripe, PayPal, all payment processors use smallest unit |
-| **Audit safety** | Financial records must be exact, not approximate |
+| **Exact calculations** | Integer math is exact and fast                           |
+| **Exact values**       | REAL/Decimal storage avoids ambiguity                    |
+| **GST compliance**     | Tax calculations are performed on decimal values         |
+| **Ease of use**        | Direct mapping between UI and Database                   |
 
 ### Conversion
 
-| Display (Rupees) | Storage (Paise) | Calculation |
-|------------------|-----------------|-------------|
-| ₹99.50 | 9950 | 99.50 × 100 |
-| ₹1,234.00 | 123400 | 1234.00 × 100 |
-| ₹0.50 | 50 | 0.50 × 100 |
+| Display (Rupees) | Storage (Rupees) | Calculation |
+| ---------------- | ---------------- | ----------- |
+| ₹99.50           | 99.5             | Direct      |
+| ₹1,234.00        | 1234.0           | Direct      |
+| ₹0.50            | 0.5              | Direct      |
 
 ### Column Specification
 
 ```sql
 -- Product prices
-price INTEGER NOT NULL CHECK(price >= 0)
-cost INTEGER CHECK(cost >= 0)
+price REAL NOT NULL CHECK(price >= 0)
+cost REAL CHECK(cost >= 0)
 
 -- Sale amounts
-subtotal INTEGER NOT NULL CHECK(subtotal >= 0)
-cgst INTEGER NOT NULL DEFAULT 0 CHECK(cgst >= 0)
-sgst INTEGER NOT NULL DEFAULT 0 CHECK(sgst >= 0)
-discount INTEGER NOT NULL DEFAULT 0 CHECK(discount >= 0)
-total INTEGER NOT NULL CHECK(total >= 0)
+subtotal REAL NOT NULL CHECK(subtotal >= 0)
+cgst REAL NOT NULL DEFAULT 0 CHECK(cgst >= 0)
+sgst REAL NOT NULL DEFAULT 0 CHECK(sgst >= 0)
+discount REAL NOT NULL DEFAULT 0 CHECK(discount >= 0)
+total REAL NOT NULL CHECK(total >= 0)
 ```
 
-**Type:** `INTEGER` (never REAL or NUMERIC)  
-**Unit:** Paise (1/100th of a rupee)  
+**Type:** `REAL` (Decimal storage)  
+**Unit:** Rupees  
 **Constraint:** `CHECK(price >= 0)` prevents negative values  
 **NOT NULL:** Required for critical amounts (price, total)
 
 ### Application Code
 
 **Storing:**
+
 ```typescript
-const priceInRupees = 99.50;
-const priceInPaise = Math.round(priceInRupees * 100); // 9950
-db.execute('INSERT INTO products (price) VALUES (?)', [priceInPaise]);
+const priceInRupees = 99.5;
+db.execute('INSERT INTO products (price) VALUES (?)', [priceInRupees]);
 ```
 
 **Retrieving:**
+
 ```typescript
 const product = db.queryOne('SELECT price FROM products WHERE id = ?', [1]);
-const priceInRupees = product.price / 100; // 99.50
-console.log(`₹${priceInRupees.toFixed(2)}`); // ₹99.50
+const priceSorted = product.price; // 99.50
+console.log(`₹${priceSorted.toFixed(2)}`); // ₹99.50
 ```
 
 ### GST Calculation Example
 
 ```typescript
 // Product: ₹100.00, GST: 18%
-const subtotalPaise = 10000; // ₹100.00
-const gstRate = 1800;        // 18% (stored as 1800 = 18.00%)
+const subtotal = 100.0;
+const gstRate = 18.0;
 
 // Calculate CGST (9%) and SGST (9%)
-const cgstPaise = Math.round((subtotalPaise * gstRate) / (2 * 10000)); // 900 paise = ₹9.00
-const sgstPaise = cgstPaise; // 900 paise = ₹9.00
-const totalPaise = subtotalPaise + cgstPaise + sgstPaise; // 11800 paise = ₹118.00
+const cgst = (subtotal * gstRate) / (2 * 100); // 9.00
+const sgst = cgst; // 9.00
+const total = subtotal + cgst + sgst; // 118.00
 ```
 
 ### ❌ Don't
 
 ```sql
--- Don't use REAL (floating-point errors)
-price REAL NOT NULL
-
--- Don't use NUMERIC (SQLite converts to REAL anyway)
-price NUMERIC(10, 2)
-
--- Don't store in rupees
-price INTEGER -- Ambiguous: rupees or paise?
+-- Don't use INTEGER for prices (Paise is deprecated)
+price INTEGER NOT NULL
 ```
 
 ### ✅ Do
 
 ```sql
--- Always use INTEGER for paise
-price INTEGER NOT NULL CHECK(price >= 0)
+-- Always use REAL for rupees
+price REAL NOT NULL CHECK(price >= 0)
 
 -- Document in comments if needed
-price INTEGER NOT NULL CHECK(price >= 0) -- Stored in paise
+price REAL NOT NULL CHECK(price >= 0) -- Stored in Rupees
 ```
 
 ---
@@ -362,6 +358,7 @@ CREATE TABLE inv_adj (...);
 ```
 
 **Rules:**
+
 - **Plural:** `products`, not `product`
 - **snake_case:** `sale_items`, not `SaleItems` or `saleitems`
 - **Descriptive:** `inventory_adjustments`, not `inv_adj`
@@ -373,7 +370,7 @@ CREATE TABLE inv_adj (...);
 CREATE TABLE products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   product_name TEXT NOT NULL,
-  unit_price INTEGER NOT NULL,
+  unit_price REAL NOT NULL,
   is_active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -389,6 +386,7 @@ CREATE TABLE products (
 ```
 
 **Rules:**
+
 - **snake_case:** `product_name`, not `productName` or `ProductName`
 - **Descriptive:** `unit_price`, not `price` or `prc`
 - **Unambiguous:** `is_active`, not `active` (boolean flag)
@@ -439,17 +437,17 @@ price_paise INTEGER  -- Redundant if all monetary values are paise
 amount REAL          -- Unclear: rupees or paise?
 ```
 
-**Note:** Since ALL monetary values are INTEGER (paise), no need for `_paise` suffix.
+**Note:** Since ALL monetary values are REAL (Rupees), no need for `_rupees` suffix.
 
 ### Rationale
 
-| Reason | Explanation |
-|--------|-------------|
-| **Consistency** | Same naming style across entire schema |
-| **Readability** | snake_case is easier to read than camelCase in SQL |
-| **SQL convention** | Most SQL databases use snake_case |
-| **Avoid conflicts** | Lowercase avoids case-sensitivity issues |
-| **Future-proof** | Descriptive names reduce need for comments |
+| Reason              | Explanation                                        |
+| ------------------- | -------------------------------------------------- |
+| **Consistency**     | Same naming style across entire schema             |
+| **Readability**     | snake_case is easier to read than camelCase in SQL |
+| **SQL convention**  | Most SQL databases use snake_case                  |
+| **Avoid conflicts** | Lowercase avoids case-sensitivity issues           |
+| **Future-proof**    | Descriptive names reduce need for comments         |
 
 ---
 
@@ -462,30 +460,30 @@ amount REAL          -- Unclear: rupees or paise?
 ```sql
 CREATE TABLE products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  price INTEGER NOT NULL CHECK(price >= 0),
+  price REAL NOT NULL CHECK(price >= 0),
   stock INTEGER NOT NULL DEFAULT 0 CHECK(stock >= 0),
   is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
-  gst_rate INTEGER NOT NULL DEFAULT 0 CHECK(gst_rate >= 0 AND gst_rate <= 10000)
+  gst_rate REAL NOT NULL DEFAULT 0 CHECK(gst_rate >= 0 AND gst_rate <= 100)
 );
 ```
 
 ### Common Constraints
 
-| Constraint | Example | Purpose |
-|------------|---------|---------|
-| **Non-negative** | `CHECK(price >= 0)` | Prevent negative prices |
-| **Boolean** | `CHECK(is_active IN (0, 1))` | Enforce 0 or 1 only |
-| **Range** | `CHECK(gst_rate >= 0 AND gst_rate <= 10000)` | GST rate 0-100% |
-| **Enum** | `CHECK(status IN ('pending', 'paid', 'void'))` | Limit to valid values |
-| **Positive** | `CHECK(quantity > 0)` | Quantity must be > 0 |
+| Constraint       | Example                                        | Purpose                 |
+| ---------------- | ---------------------------------------------- | ----------------------- |
+| **Non-negative** | `CHECK(price >= 0)`                            | Prevent negative prices |
+| **Boolean**      | `CHECK(is_active IN (0, 1))`                   | Enforce 0 or 1 only     |
+| **Range**        | `CHECK(gst_rate >= 0 AND gst_rate <= 100)`     | GST rate 0-100%         |
+| **Enum**         | `CHECK(status IN ('pending', 'paid', 'void'))` | Limit to valid values   |
+| **Positive**     | `CHECK(quantity > 0)`                          | Quantity must be > 0    |
 
 ### Rationale
 
-| Reason | Explanation |
-|--------|-------------|
-| **Data integrity** | Invalid data cannot be inserted |
-| **Fail fast** | Errors caught at insert time, not later |
-| **Self-documenting** | Constraints show valid values |
+| Reason               | Explanation                                       |
+| -------------------- | ------------------------------------------------- |
+| **Data integrity**   | Invalid data cannot be inserted                   |
+| **Fail fast**        | Errors caught at insert time, not later           |
+| **Self-documenting** | Constraints show valid values                     |
 | **Defense in depth** | Even if application has bugs, DB rejects bad data |
 
 ### ❌ Don't
@@ -539,23 +537,23 @@ CREATE INDEX idx_sales_customer_date ON sales(customer_id, created_at);
 
 ### When to Index
 
-| Column Type | Index? | Reason |
-|-------------|--------|--------|
-| **Primary key** | ❌ No | Automatically indexed |
-| **Foreign key** | ✅ Yes | Speeds up joins |
-| **Unique constraint** | ❌ No | Automatically indexed |
-| **Frequently filtered** | ✅ Yes | WHERE clauses |
-| **Frequently sorted** | ✅ Yes | ORDER BY clauses |
-| **Soft delete flags** | ✅ Yes | Almost always filtered |
-| **Rarely queried** | ❌ No | Wastes space, slows writes |
+| Column Type             | Index? | Reason                     |
+| ----------------------- | ------ | -------------------------- |
+| **Primary key**         | ❌ No  | Automatically indexed      |
+| **Foreign key**         | ✅ Yes | Speeds up joins            |
+| **Unique constraint**   | ❌ No  | Automatically indexed      |
+| **Frequently filtered** | ✅ Yes | WHERE clauses              |
+| **Frequently sorted**   | ✅ Yes | ORDER BY clauses           |
+| **Soft delete flags**   | ✅ Yes | Almost always filtered     |
+| **Rarely queried**      | ❌ No  | Wastes space, slows writes |
 
 ### Rationale
 
-| Reason | Explanation |
-|--------|-------------|
-| **Query performance** | Indexes make lookups fast (O(log n) vs O(n)) |
-| **Foreign key performance** | Joins are slow without indexes |
-| **POS responsiveness** | Fast product search, customer lookup |
+| Reason                      | Explanation                                  |
+| --------------------------- | -------------------------------------------- |
+| **Query performance**       | Indexes make lookups fast (O(log n) vs O(n)) |
+| **Foreign key performance** | Joins are slow without indexes               |
+| **POS responsiveness**      | Fast product search, customer lookup         |
 
 ### ❌ Don't
 
@@ -582,15 +580,15 @@ CREATE INDEX idx_sales_created_at ON sales(created_at);
 
 ## Summary Table
 
-| Rule | Specification | Rationale |
-|------|---------------|-----------|
-| **Primary Keys** | `INTEGER PRIMARY KEY AUTOINCREMENT` | SQLite optimization, sequential IDs |
-| **Timestamps** | `created_at`, `updated_at` (TEXT, ISO 8601) | Audit trail, debugging, reporting |
-| **Soft Deletes** | `is_active` (master), `is_void` (transactional) | Audit compliance, historical accuracy |
-| **Monetary Values** | `INTEGER` (paise, not rupees) | No rounding errors, exact calculations |
-| **Naming** | snake_case, descriptive, unambiguous | Consistency, readability, SQL convention |
-| **Constraints** | `CHECK` for validation | Data integrity, fail fast |
-| **Indexes** | Foreign keys, frequent queries, soft deletes | Query performance, POS responsiveness |
+| Rule                | Specification                                   | Rationale                                |
+| ------------------- | ----------------------------------------------- | ---------------------------------------- |
+| **Primary Keys**    | `INTEGER PRIMARY KEY AUTOINCREMENT`             | SQLite optimization, sequential IDs      |
+| **Timestamps**      | `created_at`, `updated_at` (TEXT, ISO 8601)     | Audit trail, debugging, reporting        |
+| **Soft Deletes**    | `is_active` (master), `is_void` (transactional) | Audit compliance, historical accuracy    |
+| **Monetary Values** | `REAL` (Rupees, not paise)                      | Simple calculations, direct UI mapping   |
+| **Naming**          | snake_case, descriptive, unambiguous            | Consistency, readability, SQL convention |
+| **Constraints**     | `CHECK` for validation                          | Data integrity, fail fast                |
+| **Indexes**         | Foreign keys, frequent queries, soft deletes    | Query performance, POS responsiveness    |
 
 ---
 
@@ -599,15 +597,17 @@ CREATE INDEX idx_sales_created_at ON sales(created_at);
 **These rules are MANDATORY for all schema changes.**
 
 **Migration Checklist:**
+
 - [ ] All tables have `INTEGER PRIMARY KEY AUTOINCREMENT`
 - [ ] All tables have `created_at` and `updated_at`
 - [ ] Master data has `is_active`, transactional data has `is_void`
-- [ ] All monetary values are `INTEGER` (paise)
+- [ ] All monetary values are `REAL` (Rupees)
 - [ ] All names use snake_case
 - [ ] All constraints use `CHECK` where applicable
 - [ ] All foreign keys and frequent queries have indexes
 
 **Code Review:**
+
 - Reject PRs that violate these rules
 - Update this document if rules change (with rationale)
 

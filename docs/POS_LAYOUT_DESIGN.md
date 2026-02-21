@@ -203,6 +203,31 @@ Layout
 
 ---
 
+## Management Table Pattern
+
+**Decision:** Standardize management screens (Products, Customers) with a consistent grid-based table architecture and scoped styling.
+
+### 1. Grid-Based Layout
+
+Use CSS Grid for headers and rows to ensure perfect alignment across large data sets.
+
+- **Products Grid:** `3fr 1.5fr 1.2fr 1fr 1fr 1.2fr` (Optimized for Name, SKU, Price, Stock, Status, Actions)
+- **Customers Grid:** `1.2fr 1.2fr 3fr 1.2fr 0.8fr 1fr` (Optimized for ID, Phone, Name, Balance, Status, Actions)
+
+### 2. CSS Scoping
+
+All table styles must be scoped to their parent page class (e.g., `.products-page .data-table-header`) to prevent cross-page style leakage and ensure unique column configurations.
+
+### 3. Semantic Icon Buttons
+
+Action columns use high-fidelity Lucide-style SVGs with semantic color-coded hover states:
+
+- **Edit (Blue)**: Indicates primary modification action.
+- **Power/Toggle (Red/Green)**: Semantic feedback for "Active" vs "Inactive" states.
+- **History/Adjust (Indigo/Amber)**: Secondary contextual actions.
+
+---
+
 ## Layout Implementation
 
 ### HTML Structure

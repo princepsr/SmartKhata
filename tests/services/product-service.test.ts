@@ -276,6 +276,17 @@ describe('ProductService - Stock Adjustment', () => {
     expect(allResults).toHaveLength(1);
     expect(allResults[0].isActive).toBeFalsy();
   });
+
+  it('should list all products including inactive ones', () => {
+    productService.deactivateProduct(1);
+
+    const activeProducts = productService.getAllProducts(false);
+    expect(activeProducts.find((p: any) => p.id === 1)).toBeUndefined();
+
+    const allProducts = productService.getAllProducts(true);
+    expect(allProducts.find((p: any) => p.id === 1)).toBeDefined();
+    expect(allProducts.find((p: any) => p.id === 1).isActive).toBeFalsy();
+  });
 });
 
 describe('ProductService - Search and Query', () => {

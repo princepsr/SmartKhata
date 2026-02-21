@@ -9,6 +9,7 @@ Services contain **business logic** and orchestrate multiple repositories. They 
 ## Responsibilities
 
 **Services are responsible for:**
+
 - ✅ Business logic and validation
 - ✅ Orchestrating multiple repositories
 - ✅ Enforcing business rules
@@ -74,20 +75,21 @@ Services contain **business logic** and orchestrate multiple repositories. They 
 
 ## Service vs Repository
 
-| Aspect | Service | Repository |
-|--------|---------|------------|
-| **Purpose** | Business logic | Data access |
-| **Contains** | Validation, calculations, workflows | SQL queries |
-| **Calls** | Multiple repositories | Database only |
-| **Returns** | Domain objects, aggregates | Domain objects |
-| **Throws** | Business errors | Database errors |
-| **Example** | `calculateDiscount()`, `validateSale()` | `findById()`, `create()` |
+| Aspect       | Service                                 | Repository               |
+| ------------ | --------------------------------------- | ------------------------ |
+| **Purpose**  | Business logic                          | Data access              |
+| **Contains** | Validation, calculations, workflows     | SQL queries              |
+| **Calls**    | Multiple repositories                   | Database only            |
+| **Returns**  | Domain objects, aggregates              | Domain objects           |
+| **Throws**   | Business errors                         | Database errors          |
+| **Example**  | `calculateDiscount()`, `validateSale()` | `findById()`, `create()` |
 
 ---
 
 ## IPC Interaction with Services
 
 **IPC handlers should:**
+
 - ✅ Call service methods
 - ✅ Handle service errors
 - ✅ Format responses for UI
@@ -102,21 +104,21 @@ IPCHandler.handle('sale:create', async (saleData) => {
   try {
     const saleService = new SaleService();
     const result = saleService.createSale(saleData);
-    
+
     return {
       success: true,
-      data: result
+      data: result,
     };
   } catch (error) {
     if (error instanceof InsufficientStockError) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
     return {
       success: false,
-      error: 'Failed to create sale'
+      error: 'Failed to create sale',
     };
   }
 });
@@ -129,13 +131,13 @@ IPCHandler.handle('sale:create', async (saleData) => {
 IPCHandler.handle('sale:create', async (saleData) => {
   const billRepo = new BillRepository();
   const productRepo = new ProductRepository();
-  
+
   // Business logic in IPC handler (WRONG!)
   const total = saleData.items.reduce((sum, item) => {
     const product = productRepo.findById(item.productId);
-    return sum + (product.price * item.quantity);
+    return sum + product.price * item.quantity;
   }, 0);
-  
+
   const bill = billRepo.create({ ...saleData, total });
   return { success: true, data: bill };
 });
@@ -145,12 +147,12 @@ IPCHandler.handle('sale:create', async (saleData) => {
 
 ## Naming Conventions
 
-| Pattern | Example | Notes |
-|---------|---------|-------|
-| **Class Name** | `ProductService` | Singular, ends with `Service` |
-| **File Name** | `product-service.ts` | Kebab-case |
-| **Method Names** | `createProduct`, `validateStock`, `calculateTotal` | Descriptive, verb-first |
-| **Private Methods** | `_validateDiscount` | Prefix with underscore |
+| Pattern             | Example                                            | Notes                         |
+| ------------------- | -------------------------------------------------- | ----------------------------- |
+| **Class Name**      | `ProductService`                                   | Singular, ends with `Service` |
+| **File Name**       | `product-service.ts`                               | Kebab-case                    |
+| **Method Names**    | `createProduct`, `validateStock`, `calculateTotal` | Descriptive, verb-first       |
+| **Private Methods** | `_validateDiscount`                                | Prefix with underscore        |
 
 ---
 
@@ -202,7 +204,7 @@ export class ProductService {
     }
 
     if (!product.isActive) {
-      throw new InactiveProductError('Cannot add stock to inactive product');
+      throw new InactiveEntityError('Cannot add stock to inactive product');
     }
 
     // 3. Update stock and log (orchestrate repositories)
@@ -211,7 +213,7 @@ export class ProductService {
       productId,
       changeQty: quantity,
       reason: 'MANUAL',
-      notes
+      notes,
     });
 
     Logger.info('Stock added', { productId, quantity });
@@ -255,9 +257,11 @@ export class ProductRepository extends BaseRepository {
     }
 
     // SQL query (OK in repository)
-    this.execute(`UPDATE products SET stock_qty = stock_qty + ? WHERE id = ?`, 
-      [quantity, productId]);
-    
+    this.execute(`UPDATE products SET stock_qty = stock_qty + ? WHERE id = ?`, [
+      quantity,
+      productId,
+    ]);
+
     // Calling another repository (WRONG! Should be in service)
     const inventoryRepo = new InventoryRepository();
     inventoryRepo.logChange({ productId, changeQty: quantity, reason: 'MANUAL' });
@@ -304,7 +308,7 @@ export class InvalidQuantityError extends Error {
 // Use in service
 public deductStock(productId: number, quantity: number): void {
   const product = this.productRepo.findById(productId);
-  
+
   if (!product) {
     throw new ProductNotFoundError(`Product ${productId} not found`);
   }
@@ -326,26 +330,26 @@ public deductStock(productId: number, quantity: number): void {
 ```typescript
 class XxxService {
   // Business operations
-  public createXxx(data: CreateXxxInput): Xxx
-  public updateXxx(id: number, data: UpdateXxxInput): Xxx
-  public deleteXxx(id: number): void
-  
+  public createXxx(data: CreateXxxInput): Xxx;
+  public updateXxx(id: number, data: UpdateXxxInput): Xxx;
+  public deactivateXxx(id: number): void;
+
   // Business queries (with logic)
-  public getActiveXxx(): Xxx[]
-  public searchXxx(criteria: SearchCriteria): Xxx[]
-  
+  public getActiveXxx(): Xxx[];
+  public searchXxx(criteria: SearchCriteria): Xxx[];
+
   // Business validations
-  public validateXxx(data: XxxData): void
-  
+  public validateXxx(data: XxxData): void;
+
   // Business calculations
-  public calculateXxx(params: XxxParams): number
-  
+  public calculateXxx(params: XxxParams): number;
+
   // Complex workflows
-  public processXxx(data: ProcessInput): ProcessResult
-  
+  public processXxx(data: ProcessInput): ProcessResult;
+
   // Private helpers
-  private _validateBusinessRule(data: any): void
-  private _calculateInternal(params: any): number
+  private _validateBusinessRule(data: any): void;
+  private _calculateInternal(params: any): number;
 }
 ```
 
@@ -353,13 +357,13 @@ class XxxService {
 
 ## Summary
 
-| Rule | Reason |
-|------|--------|
-| **Business logic in services** | Single source of truth |
-| **No SQL in services** | Separation of concerns |
-| **Orchestrate repositories** | Coordinate complex operations |
-| **Throw typed errors** | Better error handling |
-| **Framework-agnostic** | Testable, reusable |
-| **IPC calls services** | Proper layering |
+| Rule                           | Reason                        |
+| ------------------------------ | ----------------------------- |
+| **Business logic in services** | Single source of truth        |
+| **No SQL in services**         | Separation of concerns        |
+| **Orchestrate repositories**   | Coordinate complex operations |
+| **Throw typed errors**         | Better error handling         |
+| **Framework-agnostic**         | Testable, reusable            |
+| **IPC calls services**         | Proper layering               |
 
 **Services are the brain of the application - they contain all business intelligence!**

@@ -6,7 +6,7 @@
 -- 
 -- Key Design Decisions:
 -- 1. Product details (name, price, GST) are SNAPSHOTS at time of sale
--- 2. All monetary values stored as INTEGER (paise) for precision
+-- 2. All monetary values stored as REAL (Rupees)
 -- 3. Historical safety > normalization (denormalized for audit trail)
 -- 4. product_id retained for reference, but details are immutable
 -- 5. ON DELETE RESTRICT prevents product deletion if used in bills
@@ -37,19 +37,19 @@ CREATE TABLE bill_items (
   -- Example: 2 bottles, 5 packets
   -- Future: Can change to REAL for fractional quantities (e.g., 1.5 kg)
   
-  -- Pricing Snapshot (IMMUTABLE - stored in paise)
-  unit_price INTEGER NOT NULL CHECK(unit_price >= 0),
-  -- Price per unit at time of sale (in paise)
-  -- Example: 4000 paise = ₹40.00 per bottle
+  -- Pricing Snapshot (IMMUTABLE - stored in Rupees)
+  unit_price REAL NOT NULL CHECK(unit_price >= 0),
+  -- Price per unit at time of sale (in Rupees)
+  -- Example: 40.00 = ₹40.00 per bottle
   
-  gst_percent INTEGER NOT NULL DEFAULT 0 CHECK(gst_percent >= 0 AND gst_percent <= 10000),
-  -- GST rate at time of sale (basis points)
-  -- Example: 1800 = 18.00%
+  gst_percent REAL NOT NULL DEFAULT 0 CHECK(gst_percent >= 0 AND gst_percent <= 100),
+  -- GST rate at time of sale (Percentage)
+  -- Example: 18.0 = 18.00%
   
-  -- Line Total (IMMUTABLE - stored in paise)
-  line_total INTEGER NOT NULL CHECK(line_total >= 0),
+  -- Line Total (IMMUTABLE - stored in Rupees)
+  line_total REAL NOT NULL CHECK(line_total >= 0),
   -- Total for this line item: (unit_price * quantity) + GST
-  -- Example: 2 bottles × ₹40.00 × 1.18 (18% GST) = ₹94.40 = 9440 paise
+  -- Example: 2 bottles × ₹40.00 × 1.18 (18% GST) = ₹94.40
   
   -- Audit Timestamp
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -75,15 +75,15 @@ CREATE INDEX idx_bill_items_created_at ON bill_items(created_at);
 
 -- Example 1: Simple item (Coca Cola)
 INSERT INTO bill_items (bill_id, product_id, product_name_snapshot, quantity, unit_price, gst_percent, line_total)
-VALUES (1, 101, 'Coca Cola 500ml', 2, 4000, 1800, 9440);
+VALUES (1, 101, 'Coca Cola 500ml', 2, 40.0, 18.0, 94.4);
 -- 2 bottles × ₹40.00 = ₹80.00, GST 18% = ₹14.40, Total = ₹94.40
 
 -- Example 2: Item with no GST (Milk)
 INSERT INTO bill_items (bill_id, product_id, product_name_snapshot, quantity, unit_price, gst_percent, line_total)
-VALUES (1, 102, 'Amul Milk 1L', 1, 6000, 0, 6000);
+VALUES (1, 102, 'Amul Milk 1L', 1, 60.0, 0, 60.0);
 -- 1 packet × ₹60.00 = ₹60.00, No GST, Total = ₹60.00
 
 -- Example 3: Item with 5% GST (Dal)
 INSERT INTO bill_items (bill_id, product_id, product_name_snapshot, quantity, unit_price, gst_percent, line_total)
-VALUES (2, 103, 'Toor Dal 1kg', 3, 15000, 500, 47250);
+VALUES (2, 103, 'Toor Dal 1kg', 3, 150.0, 5.0, 472.5);
 -- 3 kg × ₹150.00 = ₹450.00, GST 5% = ₹22.50, Total = ₹472.50

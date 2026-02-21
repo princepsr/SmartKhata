@@ -5,7 +5,7 @@
 -- Version: 002 (Enhanced for INTEGER monetary values and GST compliance)
 -- 
 -- Key Design Decisions:
--- 1. All monetary values stored as INTEGER (paise) for precision
+-- 1. All monetary values stored as REAL (Rupees)
 -- 2. Totals are FINAL and immutable (no recalculation from items)
 -- 3. Unique bill_number for audit trail and receipt printing
 -- 4. customer_id is nullable (walk-in customers)
@@ -26,17 +26,17 @@ CREATE TABLE bills (
   -- Foreign key to customers table
   FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
   
-  -- Monetary Totals (Stored in paise - IMMUTABLE)
-  subtotal INTEGER NOT NULL CHECK(subtotal >= 0),
+  -- Monetary Totals (Stored in Rupees - IMMUTABLE)
+  subtotal REAL NOT NULL CHECK(subtotal >= 0),
   -- Sum of all item prices (before GST and discount)
   
-  gst_total INTEGER NOT NULL DEFAULT 0 CHECK(gst_total >= 0),
+  gst_total REAL NOT NULL DEFAULT 0 CHECK(gst_total >= 0),
   -- Total GST amount (CGST + SGST or IGST)
   
-  discount_amount INTEGER NOT NULL DEFAULT 0 CHECK(discount_amount >= 0),
+  discount_amount REAL NOT NULL DEFAULT 0 CHECK(discount_amount >= 0),
   -- Total discount applied to the bill
   
-  grand_total INTEGER NOT NULL CHECK(grand_total >= 0),
+  grand_total REAL NOT NULL CHECK(grand_total >= 0),
   -- Final amount to be paid: subtotal + gst_total - discount_amount
   -- This is the FINAL, IMMUTABLE total
   
@@ -73,16 +73,16 @@ CREATE INDEX idx_bills_payment_mode ON bills(payment_mode);
 
 -- Example 1: Walk-in customer, cash payment
 INSERT INTO bills (bill_number, customer_id, subtotal, gst_total, discount_amount, grand_total, payment_mode)
-VALUES ('BILL-20260208-0001', NULL, 10000, 1800, 0, 11800, 'cash');
+VALUES ('BILL-20260208-0001', NULL, 100.0, 18.0, 0, 118.0, 'cash');
 -- Subtotal: ₹100.00, GST: ₹18.00, Discount: ₹0.00, Total: ₹118.00
 
 -- Example 2: Registered customer, UPI payment
 INSERT INTO bills (bill_number, customer_id, subtotal, gst_total, discount_amount, grand_total, payment_mode)
-VALUES ('BILL-20260208-0002', 1, 50000, 2500, 5000, 47500, 'upi');
+VALUES ('BILL-20260208-0002', 1, 500.0, 25.0, 50.0, 475.0, 'upi');
 -- Subtotal: ₹500.00, GST: ₹25.00, Discount: ₹50.00, Total: ₹475.00
 
 -- Example 3: Customer with discount, mixed payment
 INSERT INTO bills (bill_number, customer_id, subtotal, gst_total, discount_amount, grand_total, payment_mode)
-VALUES ('BILL-20260208-0003', 2, 100000, 18000, 10000, 108000, 'mixed');
+VALUES ('BILL-20260208-0003', 2, 1000.0, 180.0, 100.0, 1080.0, 'mixed');
 -- Subtotal: ₹1000.00, GST: ₹180.00, Discount: ₹100.00, Total: ₹1080.00
 -- Payment details in separate payments table

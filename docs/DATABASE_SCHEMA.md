@@ -119,7 +119,7 @@ erDiagram
 - `gst_percent`: GST percentage (e.g., 18.0 for 18%)
 - `stock_qty`: Current inventory count (default: 0)
 - `low_stock_alert`: Threshold for low stock warning
-- `is_active`: Soft delete flag (1 = active, 0 = inactive)
+- `is_active`: Soft delete flag (1 = active, 0 = inactive/deactivated)
 
 ---
 
@@ -306,7 +306,7 @@ FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
 
 - Deletion fails with error
 - Prevents data loss
-- Use `is_active = 0` for soft delete instead
+- Use `is_active = 0` for deactivation (soft delete) instead
 
 ---
 

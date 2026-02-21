@@ -61,7 +61,6 @@ SmartKhata/
 │   │   ├── components/            # Reusable UI components
 │   │   │   ├── ProductSearch/
 │   │   │   │   ├── ProductSearch.tsx
-│   │   │   │   ├── ProductSearch.module.css
 │   │   │   │   └── index.ts
 │   │   │   ├── CartItem/
 │   │   │   ├── InvoicePrint/
@@ -70,13 +69,11 @@ SmartKhata/
 │   │   │       ├── Input/
 │   │   │       └── Modal/
 │   │   ├── hooks/                 # Custom React hooks
-│   │   │   ├── useProducts.ts
-│   │   │   ├── useSales.ts
-│   │   │   └── useKeyboardShortcuts.ts
-│   │   ├── services/              # API layer for renderer hooks
-│   │   │   ├── product-api.ts
-│   │   │   ├── sales-api.ts
-│   │   │   └── customer-api.ts
+│   │   │   ├── useIPC.ts
+│   │   │   ├── useLocalStorage.ts
+│   │   │   └── useLicense.ts
+│   │   ├── services/              # Shared IPC abstractions
+│   │   │   └── report-api.ts
 │   │   ├── styles/                # Global styles
 │   │   │   ├── global.css
 │   │   │   ├── variables.css
@@ -330,4 +327,4 @@ contextBridge.exposeInMainWorld('electron', {
 
 ---
 
-**Last updated:** 2026-02-18 (Phase 1 Complete)
+**Last updated:** 2026-02-22 (Soft Delete & Rupee Migration Complete)

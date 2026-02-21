@@ -59,7 +59,7 @@ PRAGMA busy_timeout = 5000;
 -- Products Table
 -- sale_price >= 0
 -- purchase_price >= 0
--- gst_percent >= 0 AND gst_percent <= 10000
+-- gst_percent >= 0 AND gst_percent <= 100
 -- stock_qty >= 0
 -- low_stock_alert >= 0
 -- is_active IN (0, 1)
@@ -77,7 +77,7 @@ PRAGMA busy_timeout = 5000;
 -- Bill Items Table
 -- quantity > 0
 -- unit_price >= 0
--- gst_percent >= 0 AND gst_percent <= 10000
+-- gst_percent >= 0 AND gst_percent <= 100
 -- line_total >= 0
 
 -- Inventory Logs Table
@@ -143,11 +143,11 @@ BEGIN TRANSACTION;
 
 -- 2. Create bill (DB-level constraints: CHECK, NOT NULL)
 INSERT INTO bills (bill_number, customer_id, subtotal, gst_total, discount_amount, grand_total, payment_mode)
-VALUES ('BILL-20260208-0001', 1, 10000, 1800, 0, 11800, 'cash');
+VALUES ('BILL-20260208-0001', 1, 100.0, 18.0, 0, 118.0, 'cash');
 
 -- 3. Insert bill items (DB-level constraints: CHECK, FOREIGN KEY)
 INSERT INTO bill_items (bill_id, product_id, product_name_snapshot, quantity, unit_price, gst_percent, line_total)
-VALUES (1, 101, 'Coca Cola 500ml', 2, 4000, 1800, 9440);
+VALUES (1, 101, 'Coca Cola 500ml', 2, 40.0, 18.0, 94.4);
 
 -- 4. Deduct stock (application-level: prevent negative)
 UPDATE products 

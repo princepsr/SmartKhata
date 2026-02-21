@@ -10,8 +10,6 @@ import { CustomerRepository } from '../../src/main/repositories/customer-reposit
 import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
 import {
   ValidationError,
-  NotFoundError,
-  DuplicateEntryError,
   InactiveEntityError,
 } from '../../src/main/services/errors/service-errors';
 import type Database from 'better-sqlite3';
@@ -87,27 +85,29 @@ describe('CustomerService - Balance Management', () => {
   });
 
   it('should increase balance on credit', () => {
-    const initialBalance = customerRepo.findById(1)!.balanceDue;
+    const customer = customerRepo.findById(1);
+    expect(customer).toBeDefined();
+    const initialBalance = customer?.balanceDue ?? 0;
 
     customerService.updateBalance(1, 500);
 
-    const finalBalance = customerRepo.findById(1)!.balanceDue;
-    expect(finalBalance).toBe(initialBalance + 500);
+    const updatedCustomer = customerRepo.findById(1);
+    expect(updatedCustomer?.balanceDue).toBe(initialBalance + 500);
   });
 
   it('should decrease balance on payment', () => {
     customerService.updateBalance(1, 5); // Credit
     customerService.updateBalance(1, -2); // Payment
 
-    const balance = customerRepo.findById(1)!.balanceDue;
-    expect(balance).toBe(3);
+    const customer = customerRepo.findById(1);
+    expect(customer?.balanceDue).toBe(3);
   });
 
   it('should allow negative balance (advance)', () => {
     customerService.updateBalance(1, -1);
 
-    const balance = customerRepo.findById(1)!.balanceDue;
-    expect(balance).toBe(-1); // Advance
+    const customer = customerRepo.findById(1);
+    expect(customer?.balanceDue).toBe(-1); // Advance
   });
 
   it('should throw error on zero change', () => {
@@ -148,7 +148,7 @@ describe('CustomerService - Search and Query', () => {
     const customer = customerService.getCustomerByPhone('9876543210');
 
     expect(customer).toBeDefined();
-    expect(customer!.name).toBe('Ramesh Kumar');
+    expect(customer?.name).toBe('Ramesh Kumar');
   });
 
   it('should get customers with balance', () => {
@@ -156,5 +156,22 @@ describe('CustomerService - Search and Query', () => {
 
     expect(customers.length).toBeGreaterThan(0);
     expect(customers[0].balanceDue).toBeGreaterThan(0);
+  });
+
+  it('should deactivate customer and exclude from default results', () => {
+    customerService.deactivateCustomer(1);
+
+    const results = customerService.searchCustomers('Ramesh');
+    expect(results).toHaveLength(0);
+
+    const allResults = customerService.searchCustomers('Ramesh', true);
+    expect(allResults).toHaveLength(1);
+    expect(allResults[0].isActive).toBeFalsy();
+
+    const activeList = customerService.getAllCustomers(false);
+    expect(activeList.find((c) => c.id === 1)).toBeUndefined();
+
+    const allList = customerService.getAllCustomers(true);
+    expect(allList.find((c) => c.id === 1)).toBeDefined();
   });
 });

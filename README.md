@@ -40,8 +40,8 @@ SmartKhata/
 │   ├── renderer/          # React UI
 │   │   ├── pages/         # Page components
 │   │   ├── components/    # Reusable components
-│   │   ├── hooks/         # Custom hooks
-│   │   ├── services/      # IPC wrappers
+│   │   ├── hooks/         # Custom hooks (useIPC, useLocalStorage)
+│   │   ├── services/      # Shared IPC abstractions
 │   │   └── styles/        # Global styles
 │   │
 │   ├── preload/           # IPC bridge (security)
@@ -142,7 +142,8 @@ pnpm clean            # Remove build directories
 2. **IPC for everything** - Renderer ↔ Main communication only via IPC
 3. **Repository pattern** - Abstraction for future cloud sync
 4. **Local-first** - Works offline, cloud is optional
-5. **No overengineering** - Simple, boring solutions
+5. **Soft Delete** - Deactivate products/customers (never permanent delete)
+6. **No overengineering** - Simple, boring solutions
 
 ### Data Flow
 
@@ -177,8 +178,8 @@ SQLite Database
 
 **Tables:**
 
-- `products` - Product catalog
-- `customers` - Customer info
+- `products` - Product catalog (Active/Inactive)
+- `customers` - Customer info (Active/Inactive)
 - `bills` - Sales records
 - `bill_items` - Line items
 - `inventory_logs` - Stock change history
