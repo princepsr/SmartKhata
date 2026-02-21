@@ -222,7 +222,7 @@ pnpm dev
 2. **customers**: Customer records
 3. **sales**: Sale transactions
 4. **sale_items**: Line items for sales
-5. **settings**: App configuration
+5. **settings**: App configuration (Consolidated into `app_config` in 012)
 
 **Key Features:**
 

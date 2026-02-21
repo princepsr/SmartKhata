@@ -105,9 +105,9 @@ export class SettingsRepository extends BaseRepository {
       phone: 'phone',
       gstNumber: 'gst_number',
       printerName: 'printer_name',
-      paper_size: 'paper_size',
+      paperSize: 'paper_size',
       gstEnabled: 'gst_enabled',
-      round_off_enabled: 'round_off_enabled',
+      roundOffEnabled: 'round_off_enabled',
       gstPercentage: 'gst_percentage',
       showLogo: 'show_logo',
       showCustomerDetails: 'show_customer_details',
@@ -115,7 +115,7 @@ export class SettingsRepository extends BaseRepository {
       printCopies: 'print_copies',
       autoPrint: 'auto_print',
       billingOnly: 'billing_only',
-      customers_enabled: 'customers_enabled',
+      customersEnabled: 'customers_enabled',
     };
 
     Object.entries(config).forEach(([key, value]) => {

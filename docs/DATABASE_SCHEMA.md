@@ -83,9 +83,25 @@ erDiagram
         text created_at
     }
 
-    settings {
-        text key PK
-        text value
+    app_config {
+        int id PK
+        text shop_name
+        text owner_name
+        text address
+        text phone
+        text gst_number
+        text printer_name
+        text paper_size
+        int gst_enabled
+        int round_off_enabled
+        int gst_percentage
+        int show_logo
+        int show_customer_details
+        text footer_message
+        int print_copies
+        int auto_print
+        int billing_only
+        int customers_enabled
         text updated_at
     }
 
@@ -172,22 +188,17 @@ erDiagram
 
 ---
 
-### 5. `settings`
+### 5. `app_config`
 
-**Purpose:** Application configuration (key-value store)
+**Purpose:** Application configuration (singleton)
 
 **Key Fields:**
 
-- `key`: Setting name (primary key)
-- `value`: Setting value (stored as text)
+- `id`: Primary key (must be 1)
+- `shop_name`: Name of the shop (default: "SmartKhata Shop")
+- `gst_percentage`: Default GST rate (5, 12, or 18)
+- `customers_enabled`: Feature toggle for customer management
 - `updated_at`: Last modification timestamp
-
-**Default Settings:**
-
-- `business_name`: "SmartKhata POS"
-- `tax_rate`: "0" (percentage, e.g., "18" for 18%)
-- `currency`: "INR"
-- `receipt_footer`: "Thank you for your business!"
 
 **No Foreign Keys:** Standalone configuration table
 
@@ -363,7 +374,7 @@ The schema is designed to be extended without breaking changes:
 | `bills`          | Sale transactions | `customers`         | `bill_items`                   |
 | `bill_items`     | Line items        | `bills`, `products` | None                           |
 | `inventory_logs` | Stock history     | `products`          | None                           |
-| `settings`       | Configuration     | None                | None                           |
+| `app_config`     | Configuration     | None                | None                           |
 | `license`        | Licensing         | None                | None                           |
 
 **Total Tables:** 7  

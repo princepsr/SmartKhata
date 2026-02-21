@@ -48,7 +48,7 @@ PRAGMA busy_timeout = 5000;
 -- product_id → products(id) ON DELETE RESTRICT
 -- Cannot delete product if it has inventory history
 
--- Settings Table: No foreign keys (key-value store)
+-- app_config Table: No foreign keys (singleton)
 
 -- License Table: No foreign keys (standalone)
 
@@ -83,6 +83,19 @@ PRAGMA busy_timeout = 5000;
 -- Inventory Logs Table
 -- reason IN ('SALE', 'MANUAL', 'ADJUSTMENT')
 
+-- App Config Table
+-- id = 1 (single row enforcement)
+-- paper_size IN ('58mm', '80mm')
+-- gst_enabled IN (0, 1)
+-- round_off_enabled IN (0, 1)
+-- gst_percentage IN (5, 12, 18)
+-- show_logo IN (0, 1)
+-- show_customer_details IN (0, 1)
+-- print_copies BETWEEN 1 AND 5
+-- auto_print IN (0, 1)
+-- billing_only IN (0, 1)
+-- customers_enabled IN (0, 1)
+
 -- License Table
 -- id = 1 (single row enforcement)
 
@@ -93,7 +106,7 @@ PRAGMA busy_timeout = 5000;
 -- Products: sku UNIQUE, barcode UNIQUE
 -- Customers: phone UNIQUE
 -- Bills: bill_number UNIQUE
--- Settings: key PRIMARY KEY (implicit UNIQUE)
+-- App Config: id PRIMARY KEY (must be 1)
 -- License: license_key UNIQUE
 
 -- ============================================
