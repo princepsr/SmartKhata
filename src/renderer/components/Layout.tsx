@@ -17,7 +17,7 @@ import { IPC_CHANNELS } from '@shared/ipc/channels';
 function Layout() {
   const [appVersion, setAppVersion] = useState<string>('');
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
-  const { settings } = useAppSettingsStore();
+  const { settings, fetchSettings } = useAppSettingsStore();
 
   const navigate = useNavigate();
 
@@ -34,7 +34,8 @@ function Layout() {
     };
 
     fetchVersion();
-  }, []);
+    fetchSettings();
+  }, [fetchSettings]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {

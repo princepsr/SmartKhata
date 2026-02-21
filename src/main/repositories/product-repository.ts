@@ -57,7 +57,7 @@ export interface UpdateProductInput {
  * Product Repository
  *
  * Handles all database operations for products.
- * Converts between database types (INTEGER paise) and domain types (number rupees).
+ * Stores monetary values in Rupees and percentages as decimals.
  */
 export class ProductRepository extends BaseRepository {
   /**

@@ -218,10 +218,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       name: formData.name,
       sku: formData.sku || undefined,
       barcode: formData.barcode || undefined,
-      salePrice: Math.round(parseFloat(formData.salePrice) * 100),
-      cost: formData.purchasePrice
-        ? Math.round(parseFloat(formData.purchasePrice) * 100)
-        : undefined, // Maps to 'cost' in handlers
+      salePrice: parseFloat(formData.salePrice),
+      cost: formData.purchasePrice ? parseFloat(formData.purchasePrice) : undefined, // Maps to 'cost' in handlers
       gstPercent: parseFloat(formData.gstPercent || '0'),
       stockQty: parseFloat(formData.stockQty || '0'),
       lowStockAlert: parseFloat(formData.lowStockAlert || '0'),
