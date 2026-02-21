@@ -109,26 +109,6 @@ export class SettingsService extends BaseService {
   }
 
   /**
-   * Legacy method support (for backward compatibility if needed)
-   * Converts AppConfig back to string record for old IPC handlers
-   */
-  public getAllSettings(): Record<string, string> {
-    const config = this.getConfig();
-    return {
-      shop_name: config.shopName,
-      owner_name: config.ownerName || '',
-      address: config.address || '',
-      phone: config.phone || '',
-      gst_number: config.gstNumber || '',
-      printer_name: config.printerName || '',
-      paper_size: config.paperSize,
-      gst_enabled: config.gstEnabled ? 'true' : 'false',
-      round_off_enabled: config.roundOffEnabled ? 'true' : 'false',
-      gst_percentage: config.gstPercentage.toString(),
-    };
-  }
-
-  /**
    * Validate config fields
    */
   private _validateConfig(config: Partial<AppConfig>): void {

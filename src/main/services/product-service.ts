@@ -12,9 +12,9 @@ import {
   UpdateProductInput,
 } from '../repositories/product-repository';
 import { InventoryRepository } from '../repositories/inventory-repository';
+import { SettingsService } from './settings-service';
 import {
   ValidationError,
-  BusinessError,
   NotFoundError,
   DuplicateEntryError,
   InactiveEntityError,
@@ -105,7 +105,7 @@ export class ProductService extends BaseService {
       barcode: input.barcode,
       salePrice: input.salePrice,
       purchasePrice: input.purchasePrice,
-      gstPercent: input.gstPercent ?? 18, // Default 18% GST
+      gstPercent: input.gstPercent ?? SettingsService.getInstance().getConfig().gstPercentage,
       stockQty: input.stockQty ?? 0,
       lowStockAlert: input.lowStockAlert,
       trackInventory: input.trackInventory,
@@ -151,7 +151,7 @@ export class ProductService extends BaseService {
       barcode: input.barcode,
       salePrice: input.salePrice,
       purchasePrice: input.purchasePrice,
-      gstPercent: input.gstPercent ?? 18,
+      gstPercent: input.gstPercent ?? SettingsService.getInstance().getConfig().gstPercentage,
       stockQty: input.stockQty ?? 0,
       lowStockAlert: input.lowStockAlert,
       trackInventory: input.trackInventory,

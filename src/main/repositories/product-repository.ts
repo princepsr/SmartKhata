@@ -79,7 +79,7 @@ export class ProductRepository extends BaseRepository {
       data.barcode ?? null,
       data.salePrice, // Direct Rupees
       data.purchasePrice ?? null,
-      data.gstPercent ?? 18, // Direct Percent
+      data.gstPercent ?? 0, // Fallback to 0 if not provided by service
       data.stockQty ?? 0,
       data.lowStockAlert ?? null,
       data.trackInventory === false ? 0 : 1, // Explicitly handle false (Default true)

@@ -19,6 +19,7 @@ import {
   DuplicateEntryError,
   InactiveEntityError,
 } from '../../src/main/services/errors/service-errors';
+import { SettingsService } from '../../src/main/services/settings-service';
 
 describe('ProductService - Add Product', () => {
   let db: BetterSqliteCompatibleDatabase;
@@ -87,13 +88,27 @@ describe('ProductService - Add Product', () => {
     }).toThrow(DuplicateEntryError);
   });
 
-  it('should set default GST to 18%', () => {
+  it('should set default GST from settings', () => {
+    // 1. Change settings to 12%
+    const settingsService = SettingsService.getInstance();
+    settingsService.updateConfig({ gstPercentage: 12 });
+
     const product = productService.addProduct({
-      name: 'Test Product',
+      name: 'Test Product 12',
       salePrice: 100,
     });
 
-    expect(product.gstPercent).toBe(18);
+    expect(product.gstPercent).toBe(12);
+
+    // 2. Change settings back to 5%
+    settingsService.updateConfig({ gstPercentage: 5 });
+
+    const product2 = productService.addProduct({
+      name: 'Test Product 5',
+      salePrice: 100,
+    });
+
+    expect(product2.gstPercent).toBe(5);
   });
 
   it('should throw error for invalid GST percent', () => {
