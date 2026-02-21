@@ -274,7 +274,8 @@ describe('BackupService', () => {
       vi.useFakeTimers();
       vi.setSystemTime(mockDate);
 
-      const timestamp = '2023-01-01_12-00-00';
+      // Mock Date: Jan 1, 2023, 12:00:00 UTC -> 17:30 IST
+      const timestamp = '20230101_1730';
       const firstPath = path.join(backupDir, `backup_${timestamp}.zip`);
       fs.writeFileSync(firstPath, 'dummy content');
 

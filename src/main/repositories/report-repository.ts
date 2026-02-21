@@ -29,7 +29,14 @@ export class ReportRepository extends BaseRepository {
       WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
     `;
 
-    const result = this.db.prepare(query).get(startDate, endDate) as any;
+    const result = this.db.prepare(query).get(startDate, endDate) as {
+      billCount: number;
+      totalSales: number;
+      netSales: number;
+      totalSubtotal: number;
+      totalGst: number;
+      totalDiscount: number;
+    };
 
     // Calculate previous period for comparison
     const start = new Date(startDate);
@@ -42,7 +49,12 @@ export class ReportRepository extends BaseRepository {
 
     const prevResult = this.db
       .prepare(query)
-      .get(prevStart.toISOString().split('T')[0], prevEnd.toISOString().split('T')[0]) as any;
+      .get(prevStart.toISOString().split('T')[0], prevEnd.toISOString().split('T')[0]) as {
+      totalSales: number;
+      totalDiscount: number;
+      billCount: number;
+      netSales: number;
+    };
 
     const calculateTrend = (current: number, previous: number) => {
       if (previous === 0) {
@@ -86,7 +98,11 @@ export class ReportRepository extends BaseRepository {
       GROUP BY payment_mode
     `;
 
-    const results = this.db.prepare(query).all(startDate, endDate) as any[];
+    const results = this.db.prepare(query).all(startDate, endDate) as {
+      mode: 'cash' | 'upi' | 'mixed';
+      count: number;
+      totalAmount: number;
+    }[];
 
     return results.map((row) => ({
       mode: row.mode,
@@ -149,7 +165,11 @@ export class ReportRepository extends BaseRepository {
       FROM products
       WHERE is_active = 1
     `;
-    const aggResult = this.db.prepare(aggQuery).get() as any;
+    const aggResult = this.db.prepare(aggQuery).get() as {
+      totalItems: number;
+      totalStockValue: number;
+      lowStockCount: number;
+    };
 
     let listQuery = `
       SELECT id, name, sku, stock_qty as stockQty, low_stock_alert as lowStockAlert, sale_price as salePrice
@@ -163,7 +183,7 @@ export class ReportRepository extends BaseRepository {
 
     listQuery += ` ORDER BY name ASC`;
 
-    const items = this.db.prepare(listQuery).all() as any[];
+    const items = this.db.prepare(listQuery).all() as (StockItem & { salePrice: number })[];
 
     return {
       totalItems: aggResult.totalItems,
@@ -211,7 +231,15 @@ export class ReportRepository extends BaseRepository {
       LIMIT ? OFFSET ?
     `;
 
-    const rows = this.db.prepare(query).all(startDate, endDate, limit, offset) as any[];
+    const rows = this.db.prepare(query).all(startDate, endDate, limit, offset) as {
+      id: number;
+      billNumber: string;
+      date: string;
+      total: number;
+      paymentMode: string;
+      customerName: string;
+      itemCount: number;
+    }[];
 
     const data = rows.map((row) => ({
       id: row.id,
@@ -262,7 +290,12 @@ export class ReportRepository extends BaseRepository {
       ORDER BY periodId ASC
     `;
 
-    const rows = this.db.prepare(query).all(startDate, endDate) as any[];
+    const rows = this.db.prepare(query).all(startDate, endDate) as {
+      periodId: string;
+      billCount: number;
+      totalSales: number;
+      netSales: number;
+    }[];
 
     let runningTotalSales = 0;
     let runningNetSales = 0;
@@ -293,7 +326,9 @@ export class ReportRepository extends BaseRepository {
         label = `W${w} '${y.slice(2)}`;
       } else {
         // Daily: "DD Mon"
-        const date = new Date(row.periodId);
+        // Force local interpretation of YYYY-MM-DD by replacing hyphens or using parts
+        const [y, m, d] = row.periodId.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
         label = date.toLocaleDateString('default', { day: 'numeric', month: 'short' });
       }
 

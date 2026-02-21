@@ -78,12 +78,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     error: updateError,
   } = useIPCMutation(IPC_CHANNELS.PRODUCT_UPDATE);
 
-  const {
-    execute: deleteProduct,
-    loading: deleting,
-    error: deleteError,
-  } = useIPCMutation(IPC_CHANNELS.PRODUCT_DELETE);
-
   // Parse server errors for field highlighting
   useEffect(() => {
     const serverError = createError || updateError;
@@ -240,25 +234,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
   };
 
-  const handleDelete = async () => {
-    if (!initialData || !window.confirm(`Are you sure you want to delete "${initialData.name}"?`)) {
-      return;
-    }
-
-    try {
-      const result = await deleteProduct(initialData.id);
-      if (result !== null) {
-        onSuccess();
-        onClose();
-      }
-    } catch (err) {
-      console.error('Failed to delete product:', err);
-      alert('Failed to delete product. Please try again.');
-    }
-  };
-
-  const isLoading = creating || updating || deleting;
-  const errorMsg = createError || updateError || deleteError;
+  const isLoading = creating || updating;
+  const errorMsg = createError || updateError;
 
   return (
     <div className="modal-overlay">
@@ -474,17 +451,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         </form>
 
         <div className="modal-actions">
-          {isEditMode && (
-            <button
-              type="button"
-              className="btn-danger"
-              onClick={handleDelete}
-              disabled={isLoading}
-              style={{ marginRight: 'auto' }}
-            >
-              {deleting ? 'Deleting...' : 'Delete Product'}
-            </button>
-          )}
           <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
             Cancel
           </button>

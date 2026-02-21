@@ -59,9 +59,9 @@
   position: relative;
 }
 
-.data-table-header {
+.customers-page .data-table-header {
   display: grid;
-  grid-template-columns: 2fr 1.2fr 2fr 1.2fr 0.8fr 1fr;
+  grid-template-columns: 1.2fr 1.2fr 3fr 1.2fr 0.8fr 1fr;
   padding: 1rem;
   background-color: var(--color-bg-secondary);
   border-bottom: 2px solid var(--color-border);
@@ -73,9 +73,9 @@
   z-index: 10;
 }
 
-.data-table-row {
+.customers-page .data-table-row {
   display: grid;
-  grid-template-columns: 2fr 1.2fr 2fr 1.2fr 0.8fr 1fr;
+  grid-template-columns: 1.2fr 1.2fr 3fr 1.2fr 0.8fr 1fr;
   padding: 0.8rem 1rem;
   border-bottom: 1px solid var(--color-border);
   align-items: center;
@@ -83,28 +83,28 @@
   cursor: pointer;
 }
 
-.data-table-row:hover {
+.customers-page .data-table-row:hover {
   background-color: var(--color-bg-secondary);
 }
 
-.data-table-row.selected {
+.customers-page .data-table-row.selected {
   background-color: rgba(37, 99, 235, 0.1);
   border-left: 3px solid var(--color-primary);
 }
 
-.col-balance {
+.customers-page .col-balance {
   font-weight: 600;
 }
 
-.balance-due {
+.customers-page .balance-due {
   color: var(--color-error);
 }
 
-.balance-advance {
+.customers-page .balance-advance {
   color: var(--color-success);
 }
 
-.status-badge {
+.customers-page .status-badge {
   padding: 0.2rem 0.6rem;
   border-radius: 99px;
   font-size: 0.8rem;
@@ -112,21 +112,69 @@
   text-transform: uppercase;
 }
 
-.status-badge.active {
+.customers-page .status-badge.active {
   background-color: rgba(22, 163, 74, 0.1);
   color: var(--color-success);
 }
 
-.status-badge.inactive {
+.customers-page .status-badge.inactive {
   background-color: #f1f5f9;
   color: #64748b;
   border: 1px solid #e2e8f0;
 }
 
-.col-actions {
+.customers-page .col-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.customers-page .action-icon-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.7;
+}
+
+/* Edit - Blue Theme */
+.customers-page .action-icon-btn.action-edit:hover {
+  background-color: rgba(37, 99, 235, 0.08);
+  color: var(--color-primary);
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
+
+/* Toggle - Power Button States */
+.customers-page .action-icon-btn.action-toggle.active {
+  color: var(--color-text-secondary);
+}
+
+.customers-page .action-icon-btn.action-toggle.active:hover {
+  background-color: rgba(220, 38, 38, 0.08);
+  color: var(--color-error);
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
+}
+
+.customers-page .action-icon-btn.action-toggle.inactive {
+  color: var(--color-success);
+  opacity: 1;
+}
+
+.customers-page .action-icon-btn.action-toggle.inactive:hover {
+  background-color: rgba(22, 163, 74, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.1);
 }
 
 .btn-secondary {
@@ -165,7 +213,7 @@
   background-color: rgba(22, 163, 74, 0.2);
 }
 
-.col-address {
+.customers-page .col-address {
   color: var(--color-text-secondary);
   font-size: 0.9rem;
   white-space: nowrap;
@@ -179,12 +227,12 @@
   color: var(--color-text-secondary);
 }
 
-.data-table-row.inactive-row {
+.customers-page .data-table-row.inactive-row {
   opacity: 0.6;
   background-color: #fafafa;
 }
 
-.data-table-row.inactive-row:hover {
+.customers-page .data-table-row.inactive-row:hover {
   opacity: 1;
   background-color: #f8fafc;
 }

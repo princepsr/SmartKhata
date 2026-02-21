@@ -1,10 +1,7 @@
 ﻿.products-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+  /* Inherits .page from index.css */
   background-color: var(--color-bg);
   color: var(--color-text);
-  padding: 1.5rem;
   box-sizing: border-box;
 }
 
@@ -13,6 +10,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  padding: 0 1.5rem;
 }
 
 .page-title {
@@ -22,36 +20,64 @@
   margin: 0;
 }
 
+/* Standardized Header Inputs & Buttons */
+.search-input {
+  height: 42px; /* Fixed height for alignment */
+  padding: 0 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem; /* Slightly smaller to match buttons */
+  width: 320px;
+  background-color: var(--color-bg-panel);
+  color: var(--color-text);
+  transition: all 0.2s;
+  box-sizing: border-box; /* Ensure padding doesn't affect height */
+}
+
+.search-input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Ensure buttons match input height */
+.header-actions .btn-primary,
+.header-actions .btn-secondary {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.25rem;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
 .header-actions {
   display: flex;
   gap: 1rem;
   align-items: center;
 }
 
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-right: 0.5rem;
+}
+
 .filter-checkbox {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
+  gap: 0.4rem;
+  font-size: 0.8rem; /* Smaller font for compact view */
+  font-weight: 500;
   color: var(--color-text-secondary);
   cursor: pointer;
-}
-
-.search-input {
-  padding: 0.6rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: 1rem;
-  width: 300px;
-  background-color: var(--color-bg-secondary);
-  color: var(--color-text);
-  transition: all 0.2s;
-}
-
-.search-input:focus {
-  border-color: var(--color-primary);
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  user-select: none;
+  height: auto; /* Remove fixed height */
+  line-height: 1;
 }
 
 .products-content {
@@ -65,6 +91,7 @@
   border: 1px solid var(--color-border);
   /* Ensure min-height so it's visible even if empty */
   min-height: 200px;
+  margin: 0 1.5rem 1.5rem;
 }
 
 .data-table-container {
@@ -73,9 +100,9 @@
   position: relative;
 }
 
-.data-table-header {
+.products-page .data-table-header {
   display: grid;
-  grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1.5fr;
+  grid-template-columns: 3fr 1.5fr 1.2fr 1fr 1fr 1.2fr;
   padding: 1rem;
   background-color: var(--color-bg-secondary);
   border-bottom: 2px solid var(--color-border);
@@ -87,9 +114,9 @@
   z-index: 10;
 }
 
-.data-table-row {
+.products-page .data-table-row {
   display: grid;
-  grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 1.5fr;
+  grid-template-columns: 3fr 1.5fr 1.2fr 1fr 1fr 1.2fr;
   padding: 0.8rem 1rem;
   border-bottom: 1px solid var(--color-border);
   align-items: center;
@@ -97,37 +124,37 @@
   cursor: pointer;
 }
 
-.data-table-row:hover {
+.products-page .data-table-row:hover {
   background-color: var(--color-bg-secondary);
 }
 
-.data-table-row.selected {
+.products-page .data-table-row.selected {
   background-color: rgba(37, 99, 235, 0.1);
   border-left: 3px solid var(--color-primary);
 }
 
-.col-name {
+.products-page .col-name {
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.col-sku {
+.products-page .col-sku {
   color: var(--color-text-secondary);
   font-family: monospace;
 }
 
-.col-price {
+.products-page .col-price {
   font-weight: 600;
   color: var(--color-text);
 }
 
-.col-stock {
+.products-page .col-stock {
   font-weight: 600;
 }
 
-.stock-out {
+.products-page .stock-out {
   color: var(--color-error);
   background-color: rgba(220, 38, 38, 0.1);
   padding: 0.2rem 0.5rem;
@@ -135,7 +162,7 @@
   font-size: 0.85rem;
 }
 
-.stock-low {
+.products-page .stock-low {
   color: var(--color-warning);
   background-color: rgba(234, 88, 12, 0.1);
   padding: 0.2rem 0.5rem;
@@ -143,7 +170,7 @@
   font-size: 0.85rem;
 }
 
-.status-badge {
+.products-page .status-badge {
   padding: 0.2rem 0.6rem;
   border-radius: 99px;
   font-size: 0.8rem;
@@ -151,65 +178,132 @@
   text-transform: uppercase;
 }
 
-.status-badge.active {
+.products-page .status-badge.active {
   background-color: rgba(22, 163, 74, 0.1);
   color: var(--color-success);
 }
 
-.status-badge.inactive {
-  background-color: var(--color-text-secondary);
-  color: var(--color-bg);
+.products-page .status-badge.inactive {
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
 }
 
-.col-actions {
-  display: flex;
-  justify-content: flex-end;
-  opacity: 0.5;
-  transition: opacity 0.2s;
+.products-page .data-table-row.inactive-row {
+  opacity: 0.6;
+  background-color: #fafafa;
 }
 
-.data-table-row:hover .col-actions {
+.products-page .data-table-row.inactive-row:hover {
   opacity: 1;
+  background-color: #f8fafc;
 }
 
-.btn-primary {
-  background-color: var(--color-primary);
+.btn-success {
+  background: linear-gradient(135deg, var(--color-success) 0%, #059669 100%);
   color: white;
   border: none;
-  padding: 0.6rem 1.2rem;
+  padding: 0 1.25rem;
   border-radius: var(--radius-md);
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-primary:hover {
-  background-color: var(--color-primary-dark);
-}
-
-.btn-secondary {
-  background-color: transparent;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  padding: 0.6rem 1.2rem;
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  cursor: pointer;
   transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 
-.btn-secondary:hover {
-  background-color: var(--color-bg-secondary);
-  border-color: var(--color-text-secondary);
+.btn-success:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
 }
 
-.btn-sm {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
+.products-page .action-icon-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.7;
+}
+
+/* Edit - Blue Theme */
+.products-page .action-icon-btn.action-edit:hover {
+  background-color: rgba(37, 99, 235, 0.08);
+  color: var(--color-primary);
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
+
+/* Adjust - Amber Theme */
+.products-page .action-icon-btn.action-adjust:hover {
+  background-color: rgba(234, 88, 12, 0.08);
+  color: var(--color-warning);
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.1);
+}
+
+/* History - Indigo Theme */
+.products-page .action-icon-btn.action-history:hover {
+  background-color: rgba(79, 70, 229, 0.08);
+  color: #4f46e5;
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+}
+
+/* Toggle - Power Button States */
+.products-page .action-icon-btn.action-toggle.active {
+  color: var(--color-text-secondary);
+}
+
+.products-page .action-icon-btn.action-toggle.active:hover {
+  background-color: rgba(220, 38, 38, 0.08);
+  color: var(--color-error);
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
+}
+
+.products-page .action-icon-btn.action-toggle.inactive {
+  color: var(--color-success);
+  opacity: 1;
+}
+
+.products-page .action-icon-btn.action-toggle.inactive:hover {
+  background-color: rgba(22, 163, 74, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.1);
+}
+
+.products-page .col-actions {
+  display: flex;
+  gap: 0.4rem;
+  transition: opacity 0.2s;
+  padding-right: 0.5rem;
+}
+
+/* Skeleton Styles for Table */
+.skeleton-row {
+  height: 60px;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  border-radius: var(--radius-md);
+  display: flex !important;
+  border: 1px solid var(--color-border);
+}
+
+.skeleton-text {
+  height: 14px;
+  border-radius: 4px;
 }
 
 .loading,
-.error,
 .no-results {
   display: flex;
   justify-content: center;

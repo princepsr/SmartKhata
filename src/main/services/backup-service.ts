@@ -76,11 +76,13 @@ class BackupService {
 
     // If target is a directory, generate filename
     if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
-      const timestamp = new Date()
-        .toISOString()
-        .replace(/T/, '_')
-        .replace(/\..+/, '')
-        .replace(/:/g, '-');
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      const timestamp = `${year}${month}${day}_${hours}${mins}`;
 
       let fileName = `backup_${timestamp}.zip`;
       finalPath = path.join(targetPath, fileName);
@@ -108,7 +110,7 @@ class BackupService {
       const meta = {
         appName: 'SmartKhata',
         version: app.getVersion(),
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toLocaleString('en-IN'),
         schemaVersion: migrationRunner.getCurrentVersion(),
         shopName: this.settingsService.getConfig().shopName || 'SmartKhata Shop',
       };

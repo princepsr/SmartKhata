@@ -12,6 +12,13 @@ import {
 } from '../../shared/types/report.types';
 import { ValidationError } from './errors/service-errors';
 
+const toLocalDateString = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export class ReportService extends BaseService {
   private reportRepo: ReportRepository;
 
@@ -63,8 +70,8 @@ export class ReportService extends BaseService {
     const prevStart = new Date(prevEnd.getTime() - durationMs);
 
     return {
-      startDate: prevStart.toISOString().split('T')[0],
-      endDate: prevEnd.toISOString().split('T')[0],
+      startDate: toLocalDateString(prevStart),
+      endDate: toLocalDateString(prevEnd),
     };
   }
 

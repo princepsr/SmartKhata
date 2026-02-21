@@ -188,11 +188,18 @@ const SkeletonLoader: React.FC<{ type: 'sales' | 'gst' | 'stock' }> = ({ type })
   </div>
 );
 
+const toLocalDateString = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const ReportsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('sales');
   const [dateRange, setDateRange] = useState({
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    startDate: toLocalDateString(new Date()),
+    endDate: toLocalDateString(new Date()),
   });
 
   const [loading, setLoading] = useState(false);
@@ -241,8 +248,8 @@ const ReportsPage: React.FC = () => {
         start.setDate(end.getDate() - 6);
     }
     return {
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
+      startDate: toLocalDateString(start),
+      endDate: toLocalDateString(end),
     };
   };
 
@@ -290,13 +297,6 @@ const ReportsPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to reprint bill:', error);
     }
-  };
-
-  const toLocalDateString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
   };
 
   const applyPreset = (preset: 'daily' | 'weekly' | 'monthly') => {
@@ -803,10 +803,17 @@ const ReportsPage: React.FC = () => {
                             <div
                               style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}
                             >
-                              {new Date(bill.date).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {(() => {
+                                // SQLite created_at is 'YYYY-MM-DD HH:MM:SS' in UTC
+                                // We append 'Z' to ensure it's parsed as UTC before toLocaleTimeString
+                                const dateStr = bill.date.includes(' ')
+                                  ? bill.date.replace(' ', 'T') + 'Z'
+                                  : bill.date;
+                                return new Date(dateStr).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                });
+                              })()}
                             </div>
                             <div>
                               <button

@@ -8,7 +8,7 @@ import { StockAdjustmentModal } from '../components/products/StockAdjustmentModa
 import { BulkImportModal } from '../components/products/BulkImportModal';
 import { ProductHistoryModal } from '../components/products/ProductHistoryModal';
 import { ConfirmModal } from '../components/ConfirmModal';
-import './ProductsPage.styles.css';
+import './ProductsPage.css';
 
 interface Product {
   id: number;
@@ -339,27 +339,95 @@ const ProductsPage: React.FC = () => {
                     </div>
                     <div className="col-actions">
                       <button
-                        className="btn-sm btn-secondary"
+                        className="action-icon-btn action-edit"
+                        onClick={() => handleEditProduct(product)}
+                        title="Edit Product"
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="lucide lucide-pencil"
+                        >
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                          <path d="m15 5 4 4" />
+                        </svg>
+                      </button>
+                      <button
+                        className="action-icon-btn action-adjust"
                         onClick={(e) => handleAdjustStock(e, product)}
                         title="Adjust Stock"
                       >
-                        Adj
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="lucide lucide-boxes"
+                        >
+                          <path d="M2.97 12.92A2 2 0 0 0 2 14.75v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98v-3.24a2 2 0 0 0-.97-1.83L8.14 11.3a2 2 0 0 0-1.78 0l-1.39.62Z" />
+                          <path d="M7 14.5 2.7 12.5" />
+                          <path d="m7 14.5 4.3-2" />
+                          <path d="M7 14.5v5.3" />
+                          <path d="M12.97 12.92a2 2 0 0 0-.97 1.83v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98v-3.24a2 2 0 0 0-.97-1.83L18.14 11.3a2 2 0 0 0-1.78 0l-1.39.62Z" />
+                          <path d="M17 14.5l-4.3-2" />
+                          <path d="m17 14.5 4.3-2" />
+                          <path d="M17 14.5v5.3" />
+                          <path d="M7.97 4.42A2 2 0 0 0 7 6.25v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98V6.25a2 2 0 0 0-.97-1.83L13.14 2.8a2 2 0 0 0-1.78 0l-1.39.62Z" />
+                          <path d="M12 6.5 7.7 4.5" />
+                          <path d="m12 6.5 4.3-2" />
+                          <path d="M12 6.5v5.3" />
+                        </svg>
                       </button>
                       <button
-                        className="btn-sm btn-secondary"
+                        className="action-icon-btn action-history"
                         onClick={(e) => handleViewHistory(e, product)}
                         title="View History"
-                        style={{ marginLeft: '0.5rem' }}
                       >
-                        Hist
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="lucide lucide-history"
+                        >
+                          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                          <path d="M3 3v5h5" />
+                          <path d="M12 7v5l4 2" />
+                        </svg>
                       </button>
                       <button
-                        className={`btn-sm ${product.isActive ? 'btn-secondary' : 'btn-success'}`}
+                        className={`action-icon-btn action-toggle ${product.isActive ? 'active' : 'inactive'}`}
                         onClick={(e) => handleToggleStatus(e, product)}
-                        title={product.isActive ? 'Deactivate' : 'Activate'}
-                        style={{ marginLeft: '0.5rem' }}
+                        title={product.isActive ? 'Deactivate Product' : 'Activate Product'}
                       >
-                        {product.isActive ? 'Off' : 'On'}
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="lucide lucide-power"
+                        >
+                          <path d="M12 2v10" />
+                          <path d="M18.4 6.6a9 9 0 1 1-12.77.1" />
+                        </svg>
                       </button>
                     </div>
                   </div>

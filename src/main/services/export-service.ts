@@ -1,4 +1,4 @@
-import { dialog, BrowserWindow } from 'electron';
+import { dialog } from 'electron';
 import fs from 'fs';
 import { logger } from '../utils/logger';
 
@@ -13,7 +13,7 @@ export class ExportService {
    */
   async exportToExcel(
     type: 'sales' | 'gst' | 'stock',
-    data: any,
+    data: any, // Keeping any for complex union types, or could define ExportData
     dateRange: string
   ): Promise<boolean> {
     logger.info(`Starting excel export for report: ${type}`);
@@ -21,9 +21,10 @@ export class ExportService {
     try {
       const csvContent = this.generateCsvContent(type, data, dateRange);
 
+      const localDate = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
       const { filePath } = await dialog.showSaveDialog({
         title: `Export ${type.toUpperCase()} Report`,
-        defaultPath: `SmartKhata_${type}_report_${new Date().toISOString().split('T')[0]}.csv`,
+        defaultPath: `SmartKhata_${type}_report_${localDate}.csv`,
         filters: [
           { name: 'CSV (Comma Separated Values)', extensions: ['csv'] },
           { name: 'All Files', extensions: ['*'] },

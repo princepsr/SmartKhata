@@ -4,6 +4,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../utils/billing-math';
 import { CustomerFormModal } from '../components/customers/CustomerFormModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 import './CustomersPage.css';
 
 interface Customer {
@@ -31,6 +32,17 @@ const CustomersPage: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<number | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const editingCustomer = useMemo(
     () =>
@@ -65,14 +77,36 @@ const CustomersPage: React.FC = () => {
 
   const handleToggleStatus = async (customer: Customer, e: React.MouseEvent) => {
     e.stopPropagation();
+    const isDeactivating = customer.isActive;
+
+    if (isDeactivating) {
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Deactivate Customer',
+        message: `Are you sure you want to deactivate "${customer.name}"? This will hide them from the billing search.`,
+        onConfirm: async () => {
+          try {
+            await updateCustomer({
+              id: customer.id,
+              data: { isActive: false },
+            });
+            fetchCustomers({ includeInactive: showInactive });
+          } catch (err) {
+            console.error('Failed to deactivate customer:', err);
+          }
+        },
+      });
+      return;
+    }
+
     try {
       await updateCustomer({
         id: customer.id,
-        data: { isActive: !customer.isActive },
+        data: { isActive: true },
       });
       fetchCustomers({ includeInactive: showInactive });
     } catch (err) {
-      console.error('Failed to toggle status:', err);
+      console.error('Failed to activate customer:', err);
     }
   };
 
@@ -243,21 +277,47 @@ const CustomersPage: React.FC = () => {
                     </div>
                     <div className="col-actions">
                       <button
-                        className="btn-sm btn-secondary"
+                        className="action-icon-btn action-edit"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEditCustomer(customer);
                         }}
+                        title="Edit Customer"
                       >
-                        Edit
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="lucide lucide-pencil"
+                        >
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                          <path d="m15 5 4 4" />
+                        </svg>
                       </button>
                       <button
-                        className={`btn-sm ${customer.isActive ? 'btn-secondary' : 'btn-success'}`}
+                        className={`action-icon-btn action-toggle ${customer.isActive ? 'active' : 'inactive'}`}
                         onClick={(e) => handleToggleStatus(customer, e)}
-                        title={customer.isActive ? 'Deactivate' : 'Activate'}
-                        style={{ marginLeft: '0.5rem' }}
+                        title={customer.isActive ? 'Deactivate Customer' : 'Activate Customer'}
                       >
-                        {customer.isActive ? 'Off' : 'On'}
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="lucide lucide-power"
+                        >
+                          <path d="M12 2v10" />
+                          <path d="M18.4 6.6a9 9 0 1 1-12.77.1" />
+                        </svg>
                       </button>
                     </div>
                   </div>
@@ -276,6 +336,16 @@ const CustomersPage: React.FC = () => {
         }}
         onSuccess={handleFormSuccess}
         initialData={editingCustomer}
+      />
+
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+        type="warning"
+        confirmLabel="Deactivate"
       />
     </div>
   );

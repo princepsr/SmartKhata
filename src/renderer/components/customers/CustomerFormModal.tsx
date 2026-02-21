@@ -61,12 +61,6 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
     error: updateError,
   } = useIPCMutation(IPC_CHANNELS.CUSTOMER_UPDATE);
 
-  const {
-    execute: deleteCustomer,
-    loading: deleting,
-    error: deleteError,
-  } = useIPCMutation(IPC_CHANNELS.CUSTOMER_DELETE);
-
   // Initialize form when opening
   useEffect(() => {
     if (isOpen) {
@@ -173,8 +167,8 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
     }
   };
 
-  const isLoading = creating || updating || deleting;
-  const errorMsg = createError || updateError || deleteError;
+  const isLoading = creating || updating;
+  const errorMsg = createError || updateError;
 
   return (
     <div className="modal-overlay">
