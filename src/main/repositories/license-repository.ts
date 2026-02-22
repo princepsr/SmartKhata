@@ -63,7 +63,7 @@ export class LicenseRepository extends BaseRepository {
         expires_on = excluded.expires_on,
         device_id = excluded.device_id,
         is_trial = 0,
-        updated_at = datetime('now')
+        updated_at = datetime('now', 'localtime')
     `;
 
     this.execute(sql, [data.licenseKey, this.formatDateForSql(data.expiresOn), data.deviceId]);
@@ -113,7 +113,7 @@ export class LicenseRepository extends BaseRepository {
         UPDATE license SET
           trial_started_on = COALESCE(trial_started_on, ?),
           is_trial = CASE WHEN license_key = '' OR license_key IS NULL THEN 1 ELSE is_trial END,
-          updated_at = datetime('now')
+          updated_at = datetime('now', 'localtime')
         WHERE id = 1
       `;
       this.execute(sql, [this.formatDateForSql(date)]);
@@ -139,7 +139,7 @@ export class LicenseRepository extends BaseRepository {
           expires_on = '1970-01-01', 
           device_id = '',
           is_trial = 1,
-          updated_at = datetime('now')
+          updated_at = datetime('now', 'localtime')
       WHERE id = 1
     `;
     const result = this.execute(sql);

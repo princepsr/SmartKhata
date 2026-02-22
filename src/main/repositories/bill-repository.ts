@@ -166,7 +166,7 @@ export class BillRepository extends BaseRepository {
           discountAmount: billData.discountAmount || 0,
           grandTotal: billData.grandTotal,
           paymentMode: billData.paymentMode,
-          createdAt: new Date(), // Approximate current time
+          createdAt: new Date(), // Local time
         },
         items: createdItems,
       };

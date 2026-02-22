@@ -84,8 +84,8 @@ export class ProductRepository extends BaseRepository {
       data.lowStockAlert ?? null,
       data.trackInventory === false ? 0 : 1, // Explicitly handle false (Default true)
       data.isActive !== false ? 1 : 0, // Default active
-      now.toISOString(),
-      now.toISOString(),
+      this.formatDateForSql(now),
+      this.formatDateForSql(now),
     ]);
 
     logger.info('Product created', { id: result.lastInsertRowid, name: data.name });
@@ -160,7 +160,7 @@ export class ProductRepository extends BaseRepository {
     }
 
     // Always update updated_at
-    fields.push("updated_at = datetime('now')");
+    fields.push("updated_at = datetime('now', 'localtime')");
 
     const sql = `
       UPDATE products
@@ -279,7 +279,7 @@ export class ProductRepository extends BaseRepository {
     // 3. Update stock
     const updateSql = `
       UPDATE products
-      SET stock_qty = stock_qty + ?, updated_at = datetime('now')
+      SET stock_qty = stock_qty + ?, updated_at = datetime('now', 'localtime')
       WHERE id = ?
     `;
     this.execute(updateSql, [deltaQty, productId]);
@@ -308,7 +308,7 @@ export class ProductRepository extends BaseRepository {
   public delete(id: number): void {
     const sql = `
       UPDATE products
-      SET is_active = 0, updated_at = datetime('now')
+      SET is_active = 0, updated_at = datetime('now', 'localtime')
       WHERE id = ?
     `;
 

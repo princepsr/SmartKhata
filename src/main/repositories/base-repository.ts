@@ -186,11 +186,10 @@ export abstract class BaseRepository {
     );
   }
   /**
-   * Parse SQLite date string (UTC) to JavaScript Date object
+   * Parse SQLite date string (Local Time / IST) to JavaScript Date object
    *
-   * SQLite datetime('now') returns 'YYYY-MM-DD HH:MM:SS' in UTC.
-   * Native JS 'new Date()' without 'Z' or offset assumes Local Time.
-   * This helper ensures the string is forced to UTC interpretation.
+   * SQLite datetime('now', 'localtime') returns 'YYYY-MM-DD HH:MM:SS' in Local Time.
+   * This helper parses date strings without forcing UTC suffixes.
    */
   protected parseDate(dateStr: string): Date {
     if (!dateStr) {
@@ -202,27 +201,26 @@ export abstract class BaseRepository {
       return new Date(dateStr);
     }
 
-    // SQLite format 'YYYY-MM-DD HH:MM:SS' -> 'YYYY-MM-DDTHH:MM:SSZ'
-    const utcStr = dateStr.replace(' ', 'T') + 'Z';
-    return new Date(utcStr);
+    // SQLite format 'YYYY-MM-DD HH:MM:SS' -> 'YYYY-MM-DDTHH:MM:SS'
+    // Without 'Z', JS Date constructor interprets this as LOCAL time.
+    const localIsoStr = dateStr.replace(' ', 'T');
+    return new Date(localIsoStr);
   }
 
   /**
-   * Format Date object for SQLite comparison (UTC)
+   * Format Date object for SQLite comparison (Local Time / IST)
    *
-   * Converts Date to 'YYYY-MM-DD HH:MM:SS' format.
-   * This matches SQLite's default datetime() format and avoids
-   * lexicographical comparison issues with ISO 8601 strings.
+   * Converts local Date to 'YYYY-MM-DD HH:MM:SS' format using local getters.
    */
   protected formatDateForSql(date: Date): string {
     const pad = (num: number) => num.toString().padStart(2, '0');
 
-    const year = date.getUTCFullYear();
-    const month = pad(date.getUTCMonth() + 1);
-    const day = pad(date.getUTCDate());
-    const hours = pad(date.getUTCHours());
-    const minutes = pad(date.getUTCMinutes());
-    const seconds = pad(date.getUTCSeconds());
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
 
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   }

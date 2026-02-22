@@ -95,7 +95,7 @@ export class CustomerRepository extends BaseRepository {
     }
 
     // Always update updated_at
-    fields.push("updated_at = datetime('now')");
+    fields.push("updated_at = datetime('now', 'localtime')");
 
     const sql = `
       UPDATE customers

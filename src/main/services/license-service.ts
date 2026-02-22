@@ -410,10 +410,10 @@ export class LicenseService extends BaseService {
     }
 
     // Verify Expiry
-    const epoch = new Date('2026-01-01T00:00:00Z').getTime();
+    const epoch = new Date('2026-01-01T00:00:00').getTime();
     const expiresOn =
       expiryDays === 0
-        ? new Date('9999-12-31T23:59:59Z')
+        ? new Date('9999-12-31T23:59:59')
         : new Date(epoch + expiryDays * 24 * 60 * 60 * 1000);
 
     if (expiresOn < new Date()) {
@@ -538,10 +538,10 @@ export class LicenseService extends BaseService {
           }
 
           // Derive expiry (authoritative)
-          const epoch = new Date('2026-01-01T00:00:00Z').getTime();
+          const epoch = new Date('2026-01-01T00:00:00').getTime();
           authoritativeExpiresOn =
             expiryDays === 0
-              ? new Date('9999-12-31T23:59:59Z')
+              ? new Date('9999-12-31T23:59:59')
               : new Date(epoch + expiryDays * 24 * 60 * 60 * 1000);
         } else {
           // Legacy/JSON activation re-verification

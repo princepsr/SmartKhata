@@ -47,9 +47,12 @@ export class ReportRepository extends BaseRepository {
     const prevEnd = new Date(start.getTime() - 86400000); // 1 day before startDate
     const prevStart = new Date(prevEnd.getTime() - (diffDays - 1) * 86400000);
 
-    const prevResult = this.db
-      .prepare(query)
-      .get(prevStart.toISOString().split('T')[0], prevEnd.toISOString().split('T')[0]) as {
+    const toLocalISO = (d: Date) => {
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+
+    const prevResult = this.db.prepare(query).get(toLocalISO(prevStart), toLocalISO(prevEnd)) as {
       totalSales: number;
       totalDiscount: number;
       billCount: number;
