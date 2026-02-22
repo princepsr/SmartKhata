@@ -210,6 +210,21 @@ function SettingsPage() {
             <label className="checkbox-label">
               <input
                 type="checkbox"
+                checked={settings.gstExclusiveMode}
+                onChange={(e) => updateSettings({ gstExclusiveMode: e.target.checked })}
+              />
+              GST Exclusive Mode (Master Switch)
+            </label>
+            <p className="help-text">
+              When enabled, all products use tax-exclusive pricing and individual GST toggles are
+              hidden. When disabled, products default to GST Inclusive (MRP).
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
                 checked={settings.customersEnabled}
                 onChange={(e) => updateSettings({ customersEnabled: e.target.checked })}
               />
@@ -255,7 +270,7 @@ function SettingsPage() {
               onChange={(e) => updateSettings({ gstPercentage: parseInt(e.target.value, 10) })}
               className="form-input"
             >
-              {APP_CONSTANTS.BUSINESS.GST_RATES.filter((r) => r.value !== 0).map((rate) => (
+              {APP_CONSTANTS.BUSINESS.GST_RATES.map((rate) => (
                 <option key={rate.value} value={rate.value}>
                   {rate.label}
                 </option>

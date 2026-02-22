@@ -126,11 +126,31 @@ export class BillingService extends BaseService {
       const settings = SettingsService.getInstance().getConfig();
 
       // Calculate line totals
-      const lineSubtotal = Math.round(product.salePrice * item.quantity * 100) / 100;
-      const lineGst = settings.gstEnabled
-        ? Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100
-        : 0;
-      const lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
+      let lineSubtotal: number;
+      let lineGst: number;
+      let lineTotal: number;
+
+      // Force exclusive if master switch is ON
+      const isGstInclusive = settings.gstExclusiveMode ? false : product.isGstInclusive;
+
+      if (isGstInclusive) {
+        // Price is inclusive: Total = Price * Qty, Subtotal = Total / (1 + GST%)
+        lineTotal = Math.round(product.salePrice * item.quantity * 100) / 100;
+        if (settings.gstEnabled && product.gstPercent > 0) {
+          lineSubtotal = Math.round((lineTotal / (1 + product.gstPercent / 100)) * 100) / 100;
+          lineGst = Math.round((lineTotal - lineSubtotal) * 100) / 100;
+        } else {
+          lineSubtotal = lineTotal;
+          lineGst = 0;
+        }
+      } else {
+        // Price is exclusive: Subtotal = Price * Qty, Total = Subtotal * (1 + GST%)
+        lineSubtotal = Math.round(product.salePrice * item.quantity * 100) / 100;
+        lineGst = settings.gstEnabled
+          ? Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100
+          : 0;
+        lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
+      }
 
       // Accumulate totals
       subtotal = Math.round((subtotal + lineSubtotal) * 100) / 100;

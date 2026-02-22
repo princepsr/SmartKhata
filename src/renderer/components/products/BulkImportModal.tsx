@@ -23,6 +23,7 @@ interface ColumnMapping {
   gstPercent: string;
   isActive: string;
   trackInventory: string;
+  isGstInclusive: string;
 }
 
 const SYSTEM_FIELDS: { key: keyof ColumnMapping; label: string; required: boolean }[] = [
@@ -35,6 +36,7 @@ const SYSTEM_FIELDS: { key: keyof ColumnMapping; label: string; required: boolea
   { key: 'gstPercent', label: 'GST %', required: false },
   { key: 'isActive', label: 'Active Status (true/false/1/0)', required: false },
   { key: 'trackInventory', label: 'Track Inventory (true/false/1/0)', required: false },
+  { key: 'isGstInclusive', label: 'GST Inclusive (true/false/1/0)', required: false },
 ];
 
 export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClose, onSuccess }) => {
@@ -51,6 +53,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
     gstPercent: '',
     isActive: '',
     trackInventory: '',
+    isGstInclusive: '',
   });
   const [importErrors, setImportErrors] = useState<string[]>([]);
 
@@ -142,6 +145,9 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
           if (['trackinventory', 'track', 'inventorytracking'].includes(lowerHeader)) {
             newMapping.trackInventory = index.toString();
           }
+          if (['gstinclusive', 'mrp', 'inclusive'].includes(lowerHeader)) {
+            newMapping.isGstInclusive = index.toString();
+          }
         });
         setMapping(newMapping);
       } catch (err) {
@@ -194,14 +200,18 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
             }
           }
 
-          if (field.key === 'isActive' || field.key === 'trackInventory') {
+          if (
+            field.key === 'isActive' ||
+            field.key === 'trackInventory' ||
+            field.key === 'isGstInclusive'
+          ) {
             if (value !== undefined && value !== null && value !== '') {
               const strVal = String(value).toLowerCase().trim();
               value = strVal === 'true' || strVal === '1' || strVal === 'yes';
-            } else if (field.key === 'trackInventory') {
-              value = true; // Default track inventory to true
-            } else if (field.key === 'isActive') {
-              value = true; // Default active to true
+            } else if (field.key === 'isGstInclusive') {
+              value = false; // Default inclusive to false
+            } else {
+              value = true; // Default others to true
             }
           }
 

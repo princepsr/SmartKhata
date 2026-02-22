@@ -119,9 +119,31 @@ export class BillingTransactionService extends BaseRepository {
         // Note: updateStock() validates stock and throws if insufficient
 
         // Calculate line totals
-        const lineSubtotal = Math.round(product.salePrice * item.quantity * 100) / 100;
-        const lineGst = Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100;
-        const lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
+        let lineSubtotal: number;
+        let lineGst: number;
+        let lineTotal: number;
+
+        // Force exclusive if master switch is ON
+        const isGstInclusive = config.gstExclusiveMode ? false : product.isGstInclusive;
+
+        if (isGstInclusive) {
+          // Price is inclusive: Total = Price * Qty, Subtotal = Total / (1 + GST%)
+          lineTotal = Math.round(product.salePrice * item.quantity * 100) / 100;
+          if (config.gstEnabled && product.gstPercent > 0) {
+            lineSubtotal = Math.round((lineTotal / (1 + product.gstPercent / 100)) * 100) / 100;
+            lineGst = Math.round((lineTotal - lineSubtotal) * 100) / 100;
+          } else {
+            lineSubtotal = lineTotal;
+            lineGst = 0;
+          }
+        } else {
+          // Price is exclusive: Subtotal = Price * Qty, Total = Subtotal * (1 + GST%)
+          lineSubtotal = Math.round(product.salePrice * item.quantity * 100) / 100;
+          lineGst = config.gstEnabled
+            ? Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100
+            : 0;
+          lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
+        }
 
         // Accumulate totals
         subtotal = Math.round((subtotal + lineSubtotal) * 100) / 100;

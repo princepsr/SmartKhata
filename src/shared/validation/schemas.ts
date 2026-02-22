@@ -56,6 +56,7 @@ export const CreateProductSchema = z.object({
     .optional(),
 
   trackInventory: z.boolean().optional(),
+  isGstInclusive: z.boolean().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -110,6 +111,8 @@ export const UpdateProductSchema = z.object({
         .optional(),
 
       trackInventory: z.boolean().optional(),
+
+      isGstInclusive: z.boolean().optional(),
 
       isActive: z.boolean().optional(),
     })

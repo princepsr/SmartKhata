@@ -36,6 +36,7 @@ erDiagram
         real gst_percent      /* Stored as Percentage (e.g., 18.0) */
         int stock_qty
         int low_stock_alert
+        int is_gst_inclusive  /* 1 = Inclusive (MRP), 0 = Exclusive */
         int is_active
         text created_at
         text updated_at
@@ -101,6 +102,7 @@ erDiagram
         int print_copies
         int auto_print
         int billing_only
+        int gst_exclusive_mode  /* 1 = Force Exclusive, 0 = Standard */
         int customers_enabled
         text updated_at
     }
@@ -135,6 +137,7 @@ erDiagram
 - `gst_percent`: GST percentage (e.g., 18.0 for 18%)
 - `stock_qty`: Current inventory count (default: 0)
 - `low_stock_alert`: Threshold for low stock warning
+- `is_gst_inclusive`: Flag for tax-inclusive (MRP) pricing (1 = True, 0 = False)
 - `is_active`: Soft delete flag (1 = active, 0 = inactive/deactivated)
 
 ---
@@ -197,6 +200,8 @@ erDiagram
 - `id`: Primary key (must be 1)
 - `shop_name`: Name of the shop (default: "SmartKhata Shop")
 - `gst_percentage`: Default GST rate (5, 12, or 18)
+- `billing_only`: Feature toggle for inventory tracking bypass
+- `gst_exclusive_mode`: Global master switch for forced exclusive pricing (1 = Force, 0 = Standard)
 - `customers_enabled`: Feature toggle for customer management
 - `updated_at`: Last modification timestamp
 

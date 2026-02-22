@@ -17,6 +17,7 @@ interface Product {
   lowStockAlert?: number;
   isActive: boolean;
   trackInventory: boolean;
+  isGstInclusive: boolean;
 }
 
 interface ProductFormModalProps {
@@ -37,6 +38,7 @@ interface FormData {
   lowStockAlert: string;
   isActive: boolean;
   trackInventory: boolean;
+  isGstInclusive: boolean;
 }
 
 const INITIAL_STATE: FormData = {
@@ -50,6 +52,7 @@ const INITIAL_STATE: FormData = {
   lowStockAlert: '5',
   isActive: true,
   trackInventory: true,
+  isGstInclusive: false,
 };
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
@@ -108,12 +111,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           stockQty: initialData.stockQty?.toString() || '0',
           lowStockAlert: initialData.lowStockAlert?.toString() || '5',
           isActive: initialData.isActive ?? true,
+          isGstInclusive: initialData.isGstInclusive ?? false,
           trackInventory: initialData.trackInventory ?? true,
         });
       } else {
         setFormData({
           ...INITIAL_STATE,
           gstPercent: (settings?.gstPercentage ?? 18).toString(),
+          isGstInclusive: settings?.gstExclusiveMode ? false : true,
         });
       }
       setErrors({});
@@ -218,6 +223,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       stockQty: parseFloat(formData.stockQty || '0'),
       lowStockAlert: parseFloat(formData.lowStockAlert || '0'),
       isActive: formData.isActive,
+      isGstInclusive: formData.isGstInclusive,
       trackInventory: formData.trackInventory,
     };
 
@@ -343,33 +349,66 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
             </div>
 
-            <div className="form-group">
-              <label
-                style={{
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  fontWeight: '500',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  name="trackInventory"
-                  checked={formData.trackInventory}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                  style={{
-                    width: '18px',
-                    height: '18px',
-                    cursor: 'pointer',
-                    transform: 'scale(1.1)',
-                    accentColor: 'var(--color-primary)',
-                  }}
-                />
-                Track Inventory
-              </label>
-              {!formData.trackInventory && (
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
+                {!settings.billingOnly && (
+                  <label
+                    style={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontWeight: '500',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name="trackInventory"
+                      checked={formData.trackInventory}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                        transform: 'scale(1.1)',
+                        accentColor: 'var(--color-primary)',
+                      }}
+                    />
+                    Track Inventory
+                  </label>
+                )}
+
+                {!settings.gstExclusiveMode && (
+                  <label
+                    style={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontWeight: '500',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name="isGstInclusive"
+                      checked={formData.isGstInclusive}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                        transform: 'scale(1.1)',
+                        accentColor: 'var(--color-primary)',
+                      }}
+                    />
+                    GST Inclusive (MRP)
+                  </label>
+                )}
+              </div>
+
+              {!settings.billingOnly && !formData.trackInventory && (
                 <div
                   className="info-message"
                   style={{
@@ -388,7 +427,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               )}
             </div>
 
-            {formData.trackInventory && (
+            {!settings.billingOnly && formData.trackInventory && (
               <div className="form-row">
                 {!isEditMode && (
                   <div className="form-group">

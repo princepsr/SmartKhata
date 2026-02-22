@@ -45,6 +45,19 @@ describe('BillingService - Calculations', () => {
     expect(calculation.items[0].lineTotal).toBe(94.4); // 80 + 14.4
   });
 
+  it('should calculate inclusive GST correctly (MRP logic)', () => {
+    // Product ID 5 is 'MRP Product' with salePrice 105 and 5% GST inclusive
+    const calculation = billingService.calculateBill([{ productId: 5, quantity: 1 }], 0);
+
+    expect(calculation.items[0].lineTotal).toBe(105);
+    expect(calculation.items[0].lineSubtotal).toBe(100); // 105 / 1.05
+    expect(calculation.items[0].lineGst).toBe(5);
+
+    expect(calculation.grandTotal).toBe(105);
+    expect(calculation.subtotal).toBe(100);
+    expect(calculation.gstTotal).toBe(5);
+  });
+
   it('should calculate bill totals correctly', () => {
     const calculation = billingService.calculateBill(
       [
@@ -103,6 +116,30 @@ describe('BillingService - Calculations', () => {
     expect(() => {
       billingService.calculateBill([{ productId: 1, quantity: 1 }], -10);
     }).toThrow(ValidationError);
+  });
+  it('should not calculate GST when gstEnabled is false', () => {
+    // Set setting to false
+    const settingsService = SettingsService.getInstance();
+    settingsService.updateConfig({ gstEnabled: false });
+
+    // 1. Check Calculation Preview
+    const calculation = billingService.calculateBill([{ productId: 1, quantity: 2 }], 0);
+    expect(calculation.gstTotal).toBe(0);
+    expect(calculation.grandTotal).toBe(80); // Subtotal only
+    expect(calculation.items[0].lineGst).toBe(0);
+
+    // 2. Check Finalization (BillingTransactionService)
+    const result = billingService.finalizeBill({
+      billNumber: 'BILL-NOGST',
+      items: [{ productId: 1, quantity: 2 }],
+      paymentMode: 'cash',
+    });
+
+    expect(result.bill.gstTotal).toBe(0);
+    expect(result.bill.grandTotal).toBe(80);
+
+    // Reset setting for other tests
+    settingsService.updateConfig({ gstEnabled: true });
   });
 });
 
@@ -240,5 +277,35 @@ describe('BillingService - Finalize Bill', () => {
 
     expect(billNumber).toMatch(/^BILL-\d{8}-\d{4}$/);
     expect(billNumber).toContain(`BILL-${today}`);
+  });
+
+  it('should respect inclusive GST (MRP) during finalization', () => {
+    // Product ID 5 is 'MRP Product' with salePrice 105 and 5% GST inclusive
+    const result = billingService.finalizeBill({
+      billNumber: 'BILL-MRP-FINAL',
+      items: [{ productId: 5, quantity: 2 }], // Total: 210
+      paymentMode: 'cash',
+    });
+
+    expect(result.bill.subtotal).toBe(200); // 210 / 1.05
+    expect(result.bill.gstTotal).toBe(10);
+    expect(result.bill.grandTotal).toBe(210);
+  });
+
+  it('should override product setting when gstExclusiveMode is true', () => {
+    // Set master switch to true
+    const settingsService = SettingsService.getInstance();
+    settingsService.updateConfig({ gstExclusiveMode: true, gstEnabled: true });
+
+    // Product 5 is normally Inclusive (105 / 1.05 = 100 subtotal)
+    // If master switch is ON, it becomes Exclusive (105 + 5% = 110.25)
+    const calculation = billingService.calculateBill([{ productId: 5, quantity: 1 }], 0);
+
+    expect(calculation.items[0].lineSubtotal).toBe(105);
+    expect(calculation.items[0].lineGst).toBe(5.25);
+    expect(calculation.grandTotal).toBe(110.25);
+
+    // Reset settings for other tests
+    settingsService.updateConfig({ gstExclusiveMode: false });
   });
 });

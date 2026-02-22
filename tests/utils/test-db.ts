@@ -125,6 +125,7 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       stock_qty INTEGER NOT NULL DEFAULT 0,
       low_stock_alert INTEGER DEFAULT 0 CHECK(low_stock_alert >= 0),
       is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
+      is_gst_inclusive INTEGER NOT NULL DEFAULT 0 CHECK(is_gst_inclusive IN (0, 1)),
       track_inventory INTEGER NOT NULL DEFAULT 1 CHECK(track_inventory IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -260,12 +261,13 @@ export function getTestDatabase(): BetterSqliteCompatibleDatabase {
 export function seedTestData(db: any): void {
   try {
     db.exec(`
-      INSERT INTO products (barcode, sku, name, brand, category, mrp, sale_price, purchase_price, gst_percent, stock_qty, low_stock_alert, is_active, track_inventory)
+      INSERT INTO products (barcode, sku, name, brand, category, mrp, sale_price, purchase_price, gst_percent, stock_qty, low_stock_alert, is_active, is_gst_inclusive, track_inventory)
       VALUES 
-        ('8901234567890', 'COKE-500', 'Coca Cola 500ml', 'Coca Cola', 'Beverages', 40, 40, 30, 18, 100, 10, 1, 1),
-        ('8901234567891', 'LAYS-001', 'Lays Chips', 'Lays', 'Snacks', 20, 20, 15, 12, 50, 5, 1, 1),
-        ('8901234567892', 'MILK-1L', 'Amul Milk 1L', 'Amul', 'Dairy', 60, 60, 55, 0, 30, 10, 1, 1),
-        ('8901234567893', 'INACTIVE', 'Inactive Product', NULL, NULL, 10, 10, 8, 18, 0, 0, 0, 1);
+        ('8901234567890', 'COKE-500', 'Coca Cola 500ml', 'Coca Cola', 'Beverages', 40, 40, 30, 18, 100, 10, 1, 0, 1),
+        ('8901234567891', 'LAYS-001', 'Lays Chips', 'Lays', 'Snacks', 20, 20, 15, 12, 50, 5, 1, 0, 1),
+        ('8901234567892', 'MILK-1L', 'Amul Milk 1L', 'Amul', 'Dairy', 60, 60, 55, 0, 30, 10, 1, 0, 1),
+        ('8901234567893', 'INACTIVE', 'Inactive Product', NULL, NULL, 10, 10, 8, 18, 0, 0, 0, 0, 1),
+        ('8901234567894', 'MRP-PROD', 'MRP Product', NULL, NULL, 105, 105, 80, 5, 10, 0, 1, 1, 1);
     `);
 
     db.exec(`

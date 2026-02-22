@@ -142,8 +142,11 @@ export class SettingsService extends BaseService {
 
     // GST Percentage validation
     if (config.gstPercentage !== undefined) {
-      if (![5, 12, 18].includes(config.gstPercentage)) {
-        throw new ValidationError('Invalid GST percentage. Must be 5, 12, or 18', 'gstPercentage');
+      if (![0, 5, 12, 18, 28].includes(config.gstPercentage)) {
+        throw new ValidationError(
+          'Invalid GST percentage. Must be 0, 5, 12, 18, or 28',
+          'gstPercentage'
+        );
       }
     }
 

@@ -21,6 +21,7 @@ export interface AppConfig {
   printCopies: number;
   autoPrint: boolean;
   billingOnly: boolean;
+  gstExclusiveMode: boolean; // Renamed from gstInclusiveDefault
   customersEnabled: boolean;
   updatedAt: Date;
 }
@@ -46,7 +47,7 @@ export class SettingsRepository extends BaseRepository {
       phone: string | null;
       gst_number: string | null;
       printer_name: string | null;
-      paper_size: '58mm' | '80mm';
+      paper_size: string;
       gst_enabled: number;
       round_off_enabled: number;
       gst_percentage: number;
@@ -56,6 +57,7 @@ export class SettingsRepository extends BaseRepository {
       print_copies: number;
       auto_print: number;
       billing_only: number;
+      gst_exclusive_mode: number;
       customers_enabled: number;
       updated_at: string;
     }>(sql);
@@ -80,6 +82,7 @@ export class SettingsRepository extends BaseRepository {
         printCopies: 1,
         autoPrint: true,
         billingOnly: false,
+        gstExclusiveMode: false,
         customersEnabled: true,
         updatedAt: new Date(),
       };
@@ -115,6 +118,7 @@ export class SettingsRepository extends BaseRepository {
       printCopies: 'print_copies',
       autoPrint: 'auto_print',
       billingOnly: 'billing_only',
+      gstExclusiveMode: 'gst_exclusive_mode',
       customersEnabled: 'customers_enabled',
     };
 
@@ -167,6 +171,7 @@ export class SettingsRepository extends BaseRepository {
     print_copies: number;
     auto_print: number;
     billing_only: number;
+    gst_exclusive_mode: number;
     customers_enabled: number;
     updated_at: string;
   }): AppConfig {
@@ -187,6 +192,7 @@ export class SettingsRepository extends BaseRepository {
       printCopies: row.print_copies,
       autoPrint: row.auto_print === 1,
       billingOnly: row.billing_only === 1,
+      gstExclusiveMode: row.gst_exclusive_mode === 1,
       customersEnabled: row.customers_enabled === 1,
       updatedAt: this.parseDate(row.updated_at),
     };

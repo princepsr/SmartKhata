@@ -35,6 +35,7 @@ export interface AddProductInput {
   stockQty?: number;
   lowStockAlert?: number;
   trackInventory?: boolean;
+  isGstInclusive?: boolean;
   isActive?: boolean;
 }
 
@@ -50,6 +51,7 @@ export interface UpdateProductData {
   gstPercent?: number;
   lowStockAlert?: number;
   isActive?: boolean;
+  isGstInclusive?: boolean;
   trackInventory?: boolean;
 }
 
@@ -109,6 +111,7 @@ export class ProductService extends BaseService {
       stockQty: input.stockQty ?? 0,
       lowStockAlert: input.lowStockAlert,
       trackInventory: input.trackInventory,
+      isGstInclusive: input.isGstInclusive,
     };
 
     try {
@@ -155,6 +158,7 @@ export class ProductService extends BaseService {
       stockQty: input.stockQty ?? 0,
       lowStockAlert: input.lowStockAlert,
       trackInventory: input.trackInventory,
+      isGstInclusive: input.isGstInclusive,
     }));
 
     // 3. Execute batch create
@@ -222,6 +226,7 @@ export class ProductService extends BaseService {
       gstPercent: updates.gstPercent,
       lowStockAlert: updates.lowStockAlert,
       isActive: updates.isActive,
+      isGstInclusive: updates.isGstInclusive,
       trackInventory: updates.trackInventory,
     };
 

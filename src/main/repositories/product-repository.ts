@@ -16,6 +16,7 @@ export interface Product {
   stockQty: number;
   lowStockAlert: number | null;
   isActive: boolean;
+  isGstInclusive: boolean;
   trackInventory: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -34,6 +35,7 @@ export interface CreateProductInput {
   stockQty?: number;
   lowStockAlert?: number;
   trackInventory?: boolean;
+  isGstInclusive?: boolean;
   isActive?: boolean;
 }
 
@@ -50,6 +52,7 @@ export interface UpdateProductInput {
   stockQty?: number;
   lowStockAlert?: number;
   isActive?: boolean;
+  isGstInclusive?: boolean;
   trackInventory?: boolean;
 }
 
@@ -68,9 +71,9 @@ export class ProductRepository extends BaseRepository {
     const sql = `
       INSERT INTO products (
         name, sku, barcode, sale_price, purchase_price, gst_percent, 
-        stock_qty, low_stock_alert, track_inventory, is_active,
+        stock_qty, low_stock_alert, track_inventory, is_gst_inclusive, is_active,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const result = this.execute(sql, [
@@ -83,6 +86,7 @@ export class ProductRepository extends BaseRepository {
       data.stockQty ?? 0,
       data.lowStockAlert ?? null,
       data.trackInventory === false ? 0 : 1, // Explicitly handle false (Default true)
+      data.isGstInclusive ? 1 : 0,
       data.isActive !== false ? 1 : 0, // Default active
       this.formatDateForSql(now),
       this.formatDateForSql(now),
@@ -153,6 +157,10 @@ export class ProductRepository extends BaseRepository {
     if (data.trackInventory !== undefined) {
       fields.push('track_inventory = ?');
       values.push(data.trackInventory ? 1 : 0);
+    }
+    if (data.isGstInclusive !== undefined) {
+      fields.push('is_gst_inclusive = ?');
+      values.push(data.isGstInclusive ? 1 : 0);
     }
 
     if (fields.length === 0) {
@@ -342,6 +350,7 @@ export class ProductRepository extends BaseRepository {
       stockQty: row.stock_qty,
       lowStockAlert: row.low_stock_alert,
       isActive: row.is_active === 1, // INTEGER → boolean
+      isGstInclusive: row.is_gst_inclusive === 1,
       trackInventory: row.track_inventory === 1,
       createdAt: this.parseDate(row.created_at), // TEXT → Date
       updatedAt: this.parseDate(row.updated_at),

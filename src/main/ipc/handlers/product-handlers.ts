@@ -49,6 +49,7 @@ export function registerProductHandlers(): void {
         stockQty: p.stockQty,
         lowStockAlert: p.lowStockAlert,
         isActive: p.isActive,
+        isGstInclusive: p.isGstInclusive,
         trackInventory: p.trackInventory,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
@@ -78,6 +79,7 @@ export function registerProductHandlers(): void {
         stockQty: product.stockQty,
         lowStockAlert: product.lowStockAlert,
         isActive: product.isActive,
+        isGstInclusive: product.isGstInclusive,
         trackInventory: product.trackInventory,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
@@ -111,6 +113,7 @@ export function registerProductHandlers(): void {
         stockQty: request.stockQty,
         lowStockAlert: request.lowStockAlert,
         trackInventory: request.trackInventory,
+        isGstInclusive: request.isGstInclusive,
         isActive: request.isActive,
       };
 
@@ -160,6 +163,7 @@ export function registerProductHandlers(): void {
         stockQty: req.stockQty,
         lowStockAlert: req.lowStockAlert,
         trackInventory: req.trackInventory,
+        isGstInclusive: req.isGstInclusive,
       }));
 
       const products = productService.importProducts(inputs);
@@ -175,6 +179,7 @@ export function registerProductHandlers(): void {
         stockQty: product.stockQty,
         lowStockAlert: product.lowStockAlert,
         isActive: product.isActive,
+        isGstInclusive: product.isGstInclusive,
         trackInventory: product.trackInventory,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
@@ -207,6 +212,7 @@ export function registerProductHandlers(): void {
         gstPercent: request.data.gstPercent,
         lowStockAlert: request.data.lowStockAlert,
         isActive: request.data.isActive,
+        isGstInclusive: request.data.isGstInclusive,
         trackInventory: request.data.trackInventory,
       };
 
@@ -253,6 +259,7 @@ export function registerProductHandlers(): void {
         stockQty: p.stockQty,
         lowStockAlert: p.lowStockAlert,
         isActive: p.isActive,
+        isGstInclusive: p.isGstInclusive,
         trackInventory: p.trackInventory,
       }));
     },

@@ -23,6 +23,7 @@ interface Product {
   stockQty: number;
   lowStockAlert?: number;
   isActive: boolean;
+  isGstInclusive: boolean;
   trackInventory: boolean;
 }
 
@@ -340,7 +341,27 @@ const ProductsPage: React.FC = () => {
                   >
                     <div className="col-name">{product.name}</div>
                     <div className="col-sku">{product.sku || product.barcode || '-'}</div>
-                    <div className="col-price">{formatCurrency(product.salePrice)}</div>
+                    <div className="col-price">
+                      {formatCurrency(product.salePrice)}
+                      {product.isGstInclusive && (
+                        <span
+                          className="inclusive-badge"
+                          title="Price is inclusive of GST"
+                          style={{
+                            fontSize: '0.7rem',
+                            padding: '2px 6px',
+                            background: '#e0e7ff',
+                            color: '#4338ca',
+                            borderRadius: '10px',
+                            marginLeft: '6px',
+                            fontWeight: '600',
+                            verticalAlign: 'middle',
+                          }}
+                        >
+                          MRP
+                        </span>
+                      )}
+                    </div>
                     <div className="col-stock">
                       {product.trackInventory ? (
                         <span

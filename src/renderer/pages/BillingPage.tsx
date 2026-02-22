@@ -494,12 +494,12 @@ function BillingPage() {
   // Recalculate bill PREVIEW instantly when cart or discount changes
   useEffect(() => {
     if (cart.length > 0) {
-      const preview = calculateBillPreview(cart, discountAmount);
+      const preview = calculateBillPreview(cart, discountAmount, settings.gstEnabled);
       setCalculation(preview);
     } else {
       setCalculation(null);
     }
-  }, [cart, discountAmount]);
+  }, [cart, discountAmount, settings.gstEnabled]);
 
   return (
     <div className="page billing-page">

@@ -38,7 +38,8 @@ interface CartItem {
  */
 export function calculateBillPreview(
   items: CartItem[],
-  discountAmount: number = 0
+  discountAmount: number = 0,
+  gstEnabled: boolean = true
 ): BillCalculation {
   let subtotal = 0;
   let gstTotal = 0;
@@ -46,21 +47,31 @@ export function calculateBillPreview(
 
   for (const item of items) {
     const { product, quantity } = item;
+    const qty = Math.max(0, quantity);
 
     // Line calculations
-    // Ensure we handle floating point precision by keeping everything in integers (cents/paisa) if possible,
-    // or strictly following the service logic which seems to use raw numbers but Javascript math.
-    // Service uses: lineSubtotal = product.salePrice * item.quantity;
-    // We should probably safeguard against NaN or negative inputs.
+    let lineSubtotal: number;
+    let lineGst: number;
+    let lineTotal: number;
 
-    const qty = Math.max(0, quantity);
-    const lineSubtotal = Math.round(product.salePrice * qty * 100) / 100;
-
-    // Tax
-    const lineGst = Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100;
-
-    // Total
-    const lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
+    if (product.isGstInclusive) {
+      // Price is inclusive: Total = Price * Qty, Subtotal = Total / (1 + GST%)
+      lineTotal = Math.round(product.salePrice * qty * 100) / 100;
+      if (gstEnabled && product.gstPercent > 0) {
+        lineSubtotal = Math.round((lineTotal / (1 + product.gstPercent / 100)) * 100) / 100;
+        lineGst = Math.round((lineTotal - lineSubtotal) * 100) / 100;
+      } else {
+        lineSubtotal = lineTotal;
+        lineGst = 0;
+      }
+    } else {
+      // Price is exclusive: Subtotal = Price * Qty, Total = Subtotal * (1 + GST%)
+      lineSubtotal = Math.round(product.salePrice * qty * 100) / 100;
+      lineGst = gstEnabled
+        ? Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100
+        : 0;
+      lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
+    }
 
     // Accumulate
     subtotal = Math.round((subtotal + lineSubtotal) * 100) / 100;
@@ -79,7 +90,8 @@ export function calculateBillPreview(
   }
 
   // Final totals
-  const grandTotal = Math.round((subtotal + gstTotal - discountAmount) * 100) / 100;
+  const totalWithTax = Math.round((subtotal + gstTotal) * 100) / 100;
+  const grandTotal = Math.round((totalWithTax - discountAmount) * 100) / 100;
 
   return {
     items: calculatedItems,
