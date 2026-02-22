@@ -121,8 +121,20 @@ export class ReportRepository extends BaseRepository {
     const query = `
       SELECT 
         bi.gst_percent as gstPercent,
-        COALESCE(SUM(bi.quantity * bi.unit_price), 0) as taxableAmount,
-        COALESCE(SUM(bi.line_total - (bi.quantity * bi.unit_price)), 0) as gstAmount, 
+        COALESCE(SUM(
+          CASE 
+            WHEN b.gst_total = 0 THEN bi.line_total
+            WHEN bi.line_total > (bi.quantity * bi.unit_price) + 0.01 THEN bi.quantity * bi.unit_price
+            ELSE ROUND(bi.line_total - (bi.line_total * bi.gst_percent / 100.0), 2)
+          END
+        ), 0) as taxableAmount,
+        COALESCE(SUM(
+          CASE 
+            WHEN b.gst_total = 0 THEN 0
+            WHEN bi.line_total > (bi.quantity * bi.unit_price) + 0.01 THEN bi.line_total - (bi.quantity * bi.unit_price)
+            ELSE ROUND(bi.line_total * bi.gst_percent / 100.0, 2)
+          END
+        ), 0) as gstAmount, 
         COALESCE(SUM(bi.line_total), 0) as totalAmount
       FROM bill_items bi
       JOIN bills b ON b.id = bi.bill_id

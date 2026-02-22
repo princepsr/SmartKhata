@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS products (
   barcode TEXT UNIQUE,
   sale_price INTEGER NOT NULL CHECK(sale_price >= 0),        -- In Paise
   purchase_price INTEGER CHECK(purchase_price >= 0),         -- In Paise
-  gst_percent INTEGER NOT NULL DEFAULT 1800 CHECK(gst_percent >= 0), -- Basis points (18.00% = 1800)
+  gst_percent INTEGER NOT NULL DEFAULT 500 CHECK(gst_percent >= 0), -- Basis points (5.00% = 500)
   stock_qty INTEGER NOT NULL DEFAULT 0,
   low_stock_alert INTEGER,
   is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
@@ -125,4 +125,4 @@ CREATE TABLE IF NOT EXISTS settings (
 INSERT OR IGNORE INTO settings (key, value) VALUES
   ('shop_name', 'SmartKhata Shop'),
   ('gst_enabled', 'true'),
-  ('default_gst_rate', '18');
+  ('default_gst_rate', '5');

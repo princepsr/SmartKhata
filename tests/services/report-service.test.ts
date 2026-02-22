@@ -49,10 +49,10 @@ describe('ReportService Integration Tests', () => {
 
   it('should generate correct Daily Sales Summary with Discounts', () => {
     // seeded products:
-    // 1: Coca Cola 500ml (Price: 4000 (Paise) -> 40.00 Rs, GST: 18%) -> Total: 47.20 Rs
+    // 1: Coca Cola 500ml (Price: 4000 (Paise) -> 40.00 Rs, GST: 5%) -> Total: 42.00 Rs
     // 2: Lays Chips (Price: 2000 (Paise) -> 20.00 Rs, GST: 12%) -> Total: 22.40 Rs
 
-    // Bill 1: 1 Coke. Total 47.20. Discount 0.
+    // Bill 1: 1 Coke. Total 42.00. Discount 0.
     generateBill([{ productId: 1, quantity: 1 }], 'cash', '001', 0);
 
     // Bill 2: 2 Lays. Total 44.80. Discount 4.80. Net = 40.00.
@@ -65,22 +65,22 @@ describe('ReportService Integration Tests', () => {
     expect(summary).toBeDefined();
     expect(summary.billCount).toBe(2);
 
-    // Gross Sales = Sum(GrandTotal + Discount) = (47.20 + 0) + (40.00 + 4.80) = 47.20 + 44.80 = 92.00
-    expect(summary.totalSales).toBe(92.0);
+    // Gross Sales = Sum(GrandTotal + Discount) = (42.00 + 0) + (40.00 + 4.80) = 42.00 + 44.80 = 86.80
+    expect(summary.totalSales).toBe(86.8);
 
     // Total Discount = 0 + 4.80 = 4.80
     expect(summary.totalDiscount).toBe(4.8);
 
-    // Net Sales = Sum(GrandTotal) = 47.20 + 40.00 = 87.20
-    expect(summary.netSales).toBe(87.2);
+    // Net Sales = Sum(GrandTotal) = 42.00 + 40.00 = 82.00
+    expect(summary.netSales).toBe(82.0);
 
     expect(summary.totalSubtotal).toBe(80.0); // 40.00 + 40.00
-    expect(summary.totalGst).toBe(12.0); // 7.20 + 4.80
+    expect(summary.totalGst).toBe(6.8); // 2.00 + 4.80
   });
 
   it('should generate correct Payment Mode Summary', () => {
-    generateBill([{ productId: 1, quantity: 1 }], 'cash', '001'); // 47.20
-    generateBill([{ productId: 1, quantity: 1 }], 'cash', '002'); // 47.20
+    generateBill([{ productId: 1, quantity: 1 }], 'cash', '001'); // 42.00
+    generateBill([{ productId: 1, quantity: 1 }], 'cash', '002'); // 42.00
     generateBill([{ productId: 2, quantity: 1 }], 'upi', '003'); // 22.40
 
     const today = new Date().toISOString().split('T')[0];
@@ -93,7 +93,7 @@ describe('ReportService Integration Tests', () => {
 
     expect(cashMode).toBeDefined();
     expect(cashMode?.count).toBe(2);
-    expect(cashMode?.totalAmount).toBe(94.4); // 47.20 * 2
+    expect(cashMode?.totalAmount).toBe(84.0); // 42.00 * 2
 
     expect(upiMode).toBeDefined();
     expect(upiMode?.count).toBe(1);
@@ -101,8 +101,8 @@ describe('ReportService Integration Tests', () => {
   });
 
   it('should generate correct GST Summary', () => {
-    // Bill 1: 18% item
-    generateBill([{ productId: 1, quantity: 10 }], 'cash', '001'); // 10 * 40.00 = 400.00 taxable, 72.00 GST
+    // Bill 1: 5% item
+    generateBill([{ productId: 1, quantity: 10 }], 'cash', '001'); // 10 * 40.00 = 400.00 taxable, 20.00 GST
 
     // Bill 2: 12% item
     generateBill([{ productId: 2, quantity: 10 }], 'cash', '002'); // 10 * 20.00 = 200.00 taxable, 24.00 GST
@@ -111,14 +111,14 @@ describe('ReportService Integration Tests', () => {
     const report = reportService.getGstSummary({ startDate: today, endDate: today });
 
     expect(report.totalTaxable).toBe(600.0); // 400.00 + 200.00
-    expect(report.totalGst).toBe(96.0); // 72.00 + 24.00
+    expect(report.totalGst).toBe(44.0); // 20.00 + 24.00
 
-    const slab18 = report.slabs.find((s) => s.gstPercent === 18);
+    const slab5 = report.slabs.find((s) => s.gstPercent === 5);
     const slab12 = report.slabs.find((s) => s.gstPercent === 12);
 
-    expect(slab18).toBeDefined();
-    expect(slab18?.taxableAmount).toBe(400.0);
-    expect(slab18?.gstAmount).toBe(72.0);
+    expect(slab5).toBeDefined();
+    expect(slab5?.taxableAmount).toBe(400.0);
+    expect(slab5?.gstAmount).toBe(20.0);
 
     expect(slab12).toBeDefined();
     expect(slab12?.taxableAmount).toBe(200.0);
@@ -310,9 +310,9 @@ describe('ReportService Trend Analytics', () => {
 
     expect(result.periods).toHaveLength(2);
     expect(result.periods[0].periodId).toBe('2025-01-01');
-    expect(result.periods[0].totalSales).toBe(47.2); // 1 * 47.20
-    expect(result.periods[1].totalSales).toBe(94.4); // 2 * 47.20
-    expect(result.periods[1].growth).toBe(100); // (94.4 - 47.2) / 47.2 = 100%
+    expect(result.periods[0].totalSales).toBe(42.0); // 1 * 42.00
+    expect(result.periods[1].totalSales).toBe(84.0); // 2 * 42.00
+    expect(result.periods[1].growth).toBe(100); // (84.0 - 42.0) / 42.0 = 100%
   });
 
   it('should return trend analytics with month granularity', () => {
@@ -328,14 +328,14 @@ describe('ReportService Trend Analytics', () => {
 
   it('should calculate previous period comparison correctly in getDailySalesSummary', () => {
     // Current period: Feb 10, 2025. 1 Bill.
-    generateBill([{ productId: 1, quantity: 2 }], 'cash', 'CUR', '2025-02-10'); // 94.4
+    generateBill([{ productId: 1, quantity: 2 }], 'cash', 'CUR', '2025-02-10'); // 84.0
 
     // Previous period: Feb 9, 2025. 1 Bill.
-    generateBill([{ productId: 1, quantity: 1 }], 'cash', 'PREV', '2025-02-09'); // 47.2
+    generateBill([{ productId: 1, quantity: 1 }], 'cash', 'PREV', '2025-02-09'); // 42.0
 
     const summary = reportService.getDailySalesSummary('2025-02-10', '2025-02-10');
 
-    expect(summary.totalSales).toBe(94.4);
+    expect(summary.totalSales).toBe(84.0);
     expect(summary.comparison?.totalSales?.change).toBe(100);
     expect(summary.comparison?.totalSales?.trend).toBe('up');
   });

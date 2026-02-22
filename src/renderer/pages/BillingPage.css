@@ -115,7 +115,7 @@
   top: 80px; /* Just below header */
   left: 50%;
   transform: translateX(-50%);
-  width: 800px;
+  width: 950px;
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -131,7 +131,7 @@
   padding: 1rem 1.25rem;
   border-radius: var(--radius-md);
   display: grid;
-  grid-template-columns: 1fr 1fr 120px;
+  grid-template-columns: 1fr 1fr 160px;
   gap: 1.5rem;
   align-items: center;
   cursor: pointer;
@@ -175,20 +175,20 @@
   font-size: 1.25rem;
   text-align: right;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .search-stock-status {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  margin-top: 2px;
-  padding: 1px 4px;
+  padding: 2px 6px;
   border-radius: 4px;
   display: inline-block;
-  width: fit-content;
-  align-self: flex-end;
+  white-space: nowrap;
 }
 
 .search-stock-status.out {

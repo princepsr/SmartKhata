@@ -15,6 +15,7 @@ import {
 import './BillingPage.css';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useAppSettingsStore } from '../store';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { reportApi } from '@renderer/services/report-api';
 import type { DailySalesSummary } from '@shared/types/report.types';
 
@@ -68,14 +69,17 @@ function BillingPage() {
 
   // State
   const [searchQuery, setSearchQuery] = useState('');
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [paymentMode, setPaymentMode] = useState<PaymentMode>('cash');
+  const [cart, setCart] = useLocalStorage<CartItem[]>('billing_cart', []);
+  const [discountAmount, setDiscountAmount] = useLocalStorage('billing_discountAmount', 0);
+  const [paymentMode, setPaymentMode] = useLocalStorage<PaymentMode>('billing_paymentMode', 'cash');
   const [calculation, setCalculation] = useState<BillCalculation | null>(null);
 
   // Customer State
   const [customerQuery, setCustomerQuery] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useLocalStorage<Customer | null>(
+    'billing_selectedCustomer',
+    null
+  );
   const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -494,12 +498,17 @@ function BillingPage() {
   // Recalculate bill PREVIEW instantly when cart or discount changes
   useEffect(() => {
     if (cart.length > 0) {
-      const preview = calculateBillPreview(cart, discountAmount, settings.gstEnabled);
+      const preview = calculateBillPreview(
+        cart,
+        discountAmount,
+        settings.gstEnabled,
+        settings.gstExclusiveMode
+      );
       setCalculation(preview);
     } else {
       setCalculation(null);
     }
-  }, [cart, discountAmount, settings.gstEnabled]);
+  }, [cart, discountAmount, settings.gstEnabled, settings.gstExclusiveMode]);
 
   return (
     <div className="page billing-page">
@@ -575,7 +584,6 @@ function BillingPage() {
                             SKU: {product.sku || product.barcode || '-'}
                           </span>
                           <div className="product-price">
-                            {formatCurrency(product.salePrice)}
                             {!settings.billingOnly && product.trackInventory && (
                               <span
                                 className={`search-stock-status ${
@@ -593,6 +601,7 @@ function BillingPage() {
                                     : `Stock: ${product.stockQty}`}
                               </span>
                             )}
+                            {formatCurrency(product.salePrice)}
                           </div>
                         </div>
                       ))

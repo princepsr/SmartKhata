@@ -39,7 +39,8 @@ interface CartItem {
 export function calculateBillPreview(
   items: CartItem[],
   discountAmount: number = 0,
-  gstEnabled: boolean = true
+  gstEnabled: boolean = true,
+  gstExclusiveMode: boolean = false
 ): BillCalculation {
   let subtotal = 0;
   let gstTotal = 0;
@@ -54,18 +55,21 @@ export function calculateBillPreview(
     let lineGst: number;
     let lineTotal: number;
 
-    if (product.isGstInclusive) {
-      // Price is inclusive: Total = Price * Qty, Subtotal = Total / (1 + GST%)
+    // Force exclusive if master switch is ON (mirrors backend billing-transaction-service logic)
+    const isGstInclusive = gstExclusiveMode ? false : product.isGstInclusive;
+
+    if (isGstInclusive) {
+      // Price is inclusive: Total = Price * Qty. GST = Total * Rate. Subtotal = Total - GST
       lineTotal = Math.round(product.salePrice * qty * 100) / 100;
       if (gstEnabled && product.gstPercent > 0) {
-        lineSubtotal = Math.round((lineTotal / (1 + product.gstPercent / 100)) * 100) / 100;
-        lineGst = Math.round((lineTotal - lineSubtotal) * 100) / 100;
+        lineGst = Math.round(lineTotal * (product.gstPercent / 100) * 100) / 100;
+        lineSubtotal = Math.round((lineTotal - lineGst) * 100) / 100;
       } else {
         lineSubtotal = lineTotal;
         lineGst = 0;
       }
     } else {
-      // Price is exclusive: Subtotal = Price * Qty, Total = Subtotal * (1 + GST%)
+      // Price is exclusive: Subtotal = Price * Qty, Total = Subtotal + GST
       lineSubtotal = Math.round(product.salePrice * qty * 100) / 100;
       lineGst = gstEnabled
         ? Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100

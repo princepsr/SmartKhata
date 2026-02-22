@@ -200,7 +200,7 @@ const ReportsPage: React.FC = () => {
   const [trendGranularity, setTrendGranularity] = useState<'day' | 'week' | 'month'>('day');
   const [trendLookback, setTrendLookback] = useState<string>('last_7_days');
   const [analyticsData, setAnalyticsData] = useState<TrendAnalytics | null>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   // Handle global tab switching
   useEffect(() => {
@@ -865,7 +865,7 @@ const ReportsPage: React.FC = () => {
                       </div>
                       {gstReport.slabs.map((slab) => (
                         <div key={slab.gstPercent} className="data-table-row grid-gst">
-                          <div className="font-bold">{(slab.gstPercent / 100).toFixed(0)}%</div>
+                          <div className="font-bold">{slab.gstPercent}%</div>
                           <div className="text-right">{formatCurrency(slab.taxableAmount)}</div>
                           <div className="text-right">{formatCurrency(slab.gstAmount)}</div>
                           <div className="text-right font-bold">

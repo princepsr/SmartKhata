@@ -49,7 +49,7 @@ const defaultSettings: AppSettings = {
   paperSize: '58mm',
   gstEnabled: true,
   roundOffEnabled: true,
-  gstPercentage: 18,
+  gstPercentage: 5,
   showLogo: false,
   showCustomerDetails: true,
   footerMessage: 'Thank you! Visit Again',

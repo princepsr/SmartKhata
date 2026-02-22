@@ -327,29 +327,31 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 />
                 {errors.purchasePrice && <span className="error-text">{errors.purchasePrice}</span>}
               </div>
-              <div className="form-group gst-group">
-                <label>GST %</label>
-                <div className="gst-select-wrapper">
-                  <div className="gst-display-value">{formData.gstPercent}%</div>
-                  <select
-                    name="gstPercent"
-                    value={formData.gstPercent}
-                    onChange={handleChange}
-                    disabled={isLoading}
-                    className="gst-select-overlay"
-                  >
-                    {APP_CONSTANTS.BUSINESS.GST_RATES.map((rate) => (
-                      <option key={rate.value} value={rate.value}>
-                        {rate.label}
-                      </option>
-                    ))}
-                  </select>
+              {settings.gstEnabled && (
+                <div className="form-group gst-group">
+                  <label>GST %</label>
+                  <div className="gst-select-wrapper">
+                    <div className="gst-display-value">{formData.gstPercent}%</div>
+                    <select
+                      name="gstPercent"
+                      value={formData.gstPercent}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                      className="gst-select-overlay"
+                    >
+                      {APP_CONSTANTS.BUSINESS.GST_RATES.map((rate) => (
+                        <option key={rate.value} value={rate.value}>
+                          {rate.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {errors.gstPercent && <span className="error-text">{errors.gstPercent}</span>}
                 </div>
-                {errors.gstPercent && <span className="error-text">{errors.gstPercent}</span>}
-              </div>
+              )}
             </div>
 
-            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+            <div className="form-group">
               <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
                 {!settings.billingOnly && (
                   <label
@@ -379,7 +381,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </label>
                 )}
 
-                {!settings.gstExclusiveMode && (
+                {settings.gstEnabled && !settings.gstExclusiveMode && (
                   <label
                     style={{
                       cursor: 'pointer',

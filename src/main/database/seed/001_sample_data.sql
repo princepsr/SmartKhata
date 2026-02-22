@@ -139,7 +139,7 @@ VALUES
   ('shop_phone', '9876543210', datetime('now')),
   ('shop_gstin', '27XXXXX1234X1Z5', datetime('now')),
   ('gst_enabled', 'true', datetime('now')),
-  ('default_gst_rate', '1800', datetime('now')),
+  ('default_gst_rate', '500', datetime('now')),
   ('language', 'en', datetime('now')),
   ('currency', 'INR', datetime('now'));
 

@@ -130,8 +130,8 @@ export class BillingTransactionService extends BaseRepository {
           // Price is inclusive: Total = Price * Qty, Subtotal = Total / (1 + GST%)
           lineTotal = Math.round(product.salePrice * item.quantity * 100) / 100;
           if (config.gstEnabled && product.gstPercent > 0) {
-            lineSubtotal = Math.round((lineTotal / (1 + product.gstPercent / 100)) * 100) / 100;
-            lineGst = Math.round((lineTotal - lineSubtotal) * 100) / 100;
+            lineGst = Math.round(lineTotal * (product.gstPercent / 100) * 100) / 100;
+            lineSubtotal = Math.round((lineTotal - lineGst) * 100) / 100;
           } else {
             lineSubtotal = lineTotal;
             lineGst = 0;

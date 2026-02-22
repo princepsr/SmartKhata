@@ -31,7 +31,7 @@ export interface CreateProductInput {
   barcode?: string;
   salePrice: number; // In rupees
   purchasePrice?: number; // In rupees
-  gstPercent?: number; // As decimal (default 18%)
+  gstPercent?: number; // As decimal (default 5%)
   stockQty?: number;
   lowStockAlert?: number;
   trackInventory?: boolean;

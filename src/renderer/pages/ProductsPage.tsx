@@ -4,6 +4,7 @@ import { useIPC } from '../hooks/useIPC';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../utils/billing-math';
+import { useAppSettingsStore } from '../store/useAppSettingsStore';
 import { ProductFormModal } from '../components/products/ProductFormModal';
 import { StockAdjustmentModal } from '../components/products/StockAdjustmentModal';
 import { BulkImportModal } from '../components/products/BulkImportModal';
@@ -36,6 +37,7 @@ const SkeletonRows: React.FC = () => (
 );
 
 const ProductsPage: React.FC = () => {
+  const { settings } = useAppSettingsStore();
   const {
     data: products,
     loading,
@@ -343,24 +345,26 @@ const ProductsPage: React.FC = () => {
                     <div className="col-sku">{product.sku || product.barcode || '-'}</div>
                     <div className="col-price">
                       {formatCurrency(product.salePrice)}
-                      {product.isGstInclusive && (
-                        <span
-                          className="inclusive-badge"
-                          title="Price is inclusive of GST"
-                          style={{
-                            fontSize: '0.7rem',
-                            padding: '2px 6px',
-                            background: '#e0e7ff',
-                            color: '#4338ca',
-                            borderRadius: '10px',
-                            marginLeft: '6px',
-                            fontWeight: '600',
-                            verticalAlign: 'middle',
-                          }}
-                        >
-                          MRP
-                        </span>
-                      )}
+                      {product.isGstInclusive &&
+                        settings.gstEnabled &&
+                        !settings.gstExclusiveMode && (
+                          <span
+                            className="inclusive-badge"
+                            title="Price is inclusive of GST"
+                            style={{
+                              fontSize: '0.7rem',
+                              padding: '2px 6px',
+                              background: '#e0e7ff',
+                              color: '#4338ca',
+                              borderRadius: '10px',
+                              marginLeft: '6px',
+                              fontWeight: '600',
+                              verticalAlign: 'middle',
+                            }}
+                          >
+                            MRP
+                          </span>
+                        )}
                     </div>
                     <div className="col-stock">
                       {product.trackInventory ? (

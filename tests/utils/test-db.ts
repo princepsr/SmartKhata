@@ -191,7 +191,7 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       paper_size TEXT DEFAULT '58mm',
       gst_enabled INTEGER DEFAULT 1,
       round_off_enabled INTEGER DEFAULT 1,
-      gst_percentage INTEGER DEFAULT 18,
+      gst_percentage INTEGER DEFAULT 5,
       show_logo INTEGER DEFAULT 0,
       show_customer_details INTEGER DEFAULT 1,
       footer_message TEXT,
@@ -199,6 +199,7 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       auto_print INTEGER DEFAULT 1,
       billing_only INTEGER DEFAULT 0,
       customers_enabled INTEGER DEFAULT 1,
+      gst_exclusive_mode INTEGER DEFAULT 0,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -263,7 +264,7 @@ export function seedTestData(db: any): void {
     db.exec(`
       INSERT INTO products (barcode, sku, name, brand, category, mrp, sale_price, purchase_price, gst_percent, stock_qty, low_stock_alert, is_active, is_gst_inclusive, track_inventory)
       VALUES 
-        ('8901234567890', 'COKE-500', 'Coca Cola 500ml', 'Coca Cola', 'Beverages', 40, 40, 30, 18, 100, 10, 1, 0, 1),
+        ('8901234567890', 'COKE-500', 'Coca Cola 500ml', 'Coca Cola', 'Beverages', 40, 40, 30, 5, 100, 10, 1, 0, 1),
         ('8901234567891', 'LAYS-001', 'Lays Chips', 'Lays', 'Snacks', 20, 20, 15, 12, 50, 5, 1, 0, 1),
         ('8901234567892', 'MILK-1L', 'Amul Milk 1L', 'Amul', 'Dairy', 60, 60, 55, 0, 30, 10, 1, 0, 1),
         ('8901234567893', 'INACTIVE', 'Inactive Product', NULL, NULL, 10, 10, 8, 18, 0, 0, 0, 0, 1),
@@ -279,8 +280,8 @@ export function seedTestData(db: any): void {
     `);
 
     db.exec(`
-      INSERT INTO app_config (id, shop_name, paper_size, gst_enabled, gst_percentage, billing_only, customers_enabled)
-      VALUES (1, 'Test Shop', '58mm', 1, 18, 0, 1);
+      INSERT INTO app_config (id, shop_name, paper_size, gst_enabled, gst_percentage, billing_only, customers_enabled, gst_exclusive_mode)
+      VALUES (1, 'Test Shop', '58mm', 1, 5, 0, 1, 0);
     `);
 
     db.exec(`
@@ -288,7 +289,7 @@ export function seedTestData(db: any): void {
       VALUES 
         ('shop_name', 'Test Shop'),
         ('gst_enabled', 'true'),
-        ('default_gst_rate', '18');
+        ('default_gst_rate', '5');
     `);
   } catch {
     // Ignore if already seeded
