@@ -167,25 +167,12 @@ SQLite Database
 
 ---
 
-## Database
+### 🛡️ SmartKhata Core Features
 
-**SQLite** (single file, local-only)
-
-**Location:**
-
-- Dev: `SmartKhata/dev-data/smartkhata.db`
-- Prod: `C:\Users\<User>\AppData\Roaming\SmartKhata\data\smartkhata.db`
-
-**Tables:**
-
-- `products` - Product catalog (Active/Inactive)
-- `customers` - Customer info (Active/Inactive)
-- `bills` - Sales records
-- `bill_items` - Line items
-- `inventory_logs` - Stock change history
-- `settings` - App settings (key-value)
-- `license` - License information
-- `schema_migrations` - Migration tracking
+- **🚀 Command Center**: Unified hub for zero-friction navigation and high-frequency actions (Add Product/Customer, Reports, Settings).
+- **⚡ Super-Speed Billing**: High-performance transaction engine with virtual barcode support and instant thermal printing.
+- **🛡️ Secure Licensing**: Hardware-bound machine activation with offline support and transparent IST-aligned trial management.
+- **📊 Advanced Analytics**: Daily/Weekly/Monthly trend insights with GST-ready reporting and accurate local time attribution.
 
 **See [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) for complete schema documentation.**
 

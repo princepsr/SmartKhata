@@ -4,7 +4,7 @@
 
 This document defines the **mandatory design rules** for all database schema changes in SmartKhata POS. These rules ensure consistency, data integrity, and future-proofing for a SQLite-based offline-first POS system.
 
-**Last Updated:** 2026-02-08  
+**Last Updated:** 2026-02-22  
 **Applies To:** All migrations, tables, and schema modifications
 
 ---
@@ -64,31 +64,31 @@ id INTEGER PRIMARY KEY AUTOINCREMENT
 CREATE TABLE products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   -- other columns
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 ```
 
 ### Rationale
 
-| Reason              | Explanation                                                       |
-| ------------------- | ----------------------------------------------------------------- |
-| **Audit trail**     | Know when every record was created and last modified              |
-| **Debugging**       | Troubleshoot data issues by checking timestamps                   |
-| **Reporting**       | Filter records by date ranges (e.g., "sales this month")          |
-| **Sync readiness**  | Future cloud sync will need timestamps for conflict resolution    |
-| **ISO 8601 format** | SQLite's `datetime('now')` returns ISO 8601 (sortable, parseable) |
+| Reason              | Explanation                                                                    |
+| ------------------- | ------------------------------------------------------------------------------ |
+| **Audit trail**     | Know when every record was created and last modified                           |
+| **Debugging**       | Troubleshoot data issues by checking timestamps                                |
+| **Reporting**       | Filter records by date ranges (e.g., "sales this month")                       |
+| **Sync readiness**  | Future cloud sync will need timestamps for conflict resolution                 |
+| **ISO 8601 format** | SQLite's `datetime('now', 'localtime')` returns ISO 8601 (sortable, parseable) |
 
 ### Column Specifications
 
 ```sql
-created_at TEXT NOT NULL DEFAULT (datetime('now'))
-updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 ```
 
 **Type:** `TEXT` (not INTEGER or REAL)  
 **Format:** ISO 8601 (`2026-02-08 15:02:46`)  
-**Default:** Current UTC time via `datetime('now')`  
+**Default:** Current local time via `datetime('now', 'localtime')`  
 **NOT NULL:** Always required
 
 ### Update Trigger (Optional)
@@ -100,7 +100,7 @@ CREATE TRIGGER update_products_timestamp
 AFTER UPDATE ON products
 FOR EACH ROW
 BEGIN
-  UPDATE products SET updated_at = datetime('now') WHERE id = NEW.id;
+  UPDATE products SET updated_at = datetime('now', 'localtime') WHERE id = NEW.id;
 END;
 ```
 
@@ -122,9 +122,9 @@ created_at TEXT
 ### ✅ Do
 
 ```sql
--- Always use TEXT with datetime('now')
-created_at TEXT NOT NULL DEFAULT (datetime('now'))
-updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+-- Always use TEXT with datetime('now', 'localtime')
+created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 ```
 
 ---
@@ -141,8 +141,8 @@ CREATE TABLE products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 
 -- Transactional data (sales)
@@ -150,8 +150,8 @@ CREATE TABLE sales (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   total REAL NOT NULL,
   is_void INTEGER NOT NULL DEFAULT 0 CHECK(is_void IN (0, 1)),
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 ```
 
@@ -245,8 +245,8 @@ CREATE TABLE products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   price REAL NOT NULL CHECK(price >= 0), -- Rupees (Decimal)
   cost REAL CHECK(cost >= 0),             -- Rupees (Decimal)
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 ```
 
@@ -372,7 +372,7 @@ CREATE TABLE products (
   product_name TEXT NOT NULL,
   unit_price REAL NOT NULL,
   is_active INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 
 -- ❌ Bad: camelCase, abbreviations, unclear
@@ -381,7 +381,7 @@ CREATE TABLE products (
   prodName TEXT NOT NULL,
   unitPrc INTEGER NOT NULL,
   active INTEGER NOT NULL DEFAULT 1,
-  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+  createdAt TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 ```
 

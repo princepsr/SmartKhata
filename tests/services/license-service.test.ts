@@ -190,7 +190,7 @@ describe('LicenseService - Machine Fingerprint', () => {
     vi.mocked(fs.readFileSync).mockReturnValue(
       JSON.stringify({
         trialStartedOn: new Date().toISOString(),
-        updatedAt: futureDate.toISOString(),
+        updatedAt: futureDate.toISOString().replace('Z', ''), // Simulating local timestamp
       })
     );
 
@@ -208,10 +208,10 @@ describe('LicenseService - Machine Fingerprint', () => {
     // 1. AppData is empty (fs.existsSync false)
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
-    // 2. Registry has the date
+    // 2. Registry has the date (Local/IST)
     const registryPayload = JSON.stringify({
-      t: originalDate.toISOString(),
-      u: originalDate.toISOString(),
+      t: originalDate.toISOString().replace('Z', ''),
+      u: originalDate.toISOString().replace('Z', ''),
     });
     const base64Registry = Buffer.from(registryPayload).toString('base64');
     vi.mocked(execSync).mockReturnValue(base64Registry);

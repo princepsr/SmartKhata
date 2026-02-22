@@ -101,8 +101,8 @@ private _mapToCustomer(row: any): Customer {
     phone: row.phone,
     balanceDue: row.balance_due, // Rupees
     isActive: row.is_active === 1,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at)
+    createdAt: this.parseDate(row.created_at),
+    updatedAt: this.parseDate(row.updated_at)
   };
 }
 
@@ -276,7 +276,7 @@ private _mapToProduct(row: any): Product {
     gstPercent: row.gst_percent,          // Percent (e.g., 18.0)
     stockQty: row.stock_qty,
     isActive: row.is_active === 1,        // INTEGER → boolean
-    createdAt: new Date(row.created_at)   // TEXT → Date
+    createdAt: this.parseDate(row.created_at) // TEXT → Date (Local/IST)
   };
 }
 
@@ -290,7 +290,8 @@ create(data: CreateProductInput): Product {
     data.salePrice,      // Rupees
     data.purchasePrice,
     data.gstPercent,     // Percent
-    data.stockQty
+    data.stockQty,
+    this.formatDateForSql(new Date()) // Optional: for manual created_at if needed
   ]);
 
   return this.findById(result.lastInsertRowid)!;

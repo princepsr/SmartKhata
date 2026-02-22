@@ -13,8 +13,8 @@ Design principles and specifications for the licensing and trial interface in Sm
 ### 1. Global License Banner
 
 - **Normal (Paid)**: Hidden (unless expiring within 15 days).
-- **Warning (Trial/Expiring soon)**: Soft Yellow (#fff3cd).
-- **Critical (Grace Period/Locked)**: Soft Red (#f8d7da).
+- **Warning (Trial/Expiring soon)**: var(--color-warning)
+- **Critical (Grace Period/Locked)**: var(--color-error)
 - **Content**: Displays remaining days/bills and a "License Details" or "Verify Now" button.
 
 ### 2. License Verification Modal
@@ -28,7 +28,7 @@ Design principles and specifications for the licensing and trial interface in Sm
 
 | State             | Color        | Message                                                                |
 | :---------------- | :----------- | :--------------------------------------------------------------------- |
-| **Active Trial**  | Blue/Info    | "Evaluation: X days / Y bills remaining."                              |
-| **Expiring Soon** | Yellow       | "Evaluation ends tomorrow. Upgrade to maintain access."                |
-| **Grace Period**  | Soft Red     | "Evaluation ended. Please verify within X days to avoid interruption." |
+| **Active Trial**  | Cyan/Teal    | "Evaluation: X days / Y bills remaining."                              |
+| **Expiring Soon** | Warning      | "Evaluation ends tomorrow. Upgrade to maintain access."                |
+| **Grace Period**  | Error        | "Evaluation ended. Please verify within X days to avoid interruption." |
 | **Hard Lock**     | Critical Red | "Evaluation period ended. Please verify your license for full access." |

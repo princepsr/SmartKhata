@@ -32,15 +32,15 @@ The reporting system provide real-time insights into sales, GST, inventory, and 
 
 The trend analytics engine groups sales data based on granularity:
 
-- **Day**: `strftime('%Y-%m-%d', created_at)`
-- **Week**: `strftime('%Y-%W', created_at)`
-- **Month**: `strftime('%Y-%m', created_at)`
+- **Day**: `strftime('%Y-%m-%d', created_at, 'localtime')`
+- **Week**: `strftime('%Y-%W', created_at, 'localtime')`
+- **Month**: `strftime('%Y-%m', created_at, 'localtime')`
 
 It calculates growth by comparing the `totalSales` of the current index with `index - 1` in the result set.
 
 ### Currency Handling
 
-All calculations in the repository are performed in **Paisa (Integer)** to avoid rounding errors. The service layer converts these to **Rupees (Decimal)** before sending them to the UI.
+All calculations in the repository are performed in **Rupees (REAL)** for direct consistency with the UI. The repository ensures that decimal precision is maintained for GST and final totals.
 
 ## IPC Integration
 
@@ -62,5 +62,5 @@ Data from any report can be exported via **`ExportService`**, which generates hi
 
 ---
 
-**Last updated:** 2026-02-18 (Phase 1 Complete)  
+**Last updated:** 2026-02-22  
 **Status:** ✅ Advanced analytics and multi-format exports verified

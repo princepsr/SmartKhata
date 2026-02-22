@@ -114,6 +114,9 @@ SmartKhata/
 │
 ├── docs/                          # Project documentation
 │   ├── ARCHITECTURE_DECISIONS.md
+│   ├── CURRENT_ARCHITECTURE.md
+│   ├── COMMAND_CENTER.md
+│   ├── FOLDER_STRUCTURE.md
 │   ├── UI_ARCHITECTURE.md
 │   ├── GIT_WORKFLOW.md
 │   └── API.md                     # IPC API documentation

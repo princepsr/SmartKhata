@@ -41,23 +41,23 @@ All design tokens are defined in the `:root` selector:
 #### Primary Colors
 
 ```css
---color-primary: #2563eb; /* Blue - Main brand color */
---color-primary-dark: #1e40af; /* Darker blue - Hover states */
+--color-primary: #1e3a8a; /* Navy - Main brand color */
+--color-primary-dark: #1e3b8a; /* Darker navy */
 ```
 
-**Usage:** Buttons, links, sidebar, focus indicators
+**Usage:** Buttons, active sidebar states, focus indicators.
 
 ---
 
 #### Semantic Colors
 
 ```css
---color-success: #16a34a; /* Green - Success states */
+--color-success: #0d9488; /* Muted Teal - Primary success */
 --color-warning: #ea580c; /* Orange - Warnings */
 --color-error: #dc2626; /* Red - Errors */
 ```
 
-**Usage:** Status messages, validation, alerts
+**Usage:** Status messages, balanced accounts, inventory alerts.
 
 ---
 
@@ -159,7 +159,34 @@ All design tokens are defined in the `:root` selector:
 --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.5);
 ```
 
-**Usage:** Keyboard focus indicator (accessibility)
+#### Premium Glassmorphism
+
+Applied to the Sidebar and Command Center:
+
+```css
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+```
+
+#### Key Animations
+
+**`fadeInScale`**: Standard for page transitions.
+
+```css
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 2px, 0) scale(0.998);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+```
 
 ---
 
@@ -720,5 +747,5 @@ var(--focus-ring)
 
 ---
 
-**Last updated:** 2026-02-11  
+**Last updated:** 2026-02-22  
 **File:** `src/renderer/index.css`

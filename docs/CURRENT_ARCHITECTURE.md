@@ -1,4 +1,4 @@
-# Current Architecture (As of 2026-02-18 - Phase 1 Complete)
+# Current Architecture (As of 2026-02-22 - Phase 1.1)
 
 ## Overview
 
@@ -14,6 +14,7 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
 │      React + TypeScript + Zustand + Error Boundary            │
 │                                                                │
 │  Components → Hooks → State Management → API Client          │
+│  Navigation: Command Center (Ctrl+K)                         │
 └──────────────────────────────────────────────────────────────┘
                             ↓
                     window.api.xxx()
@@ -188,6 +189,7 @@ IPCHandler.handle('product:create', async (request) => {
 | **PrintService**     | Thermal receipt formatting, printer driver communication, status checks                                        |
 | **SettingsService**  | Configuration management, caching, validation                                                                  |
 | **LicenseService**   | License validation, expiry checking, machine binding, redundant marker persistence, and anti-time-tamper logic |
+| **Support Services** | Product, Billing, Customer, and Command Center context dispatching                                             |
 | **UpdateService**    | Background version checking, `autoUpdater` event handling, and update log integration                          |
 | **BackupService**    | Atomic database archival and ZIP-based restoration flow                                                        |
 

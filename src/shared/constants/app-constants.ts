@@ -8,7 +8,7 @@
 export const APP_CONSTANTS = {
   // Application metadata
   APP_NAME: 'SmartKhata',
-  APP_VERSION: '1.0.0',
+  APP_VERSION: '1.1.0',
   APP_ID: 'com.smartkhata',
 
   // Database

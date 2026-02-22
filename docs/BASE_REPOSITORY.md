@@ -30,6 +30,10 @@ export abstract class BaseRepository {
 
   // Error handling
   private handleError(error: unknown, operation: string): Error;
+
+  // Date utilities (Local/IST)
+  protected parseDate(dateStr: string): Date;
+  protected formatDateForSql(date: Date): string;
 }
 ```
 
@@ -342,6 +346,43 @@ console.log(`Active customers: ${activeCustomers}`);
 
 ---
 
+## Date Utilities (IST/Local Time)
+
+The `BaseRepository` provides standardized helpers for handling dates in the system's local timezone (IST).
+
+### 1. parseDate()
+
+**Purpose:** Convert SQLite date strings (yyyy-mm-dd hh:mm:ss) into JS `Date` objects.
+
+**Behavior:**
+
+- Assumes **local time** if no timezone suffix is present.
+- Preserves UTC if `Z` or offset is provided.
+
+**Example:**
+
+```typescript
+const date = this.parseDate('2026-01-01 10:00:00');
+// Result: Jan 1 2026, 10:00 AM (Local Time)
+```
+
+### 2. formatDateForSql()
+
+**Purpose:** Format a JS `Date` object for SQLite storage.
+
+**Behavior:**
+
+- Generates `YYYY-MM-DD HH:MM:SS` using **local time** components.
+
+**Example:**
+
+```typescript
+const sqlDate = this.formatDateForSql(new Date());
+// Result: "2026-02-22 16:30:00"
+```
+
+---
+
 ## Error Handling
 
 ### DatabaseError Class
@@ -450,7 +491,7 @@ export class CustomerRepository extends BaseRepository {
   updateBalance(id: number, amount: number): void {
     this.execute(
       `
-      UPDATE customers SET balance_due = balance_due + ?, updated_at = datetime('now')
+      UPDATE customers SET balance_due = balance_due + ?, updated_at = datetime('now', 'localtime')
       WHERE id = ?
     `,
       [amount, id]
@@ -464,8 +505,8 @@ export class CustomerRepository extends BaseRepository {
       phone: row.phone,
       balanceDue: row.balance_due, // Rupees (direct)
       isActive: row.is_active === 1,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
+      createdAt: this.parseDate(row.created_at),
+      updatedAt: this.parseDate(row.updated_at),
     };
   }
 }

@@ -20,8 +20,8 @@ CREATE TABLE products (
   stock_qty INTEGER NOT NULL DEFAULT 0 CHECK(stock_qty >= 0),
   low_stock_alert INTEGER CHECK(low_stock_alert >= 0),
   is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 ```
 
@@ -178,12 +178,12 @@ const total = salePrice + gstAmount;
 ```sql
 -- Deduct stock on sale
 UPDATE products
-SET stock_qty = stock_qty - 2, updated_at = datetime('now')
+SET stock_qty = stock_qty - 2, updated_at = datetime('now', 'localtime')
 WHERE id = 1;
 
 -- Add stock on purchase
 UPDATE products
-SET stock_qty = stock_qty + 50, updated_at = datetime('now')
+SET stock_qty = stock_qty + 50, updated_at = datetime('now', 'localtime')
 WHERE id = 1;
 
 -- Check low stock products
@@ -215,8 +215,8 @@ WHERE is_active = 1
 **Timestamps:**
 
 - ISO 8601 format: `2026-02-08 15:05:15`
-- UTC timezone
-- Auto-populated via `datetime('now')`
+- Local timezone (IST)
+- Auto-populated via `datetime('now', 'localtime')`
 - `updated_at` should be manually updated on changes
 
 ---

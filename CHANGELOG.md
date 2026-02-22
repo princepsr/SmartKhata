@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-02-22
+
+### Added
+
+- **Command Center Enhancements**:
+  - Integrated high-frequency actions (Add Product/Customer, View Reports).
+  - Deep linking for Settings (Shop, Printer, Data) and Billing (Clear Cart, History).
+- **IST/Local Time Alignment**:
+  - Unified date handling across Repositories and License Service to use local time.
+  - Resolved 5.5-hour reporting shift issues.
+
+### Fixed
+
+- Resolved `ReportsPage` import errors and missing `useSearchParams`.
+- Fixed license expiry banner day-boundary alignment.
+
 ## [1.0.0] - 2026-02-18
 
 ### Added
