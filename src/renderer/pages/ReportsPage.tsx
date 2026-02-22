@@ -11,7 +11,7 @@ import {
   BillSummary,
   TrendAnalytics,
 } from '@shared/types/report.types';
-import { formatCurrency } from '@renderer/utils/formatters';
+import { formatCurrency, toLocalDateISO } from '@renderer/utils/formatters';
 import { BillDetailModal } from '../components/billing/BillDetailModal';
 import { ipcClient } from '../utils/ipc';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
@@ -180,18 +180,11 @@ const SkeletonLoader: React.FC<{ type: 'sales' | 'gst' | 'stock' }> = ({ type })
   </div>
 );
 
-const toLocalDateString = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
 const ReportsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('sales');
   const [dateRange, setDateRange] = useState({
-    startDate: toLocalDateString(new Date()),
-    endDate: toLocalDateString(new Date()),
+    startDate: toLocalDateISO(),
+    endDate: toLocalDateISO(),
   });
 
   const [loading, setLoading] = useState(false);
@@ -214,9 +207,6 @@ const ReportsPage: React.FC = () => {
     const tab = searchParams.get('tab');
     if (tab && ['sales', 'gst', 'stock', 'analytics'].includes(tab)) {
       setActiveTab(tab as Tab);
-      // Optional: clear param to avoid sticky state on manual nav back
-      // searchParams.delete('tab');
-      // setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams]);
 
@@ -252,8 +242,8 @@ const ReportsPage: React.FC = () => {
         start.setDate(end.getDate() - 6);
     }
     return {
-      startDate: toLocalDateString(start),
-      endDate: toLocalDateString(end),
+      startDate: toLocalDateISO(start),
+      endDate: toLocalDateISO(end),
     };
   };
 
@@ -306,23 +296,22 @@ const ReportsPage: React.FC = () => {
   const applyPreset = (preset: 'daily' | 'weekly' | 'monthly') => {
     setSelectedPreset(preset);
     const now = new Date();
-    const today = toLocalDateString(now);
+    const today = toLocalDateISO(now);
     let start = today;
 
     if (preset === 'weekly') {
-      const day = now.getDay(); // 0 is Sunday
-      const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
       const monday = new Date(now.getFullYear(), now.getMonth(), diff);
       const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
-      start = toLocalDateString(monday);
-      // For current week, end at today, but allow navigating forward to other weeks
-      setDateRange({ startDate: start, endDate: toLocalDateString(sunday) });
+      start = toLocalDateISO(monday);
+      setDateRange({ startDate: start, endDate: toLocalDateISO(sunday) });
       return;
     } else if (preset === 'monthly') {
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      start = toLocalDateString(firstDay);
-      setDateRange({ startDate: start, endDate: toLocalDateString(lastDay) });
+      start = toLocalDateISO(firstDay);
+      setDateRange({ startDate: start, endDate: toLocalDateISO(lastDay) });
       return;
     }
 
@@ -351,7 +340,6 @@ const ReportsPage: React.FC = () => {
       if (selectedPreset === 'weekly') {
         jumpDays = 7;
       } else {
-        // Daily or Custom: Jump by the actual number of days in the range
         jumpDays = Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1;
       }
 
@@ -360,17 +348,16 @@ const ReportsPage: React.FC = () => {
       nextEnd = new Date(end.getTime() + offset * MS_PER_DAY);
     }
 
-    // Cap at today for "next"
     if (direction === 'next' && nextEnd > today) {
       if (nextStart > today) {
         return;
-      } // Don't navigate into full future
+      }
       nextEnd = today;
     }
 
     setDateRange({
-      startDate: toLocalDateString(nextStart),
-      endDate: toLocalDateString(nextEnd),
+      startDate: toLocalDateISO(nextStart),
+      endDate: toLocalDateISO(nextEnd),
     });
   };
 
@@ -386,7 +373,6 @@ const ReportsPage: React.FC = () => {
 
     let jumpDays: number;
     if (selectedPreset === 'monthly') {
-      // If we are in the current month or future month, disable next
       if (
         start.getFullYear() > today.getFullYear() ||
         (start.getFullYear() === today.getFullYear() && start.getMonth() >= today.getMonth())
@@ -444,7 +430,7 @@ const ReportsPage: React.FC = () => {
           `Lookback: ${trendLookback.replace(/_/g, ' ')}, Granularity: ${trendGranularity}`
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Print failed:', err);
     } finally {
       setLoading(false);
@@ -477,7 +463,7 @@ const ReportsPage: React.FC = () => {
           `Lookback: ${trendLookback.replace(/_/g, ' ')}, Granularity: ${trendGranularity}`
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('PDF Export failed:', err);
     } finally {
       setLoading(false);
@@ -510,7 +496,7 @@ const ReportsPage: React.FC = () => {
           `Lookback: ${trendLookback.replace(/_/g, ' ')}, Granularity: ${trendGranularity}`
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Excel Export failed:', err);
     } finally {
       setLoading(false);

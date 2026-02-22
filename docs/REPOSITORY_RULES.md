@@ -276,7 +276,7 @@ private _mapToProduct(row: any): Product {
     gstPercent: row.gst_percent,          // Percent (e.g., 18.0)
     stockQty: row.stock_qty,
     isActive: row.is_active === 1,        // INTEGER → boolean
-    createdAt: this.parseDate(row.created_at) // TEXT → Date (Local/IST)
+    createdAt: this.parseDate(row.created_at) // TEXT → Date (UTC)
   };
 }
 

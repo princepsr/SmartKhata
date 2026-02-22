@@ -47,6 +47,8 @@ All calculations in the repository are performed in **Rupees (REAL)** for direct
 Reports are fetched via the following IPC channels:
 
 - `report:sales`: Returns gross sales, net sales, and comparisons.
+- **Storage Strategy**: All transactions are timestamped in **UTC** in the database.
+- **Reporting Period**: Aggregations are performed by converting UTC timestamps to **local time (IST)** in the queries to ensure logical day boundaries (e.g., `date(created_at, 'localtime')`).
 - `report:gst`: Returns GST slabs and totals.
 - `report:analytics`: Returns periodic data for charts (Day/Week/Month).
 - `report:bills`: Returns a paginated list of individual bills.

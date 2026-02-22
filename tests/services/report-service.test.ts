@@ -43,7 +43,7 @@ describe('ReportService Integration Tests', () => {
 
     const targetDate = date || new Date().toISOString().split('T')[0];
     db.exec(
-      `UPDATE bills SET created_at = '${targetDate} 12:00:00' WHERE bill_number = '${billNumber}'`
+      `UPDATE bills SET created_at = '${targetDate} 12:00:00Z' WHERE bill_number = '${billNumber}'`
     );
   };
 
@@ -194,7 +194,7 @@ describe('ReportService New API Tests', () => {
     });
     const today = new Date().toISOString().split('T')[0];
     db.exec(
-      `UPDATE bills SET created_at = '${today} 12:00:00' WHERE bill_number = '${billNumber}'`
+      `UPDATE bills SET created_at = '${today} 12:00:00Z' WHERE bill_number = '${billNumber}'`
     );
   };
 
@@ -297,7 +297,9 @@ describe('ReportService Trend Analytics', () => {
       items,
       paymentMode: mode,
     });
-    db.exec(`UPDATE bills SET created_at = '${date} 12:00:00' WHERE bill_number = '${billNumber}'`);
+    db.exec(
+      `UPDATE bills SET created_at = '${date} 12:00:00Z' WHERE bill_number = '${billNumber}'`
+    );
   };
 
   it('should return trend analytics with day granularity', () => {
@@ -334,7 +336,7 @@ describe('ReportService Trend Analytics', () => {
     const summary = reportService.getDailySalesSummary('2025-02-10', '2025-02-10');
 
     expect(summary.totalSales).toBe(94.4);
-    expect(summary.comparison?.totalSales.change).toBe(100);
-    expect(summary.comparison?.totalSales.trend).toBe('up');
+    expect(summary.comparison?.totalSales?.change).toBe(100);
+    expect(summary.comparison?.totalSales?.trend).toBe('up');
   });
 });

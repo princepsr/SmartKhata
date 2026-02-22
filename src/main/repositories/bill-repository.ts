@@ -324,13 +324,13 @@ export class BillRepository extends BaseRepository {
    * Get today's bills
    */
   public findToday(): Bill[] {
-    const sql = `
-      SELECT * FROM bills 
-      WHERE date(created_at, 'localtime') = date('now', 'localtime')
-      ORDER BY created_at DESC
-    `;
-    const rows = this.queryAll<any>(sql);
-    return rows.map((row) => this._mapToBill(row));
+    const now = new Date();
+    // Start of local day in UTC
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // End of local day in UTC
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    return this.findByDateRange(startOfToday, endOfToday);
   }
 
   /**

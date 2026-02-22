@@ -74,8 +74,8 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) =
       } else {
         showNotification('Reprint failed. Check printer.', 'error');
       }
-    } catch (err: any) {
-      const msg = err.message || 'Reprint failed';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Reprint failed';
       showNotification(msg, 'error');
       console.error(err);
     }
@@ -132,7 +132,7 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) =
                         {(() => {
                           const date = new Date(bill.createdAt);
                           return isNaN(date.getTime())
-                            ? 'Invalid Date'
+                            ? 'Invalid Time'
                             : date.toLocaleTimeString('en-IN', {
                                 hour: '2-digit',
                                 minute: '2-digit',

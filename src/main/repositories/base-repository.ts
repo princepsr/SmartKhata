@@ -201,10 +201,10 @@ export abstract class BaseRepository {
       return new Date(dateStr);
     }
 
-    // SQLite format 'YYYY-MM-DD HH:MM:SS' -> 'YYYY-MM-DDTHH:MM:SS'
-    // Without 'Z', JS Date constructor interprets this as LOCAL time.
-    const localIsoStr = dateStr.replace(' ', 'T');
-    return new Date(localIsoStr);
+    // SQLite format 'YYYY-MM-DD HH:MM:SS' -> 'YYYY-MM-DDTHH:MM:SSZ'
+    // Appending 'Z' forces it to be treated as UTC, preventing double-shifting
+    const utcIsoStr = dateStr.replace(' ', 'T') + 'Z';
+    return new Date(utcIsoStr);
   }
 
   /**
@@ -215,12 +215,12 @@ export abstract class BaseRepository {
   protected formatDateForSql(date: Date): string {
     const pad = (num: number) => num.toString().padStart(2, '0');
 
-    const year = date.getFullYear();
-    const month = pad(date.getMonth() + 1);
-    const day = pad(date.getDate());
-    const hours = pad(date.getHours());
-    const minutes = pad(date.getMinutes());
-    const seconds = pad(date.getSeconds());
+    const year = date.getUTCFullYear();
+    const month = pad(date.getUTCMonth() + 1);
+    const day = pad(date.getUTCDate());
+    const hours = pad(date.getUTCHours());
+    const minutes = pad(date.getUTCMinutes());
+    const seconds = pad(date.getUTCSeconds());
 
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   }

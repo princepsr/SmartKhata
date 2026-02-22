@@ -31,7 +31,7 @@ export abstract class BaseRepository {
   // Error handling
   private handleError(error: unknown, operation: string): Error;
 
-  // Date utilities (Local/IST)
+  // Date utilities (UTC Standardization)
   protected parseDate(dateStr: string): Date;
   protected formatDateForSql(date: Date): string;
 }
@@ -346,9 +346,9 @@ console.log(`Active customers: ${activeCustomers}`);
 
 ---
 
-## Date Utilities (IST/Local Time)
+## Date Utilities (UTC Standardization)
 
-The `BaseRepository` provides standardized helpers for handling dates in the system's local timezone (IST).
+The `BaseRepository` provides standardized helpers for handling dates in UTC, which are then converted to the system's local timezone (IST) in the UI.
 
 ### 1. parseDate()
 
@@ -356,29 +356,29 @@ The `BaseRepository` provides standardized helpers for handling dates in the sys
 
 **Behavior:**
 
-- Assumes **local time** if no timezone suffix is present.
-- Preserves UTC if `Z` or offset is provided.
+- Appends `Z` to SQLite datetime strings to ensure they are interpreted as **UTC**.
+- Preserves existing ISO strings that already have `Z` or an offset.
 
 **Example:**
 
 ```typescript
 const date = this.parseDate('2026-01-01 10:00:00');
-// Result: Jan 1 2026, 10:00 AM (Local Time)
+// Result: Jan 1 2026, 10:00 AM (UTC) -> ~3:30 PM IST
 ```
 
 ### 2. formatDateForSql()
 
-**Purpose:** Format a JS `Date` object for SQLite storage.
+**Purpose:** Format a JS `Date` object for SQLite storage in UTC.
 
 **Behavior:**
 
-- Generates `YYYY-MM-DD HH:MM:SS` using **local time** components.
+- Generates `YYYY-MM-DD HH:MM:SS` using **UTC** components.
 
 **Example:**
 
 ```typescript
 const sqlDate = this.formatDateForSql(new Date());
-// Result: "2026-02-22 16:30:00"
+// If current time is 4:30 PM IST, result is "2026-02-22 11:00:00"
 ```
 
 ---
@@ -491,7 +491,7 @@ export class CustomerRepository extends BaseRepository {
   updateBalance(id: number, amount: number): void {
     this.execute(
       `
-      UPDATE customers SET balance_due = balance_due + ?, updated_at = datetime('now', 'localtime')
+      UPDATE customers SET balance_due = balance_due + ?, updated_at = datetime('now')
       WHERE id = ?
     `,
       [amount, id]

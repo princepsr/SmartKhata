@@ -58,37 +58,37 @@ id INTEGER PRIMARY KEY AUTOINCREMENT
 
 ### Rule
 
-**All tables MUST have `created_at` and `updated_at` columns.**
+**All tables MUST have `created_at` and `updated_at` columns in UTC.**
 
 ```sql
 CREATE TABLE products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   -- other columns
-  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 ```
 
 ### Rationale
 
-| Reason              | Explanation                                                                    |
-| ------------------- | ------------------------------------------------------------------------------ |
-| **Audit trail**     | Know when every record was created and last modified                           |
-| **Debugging**       | Troubleshoot data issues by checking timestamps                                |
-| **Reporting**       | Filter records by date ranges (e.g., "sales this month")                       |
-| **Sync readiness**  | Future cloud sync will need timestamps for conflict resolution                 |
-| **ISO 8601 format** | SQLite's `datetime('now', 'localtime')` returns ISO 8601 (sortable, parseable) |
+| Reason             | Explanation                                                    |
+| ------------------ | -------------------------------------------------------------- |
+| **Audit trail**    | Know when every record was created and last modified           |
+| **Debugging**      | Troubleshoot data issues by checking timestamps                |
+| **Reporting**      | Filter records by date ranges (e.g., "sales this month")       |
+| **Sync readiness** | Future cloud sync will need timestamps for conflict resolution |
+| **ISO 8601 UTC**   | SQLite's `datetime('now')` returns ISO 8601 in UTC             |
 
 ### Column Specifications
 
 ```sql
-created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
-updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+created_at TEXT NOT NULL DEFAULT (datetime('now'))
+updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 ```
 
 **Type:** `TEXT` (not INTEGER or REAL)  
-**Format:** ISO 8601 (`2026-02-08 15:02:46`)  
-**Default:** Current local time via `datetime('now', 'localtime')`  
+**Format:** ISO 8601 UTC (`2026-02-08 15:02:46`)  
+**Default:** Current UTC time via `datetime('now')`  
 **NOT NULL:** Always required
 
 ### Update Trigger (Optional)
@@ -100,7 +100,7 @@ CREATE TRIGGER update_products_timestamp
 AFTER UPDATE ON products
 FOR EACH ROW
 BEGIN
-  UPDATE products SET updated_at = datetime('now', 'localtime') WHERE id = NEW.id;
+  UPDATE products SET updated_at = datetime('now') WHERE id = NEW.id;
 END;
 ```
 
@@ -109,22 +109,19 @@ END;
 ### ❌ Don't
 
 ```sql
+-- Don't use local time (causes double-shifts and confusion)
+created_at TEXT DEFAULT (datetime('now', 'localtime'))
+
 -- Don't use UNIX timestamps (not human-readable)
 created_at INTEGER DEFAULT (strftime('%s', 'now'))
-
--- Don't use REAL (no benefit over TEXT)
-created_at REAL
-
--- Don't allow NULL
-created_at TEXT
 ```
 
 ### ✅ Do
 
 ```sql
--- Always use TEXT with datetime('now', 'localtime')
-created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
-updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+-- Always use TEXT with datetime('now') for UTC storage
+created_at TEXT NOT NULL DEFAULT (datetime('now'))
+updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 ```
 
 ---
@@ -141,8 +138,8 @@ CREATE TABLE products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
-  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Transactional data (sales)
@@ -150,8 +147,8 @@ CREATE TABLE sales (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   total REAL NOT NULL,
   is_void INTEGER NOT NULL DEFAULT 0 CHECK(is_void IN (0, 1)),
-  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 ```
 
@@ -245,8 +242,8 @@ CREATE TABLE products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   price REAL NOT NULL CHECK(price >= 0), -- Rupees (Decimal)
   cost REAL CHECK(cost >= 0),             -- Rupees (Decimal)
-  created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 ```
 

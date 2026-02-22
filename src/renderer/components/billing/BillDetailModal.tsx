@@ -68,9 +68,16 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
             {data && (
               <div className="bill-info">
                 <div className="bill-meta">
-                  <span>
-                    <strong>Date:</strong> {new Date(data.bill.createdAt).toLocaleString('en-IN')}
-                  </span>
+                  <strong>Date:</strong>{' '}
+                  {new Date(data.bill.createdAt).toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                    timeZone: 'Asia/Kolkata',
+                  })}
                   <span className={`mode-badge ${data.bill.paymentMode.toLowerCase()}`}>
                     {data.bill.paymentMode.toUpperCase()}
                   </span>

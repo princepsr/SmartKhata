@@ -6,9 +6,9 @@ import type { Product } from '@shared/types/ipc';
 import { BillItemList } from '../components/billing/BillItemList';
 import { PaymentModeSelector, type PaymentMode } from '../components/billing/PaymentModeSelector';
 import { BillHistoryModal } from '../components/billing/BillHistoryModal';
+import { formatCurrency, toLocalDateISO } from '../utils/formatters';
 import {
   calculateBillPreview,
-  formatCurrency,
   type BillCalculation,
   calculateDiscountAmount,
 } from '../utils/billing-math';
@@ -179,7 +179,7 @@ function BillingPage() {
   // Fetch Today's Summary
   const fetchTodaySummary = useCallback(async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalDateISO();
       const summary = await reportApi.getDailySalesSummary({ startDate: today, endDate: today });
       setTodaySummary(summary);
     } catch (err) {

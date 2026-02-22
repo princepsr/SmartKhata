@@ -11,20 +11,22 @@ class TestRepository extends BaseRepository {
   }
 }
 
-describe('BaseRepository - Date Utilities (IST/Local Time)', () => {
+describe('BaseRepository - Date Utilities (UTC Standardization)', () => {
   const repo = new TestRepository();
 
   describe('formatDateForSql', () => {
-    it('should format date in local time (IST)', () => {
-      // Create a specific local date
-      const date = new Date(2026, 1, 22, 16, 30, 45); // Feb 22, 2026, 16:30:45
+    it('should format date in UTC time', () => {
+      // Create a date that is 4:30 PM IST (which is 11:00 AM UTC)
+      const date = new Date('2026-02-22T16:30:45+05:30');
       const formatted = repo.testFormatDateForSql(date);
 
-      expect(formatted).toBe('2026-02-22 16:30:45');
+      // UTC should be 11:00:45
+      expect(formatted).toBe('2026-02-22 11:00:45');
     });
 
-    it('should pad single digits with zero', () => {
-      const date = new Date(2026, 0, 5, 9, 5, 2); // Jan 5, 2026, 09:05:02
+    it('should pad single digits with zero in UTC', () => {
+      // Jan 5, 2026, 09:05:02 UTC
+      const date = new Date(Date.UTC(2026, 0, 5, 9, 5, 2));
       const formatted = repo.testFormatDateForSql(date);
 
       expect(formatted).toBe('2026-01-05 09:05:02');
@@ -32,23 +34,23 @@ describe('BaseRepository - Date Utilities (IST/Local Time)', () => {
   });
 
   describe('parseDate', () => {
-    it('should parse local date string from SQLite correctly', () => {
-      const dateStr = '2026-02-22 16:30:45';
+    it('should parse date string from SQLite as UTC correctly', () => {
+      const dateStr = '2026-02-22 11:00:45';
       const parsed = repo.testParseDate(dateStr);
 
-      expect(parsed.getFullYear()).toBe(2026);
-      expect(parsed.getMonth()).toBe(1); // Feb
-      expect(parsed.getDate()).toBe(22);
-      expect(parsed.getHours()).toBe(16);
-      expect(parsed.getMinutes()).toBe(30);
-      expect(parsed.getSeconds()).toBe(45);
+      // Since the repo appends 'Z', it should be treated as UTC
+      expect(parsed.getUTCFullYear()).toBe(2026);
+      expect(parsed.getUTCMonth()).toBe(1); // Feb
+      expect(parsed.getUTCDate()).toBe(22);
+      expect(parsed.getUTCHours()).toBe(11);
+      expect(parsed.getUTCMinutes()).toBe(0);
+      expect(parsed.getUTCSeconds()).toBe(45);
     });
 
     it('should preserve existing ISO strings with Z (UTC)', () => {
       const dateStr = '2026-02-22T16:30:45Z';
       const parsed = repo.testParseDate(dateStr);
 
-      // When parsed with Z, it should be the same UTC instant
       expect(parsed.getUTCHours()).toBe(16);
     });
 
