@@ -1,0 +1,46 @@
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  width: 100%;
+  height: 100%;
+}
+
+.empty-state-illustrator {
+  margin-bottom: 2rem;
+  color: var(--text-mutated);
+  opacity: 0.6;
+}
+
+.empty-state-icon {
+  font-size: 5rem;
+  display: block;
+}
+
+.default-empty-svg {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05));
+}
+
+.empty-state-content {
+  max-width: 400px;
+}
+
+.empty-state-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.empty-state-message {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.empty-state-action {
+  margin-top: 2rem;
+}

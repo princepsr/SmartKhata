@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppSettingsStore } from '../store';
 import { IPCPoc } from '../components/Debug/IPCPoc';
 import { DatabaseStatus } from '../components/Debug/DatabaseStatus';
@@ -28,6 +29,17 @@ function SettingsPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [printerList, setPrinterList] = useState<any[]>([]);
   const [isTestPrinting, setIsTestPrinting] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Handle global tab switching
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['shop', 'inventory', 'printing', 'licensing', 'data', 'debug'].includes(tab)) {
+      setActiveTab(tab as SettingsTab);
+      // searchParams.delete('tab');
+      // setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams]);
 
   React.useEffect(() => {
     fetchSettings();

@@ -155,19 +155,33 @@
 }
 
 .products-page .stock-out {
-  color: var(--color-error);
-  background-color: rgba(220, 38, 38, 0.1);
+  color: #ef4444; /* Red 500 */
+  background-color: #fef2f2; /* Red 50 */
+  border: 1px solid #fecaca; /* Red 200 */
   padding: 0.2rem 0.5rem;
   border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .products-page .stock-low {
-  color: var(--color-warning);
-  background-color: rgba(234, 88, 12, 0.1);
+  color: #f59e0b; /* Amber 500 */
+  background-color: #fffbeb; /* Amber 50 */
+  border: 1px solid #fef3c7; /* Amber 200 */
   padding: 0.2rem 0.5rem;
   border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.products-page .stock-ok {
+  color: #10b981; /* Emerald 500 */
+  background-color: #ecfdf5; /* Emerald 50 */
+  border: 1px solid #d1fae5; /* Emerald 200 */
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .products-page .status-badge {

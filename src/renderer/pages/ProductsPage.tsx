@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useIPC } from '../hooks/useIPC';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
@@ -8,6 +9,7 @@ import { StockAdjustmentModal } from '../components/products/StockAdjustmentModa
 import { BulkImportModal } from '../components/products/BulkImportModal';
 import { ProductHistoryModal } from '../components/products/ProductHistoryModal';
 import { ConfirmModal } from '../components/ConfirmModal';
+import EmptyState from '../components/common/EmptyState';
 import './ProductsPage.css';
 
 interface Product {
@@ -83,10 +85,23 @@ const ProductsPage: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // Initial fetch
   useEffect(() => {
     fetchProducts({ includeInactive });
   }, [fetchProducts, includeInactive]);
+
+  // Handle global actions (e.g. from Command Center)
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'add') {
+      handleAddProduct();
+      // Remove the param so it doesn't re-open on refresh or navigation back
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleAddProduct = () => {
     setEditingProductId(null);
@@ -301,7 +316,20 @@ const ProductsPage: React.FC = () => {
               </div>
 
               {filteredProducts.length === 0 ? (
-                <div className="no-results">No products found</div>
+                <EmptyState
+                  title="No Products Found"
+                  message={
+                    searchQuery
+                      ? `We couldn't find any products matching "${searchQuery}".`
+                      : "You haven't added any products yet. Let's get started!"
+                  }
+                  icon="📦"
+                  action={
+                    !searchQuery
+                      ? { label: 'Add New Product', onClick: handleAddProduct }
+                      : undefined
+                  }
+                />
               ) : (
                 filteredProducts.map((product, index) => (
                   <div
@@ -321,7 +349,14 @@ const ProductsPage: React.FC = () => {
                               ? 'stock-out'
                               : product.stockQty <= (product.lowStockAlert || 0)
                                 ? 'stock-low'
-                                : ''
+                                : 'stock-ok'
+                          }
+                          title={
+                            product.stockQty <= 0
+                              ? 'Out of Stock'
+                              : product.stockQty <= (product.lowStockAlert || 0)
+                                ? 'Low Stock Warning'
+                                : 'Sufficient Stock'
                           }
                         >
                           {product.stockQty}

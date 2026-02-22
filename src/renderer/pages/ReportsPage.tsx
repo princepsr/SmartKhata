@@ -1,5 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import './ReportsPage.css';
+import EmptyState from '../components/common/EmptyState';
 import { reportApi } from '@renderer/services/report-api';
 import {
   DailySalesSummary,
@@ -126,16 +128,6 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
   );
 };
 
-const EmptyState: React.FC<{ message: string; icon?: string }> = ({ message, icon = '📊' }) => (
-  <div className="empty-state-container">
-    <div className="empty-icon">{icon}</div>
-    <div className="empty-text">
-      <h3>No Data Available</h3>
-      <p>{message}</p>
-    </div>
-  </div>
-);
-
 const SkeletonLoader: React.FC<{ type: 'sales' | 'gst' | 'stock' }> = ({ type }) => (
   <div className="tab-content-wrapper skeleton-view animate-fade-in">
     {type === 'sales' && (
@@ -215,6 +207,18 @@ const ReportsPage: React.FC = () => {
   const [trendGranularity, setTrendGranularity] = useState<'day' | 'week' | 'month'>('day');
   const [trendLookback, setTrendLookback] = useState<string>('last_7_days');
   const [analyticsData, setAnalyticsData] = useState<TrendAnalytics | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Handle global tab switching
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['sales', 'gst', 'stock', 'analytics'].includes(tab)) {
+      setActiveTab(tab as Tab);
+      // Optional: clear param to avoid sticky state on manual nav back
+      // searchParams.delete('tab');
+      // setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams]);
 
   // Helper to get dates for trend lookback
   const getTrendDates = (lookback: string) => {
@@ -683,7 +687,11 @@ const ReportsPage: React.FC = () => {
             <div className="tab-content-wrapper animate-fade-in" key={activeTab}>
               {activeTab === 'sales' &&
                 (!dailySummary || dailySummary.billCount === 0 ? (
-                  <EmptyState message="No sales found for the selected date range." icon="📭" />
+                  <EmptyState
+                    title="No Sales Data"
+                    message="We couldn't find any sales for the selected date range. Try adjusting your filters."
+                    icon="📭"
+                  />
                 ) : (
                   <div className="report-view sales-view">
                     <div className="summary-cards">

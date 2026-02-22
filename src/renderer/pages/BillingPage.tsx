@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import type { Product } from '@shared/types/ipc';
@@ -14,6 +15,8 @@ import {
 import './BillingPage.css';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useAppSettingsStore } from '../store';
+import { reportApi } from '@renderer/services/report-api';
+import type { DailySalesSummary } from '@shared/types/report.types';
 
 /**
  * Billing Page
@@ -90,6 +93,9 @@ function BillingPage() {
     total: string;
   } | null>(null);
 
+  // Dashboard State
+  const [todaySummary, setTodaySummary] = useState<DailySalesSummary | null>(null);
+
   // Alert State (for custom styled alerts)
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
@@ -102,6 +108,25 @@ function BillingPage() {
     message: '',
     type: 'warning',
   });
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Handle global actions
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'clear-cart') {
+      setCart([]);
+      setDiscountAmount(0);
+      setSelectedCustomer(null);
+      // Remove param
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    } else if (action === 'history') {
+      setShowHistory(true);
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -150,6 +175,89 @@ function BillingPage() {
     }, 300); // Increased delay to 300ms to be safe against page transitions
     return () => clearTimeout(timer);
   }, []);
+
+  // Fetch Today's Summary
+  const fetchTodaySummary = useCallback(async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const summary = await reportApi.getDailySalesSummary({ startDate: today, endDate: today });
+      setTodaySummary(summary);
+    } catch (err) {
+      console.error('Failed to fetch today summary:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTodaySummary();
+  }, [fetchTodaySummary]);
+
+  // Update cart item quantity
+  const updateQuantity = useCallback(
+    (productId: number, quantity: number) => {
+      if (quantity <= 0) {
+        setCart((prev) => prev.filter((item) => item.product.id !== productId));
+      } else {
+        setCart((prev) =>
+          prev.map((item) => (item.product.id === productId ? { ...item, quantity } : item))
+        );
+      }
+    },
+    [setCart]
+  );
+
+  // Remove item from cart
+  const removeFromCart = useCallback(
+    (productId: number) => {
+      setCart((prev) => prev.filter((item) => item.product.id !== productId));
+    },
+    [setCart]
+  );
+
+  // Add product to cart
+  const addToCart = useCallback(
+    (product: Product) => {
+      // Check for out of stock (accounting for what's already in cart)
+      setCart((prevCart) => {
+        const existingItem = prevCart.find((item) => item.product.id === product.id);
+        const currentQtyInCart = existingItem ? existingItem.quantity : 0;
+
+        // Skip stock check in billing-only mode OR if product doesn't track inventory
+        if (
+          !settings.billingOnly &&
+          product.trackInventory &&
+          currentQtyInCart + 1 > product.stockQty
+        ) {
+          setAlertState({
+            isOpen: true,
+            title: 'Out of Stock',
+            message: `"${product.name}" only has ${product.stockQty} available.`,
+            type: 'warning',
+          });
+          return prevCart;
+        }
+
+        if (existingItem) {
+          // Increment quantity
+          return prevCart.map((item) =>
+            item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          );
+        } else {
+          // Add new item
+          return [...prevCart, { product, quantity: 1 }];
+        }
+      });
+
+      // Clear search and refocus for next item relative to current input
+      setSearchQuery('');
+      setSelectedResultIndex(-1);
+      searchInputRef.current?.focus();
+    },
+    [settings.billingOnly, searchInputRef]
+  );
+
+  useEffect(() => {
+    fetchTodaySummary();
+  }, [fetchTodaySummary]);
 
   // Discount State
   const [discountType, setDiscountType] = useState<'amount' | 'percent'>(() => {
@@ -204,12 +312,25 @@ function BillingPage() {
 
   // Auto-select first result when results change
   useEffect(() => {
+    if (searchResults && searchResults.length === 1 && searchQuery.length >= 3) {
+      const product = searchResults[0];
+      const query = searchQuery.toLowerCase();
+
+      // Auto-add if it's an exact SKU/Barcode match OR a very likely name match
+      const isExactMatch =
+        product.sku?.toLowerCase() === query || product.barcode?.toLowerCase() === query;
+
+      if (isExactMatch) {
+        addToCart(product);
+      }
+    }
+
     if (searchResults && searchResults.length > 0) {
       setSelectedResultIndex(0);
     } else {
       setSelectedResultIndex(-1);
     }
-  }, [searchResults]);
+  }, [searchResults, searchQuery, addToCart]);
 
   // Reset Bill State (Next Sale)
   const resetBill = useCallback(() => {
@@ -266,6 +387,7 @@ function BillingPage() {
 
       // 3. Reset UI for next sale
       resetBill();
+      fetchTodaySummary();
 
       // 4. Auto-hide success message after 5 seconds
       setTimeout(() => {
@@ -281,6 +403,7 @@ function BillingPage() {
     paymentMode,
     finalizeBill,
     resetBill,
+    fetchTodaySummary,
   ]);
 
   // Keyboard Shortcuts
@@ -378,59 +501,6 @@ function BillingPage() {
     }
   }, [cart, discountAmount]);
 
-  // Add product to cart
-  const addToCart = (product: Product) => {
-    // Check for out of stock (accounting for what's already in cart)
-    const existingItem = cart.find((item) => item.product.id === product.id);
-    const currentQtyInCart = existingItem ? existingItem.quantity : 0;
-
-    // Skip stock check in billing-only mode OR if product doesn't track inventory
-    if (
-      !settings.billingOnly &&
-      product.trackInventory &&
-      currentQtyInCart + 1 > product.stockQty
-    ) {
-      setAlertState({
-        isOpen: true,
-        title: 'Out of Stock',
-        message: `"${product.name}" only has ${product.stockQty} available.`,
-        type: 'warning',
-      });
-      return;
-    }
-
-    if (existingItem) {
-      // Increment quantity
-      setCart(
-        cart.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        )
-      );
-    } else {
-      // Add new item
-      setCart([...cart, { product, quantity: 1 }]);
-    }
-
-    // Clear search and refocus for next item relative to current input
-    setSearchQuery('');
-    setSelectedResultIndex(-1);
-    searchInputRef.current?.focus();
-  };
-
-  // Update cart item quantity
-  const updateQuantity = (productId: number, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(productId);
-    } else {
-      setCart(cart.map((item) => (item.product.id === productId ? { ...item, quantity } : item)));
-    }
-  };
-
-  // Remove item from cart
-  const removeFromCart = (productId: number) => {
-    setCart(cart.filter((item) => item.product.id !== productId));
-  };
-
   return (
     <div className="page billing-page">
       <div className="page-content-wrapper animate-fade-in">
@@ -502,12 +572,28 @@ function BillingPage() {
                         >
                           <span className="product-name">{product.name}</span>
                           <span className="product-meta">
-                            {!settings.billingOnly && product.trackInventory && (
-                              <>Stock: {product.stockQty} • </>
-                            )}
                             SKU: {product.sku || product.barcode || '-'}
                           </span>
-                          <span className="product-price">{formatCurrency(product.salePrice)}</span>
+                          <div className="product-price">
+                            {formatCurrency(product.salePrice)}
+                            {!settings.billingOnly && product.trackInventory && (
+                              <span
+                                className={`search-stock-status ${
+                                  product.stockQty <= 0
+                                    ? 'out'
+                                    : product.stockQty <= (product.lowStockAlert || 0)
+                                      ? 'low'
+                                      : 'ok'
+                                }`}
+                              >
+                                {product.stockQty <= 0
+                                  ? 'Out'
+                                  : product.stockQty <= (product.lowStockAlert || 0)
+                                    ? `Low (${product.stockQty})`
+                                    : `Stock: ${product.stockQty}`}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       ))
                     ) : (
@@ -699,11 +785,30 @@ function BillingPage() {
               </button>
             </div>
 
+            {todaySummary && (
+              <div className="billing-mini-dashboard side-panel animate-fade-in">
+                <div className="dash-item">
+                  <span className="dash-label">Today's Sales</span>
+                  <span className="dash-value">{formatCurrency(todaySummary.totalSales)}</span>
+                </div>
+                <div className="dash-item">
+                  <span className="dash-label">Net Sales</span>
+                  <span className="dash-value highlight">
+                    {formatCurrency(todaySummary.netSales)}
+                  </span>
+                </div>
+                <div className="dash-item">
+                  <span className="dash-label">Bills</span>
+                  <span className="dash-value">{todaySummary.billCount}</span>
+                </div>
+              </div>
+            )}
+
             {/* Shortcuts Legend */}
             <div
               className="shortcuts-legend"
               style={{
-                padding: '0.75rem',
+                padding: '0 1.5rem 1.5rem',
                 background: '#f8fafc',
                 borderRadius: '0.5rem',
                 fontSize: '0.75rem',

@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useIPC } from '../hooks/useIPC';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../utils/billing-math';
 import { CustomerFormModal } from '../components/customers/CustomerFormModal';
 import { ConfirmModal } from '../components/ConfirmModal';
+import EmptyState from '../components/common/EmptyState';
 import './CustomersPage.css';
 
 interface Customer {
@@ -55,10 +57,23 @@ const CustomersPage: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // Initial fetch and on toggle change
   useEffect(() => {
     fetchCustomers({ includeInactive: showInactive });
   }, [fetchCustomers, showInactive]);
+
+  // Handle global actions (e.g. from Command Center)
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'add') {
+      handleAddCustomer();
+      // Remove the param
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleAddCustomer = () => {
     setEditingCustomerId(null);
@@ -250,7 +265,20 @@ const CustomersPage: React.FC = () => {
               </div>
 
               {filteredCustomers.length === 0 ? (
-                <div className="no-results">No customers found</div>
+                <EmptyState
+                  title="No Customers Found"
+                  message={
+                    searchQuery
+                      ? `We couldn't find any customers matching "${searchQuery}".`
+                      : 'Build your customer database to track sales and loyalty.'
+                  }
+                  icon="👥"
+                  action={
+                    !searchQuery
+                      ? { label: 'Add New Customer', onClick: handleAddCustomer }
+                      : undefined
+                  }
+                />
               ) : (
                 filteredCustomers.map((customer, index) => (
                   <div

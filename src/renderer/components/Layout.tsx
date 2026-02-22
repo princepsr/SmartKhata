@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import GlobalMessages from './GlobalMessages';
 import LicenseBanner from './layout/LicenseBanner';
+import CommandCenter from './layout/CommandCenter';
 import LicenseActivationModal from './modals/LicenseActivationModal';
 import { useAppSettingsStore } from '../store';
 import './Layout.css';
@@ -161,6 +162,9 @@ function Layout() {
     <div className="app-container">
       {/* Global Messages (loading, error, success) */}
       <GlobalMessages />
+
+      {/* Command Center (Ctrl+K) */}
+      <CommandCenter />
 
       {/* License Banner (Global) */}
       <LicenseBanner onActivateClick={() => setIsLicenseModalOpen(true)} />
