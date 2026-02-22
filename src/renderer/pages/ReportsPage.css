@@ -7,10 +7,10 @@
   --text-primary: #0f172a;
   --text-secondary: #64748b;
   --text-mutated: #94a3b8;
-  --color-primary: #2563eb;
-  --color-primary-light: #60a5fa;
-  --color-primary-hover: #1d4ed8;
-  --color-success: #10b981;
+  --color-primary: var(--color-primary, #1e3a8a);
+  --color-primary-light: #3b82f6;
+  --color-primary-hover: #1e3b8a;
+  --color-success: #0d9488;
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
   --border-color: #e2e8f0;
@@ -363,7 +363,7 @@
   background-color: #10b981;
 }
 .card-net::before {
-  background-color: #2563eb;
+  background-color: var(--color-primary);
 }
 .card-discount::before {
   background-color: #ea580c;

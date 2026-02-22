@@ -52,6 +52,11 @@ loadEnv();
 // Register global error handlers FIRST (before any other code)
 registerGlobalErrorHandlers();
 
+// Set AppUserModelId for Windows taskbar icons
+if (process.platform === 'win32') {
+  app.setAppUserModelId(APP_CONSTANTS.APP_ID);
+}
+
 // Register privileges for custom protocol (must be done before app.ready)
 // This allows ES modules to load correctly across origins
 protocol.registerSchemesAsPrivileged([
@@ -114,6 +119,10 @@ function createWindow(): void {
       devTools: true,
     },
     title: APP_CONSTANTS.APP_NAME,
+    icon: path.join(
+      app.getAppPath(),
+      app.isPackaged ? '../resources/icons/icon.ico' : 'resources/icons/icon.ico'
+    ),
     autoHideMenuBar: true,
   });
 

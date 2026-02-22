@@ -364,7 +364,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     height: '18px',
                     cursor: 'pointer',
                     transform: 'scale(1.1)',
-                    accentColor: 'var(--primary-color)',
+                    accentColor: 'var(--color-primary)',
                   }}
                 />
                 Track Inventory
@@ -439,7 +439,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         height: '18px',
                         cursor: 'pointer',
                         transform: 'scale(1.1)',
-                        accentColor: 'var(--primary-color)',
+                        accentColor: 'var(--color-primary)',
                       }}
                     />
                     Active Product

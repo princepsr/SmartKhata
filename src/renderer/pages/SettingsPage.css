@@ -78,7 +78,7 @@
 
 .settings-page .tabs button.active {
   background-color: #ffffff !important;
-  color: var(--color-primary, #2563eb) !important;
+  color: var(--color-primary) !important;
   box-shadow: var(--shadow-sm) !important;
 }
 
@@ -345,7 +345,7 @@
 }
 
 .settings-page .form-input:focus {
-  border-color: var(--color-primary, #2563eb);
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
   outline: none;
 }
@@ -387,7 +387,7 @@
 }
 
 .settings-page .btn-primary {
-  background-color: var(--color-primary, #2563eb);
+  background-color: var(--color-primary);
   color: white;
 }
 

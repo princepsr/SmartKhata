@@ -17,12 +17,15 @@
 
 /* Root Variables - POS Optimized */
 :root {
-  /* Colors - High Contrast */
-  --color-primary: #2563eb;
-  --color-primary-dark: #1e40af;
-  --color-success: #16a34a;
+  /* Colors - Professional Navy Palette */
+  --color-primary: #1e3a8a; /* Deeper Professional Blue */
+  --color-primary-dark: #1e3b8a;
+  --color-success: #0d9488; /* Muted Teal-Emerald */
   --color-warning: #ea580c;
   --color-error: #dc2626;
+
+  /* Global Control Theme */
+  accent-color: var(--color-primary);
   --color-bg: #ffffff;
   --color-bg-secondary: #f3f4f6;
   --color-text: #111827;

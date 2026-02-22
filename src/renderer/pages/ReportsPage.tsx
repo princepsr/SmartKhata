@@ -47,21 +47,21 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
             <h3>Total Sales</h3>
             <div className="icon-box icon-gross">💰</div>
           </div>
-          <p className="card-value">₹{data.totalSales.toLocaleString('en-IN')}</p>
+          <p className="value">₹{data.totalSales.toLocaleString('en-IN')}</p>
         </div>
         <div className="card card-net">
           <div className="card-header-row">
             <h3>Total Net Revenue</h3>
             <div className="icon-box icon-net">💳</div>
           </div>
-          <p className="card-value">₹{data.totalNet.toLocaleString('en-IN')}</p>
+          <div className="value highlight">₹{data.totalNet.toLocaleString('en-IN')}</div>
         </div>
         <div className="card card-orders">
           <div className="card-header-row">
             <h3>Total Transactions</h3>
             <div className="icon-box icon-orders">🧾</div>
           </div>
-          <p className="card-value">{data.totalBills}</p>
+          <div className="value">{data.totalBills}</div>
         </div>
       </div>
 

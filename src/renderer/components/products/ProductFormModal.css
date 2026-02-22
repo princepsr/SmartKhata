@@ -45,11 +45,11 @@
 
 .gst-select-wrapper:focus-within .gst-display-value,
 .gst-select-wrapper:hover .gst-display-value {
-  border-color: #3b82f6;
+  border-color: var(--color-primary);
 }
 
 .gst-select-wrapper:focus-within .gst-display-value {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15);
 }
 
 .gst-select-overlay {
@@ -88,8 +88,8 @@
 .product-form-modal input:focus,
 .product-form-modal select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15);
 }
 
 .product-form-modal input.error {

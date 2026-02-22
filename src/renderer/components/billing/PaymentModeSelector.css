@@ -1,0 +1,64 @@
+.payment-mode-selector {
+  display: flex;
+  background-color: var(--bg-app);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  gap: 4px;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  background-color: transparent;
+  color: var(--text-secondary);
+  border-radius: calc(var(--radius-md) - 2px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.mode-btn:hover:not(:disabled):not(.active) {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--text-primary);
+}
+
+.mode-btn.active {
+  background-color: white;
+  box-shadow: var(--shadow-sm);
+  color: var(--color-primary);
+}
+
+/* Specific Active Colors for better differentiation */
+.mode-btn.active.cash {
+  color: var(--color-success);
+}
+
+.mode-btn.active.upi {
+  color: #7c3aed; /* Keeping distinct but it's already a calm purple */
+}
+
+.mode-btn.disabled,
+.mode-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mode-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mode-icon svg {
+  width: 20px;
+  height: 20px;
+}

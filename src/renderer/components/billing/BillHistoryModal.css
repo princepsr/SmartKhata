@@ -84,8 +84,8 @@
 }
 
 .mode-badge.cash {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: #f1f5f9;
+  color: var(--color-primary-dark);
 }
 
 .mode-badge.upi,

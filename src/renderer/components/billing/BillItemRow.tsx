@@ -155,7 +155,7 @@ export const BillItemRow: React.FC<BillItemRowProps> = ({
       <div style={{ textAlign: 'right' }}>{formatCurrency(item.product.salePrice)}</div>
 
       {/* Line Total (Instant Calc) */}
-      <div style={{ textAlign: 'right', fontWeight: 'bold', color: '#2563eb' }}>
+      <div style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--color-primary)' }}>
         {formatCurrency(item.product.salePrice * item.quantity)}
       </div>
 

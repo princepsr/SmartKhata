@@ -1,4 +1,5 @@
-import { BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
+import path from 'path';
 import fs from 'fs';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import { logger } from '../utils/logger';
@@ -65,6 +66,10 @@ export class PrintService extends BaseService {
       show: false,
       width: 400,
       height: 600,
+      icon: path.join(
+        app.getAppPath(),
+        app.isPackaged ? '../resources/icons/icon.ico' : 'resources/icons/icon.ico'
+      ),
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -329,6 +334,10 @@ export class PrintService extends BaseService {
       show: false,
       width: 800,
       height: 600,
+      icon: path.join(
+        app.getAppPath(),
+        app.isPackaged ? '../resources/icons/icon.ico' : 'resources/icons/icon.ico'
+      ),
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,

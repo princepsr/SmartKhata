@@ -3,51 +3,95 @@
   align-items: center;
   justify-content: center;
   padding: 8px 16px;
-  gap: 12px;
-  font-size: 14px;
+  gap: 16px;
+  font-size: 0.9rem;
   font-weight: 500;
   z-index: 1000;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  animation: bannerSlideIn 0.3s ease-out;
+  border-bottom: 1px solid transparent;
+}
+
+@keyframes bannerSlideIn {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-grow: 1;
+  justify-content: center;
 }
 
 .license-banner.info {
-  background-color: #e7f3ff;
-  color: #1e40af;
+  background-color: #f1f5f9;
+  color: var(--color-primary);
+  border-bottom-color: #e2e8f0;
 }
 
 .license-banner.warning {
-  background-color: #fffaf0; /* Softer cream */
-  color: #856404;
-  border-bottom: 2px solid #ffeeba;
+  background-color: #fffbeb; /* Very soft Amber 50 */
+  color: #92400e; /* Amber 800 */
+  border-bottom-color: #fde68a;
 }
 
 .license-banner.critical {
-  background-color: #fff5f5; /* Very soft red */
-  color: #c53030;
-  border-bottom: 2px solid #feb2b2;
+  background-color: #fef2f2; /* Red 50 */
+  color: #b91c1c; /* Red 700 */
+  border-bottom-color: #fecaca;
 }
 
 .banner-icon {
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.banner-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5px;
 }
 
 .banner-message {
-  flex-grow: 1;
-  text-align: center;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .banner-action {
   background: white;
   border: 1px solid currentColor;
-  padding: 4px 12px;
-  border-radius: 4px;
+  padding: 5px 14px;
+  border-radius: 99px; /* Pill style */
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  transition: all 0.2s;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
 }
 
 .banner-action:hover {
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
   transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.license-banner.warning .banner-action:hover {
+  background-color: #92400e;
+  border-color: #92400e;
+}
+
+.license-banner.critical .banner-action:hover {
+  background-color: #b91c1c;
+  border-color: #b91c1c;
 }
