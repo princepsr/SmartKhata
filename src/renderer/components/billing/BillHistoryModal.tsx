@@ -10,6 +10,7 @@ interface BillSummary {
   id: number;
   billNumber: string;
   customerId: number | null;
+  customerName: string | null;
   grandTotal: number; // in paise
   paymentMode: string;
   createdAt: number; // Unix timestamp
@@ -120,6 +121,7 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) =
                   <tr>
                     <th>Time</th>
                     <th>Bill No</th>
+                    <th>Customer</th>
                     <th>Mode</th>
                     <th className="text-right">Amount</th>
                     <th className="text-right">Actions</th>
@@ -149,6 +151,11 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) =
                         >
                           {bill.billNumber}
                         </button>
+                      </td>
+                      <td>
+                        <span className="customer-name">
+                          {bill.customerName || <span className="text-muted">Walk-in</span>}
+                        </span>
                       </td>
                       <td>
                         <span className={`mode-badge ${bill.paymentMode}`}>{bill.paymentMode}</span>

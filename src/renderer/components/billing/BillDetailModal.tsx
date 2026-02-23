@@ -21,6 +21,8 @@ interface BillDetail {
     gstTotal: number;
     discountAmount: number;
     grandTotal: number;
+    customerId: number | null;
+    customerName: string | null;
     paymentMode: string;
     createdAt: number;
   };
@@ -81,6 +83,18 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
                   <span className={`mode-badge ${data.bill.paymentMode.toLowerCase()}`}>
                     {data.bill.paymentMode.toUpperCase()}
                   </span>
+                </div>
+
+                <div
+                  className="bill-meta"
+                  style={{ marginTop: '8px', borderTop: '1px dashed #eee', paddingTop: '8px' }}
+                >
+                  <strong>Customer:</strong>{' '}
+                  {data.bill.customerName ? (
+                    <span className="customer-name-tag">{data.bill.customerName}</span>
+                  ) : (
+                    <span className="text-muted">Walk-in Customer</span>
+                  )}
                 </div>
 
                 <table className="items-table">

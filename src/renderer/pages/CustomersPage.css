@@ -272,3 +272,17 @@
   color: white;
   border-color: var(--color-primary);
 }
+.customers-page .loading-more,
+.customers-page .end-of-list {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  font-size: 0.9rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.customers-page .loading-more {
+  background-color: var(--color-bg-secondary);
+  font-weight: 500;
+}

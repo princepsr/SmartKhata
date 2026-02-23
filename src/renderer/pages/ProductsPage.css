@@ -102,7 +102,7 @@
 
 .products-page .data-table-header {
   display: grid;
-  grid-template-columns: 3fr 1.5fr 1.2fr 1fr 1fr 1.2fr;
+  grid-template-columns: 2.5fr 1.5fr 1.2fr 1.2fr 0.8fr 1fr 1.2fr;
   padding: 1rem;
   background-color: var(--color-bg-secondary);
   border-bottom: 2px solid var(--color-border);
@@ -116,7 +116,7 @@
 
 .products-page .data-table-row {
   display: grid;
-  grid-template-columns: 3fr 1.5fr 1.2fr 1fr 1fr 1.2fr;
+  grid-template-columns: 2.5fr 1.5fr 1.2fr 1.2fr 0.8fr 1fr 1.2fr;
   padding: 0.8rem 1rem;
   border-bottom: 1px solid var(--color-border);
   align-items: center;
@@ -148,6 +148,11 @@
 .products-page .col-price {
   font-weight: 600;
   color: var(--color-text);
+}
+
+.products-page .col-cost {
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
 }
 
 .products-page .col-stock {
@@ -327,6 +332,38 @@
   font-style: italic;
 }
 
-.error {
-  color: var(--color-error);
+.products-page .loading-more,
+.products-page .end-of-list {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  font-size: 0.9rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.products-page .loading-more {
+  background-color: var(--color-bg-secondary);
+  font-weight: 500;
+}
+
+/* Skeleton animation */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 25%,
+    var(--color-border) 50%,
+    var(--color-bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

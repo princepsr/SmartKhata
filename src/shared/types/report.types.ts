@@ -33,12 +33,16 @@ export interface DailySalesSummary {
   totalGst: number; // Sum of gst_total
   totalDiscount: number; // Sum of discount_amount
   netSales: number; // Grand Total (Revenue)
+  totalProfit: number; // Net Sales - Total Cost
+  marginPercent: number; // (Profit / Net Sales) * 100
+  salesWithCost: number; // Total Sales (Line Totals) for items where purchasePrice was available
+  totalItemSales: number; // Total Sum of all line totals (item-level revenue)
   billCount: number; // Count of bills
   comparison?: {
     totalSales?: ComparisonTrend;
     netSales?: ComparisonTrend;
     totalDiscount?: ComparisonTrend;
-    billCount?: ComparisonTrend;
+    totalProfit?: ComparisonTrend;
   };
 }
 
@@ -97,6 +101,10 @@ export interface AnalyticsPeriod {
   period: string; // e.g., "Jan", "Week 12"
   totalSales: number;
   netSales: number;
+  totalProfit?: number;
+  marginPercent?: number;
+  salesWithCost?: number; // Coverage: Total line sales for items with cost data
+  totalItemSales?: number; // Total line sales for all items
   billCount: number;
   growth: number; // % change from prev period
 }

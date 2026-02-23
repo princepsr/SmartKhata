@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
@@ -91,11 +91,13 @@ function BillingPage() {
 
   // Click Outside Handler for Product Search
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const customerSearchContainerRef = useRef<HTMLDivElement>(null);
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const [successMessage, setSuccessMessage] = useState<{
     billNumber: string;
     total: string;
+    customerName?: string;
   } | null>(null);
 
   // Dashboard State
@@ -131,7 +133,14 @@ function BillingPage() {
       searchParams.delete('action');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [
+    searchParams,
+    setSearchParams,
+    setCart,
+    setDiscountAmount,
+    setSelectedCustomer,
+    setShowHistory,
+  ]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -140,6 +149,12 @@ function BillingPage() {
         !searchContainerRef.current.contains(event.target as Node)
       ) {
         setShowProductSearch(false);
+      }
+      if (
+        customerSearchContainerRef.current &&
+        !customerSearchContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowCustomerSearch(false);
       }
     };
 
@@ -154,13 +169,17 @@ function BillingPage() {
     data: searchResults,
     loading: searching,
     execute: searchProducts,
-  } = useIPC<Product[]>(IPC_CHANNELS.PRODUCT_SEARCH);
+  } = useIPC<{ items: Product[]; totalCount: number; hasMore: boolean }>(
+    IPC_CHANNELS.PRODUCT_SEARCH
+  );
 
   const {
     data: customerResults,
     loading: searchingCustomers,
     execute: searchCustomers,
-  } = useIPC<Customer[]>(IPC_CHANNELS.CUSTOMER_SEARCH);
+  } = useIPC<{ items: Customer[]; totalCount: number; hasMore: boolean }>(
+    IPC_CHANNELS.CUSTOMER_SEARCH
+  );
 
   const {
     loading: finalizing,
@@ -257,7 +276,14 @@ function BillingPage() {
       setSelectedResultIndex(-1);
       searchInputRef.current?.focus();
     },
-    [settings.billingOnly, searchInputRef]
+    [
+      settings.billingOnly,
+      searchInputRef,
+      setCart,
+      setAlertState,
+      setSearchQuery,
+      setSelectedResultIndex,
+    ]
   );
 
   useEffect(() => {
@@ -270,35 +296,24 @@ function BillingPage() {
   });
   const [discountValue, setDiscountValue] = useState<string>(''); // Store as string to handle empty input
 
+  // Cart Base Total (Sum of MRPs) for discount calculations
+  const cartBaseTotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.product.salePrice * item.quantity, 0);
+  }, [cart]);
+
   // Update calculation when discount changes
   useEffect(() => {
-    let amt = 0;
-    // const val = parseFloat(discountValue) || 0; // Unused after refactor
-
-    if (calculation) {
-      amt = calculateDiscountAmount(
-        discountType,
-        discountValue,
-        calculation.subtotal,
-        calculation.gstTotal
-      );
-    } else {
-      // If no calculation yet, just handle fixed amount
-      if (discountType === 'amount') {
-        amt = (parseFloat(discountValue) || 0) * 100;
-      }
-    }
-
+    const amt = calculateDiscountAmount(discountType, discountValue, cartBaseTotal);
     setDiscountAmount(amt);
 
     // Persist preference
     localStorage.setItem('billing:discountType', discountType);
-  }, [discountValue, discountType, calculation]);
+  }, [discountValue, discountType, cartBaseTotal, setDiscountAmount]);
 
   // Search products with Debounce
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchQuery.length >= 2) {
+      if (searchQuery.length >= 1) {
         searchProducts({ query: searchQuery, includeInactive: false });
       }
     }, 300);
@@ -308,8 +323,8 @@ function BillingPage() {
   // Search customers with Debounce
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (customerQuery.length >= 2) {
-        searchCustomers(customerQuery);
+      if (customerQuery.length >= 1) {
+        searchCustomers({ query: customerQuery });
       }
     }, 300);
     return () => clearTimeout(timer);
@@ -317,8 +332,8 @@ function BillingPage() {
 
   // Auto-select first result when results change
   useEffect(() => {
-    if (searchResults && searchResults.length === 1 && searchQuery.length >= 3) {
-      const product = searchResults[0];
+    if (searchResults?.items && searchResults.items.length === 1 && searchQuery.length >= 1) {
+      const product = searchResults.items[0];
       const query = searchQuery.toLowerCase();
 
       // Auto-add if it's an exact SKU/Barcode match OR a very likely name match
@@ -330,7 +345,7 @@ function BillingPage() {
       }
     }
 
-    if (searchResults && searchResults.length > 0) {
+    if (searchResults?.items && searchResults.items.length > 0) {
       setSelectedResultIndex(0);
     } else {
       setSelectedResultIndex(-1);
@@ -357,7 +372,18 @@ function BillingPage() {
         searchInputRef.current.focus();
       }
     }, 50);
-  }, [searchInputRef]);
+  }, [
+    searchInputRef,
+    setCart,
+    setDiscountAmount,
+    setDiscountValue,
+    setCalculation,
+    setSelectedCustomer,
+    setPaymentMode,
+    setAmountPaid,
+    setSearchQuery,
+    setSelectedResultIndex,
+  ]);
 
   // Complete transaction
   const handleCheckout = useCallback(async () => {
@@ -365,11 +391,7 @@ function BillingPage() {
       return;
     }
 
-    // We no longer generate bill number here on the client side.
-    // The server handles it safely to avoid collisions.
-
     const input: FinalizeBillInput = {
-      // billNumber is now optional and generated by server if omitted
       customerId: selectedCustomer?.id,
       items: cart.map((item) => ({
         productId: item.product.id,
@@ -384,20 +406,15 @@ function BillingPage() {
     const result = await finalizeBill(input);
 
     if (result) {
-      // 1. Automatic Printing is now handled by the backend 'bill:create' handler
-      // based on the user's 'autoPrint' setting. Manual call removed to prevent duplicates.
-
-      // 2. Show Success Notification (Non-blocking)
       setSuccessMessage({
         billNumber: result.bill.billNumber,
         total: formatCurrency(calculation.grandTotal),
+        customerName: selectedCustomer?.name,
       });
 
-      // 3. Reset UI for next sale
       resetBill();
       fetchTodaySummary();
 
-      // 4. Auto-hide success message after 5 seconds
       setTimeout(() => {
         setSuccessMessage(null);
       }, 5000);
@@ -412,12 +429,13 @@ function BillingPage() {
     finalizeBill,
     resetBill,
     fetchTodaySummary,
+    amountPaid,
+    setSuccessMessage,
   ]);
 
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // If History or Reset Modal is open, handle appropriately
       if (showHistory || showResetConfirmation) {
         if (e.key === 'Escape') {
           setShowHistory(false);
@@ -426,7 +444,6 @@ function BillingPage() {
         return;
       }
 
-      // Global Shortcuts
       switch (e.key) {
         case 'F2':
           e.preventDefault();
@@ -444,11 +461,6 @@ function BillingPage() {
           break;
         case 'Escape':
           e.preventDefault();
-          // Hierarchy:
-          // 1. Clear Search Query
-          // 2. Clear Selected Customer
-          // 3. Clear Cart (with confirmation)
-
           if (searchQuery) {
             setSearchQuery('');
             setSelectedResultIndex(-1);
@@ -471,33 +483,43 @@ function BillingPage() {
     selectedCustomer,
     cart,
     showHistory,
-    showCustomerSearch,
     showResetConfirmation,
     handleCheckout,
+    setSelectedCustomer,
+    setShowHistory,
+    setShowResetConfirmation,
+    setSearchQuery,
+    setSelectedResultIndex,
   ]);
 
   // Search Input Navigation
-  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (!searchResults || searchResults.length === 0) {
-      return;
-    }
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedResultIndex((prev) => (prev < searchResults.length - 1 ? prev + 1 : prev));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedResultIndex((prev) => (prev > 0 ? prev - 1 : 0));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-
-      // If we have a selected result, add it
-      if (selectedResultIndex !== -1 && searchResults && searchResults[selectedResultIndex]) {
-        addToCart(searchResults[selectedResultIndex]);
+  const handleSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!searchResults?.items || searchResults.items.length === 0) {
         return;
       }
-    }
-  };
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedResultIndex((prev) => (prev < searchResults.items.length - 1 ? prev + 1 : prev));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedResultIndex((prev) => (prev > 0 ? prev - 1 : 0));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+
+        // If we have a selected result, add it
+        if (
+          selectedResultIndex !== -1 &&
+          searchResults?.items &&
+          searchResults.items[selectedResultIndex]
+        ) {
+          addToCart(searchResults.items[selectedResultIndex]);
+        }
+      }
+    },
+    [searchResults, selectedResultIndex, addToCart, setSelectedResultIndex]
+  );
 
   // Recalculate bill PREVIEW instantly when cart or discount changes
   useEffect(() => {
@@ -512,7 +534,7 @@ function BillingPage() {
     } else {
       setCalculation(null);
     }
-  }, [cart, discountAmount, settings.gstEnabled, settings.gstExclusiveMode]);
+  }, [cart, discountAmount, settings.gstEnabled, settings.gstExclusiveMode, setCalculation]);
 
   return (
     <div className="page billing-page">
@@ -524,7 +546,12 @@ function BillingPage() {
               <span className="success-icon">✅</span>
               <div className="success-details">
                 <strong>Bill #{successMessage.billNumber} Saved!</strong>
-                <span>Total: ₹{successMessage.total}</span>
+                <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
+                  {successMessage.customerName && (
+                    <span>Customer: {successMessage.customerName} | </span>
+                  )}
+                  <span>Total: ₹{successMessage.total}</span>
+                </div>
               </div>
             </div>
             <button className="close-success">&times;</button>
@@ -559,7 +586,7 @@ function BillingPage() {
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               >
-                {showProductSearch && searchQuery.length >= 2 && (
+                {showProductSearch && searchQuery.length >= 1 && (
                   <div className="search-results">
                     {searching ? (
                       <>
@@ -576,8 +603,8 @@ function BillingPage() {
                           />
                         ))}
                       </>
-                    ) : searchResults && searchResults.length > 0 ? (
-                      searchResults.map((product, index) => (
+                    ) : searchResults?.items && searchResults.items.length > 0 ? (
+                      searchResults.items.map((product, index) => (
                         <div
                           key={product.id}
                           className={`product-item ${index === selectedResultIndex ? 'selected' : ''}`}
@@ -652,7 +679,11 @@ function BillingPage() {
                   </button>
                 </div>
               ) : (
-                <div className="customer-search" style={{ position: 'relative' }}>
+                <div
+                  className="customer-search"
+                  style={{ position: 'relative' }}
+                  ref={customerSearchContainerRef}
+                >
                   <input
                     type="text"
                     placeholder="Customer (Optional)"
@@ -663,10 +694,9 @@ function BillingPage() {
                       setShowCustomerSearch(true);
                     }}
                     onFocus={() => setShowCustomerSearch(true)}
-                    onBlur={() => setTimeout(() => setShowCustomerSearch(false), 200)}
                   />
                   {/* Customer Search Results Dropdown */}
-                  {showCustomerSearch && customerQuery.length >= 2 && customerResults && (
+                  {showCustomerSearch && customerQuery.length >= 1 && customerResults?.items && (
                     <div
                       className="customer-results-dropdown"
                       style={{
@@ -677,7 +707,7 @@ function BillingPage() {
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
                         borderRadius: '0.5rem',
-                        boxShadow: '0 4px 6px -1px update(0, 0, 0, 0.1)',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                         zIndex: 20,
                         marginTop: '0.25rem',
                         maxHeight: '200px',
@@ -686,11 +716,13 @@ function BillingPage() {
                     >
                       {searchingCustomers ? (
                         <div style={{ padding: '0.5rem', color: '#6b7280' }}>Searching...</div>
-                      ) : customerResults.length > 0 ? (
-                        customerResults.map((c) => (
+                      ) : customerResults.items.length > 0 ? (
+                        customerResults.items.map((c) => (
                           <div
                             key={c.id}
-                            onClick={() => {
+                            onMouseDown={(e) => {
+                              // Use onMouseDown to trigger selection before onBlur (not needed with click-outside but more robust)
+                              e.preventDefault(); // Prevent input blur if triggered
                               setSelectedCustomer(c);
                               setCustomerQuery('');
                               setShowCustomerSearch(false);
@@ -769,7 +801,7 @@ function BillingPage() {
 
             <div className="actions-area">
               {settings.customersEnabled && selectedCustomer && (
-                <div className="amount-paid-section" style={{ marginBottom: '1rem' }}>
+                <div className="amount-paid-section">
                   <label
                     style={{
                       display: 'block',

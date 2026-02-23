@@ -42,44 +42,63 @@ export function calculateBillPreview(
   gstEnabled: boolean = true,
   gstExclusiveMode: boolean = false
 ): BillCalculation {
-  let subtotal = 0;
-  let gstTotal = 0;
+  if (items.length === 0) {
+    return {
+      items: [],
+      subtotal: 0,
+      gstTotal: 0,
+      discountAmount: 0,
+      grandTotal: 0,
+    };
+  }
+
+  // 1. Calculate Total Base Price (Sum of MRPs)
+  let totalBasePrice = 0;
+  items.forEach((item) => {
+    totalBasePrice += item.product.salePrice * Math.max(0, item.quantity);
+  });
+
+  // 2. Proportional Discount Factor for the MRP
+  const discountFactor =
+    totalBasePrice > 0 ? Math.max(0, totalBasePrice - discountAmount) / totalBasePrice : 0;
+
+  let finalSubtotal = 0;
+  let finalGstTotal = 0;
   const calculatedItems: CalculatedLineItem[] = [];
 
-  for (const item of items) {
-    const { product, quantity } = item;
-    const qty = Math.max(0, quantity);
+  items.forEach((item) => {
+    const qty = Math.max(0, item.quantity);
+    const product = item.product;
+    const isGstInclusive = gstExclusiveMode ? false : product.isGstInclusive;
 
-    // Line calculations
+    // The discount is applied to the Base Sale Price (MRP or Pre-tax Price)
+    const discountedBasePrice = product.salePrice * qty * discountFactor;
+
     let lineSubtotal: number;
     let lineGst: number;
     let lineTotal: number;
 
-    // Force exclusive if master switch is ON (mirrors backend billing-transaction-service logic)
-    const isGstInclusive = gstExclusiveMode ? false : product.isGstInclusive;
-
     if (isGstInclusive) {
-      // Price is inclusive: Total = Price * Qty. GST = Total * Rate. Subtotal = Total - GST
-      lineTotal = Math.round(product.salePrice * qty * 100) / 100;
+      // Inclusive: Discounted Base Price is the final inclusive price
+      lineTotal = Math.round(discountedBasePrice * 100) / 100;
       if (gstEnabled && product.gstPercent > 0) {
-        lineGst = Math.round(lineTotal * (product.gstPercent / 100) * 100) / 100;
-        lineSubtotal = Math.round((lineTotal - lineGst) * 100) / 100;
+        lineSubtotal = Math.round((lineTotal / (1 + product.gstPercent / 100)) * 100) / 100;
+        lineGst = Math.round((lineTotal - lineSubtotal) * 100) / 100;
       } else {
         lineSubtotal = lineTotal;
         lineGst = 0;
       }
     } else {
-      // Price is exclusive: Subtotal = Price * Qty, Total = Subtotal + GST
-      lineSubtotal = Math.round(product.salePrice * qty * 100) / 100;
+      // Exclusive: Discounted Base Price is the taxable value
+      lineSubtotal = Math.round(discountedBasePrice * 100) / 100;
       lineGst = gstEnabled
         ? Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100
         : 0;
       lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
     }
 
-    // Accumulate
-    subtotal = Math.round((subtotal + lineSubtotal) * 100) / 100;
-    gstTotal = Math.round((gstTotal + lineGst) * 100) / 100;
+    finalSubtotal = Math.round((finalSubtotal + lineSubtotal) * 100) / 100;
+    finalGstTotal = Math.round((finalGstTotal + lineGst) * 100) / 100;
 
     calculatedItems.push({
       productId: product.id,
@@ -91,18 +110,16 @@ export function calculateBillPreview(
       lineGst,
       lineTotal,
     });
-  }
+  });
 
-  // Final totals
-  const totalWithTax = Math.round((subtotal + gstTotal) * 100) / 100;
-  const grandTotal = Math.round((totalWithTax - discountAmount) * 100) / 100;
+  const grandTotal = Math.round((finalSubtotal + finalGstTotal) * 100) / 100;
 
   return {
     items: calculatedItems,
-    subtotal,
-    gstTotal,
-    discountAmount,
-    grandTotal: Math.max(0, grandTotal), // Prevent negative total
+    subtotal: finalSubtotal,
+    gstTotal: finalGstTotal,
+    discountAmount: Math.round(discountAmount * 100) / 100,
+    grandTotal: Math.max(0, grandTotal),
   };
 }
 
@@ -125,8 +142,7 @@ export const formatCurrency = standardFormatCurrency;
 export function calculateDiscountAmount(
   type: 'amount' | 'percent',
   value: string,
-  subtotal: number,
-  gstTotal: number
+  baseTotal: number
 ): number {
   const val = parseFloat(value) || 0;
 
@@ -135,8 +151,6 @@ export function calculateDiscountAmount(
   }
 
   if (type === 'percent') {
-    // Calculate percentage of Subtotal + GST
-    const baseTotal = subtotal + gstTotal;
     return Math.round(((baseTotal * val) / 100) * 100) / 100;
   } else {
     // Fixed amount (Rupees)

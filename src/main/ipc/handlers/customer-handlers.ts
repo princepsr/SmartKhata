@@ -15,6 +15,19 @@ import {
 } from '../../services/customer-service';
 import { Customer } from '../../repositories/customer-repository';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
+import { CustomerSearchSchema } from '@shared/validation/schemas';
+
+interface CustomerUI {
+  id: number;
+  name: string;
+  phone: string | null;
+  address?: string;
+  email?: string;
+  balanceDue: number;
+  isActive: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
 
 /**
  * Register All Customer Handlers
@@ -25,15 +38,27 @@ export function registerCustomerHandlers(): void {
   // ============================================
   // LIST ALL ACTIVE CUSTOMERS
   // ============================================
-  IPCHandler.handle<{ includeInactive?: boolean } | void, Customer[]>(
+  IPCHandler.handle<
+    { includeInactive?: boolean; page?: number; pageSize?: number } | void,
+    { items: CustomerUI[]; totalCount: number; hasMore: boolean; page: number }
+  >(
     IPC_CHANNELS.CUSTOMER_LIST,
     async (payload) => {
-      let includeInactive = false;
-      if (payload && typeof payload === 'object') {
-        includeInactive = !!payload.includeInactive;
-      }
-      const customers = customerService.getAllCustomers(includeInactive);
-      return customers.map((c) => _mapToUI(c));
+      const options = (payload && typeof payload === 'object' ? payload : {}) as any;
+      const includeInactive = !!options.includeInactive;
+      const page = options.page ?? 1;
+      const pageSize = options.pageSize ?? 100;
+
+      const result = customerService.getAllCustomers(includeInactive, page, pageSize);
+      const totalCount = customerService.getCustomerCount(includeInactive);
+      const hasMore = page * pageSize < totalCount;
+
+      return {
+        items: result.items.map((c: Customer) => _mapToUI(c)),
+        totalCount,
+        hasMore,
+        page: result.page,
+      };
     },
     {
       transformError: (err) => getUserFriendlyMessage(err),
@@ -43,7 +68,7 @@ export function registerCustomerHandlers(): void {
   // ============================================
   // GET CUSTOMER BY ID
   // ============================================
-  IPCHandler.handle<number, Customer>(
+  IPCHandler.handle<number, CustomerUI>(
     IPC_CHANNELS.CUSTOMER_GET,
     async (id) => {
       const customer = customerService.getCustomer(id);
@@ -57,7 +82,7 @@ export function registerCustomerHandlers(): void {
   // ============================================
   // CREATE OR GET CUSTOMER
   // ============================================
-  IPCHandler.handle<CreateOrGetCustomerInput, Customer>(
+  IPCHandler.handle<CreateOrGetCustomerInput, CustomerUI>(
     IPC_CHANNELS.CUSTOMER_CREATE,
     async (input) => {
       const customer = customerService.createOrGetCustomer(input);
@@ -71,7 +96,7 @@ export function registerCustomerHandlers(): void {
   // ============================================
   // UPDATE CUSTOMER
   // ============================================
-  IPCHandler.handle<{ id: number; data: UpdateCustomerData }, Customer>(
+  IPCHandler.handle<{ id: number; data: UpdateCustomerData }, CustomerUI>(
     IPC_CHANNELS.CUSTOMER_UPDATE,
     async ({ id, data }) => {
       const customer = customerService.updateCustomer(id, data);
@@ -98,23 +123,22 @@ export function registerCustomerHandlers(): void {
   // ============================================
   // SEARCH CUSTOMERS
   // ============================================
-  IPCHandler.handle<{ query: string; includeInactive?: boolean } | string, Customer[]>(
+  IPCHandler.handle<
+    { query: string; includeInactive?: boolean; page?: number; pageSize?: number },
+    { items: CustomerUI[]; totalCount: number; hasMore: boolean; page: number }
+  >(
     IPC_CHANNELS.CUSTOMER_SEARCH,
-    async (payload) => {
-      let query: string;
-      let includeInactive = false;
-
-      if (typeof payload === 'string') {
-        query = payload;
-      } else {
-        query = payload.query;
-        includeInactive = !!payload.includeInactive;
-      }
-
-      const customers = customerService.searchCustomers(query, includeInactive);
-      return customers.map((c) => _mapToUI(c));
+    async ({ query, includeInactive, page, pageSize }) => {
+      const result = customerService.searchCustomers(query, includeInactive, page, pageSize);
+      return {
+        items: result.items.map((c: Customer) => _mapToUI(c)),
+        totalCount: result.totalCount,
+        hasMore: result.hasMore,
+        page: result.page,
+      };
     },
     {
+      schema: CustomerSearchSchema,
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );
@@ -150,12 +174,25 @@ export function registerCustomerHandlers(): void {
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );
+
+  // ============================================
+  // TOGGLE CUSTOMER STATUS
+  // ============================================
+  IPCHandler.handle<{ id: number; isActive: boolean }, void>(
+    IPC_CHANNELS.CUSTOMER_TOGGLE_STATUS,
+    async ({ id, isActive }) => {
+      customerService.updateCustomer(id, { isActive });
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
 }
 
 /**
  * Map Domain Customer to UI Object
  */
-function _mapToUI(c: Customer): any {
+function _mapToUI(c: Customer): CustomerUI {
   return {
     id: c.id,
     name: c.name,

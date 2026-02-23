@@ -18,15 +18,42 @@ export class ReportRepository extends BaseRepository {
    */
   public getDailySalesSummary(startDate: string, endDate: string): DailySalesSummary {
     const query = `
+      WITH BillSet AS (
+        SELECT id, grand_total, discount_amount, subtotal, gst_total
+        FROM bills
+        WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
+      ),
+      ItemAggs AS (
+        SELECT 
+          COALESCE(SUM(
+            CASE 
+              WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
+              THEN bi.line_total - (bi.quantity * bi.purchase_price)
+              ELSE 0 
+            END
+          ), 0) as totalProfit,
+          COALESCE(SUM(
+            CASE 
+              WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
+              THEN bi.line_total
+              ELSE 0 
+            END
+          ), 0) as salesWithCost,
+          COALESCE(SUM(bi.line_total), 0) as totalItemSales
+        FROM bill_items bi
+        WHERE bi.bill_id IN (SELECT id FROM BillSet)
+      )
       SELECT 
-        COUNT(id) as billCount,
-        COALESCE(SUM(grand_total + discount_amount), 0) as totalSales,
-        COALESCE(SUM(grand_total), 0) as netSales,
-        COALESCE(SUM(subtotal), 0) as totalSubtotal,
-        COALESCE(SUM(gst_total), 0) as totalGst,
-        COALESCE(SUM(discount_amount), 0) as totalDiscount
-      FROM bills
-      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
+        (SELECT COUNT(*) FROM BillSet) as billCount,
+        (SELECT COALESCE(SUM(grand_total + discount_amount), 0) FROM BillSet) as totalSales,
+        (SELECT COALESCE(SUM(grand_total), 0) FROM BillSet) as netSales,
+        (SELECT COALESCE(SUM(subtotal), 0) FROM BillSet) as totalSubtotal,
+        (SELECT COALESCE(SUM(gst_total), 0) FROM BillSet) as totalGst,
+        (SELECT COALESCE(SUM(discount_amount), 0) FROM BillSet) as totalDiscount,
+        totalProfit,
+        salesWithCost,
+        totalItemSales
+      FROM ItemAggs
     `;
 
     const result = this.db.prepare(query).get(startDate, endDate) as {
@@ -36,7 +63,13 @@ export class ReportRepository extends BaseRepository {
       totalSubtotal: number;
       totalGst: number;
       totalDiscount: number;
+      totalProfit: number;
+      salesWithCost: number;
+      totalItemSales: number;
     };
+
+    const marginPercent =
+      result.netSales > 0 ? Math.round((result.totalProfit / result.netSales) * 10000) / 100 : 0;
 
     // Calculate previous period for comparison
     const start = new Date(startDate);
@@ -57,6 +90,9 @@ export class ReportRepository extends BaseRepository {
       totalDiscount: number;
       billCount: number;
       netSales: number;
+      totalProfit: number;
+      salesWithCost: number;
+      totalItemSales: number;
     };
 
     const calculateTrend = (current: number, previous: number) => {
@@ -78,11 +114,15 @@ export class ReportRepository extends BaseRepository {
       totalSubtotal: result.totalSubtotal,
       totalGst: result.totalGst,
       totalDiscount: result.totalDiscount,
+      totalProfit: result.totalProfit,
+      marginPercent: marginPercent,
+      salesWithCost: result.salesWithCost,
+      totalItemSales: result.totalItemSales,
       comparison: {
         totalSales: calculateTrend(result.totalSales, prevResult.totalSales),
         netSales: calculateTrend(result.netSales, prevResult.netSales),
         totalDiscount: calculateTrend(result.totalDiscount, prevResult.totalDiscount),
-        billCount: calculateTrend(result.billCount, prevResult.billCount),
+        totalProfit: calculateTrend(result.totalProfit, prevResult.totalProfit),
       },
     };
   }
@@ -125,14 +165,14 @@ export class ReportRepository extends BaseRepository {
           CASE 
             WHEN b.gst_total = 0 THEN bi.line_total
             WHEN bi.line_total > (bi.quantity * bi.unit_price) + 0.01 THEN bi.quantity * bi.unit_price
-            ELSE ROUND(bi.line_total - (bi.line_total * bi.gst_percent / 100.0), 2)
+            ELSE ROUND(bi.line_total / (1 + bi.gst_percent / 100.0), 2)
           END
         ), 0) as taxableAmount,
         COALESCE(SUM(
           CASE 
             WHEN b.gst_total = 0 THEN 0
             WHEN bi.line_total > (bi.quantity * bi.unit_price) + 0.01 THEN bi.line_total - (bi.quantity * bi.unit_price)
-            ELSE ROUND(bi.line_total * bi.gst_percent / 100.0, 2)
+            ELSE ROUND(bi.line_total - (bi.line_total / (1 + bi.gst_percent / 100.0)), 2)
           END
         ), 0) as gstAmount, 
         COALESCE(SUM(bi.line_total), 0) as totalAmount
@@ -295,12 +335,39 @@ export class ReportRepository extends BaseRepository {
 
     const query = `
       SELECT 
-        strftime('${dateFormat}', created_at, 'localtime') as periodId,
+        periodId,
         COUNT(id) as billCount,
-        COALESCE(SUM(grand_total + discount_amount), 0) as totalSales,
-        COALESCE(SUM(grand_total), 0) as netSales
-      FROM bills
-      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
+        COALESCE(SUM(totalSales), 0) as totalSales,
+        COALESCE(SUM(netSales), 0) as netSales,
+        COALESCE(SUM(totalProfit), 0) as totalProfit,
+        COALESCE(SUM(salesWithCost), 0) as salesWithCost,
+        COALESCE(SUM(totalItemSales), 0) as totalItemSales
+      FROM (
+        SELECT 
+           strftime('${dateFormat}', b.created_at, 'localtime') as periodId,
+           b.id,
+           b.grand_total + b.discount_amount as totalSales,
+           b.grand_total as netSales,
+           COALESCE(SUM(
+             CASE 
+               WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
+               THEN bi.line_total - (bi.quantity * bi.purchase_price)
+               ELSE 0 
+             END
+           ), 0) as totalProfit,
+           COALESCE(SUM(
+             CASE 
+               WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
+               THEN bi.line_total
+               ELSE 0 
+             END
+           ), 0) as salesWithCost,
+           COALESCE(SUM(bi.line_total), 0) as totalItemSales
+        FROM bills b
+        LEFT JOIN bill_items bi ON b.id = bi.bill_id
+        WHERE date(b.created_at, 'localtime') BETWEEN date(?) AND date(?)
+        GROUP BY b.id
+      )
       GROUP BY periodId
       ORDER BY periodId ASC
     `;
@@ -310,6 +377,9 @@ export class ReportRepository extends BaseRepository {
       billCount: number;
       totalSales: number;
       netSales: number;
+      totalProfit: number;
+      salesWithCost: number;
+      totalItemSales: number;
     }[];
 
     let runningTotalSales = 0;
@@ -352,6 +422,11 @@ export class ReportRepository extends BaseRepository {
         period: label,
         totalSales: row.totalSales,
         netSales: row.netSales,
+        totalProfit: row.totalProfit,
+        salesWithCost: row.salesWithCost,
+        totalItemSales: row.totalItemSales,
+        marginPercent:
+          row.netSales > 0 ? Math.round((row.totalProfit / row.netSales) * 1000) / 10 : 0,
         billCount: row.billCount,
         growth,
       };

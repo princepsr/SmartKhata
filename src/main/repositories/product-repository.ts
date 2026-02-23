@@ -47,7 +47,7 @@ export interface UpdateProductInput {
   sku?: string;
   barcode?: string;
   salePrice?: number; // In rupees
-  purchasePrice?: number; // In rupees
+  purchasePrice?: number | null; // In rupees
   gstPercent?: number; // As decimal
   stockQty?: number;
   lowStockAlert?: number;
@@ -203,30 +203,89 @@ export class ProductRepository extends BaseRepository {
   }
 
   /**
-   * Find all active products
+   * Find all active products with pagination
    */
-  public findAll(includeInactive: boolean = false): Product[] {
-    const sql = `
+  public findAll(includeInactive: boolean = false, limit?: number, offset?: number): Product[] {
+    let sql = `
       SELECT * FROM products
       ${includeInactive ? '' : 'WHERE is_active = 1'}
       ORDER BY name ASC
     `;
-    const rows = this.queryAll<any>(sql);
+
+    const params: any[] = [];
+    if (limit !== undefined) {
+      sql += ` LIMIT ?`;
+      params.push(limit);
+    }
+    if (offset !== undefined) {
+      sql += ` OFFSET ?`;
+      params.push(offset);
+    }
+
+    const rows = this.queryAll<any>(sql, params);
     return rows.map((row) => this._mapToProduct(row));
   }
 
   /**
-   * Search products by name
+   * Get total count of products
    */
-  public searchByName(query: string, includeInactive: boolean = false): Product[] {
+  public countAll(includeInactive: boolean = false): number {
     const sql = `
-      SELECT * FROM products
-      WHERE name LIKE ? ${includeInactive ? '' : 'AND is_active = 1'}
-      ORDER BY name ASC
-      LIMIT 50
+      SELECT COUNT(*) as count FROM products
+      ${includeInactive ? '' : 'WHERE is_active = 1'}
     `;
-    const rows = this.queryAll<any>(sql, [`%${query}%`]);
+    const row = this.queryOne<{ count: number }>(sql);
+    return row ? row.count : 0;
+  }
+
+  /**
+   * Search products by name, SKU, or barcode with pagination
+   */
+  public searchByName(
+    query: string,
+    includeInactive: boolean = false,
+    limit?: number,
+    offset?: number
+  ): Product[] {
+    let sql = `
+      SELECT * FROM products
+      WHERE (name LIKE ? OR sku LIKE ? OR barcode LIKE ?)
+      ${includeInactive ? '' : 'AND is_active = 1'}
+      ORDER BY name ASC
+    `;
+
+    const searchPattern = `%${query}%`;
+    const params: any[] = [searchPattern, searchPattern, searchPattern];
+
+    if (limit !== undefined) {
+      sql += ` LIMIT ?`;
+      params.push(limit);
+    }
+    if (offset !== undefined) {
+      sql += ` OFFSET ?`;
+      params.push(offset);
+    }
+
+    const rows = this.queryAll<any>(sql, params);
     return rows.map((row) => this._mapToProduct(row));
+  }
+
+  /**
+   * Get total count of products matching search
+   */
+  public countSearch(query: string, includeInactive: boolean = false): number {
+    const sql = `
+      SELECT COUNT(*) as count FROM products
+      WHERE (name LIKE ? OR sku LIKE ? OR barcode LIKE ?)
+      ${includeInactive ? '' : 'AND is_active = 1'}
+    `;
+    const searchPattern = `%${query}%`;
+    const row = this.queryOne<{ count: number }>(sql, [
+      searchPattern,
+      searchPattern,
+      searchPattern,
+    ]);
+    return row ? row.count : 0;
   }
 
   /**

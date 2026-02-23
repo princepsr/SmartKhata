@@ -31,14 +31,22 @@ export function registerProductHandlers(): void {
   // ============================================
   // LIST ALL PRODUCTS
   // ============================================
-  IPCHandler.handle<{ includeInactive?: boolean }, any[]>(
+  IPCHandler.handle<
+    { includeInactive?: boolean; page?: number; pageSize?: number },
+    { items: any[]; totalCount: number; hasMore: boolean; page: number }
+  >(
     IPC_CHANNELS.PRODUCT_LIST,
     async (params) => {
       const includeInactive = params?.includeInactive ?? false;
-      const products = productService.getAllProducts(includeInactive);
+      const page = params?.page ?? 1;
+      const pageSize = params?.pageSize ?? 100;
+
+      const result = productService.getAllProducts(includeInactive, page, pageSize);
+      const totalCount = productService.getProductCount(includeInactive);
+      const hasMore = page * pageSize < totalCount;
 
       // Convert domain objects to plain objects for IPC
-      return products.map((p) => ({
+      const items = result.items.map((p: any) => ({
         id: p.id,
         name: p.name,
         sku: p.sku,
@@ -54,6 +62,13 @@ export function registerProductHandlers(): void {
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
       }));
+
+      return {
+        items,
+        totalCount,
+        hasMore,
+        page: result.page,
+      };
     },
     {
       transformError: (err) => getUserFriendlyMessage(err),
@@ -243,25 +258,33 @@ export function registerProductHandlers(): void {
   // ============================================
   // SEARCH PRODUCTS
   // ============================================
-  IPCHandler.handle<{ query: string; includeInactive?: boolean }, any[]>(
+  IPCHandler.handle<
+    { query: string; includeInactive?: boolean; page?: number; pageSize?: number },
+    { items: any[]; totalCount: number; hasMore: boolean }
+  >(
     IPC_CHANNELS.PRODUCT_SEARCH,
-    async ({ query, includeInactive }) => {
-      const products = productService.searchProducts(query, includeInactive);
+    async ({ query, includeInactive, page, pageSize }) => {
+      const result = productService.searchProducts(query, includeInactive, page, pageSize);
 
-      return products.map((p) => ({
-        id: p.id,
-        name: p.name,
-        sku: p.sku,
-        barcode: p.barcode,
-        salePrice: p.salePrice,
-        purchasePrice: p.purchasePrice,
-        gstPercent: p.gstPercent,
-        stockQty: p.stockQty,
-        lowStockAlert: p.lowStockAlert,
-        isActive: p.isActive,
-        isGstInclusive: p.isGstInclusive,
-        trackInventory: p.trackInventory,
-      }));
+      return {
+        items: result.items.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          sku: p.sku,
+          barcode: p.barcode,
+          salePrice: p.salePrice,
+          purchasePrice: p.purchasePrice,
+          gstPercent: p.gstPercent,
+          stockQty: p.stockQty,
+          lowStockAlert: p.lowStockAlert,
+          isActive: p.isActive,
+          isGstInclusive: p.isGstInclusive,
+          trackInventory: p.trackInventory,
+        })),
+        totalCount: result.totalCount,
+        hasMore: result.hasMore,
+        page: result.page,
+      };
     },
     {
       schema: ProductSearchSchema,

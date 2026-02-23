@@ -151,7 +151,6 @@
 .analytics-view {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
 }
 
 .analytics-toolbar {
@@ -228,6 +227,16 @@
 
 .text-muted {
   color: var(--text-muted);
+}
+
+.margin-badge {
+  background-color: rgba(13, 148, 136, 0.1);
+  color: var(--color-success);
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid rgba(13, 148, 136, 0.2);
 }
 
 .date-inputs {
@@ -328,7 +337,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* Slightly wider min-width */
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .card {
@@ -371,6 +380,9 @@
 .card-bills::before {
   background-color: #64748b;
 }
+.card-profit::before {
+  background-color: var(--color-success);
+}
 
 .card:hover {
   transform: translateY(-2px);
@@ -408,6 +420,10 @@
 .icon-bills {
   background-color: rgba(100, 116, 139, 0.1);
 }
+.icon-profit {
+  background-color: rgba(13, 148, 136, 0.1);
+  color: var(--color-success);
+}
 
 .card h3 {
   font-size: 0.7rem;
@@ -423,6 +439,36 @@
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.2;
+}
+
+.reports-info-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.03); /* Subtle backdrop */
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex; /* Compact width */
+  animation: fadeInScale 0.3s ease-out forwards;
+}
+
+.info-icon {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.info-text {
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.info-text strong {
+  font-weight: 700;
 }
 
 .payment-summary {
@@ -456,6 +502,10 @@
   background: var(--color-primary);
   border-radius: 0 4px 4px 0;
   opacity: 0.3;
+}
+
+.mode-badge-bills::before {
+  background-color: #64748b; /* Matches icon-bills look */
 }
 
 .mode-val {

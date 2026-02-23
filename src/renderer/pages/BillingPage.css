@@ -410,7 +410,7 @@
 }
 
 .actions-area {
-  padding: 1.5rem;
+  padding: 1rem 1.5rem;
   background: #f8fafc;
   border-top: 1px solid var(--border-color);
   display: flex;

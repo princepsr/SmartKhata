@@ -44,7 +44,7 @@ export class ReportService extends BaseService {
       totalSales: this.calculateTrend(current.totalSales, previous.totalSales),
       netSales: this.calculateTrend(current.netSales, previous.netSales),
       totalDiscount: this.calculateTrend(current.totalDiscount, previous.totalDiscount),
-      billCount: this.calculateTrend(current.billCount, previous.billCount),
+      totalProfit: this.calculateTrend(current.totalProfit, previous.totalProfit),
     };
 
     return current;

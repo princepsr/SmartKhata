@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import './ReportsPage.css';
 import EmptyState from '../components/common/EmptyState';
@@ -30,101 +30,6 @@ const TrendChip: React.FC<{ value: string; trend: 'up' | 'down' | 'neutral' }> =
     <span className={`trend-chip ${color} px-2 py-1 rounded-full text-xs font-medium`}>
       {icon} {value}
     </span>
-  );
-};
-
-const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
-  if (!data) {
-    return <SkeletonLoader type="sales" />;
-  }
-
-  const maxSales = Math.max(...data.periods.map((p) => p.totalSales), 1);
-
-  return (
-    <div className="report-view analytics-view animate-fade-in">
-      {/* Annual Summary Cards */}
-      <div className="summary-cards">
-        <div className="card card-gross">
-          <div className="card-header-row">
-            <h3>Total Sales</h3>
-            <div className="icon-box icon-gross">💰</div>
-          </div>
-          <p className="value">₹{data.totalSales.toLocaleString('en-IN')}</p>
-        </div>
-        <div className="card card-net">
-          <div className="card-header-row">
-            <h3>Total Net Revenue</h3>
-            <div className="icon-box icon-net">💳</div>
-          </div>
-          <div className="value highlight">₹{data.totalNet.toLocaleString('en-IN')}</div>
-        </div>
-        <div className="card card-orders">
-          <div className="card-header-row">
-            <h3>Total Transactions</h3>
-            <div className="icon-box icon-orders">🧾</div>
-          </div>
-          <div className="value">{data.totalBills}</div>
-        </div>
-      </div>
-
-      {/* Visual Timeline Chart */}
-      <div className="chart-container">
-        <h3>Revenue Trend</h3>
-        <div className="bar-chart">
-          {data.periods.map((period) => {
-            const heightParam = (period.totalSales / maxSales) * 100;
-            return (
-              <div key={period.period} className="bar-group">
-                <div
-                  className="bar"
-                  style={{ height: `${heightParam}%` }}
-                  title={`₹${period.totalSales.toLocaleString()}`}
-                ></div>
-                <span className="bar-label">{period.period}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Detailed Table */}
-      <div className="table-container">
-        <h3>Detailed Breakdown</h3>
-        <table className="report-table">
-          <thead>
-            <tr>
-              <th>Period</th>
-              <th className="text-right">Bills</th>
-              <th className="text-right">Gross Sales</th>
-              <th className="text-right">Net Sales</th>
-              <th className="text-right">Growth</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.periods.map((row) => (
-              <tr key={row.period}>
-                <td>{row.period}</td>
-                <td className="text-right">{row.billCount}</td>
-                <td className="text-right">
-                  ₹{row.totalSales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </td>
-                <td className="text-right">
-                  ₹{row.netSales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </td>
-                <td className="text-right">
-                  {row.growth !== 0 && (
-                    <span className={`trend-badge ${row.growth > 0 ? 'up' : 'down'}`}>
-                      {row.growth > 0 ? '▲' : '▼'} {Math.abs(row.growth)}%
-                    </span>
-                  )}
-                  {row.growth === 0 && <span className="text-muted">-</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 };
 
@@ -179,6 +84,169 @@ const SkeletonLoader: React.FC<{ type: 'sales' | 'gst' | 'stock' }> = ({ type })
     )}
   </div>
 );
+
+const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
+  if (!data) {
+    return <SkeletonLoader type="sales" />;
+  }
+
+  const maxSales = Math.max(...data.periods.map((p) => p.totalSales), 1);
+
+  return (
+    <div className="report-view analytics-view animate-fade-in">
+      {/* Annual Summary Cards */}
+      <div className="summary-cards">
+        <div className="card card-gross">
+          <div className="card-header-row">
+            <h3>Total Sales</h3>
+            <div className="icon-box icon-gross">📈</div>
+          </div>
+          <p className="value">₹{data.totalSales.toLocaleString('en-IN')}</p>
+        </div>
+        <div className="card card-net">
+          <div className="card-header-row">
+            <h3>Net Revenue</h3>
+            <div className="icon-box icon-net">💰</div>
+          </div>
+          <div className="value highlight">₹{data.totalNet.toLocaleString('en-IN')}</div>
+        </div>
+        <div className="card card-discount">
+          <div className="card-header-row">
+            <h3>Discount</h3>
+            <div className="icon-box icon-discount">✂️</div>
+          </div>
+          <div className="value">
+            ₹
+            {data.periods
+              .reduce((acc, p) => acc + (p.totalSales - p.netSales), 0)
+              .toLocaleString('en-IN')}
+          </div>
+        </div>
+        <div className="card card-profit">
+          <div className="card-header-row">
+            <h3>Profit</h3>
+            <div className="icon-box icon-profit">💰</div>
+          </div>
+          <div className="value highlight">
+            ₹
+            {data.periods.reduce((acc, p) => acc + (p.totalProfit || 0), 0).toLocaleString('en-IN')}
+          </div>
+        </div>
+      </div>
+
+      {data.totalNet > 0 && (
+        <div className="reports-info-row animate-fade-in">
+          <span className="info-icon">ℹ️</span>
+          <span
+            className="info-text"
+            title={`Calculated for ₹${data.periods.reduce((acc, p) => acc + (p.salesWithCost || 0), 0).toLocaleString('en-IN')} of total item-level sales (₹${data.periods.reduce((acc, p) => acc + (p.totalItemSales || 0), 0).toLocaleString('en-IN')})`}
+          >
+            Profit metrics are calculated based on{' '}
+            <strong>
+              {Math.round(
+                (data.periods.reduce((acc, p) => acc + (p.salesWithCost || 0), 0) /
+                  (data.periods.reduce((acc, p) => acc + (p.totalItemSales || 0), 0) || 1)) *
+                  100
+              )}
+              %
+            </strong>{' '}
+            of total sales where cost data was available.
+          </span>
+        </div>
+      )}
+
+      {/* Visual Timeline Chart */}
+      <div className="chart-container">
+        <h3>Revenue Trend</h3>
+        <div className="bar-chart">
+          {data.periods.map((period) => {
+            const heightParam = (period.totalSales / maxSales) * 100;
+            return (
+              <div key={period.period} className="bar-group">
+                <div
+                  className="bar"
+                  style={{ height: `${heightParam}%` }}
+                  title={`₹${period.totalSales.toLocaleString()}`}
+                ></div>
+                <span className="bar-label">{period.period}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Detailed Table */}
+      <div className="table-container">
+        <h3>Detailed Breakdown</h3>
+        <table className="report-table">
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th className="text-right">Bills</th>
+              <th className="text-right">Gross Sales</th>
+              <th className="text-right">Net Sales</th>
+              <th className="text-right">Profit</th>
+              <th className="text-right">Margin</th>
+              <th className="text-right">Coverage</th>
+              <th className="text-right">Growth</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.periods.map((row) => (
+              <tr key={row.period}>
+                <td>{row.period}</td>
+                <td className="text-right">{row.billCount}</td>
+                <td className="text-right">
+                  ₹{row.totalSales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </td>
+                <td className="text-right">
+                  ₹{row.netSales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </td>
+                <td className="text-right">
+                  ₹{(row.totalProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </td>
+                <td className="text-right">
+                  {row.marginPercent && row.marginPercent > 0 ? (
+                    <span className="margin-badge">{row.marginPercent}%</span>
+                  ) : (
+                    <span className="text-muted">N/A</span>
+                  )}
+                </td>
+                <td className="text-right">
+                  {row.salesWithCost !== undefined &&
+                    row.totalItemSales !== undefined &&
+                    row.totalItemSales > 0 && (
+                      <span
+                        style={{
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          color:
+                            row.salesWithCost < row.totalItemSales
+                              ? 'var(--color-warning)'
+                              : 'inherit',
+                        }}
+                        title={`₹${row.salesWithCost.toLocaleString()} covered out of ₹${row.totalItemSales.toLocaleString()}`}
+                      >
+                        {Math.round((row.salesWithCost / row.totalItemSales) * 100)}%
+                      </span>
+                    )}
+                </td>
+                <td className="text-right">
+                  {row.growth !== 0 && (
+                    <span className={`trend-badge ${row.growth > 0 ? 'up' : 'down'}`}>
+                      {row.growth > 0 ? '▲' : '▼'} {Math.abs(row.growth)}%
+                    </span>
+                  )}
+                  {row.growth === 0 && <span className="text-muted">-</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 const ReportsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('sales');
@@ -731,24 +799,59 @@ const ReportsPage: React.FC = () => {
                         <div className="value">{formatCurrency(dailySummary.totalDiscount)}</div>
                       </div>
 
-                      <div className="card card-bills">
+                      <div className="card card-profit">
                         <div className="card-header-row">
-                          <h3>Bills</h3>
+                          <h3>Profit</h3>
                           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            {dailySummary.comparison?.billCount && (
+                            {dailySummary.comparison?.totalProfit && (
                               <TrendChip
-                                value={`${dailySummary.comparison.billCount.change}%`}
-                                trend={dailySummary.comparison.billCount.trend}
+                                value={`${dailySummary.comparison.totalProfit.change}%`}
+                                trend={dailySummary.comparison.totalProfit.trend}
                               />
                             )}
-                            <div className="icon-box icon-bills">📄</div>
+                            <div className="icon-box icon-profit">💰</div>
                           </div>
                         </div>
-                        <div className="value">{dailySummary.billCount}</div>
+                        <div className="value highlight">
+                          {formatCurrency(dailySummary.totalProfit)}
+                        </div>
                       </div>
                     </div>
 
+                    {dailySummary.salesWithCost < dailySummary.totalItemSales && (
+                      <div
+                        className="reports-info-row animate-fade-in"
+                        style={{ marginTop: '-1rem', marginBottom: '1.5rem' }}
+                      >
+                        <span className="info-icon">ℹ️</span>
+                        <span
+                          className="info-text"
+                          title={`Wait! Only ₹${dailySummary.salesWithCost.toLocaleString()} of ₹${dailySummary.totalItemSales.toLocaleString()} sales have cost data.`}
+                        >
+                          Profit metrics are calculated based on{' '}
+                          <strong>
+                            {Math.round(
+                              (dailySummary.salesWithCost / (dailySummary.totalItemSales || 1)) *
+                                100
+                            )}
+                            %
+                          </strong>{' '}
+                          of sales. Some items are missing purchase prices.
+                          {dailySummary.marginPercent > 0 && (
+                            <>
+                              {' '}
+                              • <strong>{dailySummary.marginPercent}% Average Margin</strong>
+                            </>
+                          )}
+                        </span>
+                      </div>
+                    )}
+
                     <div className="payment-summary">
+                      <div className="mode-badge mode-badge-bills">
+                        <span className="mode-name">TRANSACTIONS</span>
+                        <span className="mode-val">{dailySummary.billCount}</span>
+                      </div>
                       {/* Explicitly show Cash and UPI first */}
                       <div className="mode-badge">
                         <span className="mode-name">CASH</span>

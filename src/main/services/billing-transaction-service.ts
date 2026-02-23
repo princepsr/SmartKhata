@@ -9,11 +9,7 @@ import {
 import { InventoryRepository } from '../repositories/inventory-repository';
 import { ProductRepository, Product } from '../repositories/product-repository';
 import { SettingsService } from './settings-service';
-import {
-  NotFoundError,
-  InactiveEntityError,
-  InsufficientStockError,
-} from './errors/service-errors';
+import { NotFoundError, InsufficientStockError } from './errors/service-errors';
 import { logger } from '../utils/logger';
 
 /**
@@ -81,30 +77,24 @@ export class BillingTransactionService extends BaseRepository {
       logger.info('Starting sale transaction', { billNumber: saleData.billNumber });
 
       // ============================================
-      // STEP 1: Validate and prepare bill items
+      // STEP 1: Pre-calculate totals for discount distribution
       // ============================================
       const billItems: CreateBillItemInput[] = [];
-      const fetchedProducts: Map<number, Product> = new Map(); // Cache products for later steps
+      const fetchedProducts: Map<number, Product> = new Map();
+      const config = SettingsService.getInstance().getConfig();
       let subtotal = 0;
       let gstTotal = 0;
 
-      const config = SettingsService.getInstance().getConfig();
+      const itemMetas: { product: Product; quantity: number; baseTotal: number }[] = [];
+      let totalGrossAmount = 0;
 
       saleData.items.forEach((item) => {
-        // Get product details
         const product = this.productRepo.findById(item.productId);
-        if (!product) {
+        if (!product || !product.isActive) {
           throw new NotFoundError('Product', item.productId);
         }
-
-        if (!product.isActive) {
-          throw new InactiveEntityError('Product', item.productId);
-        }
-
-        // Cache for reuse in inventory logging step
         fetchedProducts.set(item.productId, product);
 
-        // Check stock availability and deduct (skip in billing-only mode OR if product doesn't track inventory)
         if (!config.billingOnly && product.trackInventory) {
           if (product.stockQty < item.quantity) {
             throw new InsufficientStockError(
@@ -116,55 +106,62 @@ export class BillingTransactionService extends BaseRepository {
           }
           this.productRepo.updateStock(item.productId, -item.quantity);
         }
-        // Note: updateStock() validates stock and throws if insufficient
 
-        // Calculate line totals
-        let lineSubtotal: number;
-        let lineGst: number;
-        let lineTotal: number;
-
-        // Force exclusive if master switch is ON
         const isGstInclusive = config.gstExclusiveMode ? false : product.isGstInclusive;
-
+        let baseTotal: number;
         if (isGstInclusive) {
-          // Price is inclusive: Total = Price * Qty, Subtotal = Total / (1 + GST%)
-          lineTotal = Math.round(product.salePrice * item.quantity * 100) / 100;
-          if (config.gstEnabled && product.gstPercent > 0) {
-            lineGst = Math.round(lineTotal * (product.gstPercent / 100) * 100) / 100;
-            lineSubtotal = Math.round((lineTotal - lineGst) * 100) / 100;
-          } else {
-            lineSubtotal = lineTotal;
-            lineGst = 0;
-          }
+          baseTotal = product.salePrice * item.quantity;
         } else {
-          // Price is exclusive: Subtotal = Price * Qty, Total = Subtotal * (1 + GST%)
-          lineSubtotal = Math.round(product.salePrice * item.quantity * 100) / 100;
-          lineGst = config.gstEnabled
-            ? Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100
-            : 0;
-          lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
+          const sub = product.salePrice * item.quantity;
+          const gst = config.gstEnabled ? (sub * product.gstPercent) / 100 : 0;
+          baseTotal = sub + gst;
         }
 
-        // Accumulate totals
+        totalGrossAmount += baseTotal;
+        itemMetas.push({ product, quantity: item.quantity, baseTotal });
+      });
+
+      const discountAmountInput = saleData.discountAmount || 0;
+      const discountFactor =
+        totalGrossAmount > 0
+          ? Math.max(0, totalGrossAmount - discountAmountInput) / totalGrossAmount
+          : 0;
+
+      // ============================================
+      // STEP 2: Calculate discounted line items
+      // ============================================
+      itemMetas.forEach(({ product, quantity, baseTotal }) => {
+        const discountedTotal = Math.round(baseTotal * discountFactor * 100) / 100;
+
+        let lineSubtotal: number;
+        let lineGst: number;
+
+        if (config.gstEnabled && product.gstPercent > 0) {
+          lineSubtotal = Math.round((discountedTotal / (1 + product.gstPercent / 100)) * 100) / 100;
+          lineGst = Math.round((discountedTotal - lineSubtotal) * 100) / 100;
+        } else {
+          lineSubtotal = discountedTotal;
+          lineGst = 0;
+        }
+
         subtotal = Math.round((subtotal + lineSubtotal) * 100) / 100;
         gstTotal = Math.round((gstTotal + lineGst) * 100) / 100;
 
-        // Prepare bill item
         billItems.push({
           productId: product.id,
           productNameSnapshot: product.name,
-          quantity: item.quantity,
+          quantity: quantity,
           unitPrice: product.salePrice,
           gstPercent: product.gstPercent,
-          lineTotal: lineTotal,
+          purchasePrice: product.purchasePrice, // Capture current cost
+          lineTotal: discountedTotal,
         });
       });
 
       // ============================================
       // STEP 2: Calculate final totals
       // ============================================
-      const discountAmount = saleData.discountAmount || 0;
-      const grandTotal = Math.round((subtotal + gstTotal - discountAmount) * 100) / 100;
+      const grandTotal = Math.round((subtotal + gstTotal) * 100) / 100;
 
       // ============================================
       // STEP 3: Create bill with items
@@ -174,7 +171,7 @@ export class BillingTransactionService extends BaseRepository {
         customerId: saleData.customerId,
         subtotal,
         gstTotal,
-        discountAmount,
+        discountAmount: saleData.discountAmount || 0,
         grandTotal,
         paymentMode: saleData.paymentMode,
       };

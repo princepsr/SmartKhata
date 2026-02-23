@@ -47,7 +47,7 @@ export interface UpdateProductData {
   sku?: string;
   barcode?: string;
   salePrice?: number;
-  purchasePrice?: number;
+  purchasePrice?: number | null;
   gstPercent?: number;
   lowStockAlert?: number;
   isActive?: boolean;
@@ -301,22 +301,33 @@ export class ProductService extends BaseService {
   }
 
   /**
-   * Search products by name or barcode
+   * Search products by name or barcode with pagination
    */
-  public searchProducts(query: string, includeInactive: boolean = false): any[] {
+  public searchProducts(
+    query: string,
+    includeInactive: boolean = false,
+    page: number = 1,
+    limit: number = 100
+  ): { items: any[]; totalCount: number; hasMore: boolean; page: number } {
     if (!query || query.trim() === '') {
       throw new ValidationError('Search query cannot be empty', 'query');
     }
 
-    const products = this.productRepo.searchByName(query, includeInactive);
+    const offset = (page - 1) * limit;
+    const items = this.productRepo.searchByName(query, includeInactive, limit, offset);
+    const totalCount = this.productRepo.countSearch(query, includeInactive);
+    const hasMore = page * limit < totalCount;
 
     this.logInfo('Products searched', {
       query,
-      resultCount: products.length,
+      resultCount: items.length,
+      totalCount,
       includeInactive,
+      page,
+      limit,
     });
 
-    return products;
+    return { items, totalCount, hasMore, page };
   }
 
   /**
@@ -331,10 +342,25 @@ export class ProductService extends BaseService {
   }
 
   /**
-   * Get all active products
+   * Get all active products with pagination
    */
-  public getAllProducts(includeInactive: boolean = false): any[] {
-    return this.productRepo.findAll(includeInactive);
+  public getAllProducts(
+    includeInactive: boolean = false,
+    page: number = 1,
+    limit: number = 100
+  ): { items: any[]; page: number } {
+    const offset = (page - 1) * limit;
+    return {
+      items: this.productRepo.findAll(includeInactive, limit, offset),
+      page,
+    };
+  }
+
+  /**
+   * Get total product count
+   */
+  public getProductCount(includeInactive: boolean = false): number {
+    return this.productRepo.countAll(includeInactive);
   }
 
   /**

@@ -69,6 +69,7 @@ export const IPC_CHANNELS = {
   CUSTOMER_SEARCH: 'customer:search',
   CUSTOMER_HISTORY: 'customer:history',
   CUSTOMER_ADD_PAYMENT: 'customer:add-payment',
+  CUSTOMER_TOGGLE_STATUS: 'customer:toggleStatus',
 
   // ============================================
   // REPORT MODULE
@@ -193,6 +194,7 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.CUSTOMER_SEARCH,
     IPC_CHANNELS.CUSTOMER_HISTORY,
     IPC_CHANNELS.CUSTOMER_ADD_PAYMENT,
+    IPC_CHANNELS.CUSTOMER_TOGGLE_STATUS,
   ],
   REPORT: [
     IPC_CHANNELS.REPORT_DAILY_SALES,

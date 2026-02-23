@@ -9,6 +9,7 @@ export interface Bill {
   id: number;
   billNumber: string;
   customerId: number | null;
+  customerName?: string | null;
   subtotal: number; // In rupees
   gstTotal: number; // In rupees
   discountAmount: number; // In rupees
@@ -28,6 +29,7 @@ export interface BillItem {
   quantity: number;
   unitPrice: number; // In rupees
   gstPercent: number; // As decimal (e.g., 18.00)
+  purchasePrice?: number; // Snapshot of cost
   lineTotal: number; // In rupees
 }
 
@@ -61,6 +63,7 @@ export interface CreateBillItemInput {
   quantity: number;
   unitPrice: number; // In rupees
   gstPercent: number; // As decimal
+  purchasePrice?: number; // Snapshot of cost
   lineTotal: number; // In rupees
 }
 
@@ -117,25 +120,26 @@ export class BillRepository extends BaseRepository {
       const billId = Number(billResult.lastInsertRowid);
 
       // 3. Create bill items
-      const itemSql = `
+      const insertItem = this.db.prepare(`
         INSERT INTO bill_items (
           bill_id, product_id, product_name_snapshot, 
-          quantity, unit_price, gst_percent, line_total
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      `;
+          quantity, unit_price, gst_percent, purchase_price, line_total
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
 
       const createdItems: BillItem[] = [];
 
-      items.forEach((item) => {
-        const itemResult = this.execute(itemSql, [
+      for (const item of items) {
+        const itemResult = insertItem.run(
           billId,
           item.productId,
           item.productNameSnapshot,
           item.quantity,
           item.unitPrice,
           item.gstPercent,
-          item.lineTotal,
-        ]);
+          item.purchasePrice ?? null,
+          item.lineTotal
+        );
 
         createdItems.push({
           id: Number(itemResult.lastInsertRowid),
@@ -145,9 +149,10 @@ export class BillRepository extends BaseRepository {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           gstPercent: item.gstPercent,
+          purchasePrice: item.purchasePrice,
           lineTotal: item.lineTotal,
         });
-      });
+      }
 
       logger.info('Bill created with items', {
         billId,
@@ -182,7 +187,12 @@ export class BillRepository extends BaseRepository {
    * Find bill by ID
    */
   public findById(id: number): Bill | null {
-    const sql = `SELECT * FROM bills WHERE id = ?`;
+    const sql = `
+      SELECT b.*, c.name as customer_name 
+      FROM bills b
+      LEFT JOIN customers c ON b.customer_id = c.id
+      WHERE b.id = ?
+    `;
     const row = this.queryOne<any>(sql, [id]);
     return row ? this._mapToBill(row) : null;
   }
@@ -191,7 +201,12 @@ export class BillRepository extends BaseRepository {
    * Find bill by bill number
    */
   public findByBillNumber(billNumber: string): Bill | null {
-    const sql = `SELECT * FROM bills WHERE bill_number = ?`;
+    const sql = `
+      SELECT b.*, c.name as customer_name 
+      FROM bills b
+      LEFT JOIN customers c ON b.customer_id = c.id
+      WHERE b.bill_number = ?
+    `;
     const row = this.queryOne<any>(sql, [billNumber]);
     return row ? this._mapToBill(row) : null;
   }
@@ -233,8 +248,10 @@ export class BillRepository extends BaseRepository {
     const row = this.db
       .prepare(
         `
-      SELECT * FROM bills 
-      ORDER BY created_at DESC, id DESC 
+      SELECT b.*, c.name as customer_name 
+      FROM bills b
+      LEFT JOIN customers c ON b.customer_id = c.id
+      ORDER BY b.created_at DESC, b.id DESC 
       LIMIT 1
     `
       )
@@ -256,9 +273,11 @@ export class BillRepository extends BaseRepository {
     // Optimization: Use direct string comparison to utilize idx_bills_created_at
     // Ensure we cover the full day by adjusting toDate if it's just a date
     const sql = `
-      SELECT * FROM bills
-      WHERE created_at >= ? AND created_at <= ?
-      ORDER BY created_at DESC
+      SELECT b.*, c.name as customer_name
+      FROM bills b
+      LEFT JOIN customers c ON b.customer_id = c.id
+      WHERE b.created_at >= ? AND b.created_at <= ?
+      ORDER BY b.created_at DESC
     `;
 
     const rows = this.queryAll<any>(sql, [
@@ -396,6 +415,7 @@ export class BillRepository extends BaseRepository {
       id: row.id,
       billNumber: row.bill_number,
       customerId: row.customer_id,
+      customerName: row.customer_name,
       subtotal: row.subtotal, // Direct Rupees
       gstTotal: row.gst_total,
       discountAmount: row.discount_amount,
@@ -417,6 +437,7 @@ export class BillRepository extends BaseRepository {
       quantity: row.quantity,
       unitPrice: row.unit_price, // Direct Rupees
       gstPercent: row.gst_percent, // Direct Percent
+      purchasePrice: row.purchase_price, // Snapshot of cost
       lineTotal: row.line_total, // Direct Rupees
     };
   }

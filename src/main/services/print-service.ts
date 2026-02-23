@@ -9,6 +9,7 @@ import { StabilityService } from './stability-service';
 import { BaseService } from './base-service';
 import { BillWithItems } from '../repositories/bill-repository';
 import { BillingService } from './billing-service';
+import { CustomerRepository, Customer } from '../repositories/customer-repository';
 import {
   DailySalesSummary,
   PaymentModeSummary,
@@ -107,6 +108,12 @@ export class PrintService extends BaseService {
     }
 
     const config = SettingsService.getInstance().getConfig();
+    let customer: Customer | null = null;
+    if (billData.bill.customerId && config.showCustomerDetails) {
+      const customerRepo = new CustomerRepository();
+      customer = customerRepo.findById(billData.bill.customerId);
+    }
+
     let targetPrinter = printerName || config.printerName || '';
     const paperSize = config.paperSize || '58mm';
 
@@ -130,7 +137,7 @@ export class PrintService extends BaseService {
 
     try {
       printWindow = this._getPrintWindow();
-      const htmlContent = this.generateReceiptHtml(billData, paperSize);
+      const htmlContent = this.generateReceiptHtml(billData, paperSize, customer);
 
       printLogger.info(`Awaiting print promise (30s timeout)...`);
       // Add a safety timeout for the entire print operation (30s)
@@ -600,7 +607,11 @@ export class PrintService extends BaseService {
   /**
    * Generates the HTML for a thermal receipt
    */
-  private generateReceiptHtml(data: BillWithItems, paperSize: '58mm' | '80mm'): string {
+  private generateReceiptHtml(
+    data: BillWithItems,
+    paperSize: '58mm' | '80mm',
+    customer: Customer | null = null
+  ): string {
     const { bill, items } = data;
     const settings = SettingsService.getInstance().getConfig();
     const width = this._getPaperWidth(paperSize);
@@ -669,6 +680,18 @@ export class PrintService extends BaseService {
             <span>#${bill.billNumber}</span>
             <span>${date} ${time}</span>
           </div>
+          ${
+            customer && settings.showCustomerDetails
+              ? `
+          <div class="divider"></div>
+          <div class="info-row bold">
+            <span>CUST: ${customer.name}</span>
+          </div>
+          ${customer.phone ? `<div class="info-row"><span>PH: ${customer.phone}</span></div>` : ''}
+          ${customer.address ? `<div class="info-row" style="font-size: 10px;"><span>${customer.address}</span></div>` : ''}
+          `
+              : ''
+          }
           <div class="divider"></div>
           
           <div class="items">
@@ -779,7 +802,17 @@ export class PrintService extends BaseService {
           <span>Bill No: ${bill.billNumber}</span>
           <span>${date} ${time}</span>
         </div>
-        ${bill.customerId && settings.showCustomerDetails ? `<div class="meta-row"><span>Customer: ${bill.customerId}</span></div>` : ''}
+        ${
+          customer && settings.showCustomerDetails
+            ? `
+        <div class="meta-row">
+          <span><b>Customer: ${customer.name}</b></span>
+          ${customer.phone ? `<span>Ph: ${customer.phone}</span>` : ''}
+        </div>
+        ${customer.address ? `<div class="meta-row" style="font-size: 11px;"><span>${customer.address}</span></div>` : ''}
+        `
+            : ''
+        }
         
         <div class="divider"></div>
         

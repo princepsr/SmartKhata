@@ -90,6 +90,7 @@ export const UpdateProductSchema = z.object({
         .number()
         .nonnegative('Cost cannot be negative')
         .max(999999.99, 'Cost is too high')
+        .nullable()
         .optional(),
 
       gstPercent: z
@@ -133,9 +134,20 @@ export const ProductIdSchema = z
 export const ProductSearchSchema = z.object({
   query: z
     .string()
-    .min(2, 'Search query must be at least 2 characters')
+    .min(1, 'Search query must be at least 1 character')
     .max(100, 'Search query is too long'),
   includeInactive: z.boolean().optional(),
+});
+
+// Customer Search Schema
+export const CustomerSearchSchema = z.object({
+  query: z
+    .string()
+    .min(1, 'Search query must be at least 1 character')
+    .max(100, 'Search query is too long'),
+  includeInactive: z.boolean().optional(),
+  page: z.number().int().positive().optional(),
+  pageSize: z.number().int().positive().optional(),
 });
 
 // Create Product Array (for Import)

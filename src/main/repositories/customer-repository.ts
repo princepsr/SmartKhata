@@ -173,32 +173,87 @@ export class CustomerRepository extends BaseRepository {
   }
 
   /**
-   * List all active customers
+   * List all active customers with pagination
    */
-  public findAll(includeInactive: boolean = false): Customer[] {
+  public findAll(includeInactive: boolean = false, limit?: number, offset?: number): Customer[] {
     const statusFilter = includeInactive ? '' : 'WHERE is_active = 1';
-    const sql = `
+    let sql = `
       SELECT * FROM customers
       ${statusFilter}
       ORDER BY name ASC
     `;
-    const rows = this.queryAll<any>(sql);
+
+    const params: any[] = [];
+    if (limit !== undefined) {
+      sql += ` LIMIT ?`;
+      params.push(limit);
+    }
+    if (offset !== undefined) {
+      sql += ` OFFSET ?`;
+      params.push(offset);
+    }
+
+    const rows = this.queryAll<any>(sql, params);
     return rows.map((row) => this._mapToCustomer(row));
   }
 
   /**
-   * Search customers by name
+   * Get total count of customers
    */
-  public searchByName(query: string, includeInactive: boolean = false): Customer[] {
-    const statusFilter = includeInactive ? '' : 'AND is_active = 1';
+  public countAll(includeInactive: boolean = false): number {
+    const statusFilter = includeInactive ? '' : 'WHERE is_active = 1';
     const sql = `
-      SELECT * FROM customers
-      WHERE name LIKE ? ${statusFilter}
-      ORDER BY name ASC
-      LIMIT 50
+      SELECT COUNT(*) as count FROM customers
+      ${statusFilter}
     `;
-    const rows = this.queryAll<any>(sql, [`%${query}%`]);
+    const row = this.queryOne<{ count: number }>(sql);
+    return row ? row.count : 0;
+  }
+
+  /**
+   * Search customers by name or phone with pagination
+   */
+  public searchByName(
+    query: string,
+    includeInactive: boolean = false,
+    limit?: number,
+    offset?: number
+  ): Customer[] {
+    let sql = `
+      SELECT * FROM customers
+      WHERE (name LIKE ? OR phone LIKE ?)
+      ${includeInactive ? '' : 'AND is_active = 1'}
+      ORDER BY name ASC
+    `;
+
+    const searchPattern = `%${query}%`;
+    const params: any[] = [searchPattern, searchPattern];
+
+    if (limit !== undefined) {
+      sql += ` LIMIT ?`;
+      params.push(limit);
+    }
+    if (offset !== undefined) {
+      sql += ` OFFSET ?`;
+      params.push(offset);
+    }
+
+    const rows = this.queryAll<any>(sql, params);
     return rows.map((row) => this._mapToCustomer(row));
+  }
+
+  /**
+   * Get total count of customers matching search
+   */
+  public countSearch(query: string, includeInactive: boolean = false): number {
+    const sql = `
+      SELECT COUNT(*) as count FROM customers
+      WHERE (name LIKE ? OR phone LIKE ?)
+      ${includeInactive ? '' : 'AND is_active = 1'}
+    `;
+    const searchPattern = `%${query}%`;
+    const row = this.queryOne<{ count: number }>(sql, [searchPattern, searchPattern]);
+    return row ? row.count : 0;
   }
 
   /**

@@ -6,7 +6,7 @@
  */
 
 import { BaseService } from './base-service';
-import { ProductRepository } from '../repositories/product-repository';
+import { ProductRepository, Product } from '../repositories/product-repository';
 import { CustomerRepository } from '../repositories/customer-repository';
 import { BillRepository, BillWithItems } from '../repositories/bill-repository';
 import { SettingsService } from './settings-service';
@@ -98,79 +98,76 @@ export class BillingService extends BaseService {
       throw new ValidationError('Discount cannot be negative', 'discountAmount');
     }
 
-    // 3. Calculate line items
-    const calculatedItems: CalculatedLineItem[] = [];
-    let subtotal = 0;
-    let gstTotal = 0;
+    // 3. Pre-calculate totals for discount distribution
+    const itemMetas: { product: Product; quantity: number; baseTotal: number }[] = [];
+    let totalGrossAmount = 0;
+    const settings = SettingsService.getInstance().getConfig();
 
     items.forEach((item, index) => {
-      // Validate quantity
       if (!item.quantity || item.quantity <= 0) {
         throw new InvalidQuantityError(
           `Quantity must be positive for item ${index + 1}`,
           item.quantity
         );
       }
-
-      // Get product
       const product = this.productRepo.findById(item.productId);
-      if (!product) {
+      if (!product || !product.isActive) {
         throw new NotFoundError('Product', item.productId);
       }
 
-      if (!product.isActive) {
-        throw new InactiveEntityError('Product', item.productId);
+      const isGstInclusive = settings.gstExclusiveMode ? false : product.isGstInclusive;
+      let baseTotal: number;
+      if (isGstInclusive) {
+        baseTotal = product.salePrice * item.quantity;
+      } else {
+        const sub = product.salePrice * item.quantity;
+        const gst = settings.gstEnabled ? (sub * product.gstPercent) / 100 : 0;
+        baseTotal = sub + gst;
       }
 
-      // Get settings to check if GST is enabled
-      const settings = SettingsService.getInstance().getConfig();
+      totalGrossAmount += baseTotal;
+      itemMetas.push({ product, quantity: item.quantity, baseTotal });
+    });
 
-      // Calculate line totals
+    const discountFactor =
+      totalGrossAmount > 0 ? Math.max(0, totalGrossAmount - discountAmount) / totalGrossAmount : 0;
+
+    // 4. Calculate discounted line items
+    const calculatedItems: CalculatedLineItem[] = [];
+    let subtotal = 0;
+    let gstTotal = 0;
+
+    itemMetas.forEach(({ product, quantity, baseTotal }) => {
+      const discountedTotal = Math.round(baseTotal * discountFactor * 100) / 100;
+
       let lineSubtotal: number;
       let lineGst: number;
-      let lineTotal: number;
 
-      // Force exclusive if master switch is ON
-      const isGstInclusive = settings.gstExclusiveMode ? false : product.isGstInclusive;
-
-      if (isGstInclusive) {
-        // Price is inclusive: Total = Price * Qty, Subtotal = Total / (1 + GST%)
-        lineTotal = Math.round(product.salePrice * item.quantity * 100) / 100;
-        if (settings.gstEnabled && product.gstPercent > 0) {
-          lineGst = Math.round(lineTotal * (product.gstPercent / 100) * 100) / 100;
-          lineSubtotal = Math.round((lineTotal - lineGst) * 100) / 100;
-        } else {
-          lineSubtotal = lineTotal;
-          lineGst = 0;
-        }
+      if (settings.gstEnabled && product.gstPercent > 0) {
+        lineSubtotal = Math.round((discountedTotal / (1 + product.gstPercent / 100)) * 100) / 100;
+        lineGst = Math.round((discountedTotal - lineSubtotal) * 100) / 100;
       } else {
-        // Price is exclusive: Subtotal = Price * Qty, Total = Subtotal * (1 + GST%)
-        lineSubtotal = Math.round(product.salePrice * item.quantity * 100) / 100;
-        lineGst = settings.gstEnabled
-          ? Math.round(((lineSubtotal * product.gstPercent) / 100) * 100) / 100
-          : 0;
-        lineTotal = Math.round((lineSubtotal + lineGst) * 100) / 100;
+        lineSubtotal = discountedTotal;
+        lineGst = 0;
       }
 
-      // Accumulate totals
       subtotal = Math.round((subtotal + lineSubtotal) * 100) / 100;
       gstTotal = Math.round((gstTotal + lineGst) * 100) / 100;
 
-      // Add calculated item
       calculatedItems.push({
         productId: product.id,
         productName: product.name,
-        quantity: item.quantity,
+        quantity: quantity,
         unitPrice: product.salePrice,
         gstPercent: product.gstPercent,
         lineSubtotal,
         lineGst,
-        lineTotal,
+        lineTotal: discountedTotal,
       });
     });
 
     // 4. Calculate grand total
-    const grandTotal = Math.round((subtotal + gstTotal - discountAmount) * 100) / 100;
+    const grandTotal = Math.round((subtotal + gstTotal) * 100) / 100;
 
     // 5. Validate grand total is positive
     if (grandTotal < 0) {

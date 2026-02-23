@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useIPC } from '../hooks/useIPC';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -22,16 +22,27 @@ interface Customer {
 }
 
 const CustomersPage: React.FC = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
   const {
-    data: customers,
+    data: paginatedData,
     loading,
     error,
-    execute: fetchCustomers,
-  } = useIPC<Customer[]>(IPC_CHANNELS.CUSTOMER_LIST);
+    execute: fetchItems,
+  } = useIPC<{ items: Customer[]; totalCount: number; hasMore: boolean; page: number }>(
+    debouncedSearchQuery.trim().length >= 1
+      ? IPC_CHANNELS.CUSTOMER_SEARCH
+      : IPC_CHANNELS.CUSTOMER_LIST
+  );
 
-  const { execute: updateCustomer } = useIPC(IPC_CHANNELS.CUSTOMER_UPDATE);
+  const { execute: toggleStatus } = useIPC(IPC_CHANNELS.CUSTOMER_TOGGLE_STATUS);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const isInitialLoading = loading && customers.length === 0;
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
   const [showInactive, setShowInactive] = useLocalStorage('customers_show_inactive', false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -66,10 +77,93 @@ const CustomersPage: React.FC = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Initial fetch and on toggle change
+  // Debounce search query
   useEffect(() => {
-    fetchCustomers({ includeInactive: showInactive });
-  }, [fetchCustomers, showInactive]);
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Initial fetch / Search trigger
+  useEffect(() => {
+    setPage(1);
+    setCustomers([]);
+    fetchItems({
+      includeInactive: showInactive,
+      query: debouncedSearchQuery,
+      page: 1,
+      pageSize: 100,
+    });
+  }, [fetchItems, showInactive, debouncedSearchQuery]);
+
+  // Fetch more items
+  const fetchNextPage = useCallback(() => {
+    if (loading || !hasMore) {
+      return;
+    }
+
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchItems({
+      includeInactive: showInactive,
+      query: debouncedSearchQuery,
+      page: nextPage,
+      pageSize: 100,
+    });
+  }, [fetchItems, showInactive, debouncedSearchQuery, page, loading, hasMore]);
+
+  // Handle data updates
+  useEffect(() => {
+    if (paginatedData) {
+      if (paginatedData.page === 1) {
+        setCustomers(paginatedData.items);
+      } else {
+        setCustomers((prev) => [...prev, ...paginatedData.items]);
+      }
+      setHasMore(paginatedData.hasMore);
+      setTotalCount(paginatedData.totalCount);
+    }
+  }, [paginatedData]);
+
+  // Intersection Observer for Infinite Scroll
+  const loaderRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!hasMore || loading) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      {
+        root: listContainerRef.current,
+        threshold: 0.1,
+        rootMargin: '100px',
+      }
+    );
+
+    const currentLoader = loaderRef.current;
+    if (currentLoader) {
+      observer.observe(currentLoader);
+    }
+
+    return () => {
+      if (currentLoader) {
+        observer.unobserve(currentLoader);
+      }
+      observer.disconnect();
+    };
+  }, [hasMore, loading, fetchNextPage]);
+
+  // Handle global actions (e.g. from Command Center)
+  const handleAddCustomer = useCallback(() => {
+    setEditingCustomerId(null);
+    setIsFormOpen(true);
+  }, []);
 
   // Handle global actions (e.g. from Command Center)
   useEffect(() => {
@@ -80,76 +174,77 @@ const CustomersPage: React.FC = () => {
       searchParams.delete('action');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, handleAddCustomer]);
 
-  const handleAddCustomer = () => {
-    setEditingCustomerId(null);
-    setIsFormOpen(true);
-  };
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // New customer on Alt+N
+      if (e.altKey && e.key === 'n') {
+        e.preventDefault();
+        handleAddCustomer();
+      }
+      // Focus search on Ctrl+F
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleAddCustomer]);
 
-  const handleEditCustomer = (customer: Customer) => {
+  const handleEditCustomer = useCallback((customer: Customer) => {
     setEditingCustomerId(customer.id);
     setIsFormOpen(true);
-  };
+  }, []);
 
-  const handleFormSuccess = () => {
-    fetchCustomers({ includeInactive: showInactive });
+  const handleFormSuccess = useCallback(() => {
+    setPage(1);
+    setCustomers([]);
+    fetchItems({
+      includeInactive: showInactive,
+      query: debouncedSearchQuery,
+      page: 1,
+      pageSize: 100,
+    });
     setIsFormOpen(false);
-  };
+  }, [fetchItems, showInactive, debouncedSearchQuery]);
 
-  const handleToggleStatus = async (customer: Customer, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const isDeactivating = customer.isActive;
+  const handleToggleStatus = useCallback(
+    async (customer: Customer, e: React.MouseEvent) => {
+      e.stopPropagation();
+      const isDeactivating = customer.isActive;
 
-    if (isDeactivating) {
-      setConfirmDialog({
-        isOpen: true,
-        title: 'Deactivate Customer',
-        message: `Are you sure you want to deactivate "${customer.name}"? This will hide them from the billing search.`,
-        onConfirm: async () => {
-          try {
-            await updateCustomer({
-              id: customer.id,
-              data: { isActive: false },
-            });
-            fetchCustomers({ includeInactive: showInactive });
-          } catch (err) {
-            console.error('Failed to deactivate customer:', err);
-          }
-        },
-      });
-      return;
-    }
+      if (isDeactivating) {
+        setConfirmDialog({
+          isOpen: true,
+          title: 'Deactivate Customer',
+          message: `Are you sure you want to deactivate "${customer.name}"? This will hide them from the billing search.`,
+          onConfirm: async () => {
+            try {
+              await toggleStatus({ id: customer.id, isActive: false });
+              handleFormSuccess(); // Refresh
+            } catch (err) {
+              console.error('Failed to toggle status:', err);
+            }
+          },
+        });
+        return;
+      }
 
-    try {
-      await updateCustomer({
-        id: customer.id,
-        data: { isActive: true },
-      });
-      fetchCustomers({ includeInactive: showInactive });
-    } catch (err) {
-      console.error('Failed to activate customer:', err);
-    }
-  };
+      try {
+        await toggleStatus({ id: customer.id, isActive: !customer.isActive });
+        handleFormSuccess();
+      } catch (err) {
+        console.error('Failed to toggle status:', err);
+      }
+    },
+    [toggleStatus, handleFormSuccess]
+  );
 
-  // Filter customers
-  const filteredCustomers = useMemo(() => {
-    if (!customers) {
-      return [];
-    }
-
-    if (!searchQuery) {
-      return customers;
-    }
-
-    const lowerQuery = searchQuery.toLowerCase();
-    return customers.filter(
-      (c) =>
-        c.name.toLowerCase().includes(lowerQuery) ||
-        (c.phone && c.phone.includes(lowerQuery)) ||
-        c.address?.toLowerCase().includes(lowerQuery)
-    );
-  }, [customers, searchQuery]);
+  // No client-side search needed anymore, using server-side
+  const filteredCustomers = customers;
 
   // Keyboard Navigation
   useEffect(() => {
@@ -192,7 +287,7 @@ const CustomersPage: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [filteredCustomers, selectedIndex]);
+  }, [filteredCustomers, selectedIndex, handleAddCustomer, handleEditCustomer]);
 
   // Auto-scroll to selected item
   useEffect(() => {
@@ -253,14 +348,14 @@ const CustomersPage: React.FC = () => {
         </header>
 
         <div className="customers-content">
-          {loading && <div className="no-results">Loading customers...</div>}
+          {isInitialLoading && <div className="no-results">Loading customers...</div>}
           {error && (
             <div className="no-results" style={{ color: 'var(--color-error)' }}>
               Error: {error}
             </div>
           )}
 
-          {!loading && !error && (
+          {(!isInitialLoading || customers.length > 0) && !error && (
             <div className="data-table-container" ref={listContainerRef}>
               <div className="data-table-header">
                 <div className="col-name">Name</div>
@@ -405,6 +500,16 @@ const CustomersPage: React.FC = () => {
                   </div>
                 ))
               )}
+
+              {hasMore && (
+                <div ref={loaderRef} className="loading-more">
+                  {loading ? 'Loading more customers...' : 'Scroll for more'}
+                </div>
+              )}
+
+              {!hasMore && customers.length > 0 && totalCount > 100 && (
+                <div className="end-of-list">Showing all {totalCount} customers</div>
+              )}
             </div>
           )}
         </div>
@@ -427,7 +532,7 @@ const CustomersPage: React.FC = () => {
         onSuccess={() => {
           setSettleCustomer(null);
           // Refresh customer list
-          fetchCustomers({ includeInactive: showInactive });
+          handleFormSuccess();
         }}
       />
 

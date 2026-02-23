@@ -218,7 +218,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       sku: formData.sku || undefined,
       barcode: formData.barcode || undefined,
       salePrice: parseFloat(formData.salePrice),
-      cost: formData.purchasePrice ? parseFloat(formData.purchasePrice) : undefined, // Maps to 'cost' in handlers
+      cost: formData.purchasePrice
+        ? parseFloat(formData.purchasePrice)
+        : isEditMode
+          ? null
+          : undefined, // Allow clearing in edit mode
       gstPercent: parseFloat(formData.gstPercent || '0'),
       stockQty: parseFloat(formData.stockQty || '0'),
       lowStockAlert: parseFloat(formData.lowStockAlert || '0'),

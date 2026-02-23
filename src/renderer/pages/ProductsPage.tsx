@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useIPC } from '../hooks/useIPC';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -38,13 +38,25 @@ const SkeletonRows: React.FC = () => (
 
 const ProductsPage: React.FC = () => {
   const { settings } = useAppSettingsStore();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
   const {
-    data: products,
+    data: paginatedData,
     loading,
     error,
-    execute: fetchProducts,
-  } = useIPC<Product[]>(IPC_CHANNELS.PRODUCT_LIST);
-  const [searchQuery, setSearchQuery] = useState('');
+    execute: fetchItems,
+  } = useIPC<{ items: Product[]; totalCount: number; hasMore: boolean; page: number }>(
+    debouncedSearchQuery.trim().length >= 1
+      ? IPC_CHANNELS.PRODUCT_SEARCH
+      : IPC_CHANNELS.PRODUCT_LIST
+  );
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const isInitialLoading = loading && products.length === 0;
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
@@ -88,13 +100,17 @@ const ProductsPage: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
+  const handleAddProduct = useCallback(() => {
+    setEditingProductId(null);
+    setIsFormOpen(true);
+  }, []);
+
+  const handleEditProduct = useCallback((product: Product) => {
+    setEditingProductId(product.id);
+    setIsFormOpen(true);
+  }, []);
+
   const [searchParams, setSearchParams] = useSearchParams();
-
-  // Initial fetch
-  useEffect(() => {
-    fetchProducts({ includeInactive });
-  }, [fetchProducts, includeInactive]);
-
   // Handle global actions (e.g. from Command Center)
   useEffect(() => {
     const action = searchParams.get('action');
@@ -104,69 +120,181 @@ const ProductsPage: React.FC = () => {
       searchParams.delete('action');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, handleAddProduct]);
 
-  const handleAddProduct = () => {
-    setEditingProductId(null);
-    setIsFormOpen(true);
-  };
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Focus search on Ctrl+F
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      // New product on Alt+N
+      if (e.altKey && e.key === 'n') {
+        e.preventDefault();
+        handleAddProduct();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleAddProduct]);
 
-  const handleEditProduct = (product: Product) => {
-    setEditingProductId(product.id);
-    setIsFormOpen(true);
-  };
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const handleAdjustStock = (e: React.MouseEvent, product: Product) => {
-    e.stopPropagation(); // Prevent row selection
-    setAdjustingProductId(product.id);
-    setIsAdjustmentOpen(true);
-  };
-
-  const handleViewHistory = (e: React.MouseEvent, product: Product) => {
-    e.stopPropagation();
-    setHistoryProduct(product);
-    setIsHistoryOpen(true);
-  };
-
-  const handleFormSuccess = () => {
-    fetchProducts({ includeInactive }); // Refresh list
-    setIsFormOpen(false); // Close form if open
-    setIsAdjustmentOpen(false); // Close adjustment if open
-    setIsImportOpen(false); // Close import if open
-  };
-
-  const { execute: toggleStatus } = useIPC(IPC_CHANNELS.PRODUCT_TOGGLE_STATUS);
-
-  const handleToggleStatus = async (e: React.MouseEvent, product: Product) => {
-    e.stopPropagation();
-    const isDeactivating = product.isActive;
-
-    if (isDeactivating) {
-      setConfirmDialog({
-        isOpen: true,
-        title: 'Deactivate Product',
-        message: `Are you sure you want to deactivate "${product.name}"? It will be hidden from the billing search.`,
-        onConfirm: async () => {
-          try {
-            await toggleStatus({ id: product.id, isActive: false });
-            fetchProducts({ includeInactive });
-          } catch (err) {
-            console.error('Failed to toggle product status:', err);
-          }
-        },
+  // Initial fetch / Search trigger
+  useEffect(() => {
+    setPage(1);
+    setProducts([]); // Clear existing items on search or filter change
+    if (debouncedSearchQuery.trim().length >= 1) {
+      fetchItems({
+        includeInactive,
+        query: debouncedSearchQuery,
+        page: 1,
+        pageSize: 100,
       });
+    } else {
+      fetchItems({
+        includeInactive,
+        page: 1,
+        pageSize: 100,
+      });
+    }
+  }, [fetchItems, includeInactive, debouncedSearchQuery]);
+
+  // Fetch more items
+  const fetchNextPage = useCallback(() => {
+    if (loading || !hasMore) {
       return;
     }
 
-    try {
-      await toggleStatus({ id: product.id, isActive: !product.isActive });
-      fetchProducts({ includeInactive });
-    } catch (err) {
-      console.error('Failed to toggle product status:', err);
-    }
-  };
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchItems({
+      includeInactive,
+      query: debouncedSearchQuery,
+      page: nextPage,
+      pageSize: 100,
+    });
+  }, [fetchItems, includeInactive, debouncedSearchQuery, page, loading, hasMore]);
 
-  // Filter products
+  // Handle data updates
+  useEffect(() => {
+    if (paginatedData) {
+      if (paginatedData.page === 1) {
+        setProducts(paginatedData.items);
+      } else {
+        setProducts((prev) => [...prev, ...paginatedData.items]);
+      }
+      setHasMore(paginatedData.hasMore);
+      setTotalCount(paginatedData.totalCount);
+    }
+  }, [paginatedData]);
+
+  // Intersection Observer for Infinite Scroll
+  const loaderRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!hasMore || loading) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      {
+        root: listContainerRef.current,
+        threshold: 0.1,
+        rootMargin: '100px', // Start loading before reaching bottom
+      }
+    );
+
+    const currentLoader = loaderRef.current;
+    if (currentLoader) {
+      observer.observe(currentLoader);
+    }
+
+    return () => {
+      if (currentLoader) {
+        observer.unobserve(currentLoader);
+      }
+      observer.disconnect();
+    };
+  }, [hasMore, loading, fetchNextPage]);
+
+  const handleAdjustStock = useCallback((e: React.MouseEvent, product: Product) => {
+    e.stopPropagation(); // Prevent row selection
+    setAdjustingProductId(product.id);
+    setIsAdjustmentOpen(true);
+  }, []);
+
+  const handleViewHistory = useCallback((e: React.MouseEvent, product: Product) => {
+    e.stopPropagation();
+    setHistoryProduct(product);
+    setIsHistoryOpen(true);
+  }, []);
+
+  const handleFormSuccess = useCallback(() => {
+    setPage(1);
+    setProducts([]);
+    fetchItems({
+      includeInactive,
+      query: debouncedSearchQuery,
+      page: 1,
+      pageSize: 100,
+    }); // Refresh list
+    setIsFormOpen(false); // Close form if open
+    setIsAdjustmentOpen(false); // Close adjustment if open
+    setIsImportOpen(false); // Close import if open
+  }, [fetchItems, includeInactive, debouncedSearchQuery]);
+
+  const handleImportSuccess = useCallback(() => {
+    handleFormSuccess();
+  }, [handleFormSuccess]);
+
+  const { execute: toggleStatus } = useIPC(IPC_CHANNELS.PRODUCT_TOGGLE_STATUS);
+
+  const handleToggleStatus = useCallback(
+    async (e: React.MouseEvent, product: Product) => {
+      e.stopPropagation();
+      const isDeactivating = product.isActive;
+
+      if (isDeactivating) {
+        setConfirmDialog({
+          isOpen: true,
+          title: 'Deactivate Product',
+          message: `Are you sure you want to deactivate "${product.name}"? It will be hidden from the billing search.`,
+          onConfirm: async () => {
+            try {
+              await toggleStatus({ id: product.id, isActive: false });
+              handleFormSuccess(); // Reuse refresh logic
+            } catch (err) {
+              console.error('Failed to toggle product status:', err);
+            }
+          },
+        });
+        return;
+      }
+
+      try {
+        await toggleStatus({ id: product.id, isActive: !product.isActive });
+        handleFormSuccess();
+      } catch (err) {
+        console.error('Failed to toggle product status:', err);
+      }
+    },
+    [toggleStatus, handleFormSuccess]
+  );
+
+  // Filter products (client side filters only, search is server side)
   const filteredProducts = useMemo(() => {
     if (!products) {
       return [];
@@ -174,23 +302,13 @@ const ProductsPage: React.FC = () => {
 
     let result = products;
 
-    // Filter by low stock first if enabled
+    // Filter by low stock if enabled (still client side for now as it's a simple toggle)
     if (showLowStockOnly) {
       result = result.filter((p) => p.stockQty <= (p.lowStockAlert || 0));
     }
 
-    if (searchQuery) {
-      const lowerQuery = searchQuery.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(lowerQuery) ||
-          p.sku?.toLowerCase().includes(lowerQuery) ||
-          p.barcode?.includes(lowerQuery)
-      );
-    }
-
     return result;
-  }, [products, searchQuery, showLowStockOnly]);
+  }, [products, showLowStockOnly]);
 
   // Keyboard Navigation
   useEffect(() => {
@@ -236,7 +354,7 @@ const ProductsPage: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [filteredProducts, selectedIndex]);
+  }, [filteredProducts, selectedIndex, handleAddProduct, handleEditProduct]);
 
   // Auto-scroll to selected item
   useEffect(() => {
@@ -300,19 +418,24 @@ const ProductsPage: React.FC = () => {
         </header>
 
         <div className="products-content">
-          {loading && (
+          {isInitialLoading && (
             <div className="data-table-container">
               <SkeletonRows />
             </div>
           )}
-          {error && <div className="error">Error: {error}</div>}
+          {error && (
+            <div className="no-results" style={{ color: 'var(--color-error)' }}>
+              Error: {error}
+            </div>
+          )}
 
-          {!loading && !error && (
+          {(!isInitialLoading || products.length > 0) && !error && (
             <div className="data-table-container" ref={listContainerRef}>
               <div className="data-table-header">
                 <div className="col-name">Name</div>
                 <div className="col-sku">SKU / Barcode</div>
-                <div className="col-price">Price</div>
+                <div className="col-price">Sale Price</div>
+                <div className="col-cost">Purchase</div>
                 <div className="col-stock">Stock</div>
                 <div className="col-status">Status</div>
                 <div className="col-actions">Actions</div>
@@ -365,6 +488,15 @@ const ProductsPage: React.FC = () => {
                             MRP
                           </span>
                         )}
+                    </div>
+                    <div className="col-cost">
+                      {product.purchasePrice && product.purchasePrice > 0 ? (
+                        formatCurrency(product.purchasePrice)
+                      ) : (
+                        <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                          N/A
+                        </span>
+                      )}
                     </div>
                     <div className="col-stock">
                       {product.trackInventory ? (
@@ -493,6 +625,16 @@ const ProductsPage: React.FC = () => {
                   </div>
                 ))
               )}
+
+              {hasMore && (
+                <div ref={loaderRef} className="loading-more">
+                  {loading ? 'Loading more products...' : 'Scroll for more'}
+                </div>
+              )}
+
+              {!hasMore && products.length > 0 && totalCount > 100 && (
+                <div className="end-of-list">Showing all {totalCount} products</div>
+              )}
             </div>
           )}
         </div>
@@ -521,7 +663,7 @@ const ProductsPage: React.FC = () => {
       <BulkImportModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
-        onSuccess={handleFormSuccess}
+        onSuccess={handleImportSuccess}
       />
 
       <ProductHistoryModal
