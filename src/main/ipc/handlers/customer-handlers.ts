@@ -11,6 +11,7 @@ import {
   CustomerService,
   CreateOrGetCustomerInput,
   UpdateCustomerData,
+  CustomerHistory,
 } from '../../services/customer-service';
 import { Customer } from '../../repositories/customer-repository';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
@@ -117,6 +118,38 @@ export function registerCustomerHandlers(): void {
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );
+
+  // ============================================
+  // GET CUSTOMER HISTORY (Ledger & Bills)
+  // ============================================
+  IPCHandler.handle<number, CustomerHistory>(
+    IPC_CHANNELS.CUSTOMER_HISTORY,
+    async (id) => {
+      // NOTE: CustomerHistory contains the raw domain objects from repo.
+      // If we need to map the customer object inside it to UI format, we can do it here:
+      const history = customerService.getCustomerHistory(id);
+      return {
+        ...history,
+        customer: _mapToUI(history.customer),
+      };
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
+
+  // ============================================
+  // ADD MANUAL PAYMENT
+  // ============================================
+  IPCHandler.handle<{ id: number; amount: number; notes?: string }, void>(
+    IPC_CHANNELS.CUSTOMER_ADD_PAYMENT,
+    async ({ id, amount, notes }) => {
+      customerService.addManualPayment(id, amount, notes);
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
 }
 
 /**
@@ -127,6 +160,8 @@ function _mapToUI(c: Customer): any {
     id: c.id,
     name: c.name,
     phone: c.phone,
+    address: c.address,
+    email: c.email,
     balanceDue: c.balanceDue,
     isActive: c.isActive,
     createdAt: c.createdAt instanceof Date ? c.createdAt.getTime() : c.createdAt,

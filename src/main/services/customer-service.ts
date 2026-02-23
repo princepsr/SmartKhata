@@ -10,6 +10,7 @@ import {
   CustomerRepository,
   CreateCustomerInput,
   UpdateCustomerInput,
+  CustomerLedgerEntry,
 } from '../repositories/customer-repository';
 import { BillRepository } from '../repositories/bill-repository';
 import {
@@ -25,6 +26,8 @@ import {
 export interface CreateOrGetCustomerInput {
   name: string;
   phone?: string;
+  address?: string;
+  email?: string;
   balanceDue?: number;
 }
 
@@ -34,6 +37,8 @@ export interface CreateOrGetCustomerInput {
 export interface UpdateCustomerData {
   name?: string;
   phone?: string;
+  address?: string;
+  email?: string;
   isActive?: boolean;
 }
 
@@ -43,6 +48,7 @@ export interface UpdateCustomerData {
 export interface CustomerHistory {
   customer: any;
   bills: any[];
+  ledger: CustomerLedgerEntry[];
   totalPurchases: number;
   currentBalance: number;
 }
@@ -87,6 +93,8 @@ export class CustomerService extends BaseService {
     const customerInput: CreateCustomerInput = {
       name: input.name,
       phone: input.phone,
+      address: input.address,
+      email: input.email,
       balanceDue: input.balanceDue ?? 0,
     };
 
@@ -151,6 +159,8 @@ export class CustomerService extends BaseService {
     const updateInput: UpdateCustomerInput = {
       name: updates.name,
       phone: updates.phone,
+      address: updates.address,
+      email: updates.email,
       isActive: updates.isActive,
     };
 
@@ -203,6 +213,43 @@ export class CustomerService extends BaseService {
   }
 
   /**
+   * Add a manual payment (Settle Balance)
+   *
+   * @param customerId - Customer ID
+   * @param amount - Amount paid (in rupees). Positive for PAYMENT_IN (they pay us), Negative for PAYMENT_OUT (we return advance).
+   * @param notes - Optional notes
+   */
+  public addManualPayment(customerId: number, amount: number, notes?: string): void {
+    if (amount === 0) {
+      throw new ValidationError('Payment amount cannot be zero', 'amount');
+    }
+
+    // Amount > 0 means they paid us (PAYMENT_IN)
+    // Amount < 0 means we paid them (PAYMENT_OUT)
+
+    // We subtract from balanceDue if they pay us.
+    // E.g., balanceDue = 100. They pay 50. New balance = 50.
+    const deltaAmount = -amount;
+
+    // 1. Update balance (will validate customer existence)
+    this.updateBalance(customerId, deltaAmount);
+
+    // 2. Add ledger entry
+    this.customerRepo.addLedgerEntry({
+      customerId,
+      amount: Math.abs(amount), // Ledger amount is absolute
+      type: amount > 0 ? 'PAYMENT_IN' : 'PAYMENT_OUT',
+      notes: notes || (amount > 0 ? 'Manual payment received' : 'Manual payment given'),
+    });
+
+    this.logInfo('Manual payment added', {
+      customerId,
+      amount,
+      type: amount > 0 ? 'PAYMENT_IN' : 'PAYMENT_OUT',
+    });
+  }
+
+  /**
    * Get customer purchase history
    */
   public getCustomerHistory(customerId: number): CustomerHistory {
@@ -218,9 +265,13 @@ export class CustomerService extends BaseService {
     // 3. Calculate total purchases
     const totalPurchases = bills.reduce((sum, bill) => sum + bill.grandTotal, 0);
 
+    // 4. Get ledger
+    const ledger = this.customerRepo.getLedgerByCustomerId(customerId);
+
     return {
       customer,
       bills,
+      ledger,
       totalPurchases,
       currentBalance: customer.balanceDue,
     };
@@ -319,7 +370,7 @@ export class CustomerService extends BaseService {
     }
 
     // Remove spaces and special characters for validation
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+    const cleanPhone = phone.replace(/[\s-()]/g, '');
 
     // Check if contains only digits
     if (!/^\d+$/.test(cleanPhone)) {

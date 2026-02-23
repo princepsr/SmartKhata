@@ -72,6 +72,7 @@ function BillingPage() {
   const [cart, setCart] = useLocalStorage<CartItem[]>('billing_cart', []);
   const [discountAmount, setDiscountAmount] = useLocalStorage('billing_discountAmount', 0);
   const [paymentMode, setPaymentMode] = useLocalStorage<PaymentMode>('billing_paymentMode', 'cash');
+  const [amountPaid, setAmountPaid] = useLocalStorage<string>('billing_amountPaid', '');
   const [calculation, setCalculation] = useState<BillCalculation | null>(null);
 
   // Customer State
@@ -345,6 +346,7 @@ function BillingPage() {
     setCalculation(null);
     setSelectedCustomer(null);
     setPaymentMode('cash');
+    setAmountPaid('');
     setSearchQuery('');
     setSelectedResultIndex(-1);
 
@@ -375,6 +377,8 @@ function BillingPage() {
       })),
       discountAmount: discountAmount > 0 ? discountAmount : undefined,
       paymentMode,
+      paymentReceived:
+        selectedCustomer && amountPaid !== '' ? parseFloat(amountPaid) : calculation.grandTotal,
     };
 
     const result = await finalizeBill(input);
@@ -764,6 +768,45 @@ function BillingPage() {
             </div>
 
             <div className="actions-area">
+              {settings.customersEnabled && selectedCustomer && (
+                <div className="amount-paid-section" style={{ marginBottom: '1rem' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.85rem',
+                      color: '#64748b',
+                      marginBottom: '0.25rem',
+                      textAlign: 'left',
+                    }}
+                  >
+                    Amount Received (₹)
+                  </label>
+                  <input
+                    type="number"
+                    className="header-input"
+                    value={amountPaid}
+                    onChange={(e) => setAmountPaid(e.target.value)}
+                    placeholder={calculation ? calculation.grandTotal.toString() : '0'}
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                  {amountPaid !== '' &&
+                    calculation &&
+                    parseFloat(amountPaid) < calculation.grandTotal && (
+                      <div
+                        style={{
+                          fontSize: '0.8rem',
+                          color: '#d97706',
+                          marginTop: '0.25rem',
+                          textAlign: 'left',
+                        }}
+                      >
+                        Udhaar Added:{' '}
+                        {formatCurrency(calculation.grandTotal - parseFloat(amountPaid))}
+                      </div>
+                    )}
+                </div>
+              )}
+
               <PaymentModeSelector
                 currentMode={paymentMode}
                 onModeChange={setPaymentMode}

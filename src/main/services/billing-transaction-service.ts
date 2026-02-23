@@ -228,6 +228,26 @@ export class BillingTransactionService extends BaseRepository {
             balanceChange,
           });
         }
+
+        // Add ledger entry for the sale
+        this.customerRepo.addLedgerEntry({
+          customerId: saleData.customerId,
+          amount: grandTotal,
+          type: 'SALE',
+          referenceId: billWithItems.bill.id,
+          notes: `Sale: Bill #${saleData.billNumber}`,
+        });
+
+        // Add ledger entry for the payment received (if any)
+        if (paymentReceived > 0) {
+          this.customerRepo.addLedgerEntry({
+            customerId: saleData.customerId,
+            amount: paymentReceived,
+            type: 'PAYMENT_IN',
+            referenceId: billWithItems.bill.id,
+            notes: `Payment for Bill #${saleData.billNumber}`,
+          });
+        }
       }
 
       logger.info('Sale transaction completed', {

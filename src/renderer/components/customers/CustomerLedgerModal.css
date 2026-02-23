@@ -1,0 +1,199 @@
+.ledger-modal {
+  width: 1000px;
+  max-width: 95%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background-color: var(--color-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  color: var(--color-text);
+  z-index: 50;
+}
+
+.ledger-modal .modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 2px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--color-bg) !important; /* Force opaque */
+  z-index: 100; /* Highest in the modal */
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ledger-modal .modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.ledger-modal .modal-body {
+  flex: 1;
+  padding: 0 !important; /* Remove any global padding */
+  overflow: hidden; /* Body doesn't scroll, inner area does */
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+  background-color: var(--color-bg);
+  gap: 0;
+}
+
+.ledger-modal .ledger-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  mask-image: none;
+}
+
+.ledger-modal .ledger-table-container {
+  width: 100%;
+}
+
+.ledger-modal .ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ledger-modal .ledger-table th,
+.ledger-modal .ledger-table td {
+  padding: 0.85rem 1.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ledger-modal .ledger-table th {
+  background-color: var(--color-bg-secondary) !important;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: sticky;
+  top: 0;
+  z-index: 10; /* Above rows, below modal header */
+  box-shadow: 0 1px 0 var(--color-border); /* Thicker line for sticky */
+}
+
+.ledger-modal .ledger-table tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.ledger-modal .ledger-table td {
+  font-size: 0.95rem;
+}
+
+.ledger-modal .col-date {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.ledger-modal .col-desc {
+  font-weight: 500;
+}
+
+.ledger-modal .col-ref {
+  font-family: monospace;
+}
+
+.ledger-modal .col-amount {
+  font-weight: 700;
+  font-family: inherit; /* Use same font */
+}
+
+.ledger-modal .col-amount.col-gave {
+  color: var(--color-error);
+}
+
+.ledger-modal .col-amount.col-got {
+  color: var(--color-success);
+}
+
+.ledger-modal .col-notes {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  margin-top: 0.2rem;
+}
+
+.ledger-modal .modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+  background-color: var(--color-bg-secondary);
+  flex-shrink: 0;
+}
+
+.ledger-modal .bill-link-btn {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.ledger-modal .bill-link-btn:hover {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.ledger-modal .no-data,
+.ledger-modal .loading,
+.ledger-modal .error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  padding: 3rem;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  text-align: center;
+}
+
+.ledger-modal .error {
+  color: var(--color-error);
+}
+
+/* Header Summary styles */
+.ledger-modal .ledger-header-summary {
+  padding: 0.25rem 1.5rem;
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ledger-modal .ledger-header-summary .net-balance-label {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+.ledger-modal .ledger-header-summary .net-balance-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.ledger-modal .ledger-header-summary .net-balance-value.due {
+  color: var(--color-error);
+}
+.ledger-modal .ledger-header-summary .net-balance-value.advance {
+  color: var(--color-success);
+}
+.ledger-modal .ledger-header-summary .net-balance-value.settled {
+  color: var(--color-text);
+}
+.ledger-modal .ledger-header-summary .net-balance-text {
+  font-size: 1rem;
+  margin-left: 0.35rem;
+  font-weight: 500;
+}

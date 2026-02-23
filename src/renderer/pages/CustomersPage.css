@@ -125,7 +125,6 @@
 
 .customers-page .col-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 0.5rem;
   padding-right: 0.5rem;
 }
@@ -151,6 +150,24 @@
   opacity: 1;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
+
+/* Settle - Green Theme */
+.customers-page .action-icon-btn.action-settle:hover {
+  background-color: rgba(16, 185, 129, 0.08);
+  color: #10b981;
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+}
+
+/* Ledger - Lighter Blue Theme */
+.customers-page .action-icon-btn.action-ledger:hover {
+  background-color: rgba(59, 130, 246, 0.08);
+  color: #3b82f6;
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
 }
 
 /* Toggle - Power Button States */
@@ -235,4 +252,23 @@
 .customers-page .data-table-row.inactive-row:hover {
   opacity: 1;
   background-color: #f8fafc;
+}
+
+.ledger-bill-link-btn {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.ledger-bill-link-btn:hover {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
 }

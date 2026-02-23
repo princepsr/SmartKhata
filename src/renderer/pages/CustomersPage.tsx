@@ -5,6 +5,8 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../utils/billing-math';
 import { CustomerFormModal } from '../components/customers/CustomerFormModal';
+import { CustomerLedgerModal } from '../components/customers/CustomerLedgerModal';
+import { SettleBalanceModal } from '../components/customers/SettleBalanceModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import EmptyState from '../components/common/EmptyState';
 import './CustomersPage.css';
@@ -34,6 +36,11 @@ const CustomersPage: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<number | null>(null);
+
+  // New Modal States
+  const [settleCustomer, setSettleCustomer] = useState<Customer | null>(null);
+  const [ledgerCustomer, setLedgerCustomer] = useState<Customer | null>(null);
+
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -303,7 +310,54 @@ const CustomersPage: React.FC = () => {
                         {customer.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </div>
-                    <div className="col-actions">
+                    <div
+                      className="col-actions"
+                      style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end' }}
+                    >
+                      <button
+                        className="action-icon-btn action-settle"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSettleCustomer(customer);
+                        }}
+                        title="Settle Balance"
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect width="20" height="14" x="2" y="5" rx="2" />
+                          <line x1="2" x2="22" y1="10" y2="10" />
+                        </svg>
+                      </button>
+                      <button
+                        className="action-icon-btn action-ledger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLedgerCustomer(customer);
+                        }}
+                        title="View Ledger"
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                        </svg>
+                      </button>
                       <button
                         className="action-icon-btn action-edit"
                         onClick={(e) => {
@@ -364,6 +418,23 @@ const CustomersPage: React.FC = () => {
         }}
         onSuccess={handleFormSuccess}
         initialData={editingCustomer}
+      />
+
+      <SettleBalanceModal
+        isOpen={!!settleCustomer}
+        onClose={() => setSettleCustomer(null)}
+        customer={settleCustomer}
+        onSuccess={() => {
+          setSettleCustomer(null);
+          // Refresh customer list
+          fetchCustomers({ includeInactive: showInactive });
+        }}
+      />
+
+      <CustomerLedgerModal
+        isOpen={!!ledgerCustomer}
+        onClose={() => setLedgerCustomer(null)}
+        customer={ledgerCustomer}
       />
 
       <ConfirmModal

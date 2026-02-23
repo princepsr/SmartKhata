@@ -9,10 +9,26 @@ export interface Customer {
   id: number;
   name: string;
   phone: string | null;
+  address?: string;
+  email?: string;
   balanceDue: number; // In rupees (positive = owes, negative = advance)
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/**
+ * Customer Ledger Entry
+ */
+export interface CustomerLedgerEntry {
+  id: number;
+  customerId: number;
+  amount: number; // In rupees
+  type: 'SALE' | 'PAYMENT_IN' | 'PAYMENT_OUT' | 'OPENING_BALANCE';
+  referenceId?: number;
+  referenceNumber?: string; // e.g. Bill Number
+  notes?: string;
+  createdAt: Date;
 }
 
 /**
@@ -21,6 +37,8 @@ export interface Customer {
 export interface CreateCustomerInput {
   name: string;
   phone?: string;
+  address?: string;
+  email?: string;
   balanceDue?: number; // In rupees (default 0)
 }
 
@@ -30,6 +48,8 @@ export interface CreateCustomerInput {
 export interface UpdateCustomerInput {
   name?: string;
   phone?: string;
+  address?: string;
+  email?: string;
   balanceDue?: number; // In rupees
   isActive?: boolean;
 }
@@ -46,13 +66,15 @@ export class CustomerRepository extends BaseRepository {
    */
   public create(data: CreateCustomerInput): Customer {
     const sql = `
-      INSERT INTO customers (name, phone, balance_due)
-      VALUES (?, ?, ?)
+      INSERT INTO customers (name, phone, address, email, balance_due)
+      VALUES (?, ?, ?, ?, ?)
     `;
 
     const result = this.execute(sql, [
       data.name,
       data.phone || null,
+      data.address || null,
+      data.email || null,
       data.balanceDue || 0, // Direct Rupees
     ]);
 
@@ -80,6 +102,14 @@ export class CustomerRepository extends BaseRepository {
     if (data.phone !== undefined) {
       fields.push('phone = ?');
       values.push(data.phone || null);
+    }
+    if (data.address !== undefined) {
+      fields.push('address = ?');
+      values.push(data.address || null);
+    }
+    if (data.email !== undefined) {
+      fields.push('email = ?');
+      values.push(data.email || null);
     }
     if (data.balanceDue !== undefined) {
       fields.push('balance_due = ?');
@@ -241,6 +271,55 @@ export class CustomerRepository extends BaseRepository {
   }
 
   /**
+   * Add a ledger entry
+   */
+  public addLedgerEntry(data: {
+    customerId: number;
+    amount: number;
+    type: string;
+    referenceId?: number;
+    notes?: string;
+  }): void {
+    const sql = `
+      INSERT INTO customer_ledger (customer_id, amount, type, reference_id, notes)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+    this.execute(sql, [
+      data.customerId,
+      data.amount, // Direct Rupees
+      data.type,
+      data.referenceId || null,
+      data.notes || null,
+    ]);
+  }
+
+  /**
+   * Get ledger entries for a customer
+   */
+  public getLedgerByCustomerId(customerId: number): CustomerLedgerEntry[] {
+    const sql = `
+      SELECT 
+        cl.*,
+        b.bill_number as reference_number
+      FROM customer_ledger cl
+      LEFT JOIN bills b ON cl.reference_id = b.id
+      WHERE cl.customer_id = ?
+      ORDER BY cl.created_at DESC
+    `;
+    const rows = this.queryAll<any>(sql, [customerId]);
+    return rows.map((row) => ({
+      id: row.id,
+      customerId: row.customer_id,
+      amount: row.amount, // Direct rupees
+      type: row.type,
+      referenceId: row.reference_id,
+      referenceNumber: row.reference_number,
+      notes: row.notes,
+      createdAt: this.parseDate(row.created_at),
+    }));
+  }
+
+  /**
    * Map database row to Customer domain object
    *
    * Converts:
@@ -253,6 +332,8 @@ export class CustomerRepository extends BaseRepository {
       id: row.id,
       name: row.name,
       phone: row.phone,
+      address: row.address,
+      email: row.email,
       balanceDue: row.balance_due, // Direct Rupees
       isActive: row.is_active === 1, // INTEGER → boolean
       createdAt: this.parseDate(row.created_at), // TEXT → Date

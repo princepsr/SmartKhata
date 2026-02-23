@@ -291,13 +291,14 @@ pnpm build:win:portable
 
 ### 🛠️ Developer Guides
 
-| Document                                        | Purpose                              |
-| :---------------------------------------------- | :----------------------------------- |
-| [INSTALLATION.md](docs/INSTALLATION.md)         | **Setup & production build guide**   |
-| [DEV_SCRIPTS.md](docs/DEV_SCRIPTS.md)           | Full CLI script documentation        |
-| [TESTING_GUIDE.md](docs/TESTING_GUIDE.md)       | Unit, integration & hardware testing |
-| [TYPESCRIPT_SETUP.md](docs/TYPESCRIPT_SETUP.md) | Path aliases & TS configuration      |
-| [GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)         | Branching & merge protocols          |
+| Document                                                        | Purpose                               |
+| :-------------------------------------------------------------- | :------------------------------------ |
+| [INSTALLATION.md](docs/INSTALLATION.md)                         | **Setup & production build guide**    |
+| [DEV_SCRIPTS.md](docs/DEV_SCRIPTS.md)                           | Full CLI script documentation         |
+| [TESTING_GUIDE.md](docs/TESTING_GUIDE.md)                       | Unit, integration & hardware testing  |
+| [TYPESCRIPT_SETUP.md](docs/TYPESCRIPT_SETUP.md)                 | Path aliases & TS configuration       |
+| [DEVELOPER_DATABASE_GUIDE.md](docs/DEVELOPER_DATABASE_GUIDE.md) | **DB dumping & restoration commands** |
+| [GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md)                         | Branching & merge protocols           |
 
 ---
 
