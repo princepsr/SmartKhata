@@ -7,24 +7,23 @@ import {
 describe('Billing Math Utilities', () => {
   describe('calculateDiscountAmount', () => {
     it('should return 0 for invalid inputs', () => {
-      expect(calculateDiscountAmount('amount', '', 1000, 0)).toBe(0);
-      expect(calculateDiscountAmount('amount', '0', 1000, 0)).toBe(0);
-      expect(calculateDiscountAmount('amount', '-10', 1000, 0)).toBe(0);
+      expect(calculateDiscountAmount('amount', '', 1000)).toBe(0);
+      expect(calculateDiscountAmount('amount', '0', 1000)).toBe(0);
+      expect(calculateDiscountAmount('amount', '-10', 1000)).toBe(0);
     });
 
     it('should calculate fixed amount discount correctly', () => {
       // 100 rupees discount
-      expect(calculateDiscountAmount('amount', '100', 500, 0)).toBe(100);
+      expect(calculateDiscountAmount('amount', '100', 500)).toBe(100);
       // 50.50 rupees discount
-      expect(calculateDiscountAmount('amount', '50.50', 500, 0)).toBe(50.5);
+      expect(calculateDiscountAmount('amount', '50.50', 500)).toBe(50.5);
     });
 
     it('should calculate percentage discount correctly', () => {
-      // 10% of 1000 (subtotal) + 180 (gst) = 1180 -> 118 discount
-      const subtotal = 1000;
-      const gst = 180;
+      // 10% of 1000 (Base Total / MRP Sum) = 100
+      const baseTotal = 1000;
       const val = '10'; // 10%
-      expect(calculateDiscountAmount('percent', val, subtotal, gst)).toBe(118);
+      expect(calculateDiscountAmount('percent', val, baseTotal)).toBe(100);
     });
 
     it('should handle percentage calculation with rounding', () => {
@@ -75,14 +74,17 @@ describe('Billing Math Utilities', () => {
       expect(result.grandTotal).toBe(90);
     });
 
-    it('should deduct discount after GST addition', () => {
+    it('should deduct discount proportionally from subtotal and GST', () => {
       // Subtotal: 10, GST: 1.8 -> Total: 11.8
-      // Discount: 1.8 -> Grand Total: 10
+      // Discount: 1.8. Factor = (10 - 1.8) / 10 = 0.82.
+      // Net Subtotal = 10 * 0.82 = 8.2
+      // Net GST = 8.2 * 0.18 = 1.476 -> 1.48
+      // Grand Total = 8.2 + 1.48 = 9.68
       const items = [{ product: mockProduct(10, 18), quantity: 1 }];
       const result = calculateBillPreview(items, 1.8);
-      expect(result.subtotal).toBe(10);
-      expect(result.gstTotal).toBe(1.8);
-      expect(result.grandTotal).toBe(10);
+      expect(result.subtotal).toBe(8.2);
+      expect(result.gstTotal).toBe(1.48);
+      expect(result.grandTotal).toBe(9.68);
     });
 
     it('should not return negative grand total', () => {

@@ -175,14 +175,20 @@ export class CustomerService extends BaseService {
   }
 
   /**
-   * Update customer balance (for udhaar tracking)
-   *
-   * @param customerId - Customer ID
    * @param deltaAmount - Change in balance (in rupees)
    *                      Positive = customer owes more
    *                      Negative = customer paid/advance
+   * @param referenceId - Optional Bill ID or Payment ID
+   * @param type - Ledger entry type
+   * @param notes - Optional notes
    */
-  public updateBalance(customerId: number, deltaAmount: number): void {
+  public updateBalance(
+    customerId: number,
+    deltaAmount: number,
+    referenceId?: number,
+    type: 'SALE' | 'PAYMENT_IN' | 'PAYMENT_OUT' | 'OPENING_BALANCE' = 'SALE',
+    notes?: string
+  ): void {
     // 1. Validate
     if (deltaAmount === 0) {
       throw new ValidationError('Balance change cannot be zero', 'deltaAmount');
@@ -198,16 +204,23 @@ export class CustomerService extends BaseService {
       throw new InactiveEntityError('Customer', customerId);
     }
 
-    // 3. Update balance
+    // 3. Update balance and add ledger entry atomically (via service wrapper)
     this.customerRepo.updateBalance(customerId, deltaAmount);
+    this.customerRepo.addLedgerEntry({
+      customerId,
+      amount: Math.abs(deltaAmount),
+      type,
+      referenceId,
+      notes,
+    });
 
     const newBalance = customer.balanceDue + deltaAmount;
 
-    this.logInfo('Customer balance updated', {
+    this.logInfo('Customer balance updated with ledger', {
       customerId,
       customerName: customer.name,
       deltaAmount,
-      oldBalance: customer.balanceDue,
+      type,
       newBalance,
     });
   }
@@ -231,16 +244,14 @@ export class CustomerService extends BaseService {
     // E.g., balanceDue = 100. They pay 50. New balance = 50.
     const deltaAmount = -amount;
 
-    // 1. Update balance (will validate customer existence)
-    this.updateBalance(customerId, deltaAmount);
-
-    // 2. Add ledger entry
-    this.customerRepo.addLedgerEntry({
+    // 1. Update balance (will validate customer existence and add ledger entry)
+    this.updateBalance(
       customerId,
-      amount: Math.abs(amount), // Ledger amount is absolute
-      type: amount > 0 ? 'PAYMENT_IN' : 'PAYMENT_OUT',
-      notes: notes || (amount > 0 ? 'Manual payment received' : 'Manual payment given'),
-    });
+      deltaAmount,
+      undefined,
+      amount > 0 ? 'PAYMENT_IN' : 'PAYMENT_OUT',
+      notes
+    );
 
     this.logInfo('Manual payment added', {
       customerId,

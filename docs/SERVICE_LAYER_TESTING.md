@@ -19,30 +19,18 @@ This document outlines the **unit testing strategy** for the service layer, focu
 
 ### Test Database Strategy
 
-**Use in-memory SQLite database:**
+**Use in-memory SQLite with `BetterSqliteCompatibleDatabase` wrapper:**
 
 ```typescript
-import Database from 'better-sqlite3';
+import { createTestDatabase, resetTestDatabase } from './test-utils';
+import { BetterSqliteCompatibleDatabase } from '../utils/test-db';
 
-function createTestDatabase(): Database.Database {
-  const db = new Database(':memory:');
+let db: BetterSqliteCompatibleDatabase;
 
-  // Run migrations
-  runMigrations(db);
-
-  return db;
-}
-
-function resetTestDatabase(db: Database.Database): void {
-  // Clear all tables
-  db.exec('DELETE FROM products');
-  db.exec('DELETE FROM customers');
-  db.exec('DELETE FROM bills');
-  db.exec('DELETE FROM bill_items');
-  db.exec('DELETE FROM inventory_logs');
-  db.exec('DELETE FROM settings');
-  db.exec('DELETE FROM license');
-}
+beforeEach(async () => {
+  db = await createTestDatabase();
+  seedTestData(db);
+});
 ```
 
 ### Test Framework
@@ -614,11 +602,10 @@ npx vitest run --config vitest.unit.config.ts
 
 **Testing Strategy:**
 
-1. ✅ Use in-memory SQLite for fast tests
-2. ✅ Test business logic in isolation
-3. ✅ Verify calculations and validations
-4. ✅ Test error scenarios
-5. ✅ Verify transaction rollbacks
-6. ✅ Test license validation
+1. ✅ Use in-memory SQLite (`sql.js`) for fast, portable tests
+2. ✅ Test business logic in isolation via specialized Services
+3. ✅ Verify atomic transactions and complex rollbacks
+4. ✅ Validate proportional tax and discount distribution
+5. ✅ Achieve 100% behavioral coverage (172+ tests)
 
 **This ensures robust service layer with comprehensive test coverage!**

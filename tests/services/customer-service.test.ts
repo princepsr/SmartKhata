@@ -39,6 +39,18 @@ describe('CustomerService - Create Customer', () => {
     expect(customer.balanceDue).toBe(0);
   });
 
+  it('should create customer with extended profile (email, address)', () => {
+    const customer = customerService.createOrGetCustomer({
+      name: 'Modern Customer',
+      phone: '8888888888',
+      email: 'modern@example.com',
+      address: '123 Tech Lane, Bangalore',
+    });
+
+    expect(customer.email).toBe('modern@example.com');
+    expect(customer.address).toBe('123 Tech Lane, Bangalore');
+  });
+
   it('should return existing customer by phone', () => {
     const customer = customerService.createOrGetCustomer({
       name: 'Different Name',
@@ -110,6 +122,37 @@ describe('CustomerService - Balance Management', () => {
     expect(customer?.balanceDue).toBe(-1); // Advance
   });
 
+  it('should atomically create ledger entry on balance update', () => {
+    // Initial balance is 0 for Ramesh (ID 1)
+    customerService.updateBalance(1, 1500, undefined, 'SALE', 'New Sale');
+
+    const customer = customerRepo.findById(1);
+    expect(customer?.balanceDue).toBe(1500);
+
+    // Verify ledger entry
+    const ledger = (db as any)
+      .prepare('SELECT * FROM customer_ledger WHERE customer_id = ?')
+      .get(1);
+    expect(ledger).toBeDefined();
+    expect(ledger.amount).toBe(1500);
+    expect(ledger.type).toBe('SALE');
+    expect(ledger.notes).toBe('New Sale');
+  });
+
+  it('should retrieve ledger history correctly ordered', () => {
+    customerService.updateBalance(1, 1000, undefined, 'SALE', 'Sale 1');
+    customerService.updateBalance(1, -400, undefined, 'PAYMENT_IN', 'Cash Payment');
+    customerService.updateBalance(1, 500, undefined, 'SALE', 'Sale 2');
+
+    const history = customerService.getCustomerHistory(1).ledger;
+    expect(history).toHaveLength(3);
+
+    // Ordered by CreatedAt DESC
+    expect(history[0].amount).toBe(500);
+    expect(history[1].amount).toBe(400); // Ledger amount is absolute
+    expect(history[2].amount).toBe(1000);
+  });
+
   it('should throw error on zero change', () => {
     expect(() => {
       customerService.updateBalance(1, 0);
@@ -137,11 +180,10 @@ describe('CustomerService - Search and Query', () => {
     resetTestDatabase(db);
   });
 
-  it('should search customers by name', () => {
-    const results = customerService.searchCustomers('Ramesh');
-
-    expect(results.length).toBeGreaterThan(0);
-    expect(results[0].name).toContain('Ramesh');
+  it('should list all customers', () => {
+    const result = customerService.getAllCustomers();
+    expect(result.items.length).toBeGreaterThanOrEqual(2);
+    expect(result.items[0].name).toBeDefined();
   });
 
   it('should get customer by phone', () => {
@@ -162,16 +204,25 @@ describe('CustomerService - Search and Query', () => {
     customerService.deactivateCustomer(1);
 
     const results = customerService.searchCustomers('Ramesh');
-    expect(results).toHaveLength(0);
+    expect(results.items).toHaveLength(0);
 
     const allResults = customerService.searchCustomers('Ramesh', true);
-    expect(allResults).toHaveLength(1);
-    expect(allResults[0].isActive).toBeFalsy();
+    expect(allResults.items).toHaveLength(1);
+    expect(allResults.items[0].isActive).toBeFalsy();
 
     const activeList = customerService.getAllCustomers(false);
-    expect(activeList.find((c) => c.id === 1)).toBeUndefined();
+    expect(activeList.items.find((c) => c.id === 1)).toBeUndefined();
 
     const allList = customerService.getAllCustomers(true);
-    expect(allList.find((c) => c.id === 1)).toBeDefined();
+    expect(allList.items.find((c) => c.id === 1)).toBeDefined();
+  });
+
+  it('should search customers', () => {
+    const result = customerService.searchCustomers('Ramesh');
+    expect(result.items.length).toBe(1);
+    expect(result.items[0].name).toBe('Ramesh Kumar');
+
+    const noResult = customerService.searchCustomers('NonExistent');
+    expect(noResult.items.length).toBe(0);
   });
 });

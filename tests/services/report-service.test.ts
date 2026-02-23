@@ -74,8 +74,11 @@ describe('ReportService Integration Tests', () => {
     // Net Sales = Sum(GrandTotal) = 42.00 + 40.00 = 82.00
     expect(summary.netSales).toBe(82.0);
 
-    expect(summary.totalSubtotal).toBe(80.0); // 40.00 + 40.00
-    expect(summary.totalGst).toBe(6.8); // 2.00 + 4.80
+    // Bill 1: Sub 40, GST 2.
+    // Bill 2: Gross 40 (after 4.8 disc). Net Sub = 40/1.12 = 35.71. GST = 4.29.
+    // Total Sub = 40 + 35.71 = 75.71. Total GST = 2 + 4.29 = 6.29.
+    expect(summary.totalSubtotal).toBeCloseTo(75.71, 1);
+    expect(summary.totalGst).toBeCloseTo(6.29, 1);
   });
 
   it('should generate correct Payment Mode Summary', () => {
@@ -159,7 +162,52 @@ describe('ReportService Integration Tests', () => {
     const summary = reportService.getDailySalesSummary(futureDate, futureDate);
 
     expect(summary.billCount).toBe(0);
-    expect(summary.totalSales).toBe(0);
+  });
+
+  it('should calculate profit and coverage accurately', () => {
+    // 1. Create a bill with snapshots
+    // Product 1: Price 40, Cost 30 (Profit 10)
+    // Product 2: Price 20, Cost 15 (Profit 5)
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    db.exec(`
+      INSERT INTO bills (bill_number, subtotal, gst_total, discount_amount, grand_total, payment_mode, created_at)
+      VALUES ('REPORT-1', 60, 4.4, 0, 64.4, 'cash', '${todayStr}')
+    `);
+    const billId = (db as any)
+      .prepare('SELECT id FROM bills WHERE bill_number = "REPORT-1"')
+      .get().id;
+
+    db.exec(`
+      INSERT INTO bill_items (bill_id, product_id, product_name_snapshot, quantity, unit_price, purchase_price, gst_percent, line_total)
+      VALUES 
+        (${billId}, 1, 'Coke', 1, 40, 30, 5, 42),
+        (${billId}, 2, 'Lays', 1, 20, 15, 12, 22.4)
+    `);
+
+    const summary = reportService.getDailySalesSummary(todayStr, todayStr);
+
+    // Profit = (Total - GST) - Cost = 60 - (30+15) = 15
+    expect(summary.totalProfit).toBeCloseTo(15, 2);
+    expect(summary.marginPercent).toBeCloseTo((15 / 60) * 100, 2);
+    expect(summary.salesWithCost).toBe(60); // Total Subtotal amount where cost was known
+    expect(summary.totalItemSales).toBe(60);
+  });
+
+  it('should maintain historical cost integrity', () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 1. Check current profit
+    const initialSummary = reportService.getDailySalesSummary(todayStr, todayStr);
+    const initialProfit = initialSummary.totalProfit || 0;
+
+    // 2. Change product cost price in product table
+    db.exec('UPDATE products SET purchase_price = 100 WHERE id = 1');
+
+    // 3. Profit for past sale should NOT change
+    const freshSummary = reportService.getDailySalesSummary(todayStr, todayStr);
+    expect(freshSummary.totalProfit).toBe(initialProfit);
   });
 });
 
@@ -338,5 +386,40 @@ describe('ReportService Trend Analytics', () => {
     expect(summary.totalSales).toBe(84.0);
     expect(summary.comparison?.totalSales?.change).toBe(100);
     expect(summary.comparison?.totalSales?.trend).toBe('up');
+  });
+
+  it('should handle negative profit when cost exceeds revenue', () => {
+    // Product 1: Cost 30, Sale 40.
+    // Buy 1. Apply large discount of 20.
+    // Net Gross = 42 - 20 = 22.
+    // Net Subtotal = 22 / 1.05 = 20.95.
+    // Profit = 20.95 - 30 = -9.05.
+
+    const billNumber = 'NEG-PROFIT';
+    billingService.finalizeBill({
+      billNumber,
+      items: [{ productId: 1, quantity: 1 }],
+      discountAmount: 20,
+      paymentMode: 'cash',
+    });
+
+    const summary = reportService.getDailySalesSummary(
+      new Date().toISOString().split('T')[0],
+      new Date().toISOString().split('T')[0]
+    );
+
+    expect(summary.totalProfit).toBeLessThan(0);
+    expect(summary.totalProfit).toBeCloseTo(-9.05, 1);
+    expect(summary.marginPercent).toBeLessThan(0);
+  });
+
+  it('should return clean zeros for range with no sales', () => {
+    const summary = reportService.getDailySalesSummary('2099-01-01', '2099-01-01');
+
+    expect(summary.billCount).toBe(0);
+    expect(summary.totalSales).toBe(0);
+    expect(summary.totalProfit).toBe(0);
+    expect(summary.marginPercent).toBe(0);
+    expect(summary.totalItemSales).toBe(0);
   });
 });

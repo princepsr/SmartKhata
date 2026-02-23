@@ -42,31 +42,30 @@ saleData.items.forEach((item) => {
   if (!product) throw new Error('Product not found');
   if (!product.isActive) throw new Error('Product inactive');
 
-  // 1.2: Check stock availability (WITH ROW LOCK)
-  this.productRepo.updateStock(item.productId, -item.quantity);
-  // This locks the row and validates stock in one operation
-  // Throws error if insufficient stock
+  // 1.2: Check stock availability
+  if (product.trackInventory && !settings.billingOnly) {
+     if (product.stockQty < item.quantity) throw new InsufficientStockError(...);
+     this.productRepo.updateStock(item.productId, -item.quantity);
+  }
 
-  // 1.3: Calculate line totals
-  // Use BillingMath.calculateLineTotals for consistency (handles Inclusive/Exclusive GST)
-  const totals = BillingMath.calculateLineTotals(
-    product.salePrice,
-    item.quantity,
-    product.gstPercent,
-    product.isGstInclusive
-  );
-
-  // 1.5: Prepare bill item with snapshot
-  billItems.push({
-    productId: product.id,
-    productNameSnapshot: product.name, // SNAPSHOT
-    quantity: item.quantity,
-    unitPrice: product.salePrice, // SNAPSHOT (MRP or Base)
-    purchasePrice: product.purchasePrice || 0, // SNAPSHOT (Cost)
-    gstPercent: product.gstPercent, // SNAPSHOT
-    lineTotal: totals.lineTotal,
-  });
+  // 1.3: Calculate Gross Base Total (for discount weighting)
+  const isGstInclusive = settings.gstExclusiveMode ? false : product.isGstInclusive;
+  let baseTotal: number;
+  if (isGstInclusive) {
+    baseTotal = product.salePrice * item.quantity;
+  } else {
+    const sub = product.salePrice * item.quantity;
+    const gst = settings.gstEnabled ? (sub * product.gstPercent) / 100 : 0;
+    baseTotal = sub + gst;
+  }
+  totalGrossAmount += baseTotal;
+  itemMetas.push({ product, quantity: item.quantity, baseTotal });
 });
+
+// 1.4: Calculate Proportional Factor
+const discountFactor = totalGrossAmount > 0
+  ? Math.max(0, totalGrossAmount - discountAmountInput) / totalGrossAmount
+  : 0;
 ```
 
 **Key Points:**

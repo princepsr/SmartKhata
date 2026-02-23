@@ -46,10 +46,22 @@ erDiagram
         int id PK
         text name
         text phone UK
+        text email
+        text address
         real balance_due      /* Stored in Rupees (Decimal) */
         int is_active
         text created_at
         text updated_at
+    }
+
+    customer_ledger {
+        int id PK
+        int customer_id FK
+        real amount
+        text type             /* SALE, PAYMENT_IN, PAYMENT_OUT, OPENING_BALANCE */
+        int reference_id
+        text notes
+        text created_at
     }
 
     bills {
@@ -153,8 +165,26 @@ erDiagram
 - `id`: Auto-incrementing primary key
 - `name`: Customer name (required)
 - `phone`: Phone number (unique)
+- `email`: Customer email address
+- `address`: Detailed physical address
 - `balance_due`: Current unpaid amount in Rupees (default: 0)
 - `is_active`: Soft delete flag
+- `updated_at`: Last synchronization timestamp
+
+---
+
+### 2a. `customer_ledger`
+
+**Purpose:** Transaction audit trail for each customer
+
+**Key Fields:**
+
+- `id`: Primary key
+- `customer_id`: Reference to customer
+- `amount`: Absolute transaction value in Rupees
+- `type`: Category of entry (`SALE`, `PAYMENT_IN`, `PAYMENT_OUT`, `OPENING_BALANCE`)
+- `reference_id`: Link to source table (e.g., `bill_id` for sales)
+- `notes`: Descriptive reason or manual entry notes
 
 ---
 

@@ -129,8 +129,16 @@ export class BillingService extends BaseService {
       itemMetas.push({ product, quantity: item.quantity, baseTotal });
     });
 
+    // 3. Validate discount vs gross
+    if (discountAmount > totalGrossAmount) {
+      throw new ValidationError(
+        `Discount (₹${discountAmount}) cannot exceed Gross Total (₹${totalGrossAmount})`,
+        'discountAmount'
+      );
+    }
+
     const discountFactor =
-      totalGrossAmount > 0 ? Math.max(0, totalGrossAmount - discountAmount) / totalGrossAmount : 0;
+      totalGrossAmount > 0 ? (totalGrossAmount - discountAmount) / totalGrossAmount : 0;
 
     // 4. Calculate discounted line items
     const calculatedItems: CalculatedLineItem[] = [];

@@ -37,9 +37,15 @@ When a global discount (e.g., ₹50 off the bill) is applied, the system does no
 
 ### How it Works:
 
-1. Calculate the **Weight** of each item based on its share of the total bill amount.
-2. Multiply the **Weight** by the **Total Discount Amount**.
-3. Subtract the **Item Discount** from the item's taxable value _before_ applying GST (for exclusive) or _before_ separating GST (for inclusive).
+1.  **Calculate Total Gross Amount**: Sum of all items (Price \* Qty) including taxes (if exclusive mode is off).
+2.  **Calculate Discount Factor**: `(Total Gross - Discount Amount) / Total Gross`.
+3.  **Apply to Line Items**:
+    - **Base Total**: Original line total before global discount.
+    - **Discounted Total**: `Math.round(Base Total * Discount Factor * 100) / 100`.
+4.  **Reverse GST (Inclusive)**: `Discounted Total / (1 + GST%)` gives the new taxable subtotal.
+5.  **Calculate Line GST**: `Discounted Total - Line Subtotal`.
+
+This ensures that the discount reduces the **taxable base** proportionally, a critical requirement for GST compliance in India.
 
 ---
 

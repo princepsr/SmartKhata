@@ -104,6 +104,8 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       phone TEXT UNIQUE,
+      email TEXT,
+      address TEXT,
       balance_due INTEGER NOT NULL DEFAULT 0,
       is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -153,11 +155,24 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       product_name_snapshot TEXT NOT NULL,
       quantity INTEGER NOT NULL CHECK(quantity > 0),
       unit_price REAL NOT NULL CHECK(unit_price >= 0),
+      purchase_price REAL DEFAULT 0,
       gst_percent REAL NOT NULL DEFAULT 0,
       line_total REAL NOT NULL CHECK(line_total >= 0),
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE,
       FOREIGN KEY (product_id) REFERENCES products(id)
+    );
+
+    -- Customer Ledger table
+    CREATE TABLE IF NOT EXISTS customer_ledger (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('SALE', 'PAYMENT_IN', 'PAYMENT_OUT', 'OPENING_BALANCE')),
+      reference_id INTEGER,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
     );
 
     -- Inventory Logs table
@@ -232,6 +247,7 @@ export function resetTestDatabase(db: any): void {
   // Clear all tables in correct order (respecting foreign keys)
   try {
     db.exec(`
+      DELETE FROM customer_ledger;
       DELETE FROM app_config;
       DELETE FROM bill_items;
       DELETE FROM bills;

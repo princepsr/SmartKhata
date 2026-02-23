@@ -331,7 +331,7 @@ export class CustomerRepository extends BaseRepository {
   public addLedgerEntry(data: {
     customerId: number;
     amount: number;
-    type: string;
+    type: 'SALE' | 'PAYMENT_IN' | 'PAYMENT_OUT' | 'OPENING_BALANCE';
     referenceId?: number;
     notes?: string;
   }): void {
@@ -359,7 +359,7 @@ export class CustomerRepository extends BaseRepository {
       FROM customer_ledger cl
       LEFT JOIN bills b ON cl.reference_id = b.id
       WHERE cl.customer_id = ?
-      ORDER BY cl.created_at DESC
+      ORDER BY cl.created_at DESC, cl.id DESC
     `;
     const rows = this.queryAll<any>(sql, [customerId]);
     return rows.map((row) => ({

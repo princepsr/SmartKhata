@@ -46,16 +46,16 @@ describe('BillingService - Calculations', () => {
 
   it('should calculate inclusive GST correctly (MRP logic)', () => {
     // Product ID 5 is 'MRP Product' with salePrice 105 and 5% GST inclusive
-    // New Logic: GST = 105 * 0.05 = 5.25. Subtotal = 105 - 5.25 = 99.75
+    // Correct Logic: 105 / 1.05 = 100. GST = 5.
     const calculation = billingService.calculateBill([{ productId: 5, quantity: 1 }], 0);
 
     expect(calculation.items[0].lineTotal).toBe(105);
-    expect(calculation.items[0].lineSubtotal).toBe(99.75);
-    expect(calculation.items[0].lineGst).toBe(5.25);
+    expect(calculation.items[0].lineSubtotal).toBe(100);
+    expect(calculation.items[0].lineGst).toBe(5);
 
     expect(calculation.grandTotal).toBe(105);
-    expect(calculation.subtotal).toBe(99.75);
-    expect(calculation.gstTotal).toBe(5.25);
+    expect(calculation.subtotal).toBe(100);
+    expect(calculation.gstTotal).toBe(5);
   });
 
   it('should calculate GST correctly for User Example (MRP 100, 5% GST)', () => {
@@ -85,12 +85,16 @@ describe('BillingService - Calculations', () => {
   });
 
   it('should apply discount correctly', () => {
+    // 2 Coke (Price 40, GST 5% Exclusive) = 80 + 4 = 84 Total
+    // Discount 10. Net Total = 74.
+    // Net Subtotal = 74 / 1.05 = 70.48.
+    // Net GST = 74 - 70.48 = 3.52.
     const calculation = billingService.calculateBill([{ productId: 1, quantity: 2 }], 10);
 
-    expect(calculation.subtotal).toBe(80);
-    expect(calculation.gstTotal).toBe(4);
+    expect(calculation.grandTotal).toBe(74);
+    expect(calculation.subtotal).toBeCloseTo(70.48, 1);
+    expect(calculation.gstTotal).toBeCloseTo(3.52, 1);
     expect(calculation.discountAmount).toBe(10);
-    expect(calculation.grandTotal).toBe(74); // 80 + 4 - 10
   });
 
   it('should throw error if discount makes grand total negative', () => {
@@ -152,6 +156,42 @@ describe('BillingService - Calculations', () => {
 
     // Reset setting for other tests
     settingsService.updateConfig({ gstEnabled: true });
+  });
+
+  it('should distribute discount proportionally across items', () => {
+    // Product 1: 40.00, GST 5% (Exclusive) -> Total 42.00
+    // Product 2: 20.00, GST 12% (Exclusive) -> Total 22.40
+    // Buy 1 of each. Grand Total before discount = 64.40. Subtotal = 60.00. GST = 4.40.
+    // Apply 10.00 Discount.
+    // Total Value (Subtotal) = 60.00.
+    // P1 weight: 40/60 = 0.666...
+    // P2 weight: 20/60 = 0.333...
+    // P1 Discount share: 10 * 0.666 = 6.67
+    // P2 Discount share: 10 * 0.333 = 3.33
+    // Net P1 Subtotal: 40 - 6.67 = 33.33. GST (5%): 1.67. Total: 35.00
+    // Net P2 Subtotal: 20 - 3.33 = 16.67. GST (12%): 2.00. Total: 18.67
+    // Grand Total: 35.00 + 18.67 = 53.67
+    // (Calculation: 64.40 - 10 = 54.40. Wait, 53.67? Let's check math)
+    // Actually, the billing engine (billing-math.ts) does NetTotal = GrandTotal - Discount.
+    // But it calculates lineSubtotal for proportional shares.
+
+    const calculation = billingService.calculateBill(
+      [
+        { productId: 1, quantity: 1 },
+        { productId: 2, quantity: 1 },
+      ],
+      10
+    );
+
+    expect(calculation.discountAmount).toBe(10);
+    expect(calculation.grandTotal).toBe(54.4); // (42.00 + 22.40) - 10.00
+
+    // Verify proportional subtotal reduction (Gross-based weight)
+    // P1 (42), P2 (22.4). Total 64.4. Factor = 54.4 / 64.4 = 0.8447...
+    // P1 Net Gross = 42 * Factor = 35.48. Net Sub (5% Incl) = 35.48 / 1.05 = 33.79
+    // P2 Net Gross = 22.4 * Factor = 18.92. Net Sub (12% Incl) = 18.92 / 1.12 = 16.89
+    expect(calculation.items[0].lineSubtotal).toBeCloseTo(33.79, 1);
+    expect(calculation.items[1].lineSubtotal).toBeCloseTo(16.89, 1);
   });
 });
 
@@ -265,6 +305,29 @@ describe('BillingService - Finalize Bill', () => {
     expect(bill).toBeNull();
   });
 
+  it('should snapshot purchase_price in bill_items', () => {
+    // Seeding: Product 1 has purchase_price 30
+    const result = billingService.finalizeBill({
+      billNumber: 'BILL-SNAPSHOT',
+      items: [{ productId: 1, quantity: 1 }],
+      paymentMode: 'cash',
+    });
+
+    const billItem = db
+      .prepare('SELECT * FROM bill_items WHERE bill_id = ?')
+      .get(result.bill.id) as any;
+    expect(billItem).toBeDefined();
+    expect(billItem.purchase_price).toBe(30);
+
+    // Verify it stays same if product price changes later
+    db.exec('UPDATE products SET purchase_price = 50 WHERE id = 1');
+
+    const freshBillItem = db
+      .prepare('SELECT * FROM bill_items WHERE bill_id = ?')
+      .get(result.bill.id) as any;
+    expect(freshBillItem.purchase_price).toBe(30); // Still 30
+  });
+
   it('should update customer balance on credit sale', () => {
     const customerRepo = new CustomerRepository();
     const customer = customerRepo.findById(1);
@@ -295,15 +358,15 @@ describe('BillingService - Finalize Bill', () => {
 
   it('should respect inclusive GST (MRP) during finalization', () => {
     // Product ID 5 is 'MRP Product' with salePrice 105 and 5% GST inclusive
-    // Two units: Total = 210. GST = 210 * 0.05 = 10.5. Subtotal = 199.5
+    // Two units: Total = 210. Correct Logic: 210 / 1.05 = 200 Subtotal, 10 GST.
     const result = billingService.finalizeBill({
       billNumber: 'BILL-MRP-FINAL',
       items: [{ productId: 5, quantity: 2 }], // Total: 210
       paymentMode: 'cash',
     });
 
-    expect(result.bill.subtotal).toBe(199.5);
-    expect(result.bill.gstTotal).toBe(10.5);
+    expect(result.bill.subtotal).toBe(200);
+    expect(result.bill.gstTotal).toBe(10);
     expect(result.bill.grandTotal).toBe(210);
   });
 

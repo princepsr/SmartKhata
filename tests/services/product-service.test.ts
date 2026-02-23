@@ -285,22 +285,22 @@ describe('ProductService - Stock Adjustment', () => {
     productService.deactivateProduct(1);
 
     const results = productService.searchProducts('Coca');
-    expect(results).toHaveLength(0);
+    expect(results.items).toHaveLength(0);
 
     const allResults = productService.searchProducts('Coca', true);
-    expect(allResults).toHaveLength(1);
-    expect(allResults[0].isActive).toBeFalsy();
+    expect(allResults.items).toHaveLength(1);
+    expect(allResults.items[0].isActive).toBeFalsy();
   });
 
   it('should list all products including inactive ones', () => {
     productService.deactivateProduct(1);
 
     const activeProducts = productService.getAllProducts(false);
-    expect(activeProducts.find((p: any) => p.id === 1)).toBeUndefined();
+    expect(activeProducts.items.find((p: any) => p.id === 1)).toBeUndefined();
 
     const allProducts = productService.getAllProducts(true);
-    expect(allProducts.find((p: any) => p.id === 1)).toBeDefined();
-    expect(allProducts.find((p: any) => p.id === 1).isActive).toBeFalsy();
+    expect(allProducts.items.find((p: any) => p.id === 1)).toBeDefined();
+    expect(allProducts.items.find((p: any) => p.id === 1).isActive).toBeFalsy();
   });
 });
 
@@ -321,8 +321,8 @@ describe('ProductService - Search and Query', () => {
   it('should search products by name', () => {
     const results = productService.searchProducts('Coca');
 
-    expect(results.length).toBeGreaterThan(0);
-    expect(results[0].name).toContain('Coca');
+    expect(results.items.length).toBeGreaterThan(0);
+    expect(results.items[0].name).toContain('Coca');
   });
 
   it('should throw error for empty search query', () => {
@@ -342,5 +342,45 @@ describe('ProductService - Search and Query', () => {
     const lowStock = productService.getLowStockProducts();
 
     expect(lowStock.length).toBeGreaterThan(0);
+  });
+
+  it('should handle pagination depth correctly', () => {
+    // Add 5 more products (total will be 3 + 5 = 8 in seed, or more if seed is larger)
+    // Seed has 3 products. Let's add 5 more to make 8.
+    for (let i = 0; i < 5; i++) {
+      productService.addProduct({
+        name: `Paginator ${i}`,
+        salePrice: 10 + i,
+      });
+    }
+
+    // Page 1, Limit 3 -> 3 items, hasMore = true
+    const p1 = productService.getAllProducts(false, 1, 3);
+    const count = productService.getProductCount();
+    expect(p1.items).toHaveLength(3);
+    // hasMore logic in service: page * limit < totalCount. 1 * 3 < 8 is true.
+    // Wait, getAllProducts returns { items, page }. It doesn't return hasMore?
+    // Let me check searchProducts which does.
+
+    const s1 = productService.searchProducts('Paginator', false, 1, 2);
+    expect(s1.items).toHaveLength(2);
+    expect(s1.totalCount).toBe(5);
+    expect(s1.hasMore).toBe(true);
+
+    const s3 = productService.searchProducts('Paginator', false, 3, 2);
+    expect(s3.items).toHaveLength(1);
+    expect(s3.hasMore).toBe(false);
+  });
+
+  it('should sanitize search queries with special characters', () => {
+    productService.addProduct({
+      name: 'Product % with _ wildcards',
+      salePrice: 100,
+    });
+
+    // Should find the literal product, not behave as SQL wildcard
+    const results = productService.searchProducts('% with _');
+    expect(results.items).toHaveLength(1);
+    expect(results.items[0].name).toBe('Product % with _ wildcards');
   });
 });

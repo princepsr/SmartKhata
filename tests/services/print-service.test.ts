@@ -16,6 +16,10 @@ vi.mock('electron', () => {
     },
   };
   return {
+    app: {
+      getAppPath: vi.fn(() => 'test-path'),
+      isPackaged: false,
+    },
     BrowserWindow: vi.fn(() => mockWindow),
     dialog: {
       showSaveDialog: vi.fn().mockResolvedValue({ filePath: 'test.pdf' }),

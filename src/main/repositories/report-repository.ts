@@ -28,18 +28,18 @@ export class ReportRepository extends BaseRepository {
           COALESCE(SUM(
             CASE 
               WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
-              THEN bi.line_total - (bi.quantity * bi.purchase_price)
+              THEN (bi.line_total / (1 + bi.gst_percent / 100.0)) - (bi.quantity * bi.purchase_price)
               ELSE 0 
             END
           ), 0) as totalProfit,
           COALESCE(SUM(
             CASE 
               WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
-              THEN bi.line_total
+              THEN (bi.line_total / (1 + bi.gst_percent / 100.0))
               ELSE 0 
             END
           ), 0) as salesWithCost,
-          COALESCE(SUM(bi.line_total), 0) as totalItemSales
+          COALESCE(SUM(bi.line_total / (1 + bi.gst_percent / 100.0)), 0) as totalItemSales
         FROM bill_items bi
         WHERE bi.bill_id IN (SELECT id FROM BillSet)
       )
@@ -69,7 +69,9 @@ export class ReportRepository extends BaseRepository {
     };
 
     const marginPercent =
-      result.netSales > 0 ? Math.round((result.totalProfit / result.netSales) * 10000) / 100 : 0;
+      result.totalSubtotal > 0
+        ? Math.round((result.totalProfit / result.totalSubtotal) * 10000) / 100
+        : 0;
 
     // Calculate previous period for comparison
     const start = new Date(startDate);
@@ -349,20 +351,20 @@ export class ReportRepository extends BaseRepository {
            b.grand_total + b.discount_amount as totalSales,
            b.grand_total as netSales,
            COALESCE(SUM(
-             CASE 
-               WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
-               THEN bi.line_total - (bi.quantity * bi.purchase_price)
-               ELSE 0 
-             END
-           ), 0) as totalProfit,
-           COALESCE(SUM(
-             CASE 
-               WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
-               THEN bi.line_total
-               ELSE 0 
-             END
-           ), 0) as salesWithCost,
-           COALESCE(SUM(bi.line_total), 0) as totalItemSales
+            CASE 
+              WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
+              THEN (bi.line_total / (1 + bi.gst_percent / 100.0)) - (bi.quantity * bi.purchase_price)
+              ELSE 0 
+            END
+          ), 0) as totalProfit,
+          COALESCE(SUM(
+            CASE 
+              WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
+              THEN (bi.line_total / (1 + bi.gst_percent / 100.0))
+              ELSE 0 
+            END
+          ), 0) as salesWithCost,
+          COALESCE(SUM(bi.line_total / (1 + bi.gst_percent / 100.0)), 0) as totalItemSales
         FROM bills b
         LEFT JOIN bill_items bi ON b.id = bi.bill_id
         WHERE date(b.created_at, 'localtime') BETWEEN date(?) AND date(?)
@@ -426,7 +428,9 @@ export class ReportRepository extends BaseRepository {
         salesWithCost: row.salesWithCost,
         totalItemSales: row.totalItemSales,
         marginPercent:
-          row.netSales > 0 ? Math.round((row.totalProfit / row.netSales) * 1000) / 10 : 0,
+          row.totalItemSales > 0
+            ? Math.round((row.totalProfit / row.totalItemSales) * 1000) / 10
+            : 0,
         billCount: row.billCount,
         growth,
       };

@@ -29,9 +29,10 @@ Whenever a bill is generated or a payment is received, a ledger entry is created
 
 ### Entry Types:
 
-1. **SALES**: Created when a bill is generated. Links directly to the `bill_id`.
-2. **PAYMENT**: Created when a customer pays their pending balance.
-3. **RETURN**: Created during sales returns (Future enhancement).
+1. **SALE**: Created when a bill is generated. Links directly to the `reference_id` (bill ID).
+2. **PAYMENT_IN**: Created when a customer pays their pending balance.
+3. **PAYMENT_OUT**: Created if the shop issues a refund or payout to the customer.
+4. **OPENING_BALANCE**: Created when a customer is registered with a non-zero starting balance.
 
 ---
 
