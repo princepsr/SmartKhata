@@ -194,12 +194,14 @@ Layout
 - **Reasoning:** Better scanability and more vertical space for the main data table.
 - **Implementation:** Use a sidebar or a dedicated column for filters that remains consistent across management screens.
 
-### 4. Billing Summary Refinement
+### 4. Billing & Reporting Summary Refinement
 
-**Decision:** Semantic grouping of totals (Subtotal, GST, Discount, Grand Total) with clear toggle controls for discounts.
+**Decision:** Semantic grouping of totals and synchronization of reporting grids.
 
 - **Flat Structure:** Discount row uses flexbox for label, toggle, and input alignment.
 - **Visual Priority:** Grand total is emphasized with larger font and vibrant success color.
+- **Standardized Dashboard**: The **Sales** and **Trends** tabs use a identical 4-card summary grid (Gross, Net, Discount, Profit) to maintain a consistent mental model.
+- **Payment Summary Badges**: Secondary metrics (like bill count/transactions) are moved to the bottom payment summary as discrete badges, keeping the primary focus on financial totals.
 
 ---
 
@@ -636,5 +638,5 @@ const [collapsed, setCollapsed] = useState(false);
 
 ---
 
-**Last updated:** 2026-02-08  
+**Last updated:** 2026-02-23
 **Files:** `src/renderer/components/Layout.tsx`, `src/renderer/components/Layout.css`, `src/renderer/index.css`

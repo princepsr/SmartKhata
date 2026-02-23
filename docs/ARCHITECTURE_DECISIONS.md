@@ -1,13 +1,14 @@
 # Architecture Decisions
 
-
 **Rationale:**
+
 - **Tightly coupled components**: Electron main/renderer/preload share types and interfaces
 - **Simpler CI/CD**: Single build pipeline, no version sync issues
 - **Faster development**: Refactor across boundaries without managing multiple repos
 - **TypeScript benefits**: Shared types between main and renderer processes
 
 **Structure:**
+
 ```
 SmartKhata/
 ├── src/
@@ -21,6 +22,7 @@ SmartKhata/
 ```
 
 **Alternative considered:** Multi-repo (main + renderer separate)
+
 - ❌ Overkill for small team
 - ❌ Adds complexity (version sync, type sharing)
 - ❌ Only beneficial for large teams or microservices
@@ -32,6 +34,7 @@ SmartKhata/
 **Decision:** pnpm
 
 **Rationale:**
+
 - **Disk efficiency**: Symlinks to global store (important for low-end PCs)
 - **Faster installs**: ~2x faster than npm, especially on Windows
 - **Strict dependency resolution**: Prevents phantom dependencies
@@ -39,10 +42,12 @@ SmartKhata/
 - **Growing adoption**: Industry trend, good tooling support
 
 **Configuration:**
+
 - Workspaces for organizing main/renderer if needed
 - Lockfile committed to repo (`pnpm-lock.yaml`)
 
 **Alternatives considered:**
+
 - **npm**: ❌ Slower, larger `node_modules`, but most compatible
 - **yarn**: ❌ Good but pnpm is faster on Windows and more efficient
 
@@ -55,6 +60,7 @@ SmartKhata/
 **Decision:** kebab-case for folders, PascalCase for React components
 
 **Rules:**
+
 ```
 src/
 ├── main/
@@ -80,12 +86,14 @@ src/
 ```
 
 **File naming:**
+
 - React components: `ComponentName.tsx` (PascalCase)
 - Services/Repos: `product-service.ts` (kebab-case)
 - Types: `product.types.ts` (kebab-case)
 - Tests: `product-service.test.ts` (kebab-case)
 
 **Rationale:**
+
 - **Consistency**: Matches Node.js/npm conventions
 - **Cross-platform**: Avoids case-sensitivity issues (though Windows-only, good practice)
 - **Readability**: Clear separation between React (PascalCase) and Node (kebab-case)
@@ -99,6 +107,7 @@ src/
 **Decision:** Three-layer architecture (UI → IPC → Service → Repository → Database)
 
 **Rationale:**
+
 - **Separation of concerns**: Business logic separated from data access
 - **Testability**: Services can be tested independently without UI or database
 - **Reusability**: Services can be called from multiple IPC handlers
@@ -106,6 +115,7 @@ src/
 - **Type safety**: Strongly typed errors and responses
 
 **Architecture:**
+
 ```
 ┌─────────────────────────────────────────┐
 │              UI (Renderer)              │
@@ -139,11 +149,13 @@ src/
 ```
 
 **Layer Responsibilities:**
+
 - **IPC**: Orchestration, error handling, response formatting
 - **Service**: Business logic, validation, calculations, cross-entity operations
 - **Repository**: SQL queries, data mapping, transactions
 
 **Benefits:**
+
 - ✅ Business logic is testable (in-memory database)
 - ✅ IPC handlers are thin (no business logic)
 - ✅ Repositories are thin (no business logic)
@@ -151,6 +163,7 @@ src/
 - ✅ Easy to add new features
 
 **Alternative considered:** Direct IPC → Repository
+
 - ❌ Business logic scattered across IPC handlers
 - ❌ Difficult to test
 - ❌ Code duplication
@@ -160,17 +173,40 @@ src/
 
 ---
 
-## Summary
+### 5. Taxation & Discount Distribution ✅
 
-| Decision | Choice | Why |
-|----------|--------|-----|
-| **Repo structure** | Mono-repo | Small team, tightly coupled, simpler |
-| **Package manager** | pnpm | Fast, efficient, Windows-friendly |
-| **Architecture** | Service Layer | Separation of concerns, testability |
-| **Folder naming** | kebab-case (PascalCase for React) | Consistent, readable, conventional |
+**Decision:** Proportional discount distribution across line items.
 
+**Rationale:**
+
+- **GST Compliance**: Tax must be calculated on the net taxable value after discounts.
+- **Accuracy**: Distributing global discounts to items ensures the taxable base is reduced appropriately for each GST slab.
+- **Traceability**: Allows for precise calculation of tax liability at the line-item level.
 
 ---
 
-**Last updated:** 2026-02-08  
-**Status:** ✅ Approved
+### 6. Historical Profit Integrity ✅
+
+**Decision:** Cost-price (`purchase_price`) snapshotting at the moment of sale.
+
+**Rationale:**
+
+- **Business Transparency**: Ensures profit reports for previous months remain accurate even if current product costs change.
+- **Data Integrity**: Decouples historical performance from future price fluctuations.
+- **Reporting Clarity**: Allows for "Coverage" metrics to be calculated reliably by checking for snapshots in historical data.
+
+---
+
+## Summary
+
+| Decision            | Choice                            | Why                                  |
+| ------------------- | --------------------------------- | ------------------------------------ |
+| **Repo structure**  | Mono-repo                         | Small team, tightly coupled, simpler |
+| **Package manager** | pnpm                              | Fast, efficient, Windows-friendly    |
+| **Architecture**    | Service Layer                     | Separation of concerns, testability  |
+| **Folder naming**   | kebab-case (PascalCase for React) | Consistent, readable, conventional   |
+
+---
+
+**Last updated:** 2026-02-23
+**Status:** ✅ Modern POS architecture with robust taxation logic verified

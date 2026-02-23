@@ -483,6 +483,10 @@ pnpm test:coverage     # Coverage report
 - [`SETTINGS_ARCHITECTURE.md`](./SETTINGS_ARCHITECTURE.md) - Settings UI & Patterns
 - [`PRINT_SERVICE.md`](./PRINT_SERVICE.md) - Printing and Receipt formatting
 - [`BACKUP_RESTORE.md`](./BACKUP_RESTORE.md) - Backup & Restore Architecture
+- [`TAXATION_AND_DISCOUNTS.md`](./TAXATION_AND_DISCOUNTS.md) - GST Models and Discount Logic
+- [`CUSTOMER_MANAGEMENT.md`](./CUSTOMER_MANAGEMENT.md) - Profiles and Ledger Integration
+- [`SECURITY_AND_VALIDATION.md`](./SECURITY_AND_VALIDATION.md) - Zod and IPCHandler Middleware
+- [`UI_PATTERNS.md`](./UI_PATTERNS.md) - Loading, Pagination, and Resilience
 
 ### Repository Layer
 

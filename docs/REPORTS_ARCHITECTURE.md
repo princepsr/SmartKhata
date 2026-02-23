@@ -21,9 +21,10 @@ The reporting system provide real-time insights into sales, GST, inventory, and 
 
 - **Purpose**: Optimized SQL queries for data aggregation.
 - **Queries**:
-  - **Daily Sales**: Aggregates `bills` and `bill_items` by date.
+  - **Daily Sales**: Aggregates `bills` and `bill_items` by date. Calculates profit by subtracting snapshotted `purchase_price` from revenue.
   - **GST Summary**: Groups items by tax slab (e.g., 5%, 12%, 18%).
   - **Trend Analytics**: Uses SQLite `strftime` to group data by Day, Week, or Month.
+  - **Profit & Coverage**: Calculates "Coverage" percentage based on items having cost data (`purchase_price > 0`).
   - **Stock Summary**: Identifies products below their `low_stock_alert` threshold.
 
 ## Data Aggregation Logic
@@ -46,11 +47,11 @@ All calculations in the repository are performed in **Rupees (REAL)** for direct
 
 Reports are fetched via the following IPC channels:
 
-- `report:sales`: Returns gross sales, net sales, and comparisons.
+- `report:sales`: Returns gross sales, net sales, profit, and coverage metrics.
 - **Storage Strategy**: All transactions are timestamped in **UTC** in the database.
 - **Reporting Period**: Aggregations are performed by converting UTC timestamps to **local time (IST)** in the queries to ensure logical day boundaries (e.g., `date(created_at, 'localtime')`).
 - `report:gst`: Returns GST slabs and totals.
-- `report:analytics`: Returns periodic data for charts (Day/Week/Month).
+- `report:analytics`: Returns periodic data for charts and summary grids (Sales, Net, Discount, Profit).
 - `report:bills`: Returns a paginated list of individual bills.
 - `report:stock`: Returns low stock item summaries.
 
@@ -64,5 +65,5 @@ Data from any report can be exported via **`ExportService`**, which generates hi
 
 ---
 
-**Last updated:** 2026-02-22  
-**Status:** ✅ Advanced analytics and multi-format exports verified
+**Last updated:** 2026-02-23
+**Status:** ✅ Profit reporting and coverage transparency implemented. Layout synchronized.

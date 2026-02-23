@@ -17,6 +17,10 @@ src/main/database/
     ├── 001_initial_schema.sql      # Initial schema
     ├── 005_gst_percentage.sql      # GST basis pts -> percent (partially superseded by 011)
     ├── 011_paise_to_rupees.sql     # Full migration to Rupee storage
+    ├── 013_gst_enhancements.sql    # Support for global GST inclusive/exclusive modes
+    ├── 014_customer_ledger.sql     # Customer balance tracking and ledger tables
+    ├── 015_customer_address_email.sql # Extended customer profile attributes
+    ├── 016_bill_items_purchase_price.sql # Profit tracking via cost-price snapshots
     └── ...
 ```
 
@@ -165,8 +169,8 @@ if (current.checksum !== applied.checksum) {
 ### Step 1: Create SQL File
 
 ```bash
-# Next version is 012
-touch src/main/database/migrations/012_add_new_feature.sql
+# Next version is 017
+touch src/main/database/migrations/017_new_feature.sql
 ```
 
 ### Step 2: Write Migration SQL

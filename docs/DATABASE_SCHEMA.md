@@ -71,6 +71,7 @@ erDiagram
         text product_name_snapshot
         int quantity
         real unit_price       /* Stored in Rupees (Decimal) */
+        real purchase_price   /* Stored in Rupees (Decimal) SNAPSHOT */
         real gst_percent      /* Stored as Percentage */
         real line_total       /* Stored in Rupees (Decimal) */
     }
@@ -89,6 +90,7 @@ erDiagram
         text shop_name
         text owner_name
         text address
+        text email            /* Added email support */
         text phone
         text gst_number
         text printer_name
@@ -186,6 +188,7 @@ erDiagram
 - `product_name_snapshot`: Name at time of sale
 - `quantity`: Quantity sold (required, > 0)
 - `unit_price`: Price at time of sale in Rupees
+- `purchase_price`: Cost price at time of sale in Rupees (**snapshot for profit tracking**)
 - `gst_percent`: GST rate at time of sale in percentage
 - `line_total`: Line total in Rupees
 
@@ -336,11 +339,11 @@ INSERT INTO bills (customer_id, subtotal, gst_total, discount_amount, grand_tota
 VALUES (5, 1000.00, 180.00, 50.00, 1130.00, 'cash');
 -- Returns sale_id = 42
 
--- 2. Insert sale items
-INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, subtotal)
+-- 2. Insert sale items (with snapshots)
+INSERT INTO bill_items (bill_id, product_id, product_name_snapshot, quantity, unit_price, purchase_price, gst_percent, line_total)
 VALUES
-  (42, 10, 'Product A', 2, 300, 600),
-  (42, 15, 'Product B', 1, 400, 400);
+  (42, 10, 'Product A', 2, 300, 200, 18.0, 600),
+  (42, 15, 'Product B', 1, 400, 300, 5.0, 400);
 
 -- 3. Update product stock
 UPDATE products SET stock = stock - 2 WHERE id = 10;

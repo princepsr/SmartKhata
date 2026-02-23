@@ -13,11 +13,13 @@ SmartKhata uses a **strict request-response pattern** for all communication betw
 ### Rule 1: Request-Response Only
 
 **✅ ALLOWED:**
+
 - Renderer sends request → Main returns response
 - Synchronous, predictable flow
 - One request = One response
 
 **❌ FORBIDDEN:**
+
 - Event-based communication
 - Pub/sub patterns
 - Main process pushing unsolicited data to renderer
@@ -35,11 +37,13 @@ SmartKhata uses a **strict request-response pattern** for all communication betw
 ```
 
 **Renderer → Main:**
+
 - Commands (create, update, delete)
 - Queries (get, list, search)
 - System operations (backup, export)
 
 **Main → Renderer:**
+
 - Success responses with data
 - Error responses with message
 - Never: Unsolicited events
@@ -49,6 +53,7 @@ SmartKhata uses a **strict request-response pattern** for all communication betw
 ### Rule 3: No Wildcards or Dynamic Channels
 
 **✅ ALLOWED:**
+
 ```typescript
 // Predefined, static channel names
 const IPC_EVENTS = {
@@ -58,6 +63,7 @@ const IPC_EVENTS = {
 ```
 
 **❌ FORBIDDEN:**
+
 ```typescript
 // Dynamic channel names
 const channel = `product:${action}`; // NO!
@@ -80,6 +86,7 @@ module:action
 ```
 
 **Components:**
+
 - `module` - Lowercase, singular noun (product, sale, customer, system)
 - `action` - Lowercase verb or noun (create, list, search, backup)
 - Separator - Always colon (`:`)
@@ -88,69 +95,72 @@ module:action
 
 ### Standard Actions
 
-| Action | Meaning | Example |
-|--------|---------|---------|
-| `create` | Create new resource | `product:create` |
-| `list` | Get all resources | `product:list` |
-| `get` | Get single resource by ID | `product:get` |
-| `update` | Update existing resource | `product:update` |
-| `delete` | Delete resource | `product:delete` |
-| `search` | Search/filter resources | `product:search` |
-| `count` | Get count of resources | `product:count` |
-| `exists` | Check if resource exists | `product:exists` |
+| Action   | Meaning                   | Example          |
+| -------- | ------------------------- | ---------------- |
+| `create` | Create new resource       | `product:create` |
+| `list`   | Get all resources         | `product:list`   |
+| `get`    | Get single resource by ID | `product:get`    |
+| `update` | Update existing resource  | `product:update` |
+| `delete` | Delete resource           | `product:delete` |
+| `search` | Search/filter resources   | `product:search` |
+| `count`  | Get count of resources    | `product:count`  |
+| `exists` | Check if resource exists  | `product:exists` |
 
 ---
 
 ### Module Examples
 
 **Business Entities:**
+
 ```typescript
 // Products
-'product:create'
-'product:list'
-'product:get'
-'product:update'
-'product:delete'
-'product:search'
+'product:create';
+'product:list';
+'product:get';
+'product:update';
+'product:delete';
+'product:search';
 
 // Sales
-'sale:create'
-'sale:list'
-'sale:get'
-'sale:void'  // Business-specific action
+'sale:create';
+'sale:list';
+'sale:get';
+'sale:void'; // Business-specific action
 
 // Customers
-'customer:create'
-'customer:list'
-'customer:get'
-'customer:update'
+'customer:create';
+'customer:list';
+'customer:get';
+'customer:update';
 ```
 
 **System Operations:**
+
 ```typescript
 // System
-'system:backup'
-'system:restore'
-'system:export'
-'system:import'
+'system:backup';
+'system:restore';
+'system:export';
+'system:import';
 
 // Settings
-'settings:get'
-'settings:update'
-'settings:reset'
+'settings:get';
+'settings:update';
+'settings:reset';
 
 // Reports
-'report:sales'
-'report:inventory'
-'report:profit'
+'report:sales';
+'report:inventory';
+'report:profit';
 ```
 
 **App Metadata:**
+
 ```typescript
 // App
-'app:version'
-'app:config'
-'app:logs'
+'app:version';
+'app:config';
+'app:logs';
 ```
 
 ---
@@ -161,15 +171,15 @@ module:action
 
 ```typescript
 // Clear module and action
-'product:create'
-'product:list'
-'sale:create'
-'customer:search'
+'product:create';
+'product:list';
+'sale:create';
+'customer:search';
 
 // Specific, unambiguous
-'report:sales-by-date'
-'system:backup-database'
-'settings:update-tax-rate'
+'report:sales-by-date';
+'system:backup-database';
+'settings:update-tax-rate';
 ```
 
 ---
@@ -178,29 +188,28 @@ module:action
 
 ```typescript
 // Too generic
-'data'
-'fetch'
+'data';
+'fetch';
 'update'
-
 // Dynamic/computed
-`${module}:${action}`  // Runtime construction
-'product-' + id        // Variable channel
+`${module}:${action}`; // Runtime construction
+'product-' + id; // Variable channel
 
 // Event-like names
-'product-created'      // Sounds like an event
-'on-sale-complete'     // Event listener pattern
-'product:changed'      // Pub/sub pattern
+('product-created'); // Sounds like an event
+('on-sale-complete'); // Event listener pattern
+('product:changed'); // Pub/sub pattern
 
 // Wildcards
-'product:*'
-'*:create'
+('product:*');
+('*:create');
 
 // Nested/complex
-'product:category:subcategory:list'  // Too deep
+('product:category:subcategory:list'); // Too deep
 
 // Camel case (inconsistent)
-'productCreate'        // Use 'product:create'
-'getProduct'           // Use 'product:get'
+('productCreate'); // Use 'product:create'
+('getProduct'); // Use 'product:get'
 ```
 
 ---
@@ -220,6 +229,7 @@ interface IPCResponse<T> {
 ```
 
 **Success Response:**
+
 ```typescript
 {
   success: true,
@@ -228,6 +238,7 @@ interface IPCResponse<T> {
 ```
 
 **Error Response:**
+
 ```typescript
 {
   success: false,
@@ -240,6 +251,7 @@ interface IPCResponse<T> {
 ### Request Types
 
 **1. No Parameters (Query)**
+
 ```typescript
 // Channel: 'product:list'
 // Request: void
@@ -249,6 +261,7 @@ await window.electron.products.list();
 ```
 
 **2. Single Parameter (Get by ID)**
+
 ```typescript
 // Channel: 'product:get'
 // Request: number (ID)
@@ -258,27 +271,29 @@ await window.electron.products.get(123);
 ```
 
 **3. Object Parameter (Create/Update)**
+
 ```typescript
 // Channel: 'product:create'
 // Request: CreateProductRequest
 // Response: IPCResponse<Product>
 
 await window.electron.products.create({
-  name: "New Product",
+  name: 'New Product',
   price: 100,
-  stock: 50
+  stock: 50,
 });
 ```
 
 **4. Multiple Parameters (Search/Filter)**
+
 ```typescript
 // Channel: 'sale:list-by-date'
 // Request: { startDate: string, endDate: string }
 // Response: IPCResponse<Sale[]>
 
 await window.electron.sales.listByDate({
-  startDate: "2026-01-01",
-  endDate: "2026-01-31"
+  startDate: '2026-01-01',
+  endDate: '2026-01-31',
 });
 ```
 
@@ -289,6 +304,7 @@ await window.electron.sales.listByDate({
 ### Rule 1: No Direct ipcRenderer Access
 
 **❌ FORBIDDEN in Renderer:**
+
 ```typescript
 import { ipcRenderer } from 'electron'; // NO!
 
@@ -296,6 +312,7 @@ ipcRenderer.invoke('any:channel'); // NO!
 ```
 
 **✅ REQUIRED:**
+
 ```typescript
 // Only use window.electron API
 await window.electron.products.list();
@@ -306,11 +323,11 @@ await window.electron.products.list();
 ### Rule 2: Whitelist All Channels
 
 **In Preload Script:**
+
 ```typescript
 // ❌ BAD: Generic invoke
 const api = {
-  invoke: (channel: string, ...args: any[]) => 
-    ipcRenderer.invoke(channel, ...args)
+  invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
 };
 
 // ✅ GOOD: Explicit methods only
@@ -318,7 +335,7 @@ const api = {
   products: {
     list: () => ipcRenderer.invoke('product:list'),
     get: (id: number) => ipcRenderer.invoke('product:get', id),
-  }
+  },
 };
 ```
 
@@ -329,24 +346,25 @@ const api = {
 **Every IPC handler MUST validate:**
 
 ```typescript
-IPCHandler.handle<CreateProductRequest, Product>(
-  'product:create',
-  async (request) => {
-    // ✅ REQUIRED: Validate inputs
-    if (!request.name || request.name.trim().length === 0) {
-      throw new Error('Product name is required');
-    }
-    if (request.price <= 0) {
-      throw new Error('Price must be greater than 0');
-    }
-    if (request.stock < 0) {
-      throw new Error('Stock cannot be negative');
-    }
-
-    // Process request...
+IPCHandler.handle<CreateProductRequest, Product>('product:create', async (request) => {
+  // ✅ REQUIRED: Validate inputs
+  if (!request.name || request.name.trim().length === 0) {
+    throw new Error('Product name is required');
   }
-);
+  if (request.price <= 0) {
+    throw new Error('Price must be greater than 0');
+  }
+  if (request.stock < 0) {
+    throw new Error('Stock cannot be negative');
+  }
+
+  // Process request...
+});
 ```
+
+**Note:** All IPC requests should use a corresponding Zod schema for validation. See **[SECURITY_AND_VALIDATION.md](SECURITY_AND_VALIDATION.md)** for patterns.
+
+````
 
 ---
 
@@ -365,20 +383,21 @@ return {
   success: false,
   error: `File not found: ${internalPath}`  // NO!
 };
-```
+````
 
 **✅ REQUIRED:**
+
 ```typescript
 // User-friendly error messages only
 return {
   success: false,
-  error: 'Product not found'
+  error: 'Product not found',
 };
 
 // Log full error internally
-logger.error('Product creation failed', { 
+logger.error('Product creation failed', {
   error: error.stack,
-  request 
+  request,
 });
 ```
 
@@ -389,6 +408,7 @@ logger.error('Product creation failed', {
 When adding a new IPC endpoint:
 
 - [ ] **1. Define channel name** in `src/shared/constants/app-constants.ts`
+
   ```typescript
   export const IPC_EVENTS = {
     PRODUCT_CREATE: 'product:create',
@@ -396,6 +416,7 @@ When adding a new IPC endpoint:
   ```
 
 - [ ] **2. Define types** in `src/shared/types/ipc.ts`
+
   ```typescript
   export interface CreateProductRequest {
     name: string;
@@ -405,29 +426,28 @@ When adding a new IPC endpoint:
   ```
 
 - [ ] **3. Create handler** in `src/main/ipc/handlers/`
+
   ```typescript
-  IPCHandler.handle<CreateProductRequest, Product>(
-    IPC_EVENTS.PRODUCT_CREATE,
-    async (request) => {
-      // Validate
-      // Process
-      // Return
-    }
-  );
+  IPCHandler.handle<CreateProductRequest, Product>(IPC_EVENTS.PRODUCT_CREATE, async (request) => {
+    // Validate
+    // Process
+    // Return
+  });
   ```
 
 - [ ] **4. Register handler** in `src/main/ipc/index.ts`
+
   ```typescript
   registerProductHandlers();
   ```
 
 - [ ] **5. Expose in preload** in `src/preload/index.ts`
+
   ```typescript
   const api = {
     products: {
-      create: (req: CreateProductRequest) => 
-        ipcRenderer.invoke(IPC_EVENTS.PRODUCT_CREATE, req),
-    }
+      create: (req: CreateProductRequest) => ipcRenderer.invoke(IPC_EVENTS.PRODUCT_CREATE, req),
+    },
   };
   ```
 
@@ -436,9 +456,9 @@ When adding a new IPC endpoint:
 - [ ] **7. Test** in renderer
   ```typescript
   const result = await window.electron.products.create({
-    name: "Test",
+    name: 'Test',
     price: 100,
-    stock: 50
+    stock: 50,
   });
   ```
 
@@ -452,7 +472,7 @@ When adding a new IPC endpoint:
 // DON'T DO THIS
 ipcMain.on('product-created', (event, product) => {
   // Broadcast to all windows
-  BrowserWindow.getAllWindows().forEach(win => {
+  BrowserWindow.getAllWindows().forEach((win) => {
     win.webContents.send('product-updated', product);
   });
 });
@@ -500,8 +520,8 @@ setInterval(async () => {
 ```typescript
 // DON'T DO THIS
 window.electron.products.create({
-  name: "Product",
-  onSuccess: () => console.log('Created!') // NO!
+  name: 'Product',
+  onSuccess: () => console.log('Created!'), // NO!
 });
 ```
 
@@ -523,6 +543,7 @@ logger.error('IPC Error: product:create', { error });
 ```
 
 **Log Format:**
+
 - `IPC Request: <channel>` - When request received
 - `IPC Response: <channel>` - When response sent
 - `IPC Error: <channel>` - When error occurs
@@ -532,6 +553,7 @@ logger.error('IPC Error: product:create', { error });
 ## Summary
 
 **DO:**
+
 - ✅ Use `module:action` naming
 - ✅ Request-response only
 - ✅ Validate all inputs
@@ -540,6 +562,7 @@ logger.error('IPC Error: product:create', { error });
 - ✅ Type everything
 
 **DON'T:**
+
 - ❌ Use events or pub/sub
 - ❌ Use dynamic channel names
 - ❌ Expose ipcRenderer directly
@@ -553,5 +576,5 @@ logger.error('IPC Error: product:create', { error });
 
 ---
 
-**Last updated:** 2026-02-08  
+**Last updated:** 2026-02-23  
 **Version:** 1.0

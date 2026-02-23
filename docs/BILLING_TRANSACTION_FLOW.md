@@ -48,22 +48,23 @@ saleData.items.forEach((item) => {
   // Throws error if insufficient stock
 
   // 1.3: Calculate line totals
-  const lineSubtotal = product.salePrice * item.quantity;
-  const lineGst = (lineSubtotal * product.gstPercent) / 100; // Percent logic remains standard
-  const lineTotal = lineSubtotal + lineGst;
-
-  // 1.4: Accumulate totals
-  subtotal += lineSubtotal;
-  gstTotal += lineGst;
+  // Use BillingMath.calculateLineTotals for consistency (handles Inclusive/Exclusive GST)
+  const totals = BillingMath.calculateLineTotals(
+    product.salePrice,
+    item.quantity,
+    product.gstPercent,
+    product.isGstInclusive
+  );
 
   // 1.5: Prepare bill item with snapshot
   billItems.push({
     productId: product.id,
     productNameSnapshot: product.name, // SNAPSHOT
     quantity: item.quantity,
-    unitPrice: product.salePrice, // SNAPSHOT
+    unitPrice: product.salePrice, // SNAPSHOT (MRP or Base)
+    purchasePrice: product.purchasePrice || 0, // SNAPSHOT (Cost)
     gstPercent: product.gstPercent, // SNAPSHOT
-    lineTotal: lineTotal,
+    lineTotal: totals.lineTotal,
   });
 });
 ```
@@ -79,7 +80,18 @@ saleData.items.forEach((item) => {
 
 ### Step 2: Calculate Final Totals
 
-**Purpose:** Apply discount and calculate grand total
+**Purpose:** Apply discount and calculate#### Standard (Exclusive) GST:
+lineSubtotal = unitPrice × quantity
+lineGst = lineSubtotal × (gstPercent / 100)
+lineTotal = lineSubtotal + lineGst
+
+#### MRP (Inclusive) GST:
+
+// GST is already baked into the unitPrice (MRP)
+lineTotal = unitPrice × quantity
+lineSubtotal = lineTotal / (1 + gstPercent / 100)
+lineGst = lineTotal - lineSubtotal
+Subtotal + GST Total - Discount
 
 ```typescript
 const discountAmount = saleData.discountAmount || 0;

@@ -252,14 +252,17 @@ pnpm build:win:portable
 
 ### 🏗️ Architecture & Core Logic
 
-| Document                                                    | Purpose                               |
-| :---------------------------------------------------------- | :------------------------------------ |
-| [CURRENT_ARCHITECTURE.md](docs/CURRENT_ARCHITECTURE.md)     | **High-level architecture overview**  |
-| [ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md) | Technical choices and design patterns |
-| [FOLDER_STRUCTURE.md](docs/FOLDER_STRUCTURE.md)             | Detailed file/folder responsibilities |
-| [BILLING_SERVICE_FLOW.md](docs/BILLING_SERVICE_FLOW.md)     | State machine for atomic billing      |
-| [PRINT_SERVICE.md](docs/PRINT_SERVICE.md)                   | Thermal printing & window pooling     |
-| [REPORTS_ARCHITECTURE.md](docs/REPORTS_ARCHITECTURE.md)     | Analytics & multi-format exports      |
+| Document                                                        | Purpose                               |
+| :-------------------------------------------------------------- | :------------------------------------ |
+| [CURRENT_ARCHITECTURE.md](docs/CURRENT_ARCHITECTURE.md)         | **High-level architecture overview**  |
+| [ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md)     | Technical choices and design patterns |
+| [FOLDER_STRUCTURE.md](docs/FOLDER_STRUCTURE.md)                 | Detailed file/folder responsibilities |
+| [BILLING_SERVICE_FLOW.md](docs/BILLING_SERVICE_FLOW.md)         | State machine for atomic billing      |
+| [BILLING_TRANSACTION_FLOW.md](docs/BILLING_TRANSACTION_FLOW.md) | Step-by-step transaction logic        |
+| [TAXATION_AND_DISCOUNTS.md](docs/TAXATION_AND_DISCOUNTS.md)     | GST Models and Proportional Discounts |
+| [CUSTOMER_MANAGEMENT.md](docs/CUSTOMER_MANAGEMENT.md)           | Profiles and Ledger Integration       |
+| [PRINT_SERVICE.md](docs/PRINT_SERVICE.md)                       | Thermal printing & window pooling     |
+| [REPORTS_ARCHITECTURE.md](docs/REPORTS_ARCHITECTURE.md)         | Analytics & multi-format exports      |
 
 ### �️ System Reliability
 
@@ -275,25 +278,30 @@ pnpm build:win:portable
 | Document                                                  | Purpose                            |
 | :-------------------------------------------------------- | :--------------------------------- |
 | [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)             | Product, Bill, and Customer tables |
+| [DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md)     | Schema versioning & runner logic   |
 | [REPOSITORY_RULES.md](docs/REPOSITORY_RULES.md)           | SQL query & domain mapping rules   |
 | [DATABASE_TRANSACTIONS.md](docs/DATABASE_TRANSACTIONS.md) | ACID compliance & error recovery   |
 | [BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md)               | Atomic ZIP-based data archival     |
 
 ### 🔐 Security & Operations
 
-| Document                                                | Purpose                                 |
-| :------------------------------------------------------ | :-------------------------------------- |
-| [LICENSING_STRATEGY.md](docs/LICENSING_STRATEGY.md)     | Trials, hardware binding, & anti-tamper |
-| [ADMIN_KEY_GENERATION.md](docs/ADMIN_KEY_GENERATION.md) | Internal license key generation guide   |
-| [APP_METADATA.md](docs/APP_METADATA.md)                 | Versioning, icons, & branding config    |
-| [LOGGING.md](docs/LOGGING.md)                           | Structured auditing & sanitized logs    |
-| [ENVIRONMENT_CONFIG.md](docs/ENVIRONMENT_CONFIG.md)     | Dev/Prod path management                |
+| Document                                                      | Purpose                                 |
+| :------------------------------------------------------------ | :-------------------------------------- |
+| [SECURITY_AND_VALIDATION.md](docs/SECURITY_AND_VALIDATION.md) | Zod, IPC Guards, & Sanitization         |
+| [IPC_ARCHITECTURE.md](docs/IPC_ARCHITECTURE.md)               | Request-Response bridge design          |
+| [IPC_DESIGN_RULES.md](docs/IPC_DESIGN_RULES.md)               | Channel naming & response patterns      |
+| [LICENSING_STRATEGY.md](docs/LICENSING_STRATEGY.md)           | Trials, hardware binding, & anti-tamper |
+| [ADMIN_KEY_GENERATION.md](docs/ADMIN_KEY_GENERATION.md)       | Internal license key generation guide   |
+| [APP_METADATA.md](docs/APP_METADATA.md)                       | Versioning, icons, & branding config    |
+| [LOGGING.md](docs/LOGGING.md)                                 | Structured auditing & sanitized logs    |
+| [ENVIRONMENT_CONFIG.md](docs/ENVIRONMENT_CONFIG.md)           | Dev/Prod path management                |
 
 ### 🛠️ Developer Guides
 
 | Document                                                        | Purpose                               |
 | :-------------------------------------------------------------- | :------------------------------------ |
 | [INSTALLATION.md](docs/INSTALLATION.md)                         | **Setup & production build guide**    |
+| [UI_PATTERNS.md](docs/UI_PATTERNS.md)                           | Performance, Scroll, & Debouncing     |
 | [DEV_SCRIPTS.md](docs/DEV_SCRIPTS.md)                           | Full CLI script documentation         |
 | [TESTING_GUIDE.md](docs/TESTING_GUIDE.md)                       | Unit, integration & hardware testing  |
 | [TYPESCRIPT_SETUP.md](docs/TYPESCRIPT_SETUP.md)                 | Path aliases & TS configuration       |
