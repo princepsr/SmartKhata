@@ -264,7 +264,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             )}
 
             <div className="form-group">
-              <label>Product Name {isEditMode ? '(Immutable)' : '*'}</label>
+              <label>Product Name *</label>
               <input
                 ref={firstInputRef}
                 type="text"
@@ -273,7 +273,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 onChange={handleChange}
                 placeholder="Product Name"
                 className={errors.name ? 'error' : ''}
-                disabled={isLoading || isEditMode}
+                disabled={isLoading}
               />
               {errors.name && <span className="error-text">{errors.name}</span>}
             </div>
