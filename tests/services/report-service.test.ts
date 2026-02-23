@@ -115,6 +115,7 @@ describe('ReportService Integration Tests', () => {
 
     expect(report.totalTaxable).toBe(600.0); // 400.00 + 200.00
     expect(report.totalGst).toBe(44.0); // 20.00 + 24.00
+    expect(report.totalAmount).toBe(644.0); // 600.00 + 44.00
 
     const slab5 = report.slabs.find((s) => s.gstPercent === 5);
     const slab12 = report.slabs.find((s) => s.gstPercent === 12);
@@ -208,6 +209,33 @@ describe('ReportService Integration Tests', () => {
     // 3. Profit for past sale should NOT change
     const freshSummary = reportService.getDailySalesSummary(todayStr, todayStr);
     expect(freshSummary.totalProfit).toBe(initialProfit);
+  });
+
+  it('should calculate profit correctly for bills with zero GST', () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Create a bill with NO GST (gst_total = 0)
+    // Product 1: Price 42, Cost 30 (Profit 12 if no GST subtracted)
+    db.exec(`
+      INSERT INTO bills (bill_number, subtotal, gst_total, discount_amount, grand_total, payment_mode, created_at)
+      VALUES ('GST-ZERO-1', 42, 0, 0, 42, 'cash', '${todayStr} 12:00:00Z')
+    `);
+    const billId = (db as any)
+      .prepare('SELECT id FROM bills WHERE bill_number = "GST-ZERO-1"')
+      .get().id;
+
+    db.exec(`
+      INSERT INTO bill_items (bill_id, product_id, product_name_snapshot, quantity, unit_price, purchase_price, gst_percent, line_total)
+      VALUES (${billId}, 1, 'Coke', 1, 42, 30, 0, 42)
+    `);
+
+    const summary = reportService.getDailySalesSummary(todayStr, todayStr);
+
+    // If bug existed: Profit = (42 - 0 GST_TOTAL) - 30 = 12.
+    // Wait, the bug was actually: if bill.gst_total > 0, subtract item.line_gst.
+    // If bill.gst_total is 0, profit should be subtotal - cost.
+    // 42 - 30 = 12.
+    expect(summary.totalProfit).toBe(12);
   });
 });
 

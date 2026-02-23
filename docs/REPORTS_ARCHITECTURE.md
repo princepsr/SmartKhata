@@ -21,8 +21,8 @@ The reporting system provide real-time insights into sales, GST, inventory, and 
 
 - **Purpose**: Optimized SQL queries for data aggregation.
 - **Queries**:
-  - **Daily Sales**: Aggregates `bills` and `bill_items` by date. Calculates profit by subtracting snapshotted `purchase_price` from revenue.
-  - **GST Summary**: Groups items by tax slab (e.g., 5%, 12%, 18%).
+  - **Daily Sales**: Aggregates `bills` and `bill_items` by date. Calculates profit by subtracting snapshotted `purchase_price` from taxable revenue (Sales Price - Discount). Crucially, it only subtracts GST from profit if GST was actually charged on the bill (`gst_total > 0`), preventing artificial profit loss on non-GST bills.
+  - **GST Summary**: Groups items by tax slab (e.g., 5%, 12%, 18%). Returns `totalTaxable`, `totalGst`, and `totalAmount` (Revenue).
   - **Trend Analytics**: Uses SQLite `strftime` to group data by Day, Week, or Month.
   - **Profit & Coverage**: Calculates "Coverage" percentage based on items having cost data (`purchase_price > 0`).
   - **Stock Summary**: Identifies products below their `low_stock_alert` threshold.
@@ -50,7 +50,7 @@ Reports are fetched via the following IPC channels:
 - `report:sales`: Returns gross sales, net sales, profit, and coverage metrics.
 - **Storage Strategy**: All transactions are timestamped in **UTC** in the database.
 - **Reporting Period**: Aggregations are performed by converting UTC timestamps to **local time (IST)** in the queries to ensure logical day boundaries (e.g., `date(created_at, 'localtime')`).
-- `report:gst`: Returns GST slabs and totals.
+- `report:gst`: Returns GST slabs and totals. Includes `totalAmount` for Revenue visualization (Taxable + GST).
 - `report:analytics`: Returns periodic data for charts and summary grids (Sales, Net, Discount, Profit).
 - `report:bills`: Returns a paginated list of individual bills.
 - `report:stock`: Returns low stock item summaries.

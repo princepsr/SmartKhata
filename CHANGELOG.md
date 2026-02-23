@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-02-23
+
+### Added
+
+- **Immersive Reporting UI**:
+  - Implemented custom, professional-themed `RichTooltip` components with detailed analytics metadata.
+  - Added a dedicated **Revenue** summary card to the GST tab for better financial visibility.
+- **Improved Analytics Context**: Tooltips now provide clear explanations for Gross Sales, Revenue, and Estimated Profit.
+
+### Fixed
+
+- **GST-Aware Profit Calculation**: Fixed a bug where GST was incorrectly subtracted from profit on non-GST bills.
+- **Reporting Accuracy**: Standardized subtotal-based profit derivation to ensure consistency with tax-reporting rules.
+- **UI Polishing**: Removed redundant browser-default tooltips and refined interactive hover states.
+
 ## [1.1.0] - 2026-02-22
 
 ### Added

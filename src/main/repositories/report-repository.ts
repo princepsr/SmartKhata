@@ -28,19 +28,35 @@ export class ReportRepository extends BaseRepository {
           COALESCE(SUM(
             CASE 
               WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
-              THEN (bi.line_total / (1 + bi.gst_percent / 100.0)) - (bi.quantity * bi.purchase_price)
+              THEN (
+                CASE 
+                  WHEN b.gst_total = 0 THEN bi.line_total 
+                  ELSE ROUND(bi.line_total / (1 + bi.gst_percent / 100.0), 2)
+                END
+              ) - (bi.quantity * bi.purchase_price)
               ELSE 0 
             END
           ), 0) as totalProfit,
           COALESCE(SUM(
             CASE 
               WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
-              THEN (bi.line_total / (1 + bi.gst_percent / 100.0))
+              THEN (
+                CASE 
+                  WHEN b.gst_total = 0 THEN bi.line_total 
+                  ELSE ROUND(bi.line_total / (1 + bi.gst_percent / 100.0), 2)
+                END
+              )
               ELSE 0 
             END
           ), 0) as salesWithCost,
-          COALESCE(SUM(bi.line_total / (1 + bi.gst_percent / 100.0)), 0) as totalItemSales
+          COALESCE(SUM(
+            CASE 
+              WHEN b.gst_total = 0 THEN bi.line_total 
+              ELSE ROUND(bi.line_total / (1 + bi.gst_percent / 100.0), 2)
+            END
+          ), 0) as totalItemSales
         FROM bill_items bi
+        JOIN bills b ON b.id = bi.bill_id
         WHERE bi.bill_id IN (SELECT id FROM BillSet)
       )
       SELECT 
@@ -349,27 +365,42 @@ export class ReportRepository extends BaseRepository {
            strftime('${dateFormat}', b.created_at, 'localtime') as periodId,
            b.id,
            b.grand_total + b.discount_amount as totalSales,
-           b.grand_total as netSales,
+            b.grand_total as netSales,
+            COALESCE(SUM(
+             CASE 
+               WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
+               THEN (
+                 CASE 
+                   WHEN b.gst_total = 0 THEN bi.line_total 
+                   ELSE ROUND(bi.line_total / (1 + bi.gst_percent / 100.0), 2)
+                 END
+               ) - (bi.quantity * bi.purchase_price)
+               ELSE 0 
+             END
+           ), 0) as totalProfit,
            COALESCE(SUM(
-            CASE 
-              WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
-              THEN (bi.line_total / (1 + bi.gst_percent / 100.0)) - (bi.quantity * bi.purchase_price)
-              ELSE 0 
-            END
-          ), 0) as totalProfit,
-          COALESCE(SUM(
-            CASE 
-              WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
-              THEN (bi.line_total / (1 + bi.gst_percent / 100.0))
-              ELSE 0 
-            END
-          ), 0) as salesWithCost,
-          COALESCE(SUM(bi.line_total / (1 + bi.gst_percent / 100.0)), 0) as totalItemSales
-        FROM bills b
-        LEFT JOIN bill_items bi ON b.id = bi.bill_id
-        WHERE date(b.created_at, 'localtime') BETWEEN date(?) AND date(?)
-        GROUP BY b.id
-      )
+             CASE 
+               WHEN bi.purchase_price IS NOT NULL AND bi.purchase_price > 0 
+               THEN (
+                 CASE 
+                   WHEN b.gst_total = 0 THEN bi.line_total 
+                   ELSE ROUND(bi.line_total / (1 + bi.gst_percent / 100.0), 2)
+                 END
+               )
+               ELSE 0 
+             END
+           ), 0) as salesWithCost,
+           COALESCE(SUM(
+             CASE 
+               WHEN b.gst_total = 0 THEN bi.line_total 
+               ELSE ROUND(bi.line_total / (1 + bi.gst_percent / 100.0), 2)
+             END
+           ), 0) as totalItemSales
+         FROM bills b
+         LEFT JOIN bill_items bi ON b.id = bi.bill_id
+         WHERE date(b.created_at, 'localtime') BETWEEN date(?) AND date(?)
+         GROUP BY b.id
+       )
       GROUP BY periodId
       ORDER BY periodId ASC
     `;

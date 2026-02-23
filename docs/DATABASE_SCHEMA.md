@@ -203,6 +203,7 @@ erDiagram
 - `grand_total`: Final amount in Rupees (required)
 - `payment_mode`: Payment type ('cash', 'upi', 'mixed')
 - `created_at`: Transaction timestamp
+- **Reporting Note**: The `gst_total` field is vital for profit calculation; if `gst_total > 0`, the reporting system treats items on this bill as taxable and subtracts GST from the gross profit to find the net taxable profit.
 
 ---
 
@@ -221,6 +222,7 @@ erDiagram
 - `purchase_price`: Cost price at time of sale in Rupees (**snapshot for profit tracking**)
 - `gst_percent`: GST rate at time of sale in percentage
 - `line_total`: Line total in Rupees
+- **Reporting Note**: Profit is calculated per item as `(line_total - line_gst) - (purchase_price * quantity)`, provided a `purchase_price` snapshot is present.
 
 ---
 

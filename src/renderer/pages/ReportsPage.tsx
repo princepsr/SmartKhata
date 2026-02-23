@@ -19,6 +19,26 @@ import { RichSelect } from '../components/ui/RichSelect';
 
 type Tab = 'sales' | 'gst' | 'stock' | 'analytics';
 
+const RichTooltip: React.FC<{ title: string; children: React.ReactNode; meta?: string }> = ({
+  title,
+  children,
+  meta,
+}) => {
+  return (
+    <div className="rich-tooltip-trigger">
+      {children}
+      <div className="rich-tooltip">
+        <h4>
+          <span>✨</span> {title}
+        </h4>
+        <div className="tooltip-divider" />
+        <p>{meta}</p>
+        <div className="tooltip-meta">SmartKhata Analytics</div>
+      </div>
+    </div>
+  );
+};
+
 const TrendChip: React.FC<{ value: string; trend: 'up' | 'down' | 'neutral' }> = ({
   value,
   trend,
@@ -96,52 +116,74 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
     <div className="report-view analytics-view animate-fade-in">
       {/* Annual Summary Cards */}
       <div className="summary-cards">
-        <div className="card card-gross">
-          <div className="card-header-row">
-            <h3>Total Sales</h3>
-            <div className="icon-box icon-gross">📈</div>
+        <RichTooltip
+          title="Total Sales"
+          meta="Total billing amount before any discounts or GST adjustments. Represents the maximum potential revenue."
+        >
+          <div className="card card-gross">
+            <div className="card-header-row">
+              <h3>Total Sales</h3>
+              <div className="icon-box icon-gross">📈</div>
+            </div>
+            <p className="value">₹{data.totalSales.toLocaleString('en-IN')}</p>
           </div>
-          <p className="value">₹{data.totalSales.toLocaleString('en-IN')}</p>
-        </div>
-        <div className="card card-net">
-          <div className="card-header-row">
-            <h3>Net Revenue</h3>
-            <div className="icon-box icon-net">💰</div>
+        </RichTooltip>
+
+        <RichTooltip
+          title="Revenue"
+          meta="Total taxable value (Sales Price - Discount) + GST. This is the actual amount collected from customers."
+        >
+          <div className="card card-net">
+            <div className="card-header-row">
+              <h3>Revenue</h3>
+              <div className="icon-box icon-net">💰</div>
+            </div>
+            <div className="value highlight">₹{data.totalNet.toLocaleString('en-IN')}</div>
           </div>
-          <div className="value highlight">₹{data.totalNet.toLocaleString('en-IN')}</div>
-        </div>
-        <div className="card card-discount">
-          <div className="card-header-row">
-            <h3>Discount</h3>
-            <div className="icon-box icon-discount">✂️</div>
+        </RichTooltip>
+
+        <RichTooltip
+          title="Discount"
+          meta="Total savings given to customers across all bills in this period."
+        >
+          <div className="card card-discount">
+            <div className="card-header-row">
+              <h3>Discount</h3>
+              <div className="icon-box icon-discount">✂️</div>
+            </div>
+            <div className="value">
+              ₹
+              {data.periods
+                .reduce((acc, p) => acc + (p.totalSales - p.netSales), 0)
+                .toLocaleString('en-IN')}
+            </div>
           </div>
-          <div className="value">
-            ₹
-            {data.periods
-              .reduce((acc, p) => acc + (p.totalSales - p.netSales), 0)
-              .toLocaleString('en-IN')}
+        </RichTooltip>
+
+        <RichTooltip
+          title="Est. Profit"
+          meta="Taxable Revenue (excluding GST) minus the recorded purchase cost of items sold."
+        >
+          <div className="card card-profit">
+            <div className="card-header-row">
+              <h3>Est. Profit</h3>
+              <div className="icon-box icon-profit">💰</div>
+            </div>
+            <div className="value highlight">
+              ₹
+              {data.periods
+                .reduce((acc, p) => acc + (p.totalProfit || 0), 0)
+                .toLocaleString('en-IN')}
+            </div>
           </div>
-        </div>
-        <div className="card card-profit">
-          <div className="card-header-row">
-            <h3>Profit</h3>
-            <div className="icon-box icon-profit">💰</div>
-          </div>
-          <div className="value highlight">
-            ₹
-            {data.periods.reduce((acc, p) => acc + (p.totalProfit || 0), 0).toLocaleString('en-IN')}
-          </div>
-        </div>
+        </RichTooltip>
       </div>
 
       {data.totalNet > 0 && (
         <div className="reports-info-row animate-fade-in">
           <span className="info-icon">ℹ️</span>
-          <span
-            className="info-text"
-            title={`Calculated for ₹${data.periods.reduce((acc, p) => acc + (p.salesWithCost || 0), 0).toLocaleString('en-IN')} of total item-level sales (₹${data.periods.reduce((acc, p) => acc + (p.totalItemSales || 0), 0).toLocaleString('en-IN')})`}
-          >
-            Profit metrics are calculated based on{' '}
+          <span className="info-text">
+            Profit metrics are calculated based on taxable value (excluding GST) for{' '}
             <strong>
               {Math.round(
                 (data.periods.reduce((acc, p) => acc + (p.salesWithCost || 0), 0) /
@@ -150,7 +192,7 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
               )}
               %
             </strong>{' '}
-            of total sales where cost data was available.
+            of items where cost data was available.
           </span>
         </div>
       )}
@@ -163,11 +205,7 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
             const heightParam = (period.totalSales / maxSales) * 100;
             return (
               <div key={period.period} className="bar-group">
-                <div
-                  className="bar"
-                  style={{ height: `${heightParam}%` }}
-                  title={`₹${period.totalSales.toLocaleString()}`}
-                ></div>
+                <div className="bar" style={{ height: `${heightParam}%` }}></div>
                 <span className="bar-label">{period.period}</span>
               </div>
             );
@@ -184,8 +222,8 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
               <th>Period</th>
               <th className="text-right">Bills</th>
               <th className="text-right">Gross Sales</th>
-              <th className="text-right">Net Sales</th>
-              <th className="text-right">Profit</th>
+              <th className="text-right">Revenue</th>
+              <th className="text-right">Est. Profit</th>
               <th className="text-right">Margin</th>
               <th className="text-right">Coverage</th>
               <th className="text-right">Growth</th>
@@ -225,7 +263,6 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
                               ? 'var(--color-warning)'
                               : 'inherit',
                         }}
-                        title={`₹${row.salesWithCost.toLocaleString()} covered out of ₹${row.totalItemSales.toLocaleString()}`}
                       >
                         {Math.round((row.salesWithCost / row.totalItemSales) * 100)}%
                       </span>
@@ -749,73 +786,93 @@ const ReportsPage: React.FC = () => {
                 ) : (
                   <div className="report-view sales-view">
                     <div className="summary-cards">
-                      <div className="card card-gross">
-                        <div className="card-header-row">
-                          <h3>Gross Sales</h3>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            {dailySummary.comparison?.totalSales && (
-                              <TrendChip
-                                value={`${dailySummary.comparison.totalSales.change}%`}
-                                trend={dailySummary.comparison.totalSales.trend}
-                              />
-                            )}
-                            <div className="icon-box icon-gross">📈</div>
+                      <RichTooltip
+                        title="Gross Sales"
+                        meta="Total billing amount before any discounts or GST adjustments."
+                      >
+                        <div className="card card-gross">
+                          <div className="card-header-row">
+                            <h3>Gross Sales</h3>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              {dailySummary.comparison?.totalSales && (
+                                <TrendChip
+                                  value={`${dailySummary.comparison.totalSales.change}%`}
+                                  trend={dailySummary.comparison.totalSales.trend}
+                                />
+                              )}
+                              <div className="icon-box icon-gross">📈</div>
+                            </div>
                           </div>
+                          <div className="value">{formatCurrency(dailySummary.totalSales)}</div>
                         </div>
-                        <div className="value">{formatCurrency(dailySummary.totalSales)}</div>
-                      </div>
+                      </RichTooltip>
 
-                      <div className="card card-net">
-                        <div className="card-header-row">
-                          <h3>Net Sales</h3>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            {dailySummary.comparison?.netSales && (
-                              <TrendChip
-                                value={`${dailySummary.comparison.netSales.change}%`}
-                                trend={dailySummary.comparison.netSales.trend}
-                              />
-                            )}
-                            <div className="icon-box icon-net">💰</div>
+                      <RichTooltip
+                        title="Revenue"
+                        meta="Total taxable value (Sales Price - Discount) + GST. This is the final amount billed."
+                      >
+                        <div className="card card-net">
+                          <div className="card-header-row">
+                            <h3>Revenue</h3>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              {dailySummary.comparison?.netSales && (
+                                <TrendChip
+                                  value={`${dailySummary.comparison.netSales.change}%`}
+                                  trend={dailySummary.comparison.netSales.trend}
+                                />
+                              )}
+                              <div className="icon-box icon-net">💰</div>
+                            </div>
+                          </div>
+                          <div className="value highlight">
+                            {formatCurrency(dailySummary.netSales)}
                           </div>
                         </div>
-                        <div className="value highlight">
-                          {formatCurrency(dailySummary.netSales)}
-                        </div>
-                      </div>
+                      </RichTooltip>
 
-                      <div className="card card-discount">
-                        <div className="card-header-row">
-                          <h3>Discount</h3>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            {dailySummary.comparison?.totalDiscount && (
-                              <TrendChip
-                                value={`${dailySummary.comparison.totalDiscount.change}%`}
-                                trend={dailySummary.comparison.totalDiscount.trend}
-                              />
-                            )}
-                            <div className="icon-box icon-discount">✂️</div>
+                      <RichTooltip
+                        title="Discount"
+                        meta="Total discount amount deducted from gross sales."
+                      >
+                        <div className="card card-discount">
+                          <div className="card-header-row">
+                            <h3>Discount</h3>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              {dailySummary.comparison?.totalDiscount && (
+                                <TrendChip
+                                  value={`${dailySummary.comparison.totalDiscount.change}%`}
+                                  trend={dailySummary.comparison.totalDiscount.trend}
+                                />
+                              )}
+                              <div className="icon-box icon-discount">✂️</div>
+                            </div>
                           </div>
+                          <div className="value">{formatCurrency(dailySummary.totalDiscount)}</div>
                         </div>
-                        <div className="value">{formatCurrency(dailySummary.totalDiscount)}</div>
-                      </div>
+                      </RichTooltip>
 
-                      <div className="card card-profit">
-                        <div className="card-header-row">
-                          <h3>Profit</h3>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            {dailySummary.comparison?.totalProfit && (
-                              <TrendChip
-                                value={`${dailySummary.comparison.totalProfit.change}%`}
-                                trend={dailySummary.comparison.totalProfit.trend}
-                              />
-                            )}
-                            <div className="icon-box icon-profit">💰</div>
+                      <RichTooltip
+                        title="Est. Profit"
+                        meta="Taxable revenue minus the purchase cost of items sold."
+                      >
+                        <div className="card card-profit">
+                          <div className="card-header-row">
+                            <h3>Est. Profit</h3>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              {dailySummary.comparison?.totalProfit && (
+                                <TrendChip
+                                  value={`${dailySummary.comparison.totalProfit.change}%`}
+                                  trend={dailySummary.comparison.totalProfit.trend}
+                                />
+                              )}
+                              <div className="icon-box icon-profit">💰</div>
+                            </div>
+                          </div>
+                          <div className="value highlight">
+                            {formatCurrency(dailySummary.totalProfit)}
                           </div>
                         </div>
-                        <div className="value highlight">
-                          {formatCurrency(dailySummary.totalProfit)}
-                        </div>
-                      </div>
+                      </RichTooltip>
                     </div>
 
                     {dailySummary.salesWithCost < dailySummary.totalItemSales && (
@@ -828,7 +885,7 @@ const ReportsPage: React.FC = () => {
                           className="info-text"
                           title={`Wait! Only ₹${dailySummary.salesWithCost.toLocaleString()} of ₹${dailySummary.totalItemSales.toLocaleString()} sales have cost data.`}
                         >
-                          Profit metrics are calculated based on{' '}
+                          Profit metrics are calculated based on taxable value (excluding GST) for{' '}
                           <strong>
                             {Math.round(
                               (dailySummary.salesWithCost / (dailySummary.totalItemSales || 1)) *
@@ -836,7 +893,7 @@ const ReportsPage: React.FC = () => {
                             )}
                             %
                           </strong>{' '}
-                          of sales. Some items are missing purchase prices.
+                          of sales. Some items may be missing purchase prices.
                           {dailySummary.marginPercent > 0 && (
                             <>
                               {' '}
@@ -892,7 +949,9 @@ const ReportsPage: React.FC = () => {
                           <div>Customer</div>
                           <div>Mode</div>
                           <div className="text-center">Qty</div>
-                          <div className="text-right">Total</div>
+                          <div className="text-right" title="Bill Grand Total (Incl. GST)">
+                            Total
+                          </div>
                           <div className="text-right"></div>
                         </div>
                         {billList.map((bill) => (
@@ -943,20 +1002,46 @@ const ReportsPage: React.FC = () => {
               {activeTab === 'gst' && gstReport && (
                 <div className="report-view gst-view">
                   <div className="summary-cards">
-                    <div className="card card-bills">
-                      <div className="card-header-row">
-                        <h3>Taxable</h3>
-                        <div className="icon-box icon-bills">📊</div>
+                    <RichTooltip
+                      title="Taxable Amount"
+                      meta="Total net amount before GST. This is your core business revenue."
+                    >
+                      <div className="card card-bills">
+                        <div className="card-header-row">
+                          <h3>Taxable</h3>
+                          <div className="icon-box icon-bills">📊</div>
+                        </div>
+                        <div className="value">{formatCurrency(gstReport.totalTaxable)}</div>
                       </div>
-                      <div className="value">{formatCurrency(gstReport.totalTaxable)}</div>
-                    </div>
-                    <div className="card card-net">
-                      <div className="card-header-row">
-                        <h3>GST</h3>
-                        <div className="icon-box icon-net">💸</div>
+                    </RichTooltip>
+
+                    <RichTooltip
+                      title="Total GST"
+                      meta="Total Goods and Services Tax collected from customers, to be paid to government."
+                    >
+                      <div className="card card-net">
+                        <div className="card-header-row">
+                          <h3>GST</h3>
+                          <div className="icon-box icon-net">💸</div>
+                        </div>
+                        <div className="value highlight">{formatCurrency(gstReport.totalGst)}</div>
                       </div>
-                      <div className="value highlight">{formatCurrency(gstReport.totalGst)}</div>
-                    </div>
+                    </RichTooltip>
+
+                    <RichTooltip
+                      title="Revenue"
+                      meta="Total amount collected (Taxable Amount + GST). This matches your total bill receivables."
+                    >
+                      <div className="card card-net">
+                        <div className="card-header-row">
+                          <h3>Revenue</h3>
+                          <div className="icon-box icon-net">💰</div>
+                        </div>
+                        <div className="value highlight">
+                          {formatCurrency(gstReport.totalAmount)}
+                        </div>
+                      </div>
+                    </RichTooltip>
                   </div>
                   <div className="table-section">
                     <div className="data-table-container">
@@ -984,22 +1069,33 @@ const ReportsPage: React.FC = () => {
               {activeTab === 'stock' && stockSummary && (
                 <div className="report-view stock-view animate-fade-in">
                   <div className="summary-cards">
-                    <div className="card card-bills">
-                      <div className="card-header-row">
-                        <h3>Items</h3>
-                        <div className="icon-box icon-bills">📦</div>
+                    <RichTooltip
+                      title="Total Items"
+                      meta="Unique number of products currently in your active inventory."
+                    >
+                      <div className="card card-bills">
+                        <div className="card-header-row">
+                          <h3>Items</h3>
+                          <div className="icon-box icon-bills">📦</div>
+                        </div>
+                        <div className="value">{stockSummary.totalItems}</div>
                       </div>
-                      <div className="value">{stockSummary.totalItems}</div>
-                    </div>
-                    <div className="card card-net">
-                      <div className="card-header-row">
-                        <h3>Value</h3>
-                        <div className="icon-box icon-net">💎</div>
+                    </RichTooltip>
+
+                    <RichTooltip
+                      title="Total Value"
+                      meta="Total monetary value of your stock, calculated as Sum(Stock Qty * Purchase Price)."
+                    >
+                      <div className="card card-net">
+                        <div className="card-header-row">
+                          <h3>Value</h3>
+                          <div className="icon-box icon-net">💎</div>
+                        </div>
+                        <div className="value highlight">
+                          {formatCurrency(stockSummary.totalStockValue)}
+                        </div>
                       </div>
-                      <div className="value highlight">
-                        {formatCurrency(stockSummary.totalStockValue)}
-                      </div>
-                    </div>
+                    </RichTooltip>
                   </div>
 
                   <div className="table-section">

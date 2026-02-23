@@ -58,6 +58,20 @@ SmartKhata implements a standard mathematical round-off to the nearest rupee:
 
 ---
 
+## 📊 GST & Profit Reporting
+
+The reporting system ensures that profit reflects **taxable revenue** (the actual business gain) rather than the grand total.
+
+### Profit Formula
+
+`Est. Profit = (Taxable Revenue) - (Cost of Goods Sold)`
+
+- **Taxable Revenue**: `Line Total - Line GST`.
+- **Handling Zero-GST Bills**: If a bill is issued with `0` total GST, the system treats the entire subtotal as taxable revenue to prevent artificial profit loss.
+- **Why this matters**: Subtracting GST from revenue is essential because GST collected must be paid to the government and is not part of the business profit.
+
+---
+
 ## 🛠️ Implementation References
 
 - **Math Logic**: `src/renderer/utils/billing-math.ts`

@@ -904,3 +904,92 @@
 .report-table tr:hover td {
   background-color: #f8fafc;
 }
+
+/* Rich Immersive Tooltips */
+.rich-tooltip-trigger {
+  position: relative;
+  display: block;
+}
+
+.rich-tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.6;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1),
+    0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
+}
+
+.rich-tooltip-trigger:hover .rich-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Ensure the tooltip content is visible and sharp */
+.rich-tooltip h4 {
+  margin: 0 0 0.6rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  letter-spacing: -0.01em;
+}
+
+.rich-tooltip p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.rich-tooltip .tooltip-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 0.8rem 0;
+}
+
+.rich-tooltip .tooltip-meta {
+  font-size: 0.75rem;
+  color: var(--text-mutated);
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+/* Arrow for Tooltip */
+.rich-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 8px;
+  border-style: solid;
+  border-color: transparent transparent #ffffff transparent;
+}
+
+/* Interactive Card hover effect when trigger is hovered */
+.rich-tooltip-trigger:hover .card {
+  border-color: var(--color-primary-light);
+  box-shadow: 0 10px 20px rgba(30, 58, 138, 0.1);
+  transform: translateY(-4px);
+}
