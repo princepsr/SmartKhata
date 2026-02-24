@@ -120,7 +120,7 @@ function Layout() {
     };
 
     fetchVersion();
-    fetchSettings();
+    fetchSettings(true);
   }, [fetchSettings]);
 
   // Global Keyboard Shortcuts

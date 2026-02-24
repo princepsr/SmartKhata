@@ -1,0 +1,135 @@
+.onboarding-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  padding: 2rem;
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+.onboarding-card {
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 900px;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.onboarding-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.brand-logo {
+  width: 64px;
+  height: 64px;
+  background: white;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.brand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.onboarding-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #111;
+  margin-bottom: 0.5rem;
+}
+
+.onboarding-header p {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.onboarding-body {
+  flex: 1;
+}
+
+.intro-text {
+  color: #4b5563;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.policy-viewer {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+}
+
+.scroll-hint {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: #2563eb;
+  font-weight: 500;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.onboarding-footer {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.accept-btn {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: var(--primary-color, #2563eb);
+  color: white;
+  border: none;
+}
+
+.accept-btn:hover:not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+}
+
+.accept-btn.disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+.footer-note {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}

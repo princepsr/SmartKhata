@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Portal } from '../common/Portal';
 import './RestoreSuccessModal.css';
 
@@ -12,7 +12,8 @@ export function RestoreSuccessModal({ isOpen, onRestart }: RestoreSuccessModalPr
 
   useEffect(() => {
     if (!isOpen) {
-      return;
+      setCountdown(5);
+      return () => {};
     }
 
     const timer = setInterval(() => {

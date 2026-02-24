@@ -32,6 +32,7 @@ export interface AppConfig {
   lastCloudSync: string | null;
   cloudSyncPending: boolean;
   pendingSyncPath: string | null;
+  privacyPolicyAccepted: boolean;
   updatedAt: Date;
 }
 
@@ -77,6 +78,7 @@ export class SettingsRepository extends BaseRepository {
       last_cloud_sync: string | null;
       cloud_sync_pending: number;
       pending_sync_path: string | null;
+      privacy_policy_accepted: number;
       updated_at: string;
     }>(sql);
 
@@ -111,6 +113,7 @@ export class SettingsRepository extends BaseRepository {
         lastCloudSync: null,
         cloudSyncPending: false,
         pendingSyncPath: null,
+        privacyPolicyAccepted: false,
         updatedAt: new Date(),
       };
     }
@@ -156,6 +159,7 @@ export class SettingsRepository extends BaseRepository {
       lastCloudSync: 'last_cloud_sync',
       cloudSyncPending: 'cloud_sync_pending',
       pendingSyncPath: 'pending_sync_path',
+      privacyPolicyAccepted: 'privacy_policy_accepted',
     };
 
     Object.entries(config).forEach(([key, value]) => {
@@ -218,6 +222,7 @@ export class SettingsRepository extends BaseRepository {
     last_cloud_sync: string | null;
     cloud_sync_pending: number;
     pending_sync_path: string | null;
+    privacy_policy_accepted: number;
     updated_at: string;
   }): AppConfig {
     return {
@@ -248,6 +253,7 @@ export class SettingsRepository extends BaseRepository {
       lastCloudSync: row.last_cloud_sync,
       cloudSyncPending: row.cloud_sync_pending === 1,
       pendingSyncPath: row.pending_sync_path,
+      privacyPolicyAccepted: row.privacy_policy_accepted === 1,
       updatedAt: this.parseDate(row.updated_at),
     };
   }

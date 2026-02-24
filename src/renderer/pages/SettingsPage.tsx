@@ -10,6 +10,7 @@ import { useLicense } from '../hooks/useLicense';
 import LicenseActivationModal from '../components/modals/LicenseActivationModal';
 import LicenseSettings from '../components/Settings/LicenseSettings';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
+import { PrivacyPolicy } from '../components/Settings/PrivacyPolicy';
 import './SettingsPage.css';
 
 /**
@@ -19,7 +20,7 @@ import './SettingsPage.css';
  * Fully synchronized with the "Rich App" design language and structural layout.
  */
 
-type SettingsTab = 'shop' | 'inventory' | 'printing' | 'licensing' | 'data' | 'debug';
+type SettingsTab = 'shop' | 'inventory' | 'printing' | 'licensing' | 'data' | 'privacy' | 'debug';
 
 function SettingsPage() {
   const { settings, updateSettings, fetchSettings, saveSettings, resetSettings, isLoading, error } =
@@ -31,26 +32,26 @@ function SettingsPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [printerList, setPrinterList] = useState<any[]>([]);
   const [isTestPrinting, setIsTestPrinting] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   // Handle global tab switching
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['shop', 'inventory', 'printing', 'licensing', 'data', 'debug'].includes(tab)) {
+    if (
+      tab &&
+      ['shop', 'inventory', 'printing', 'licensing', 'data', 'privacy', 'debug'].includes(tab)
+    ) {
       setActiveTab(tab as SettingsTab);
-      // searchParams.delete('tab');
-      // setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams]);
 
   React.useEffect(() => {
-    fetchSettings();
+    fetchSettings(true);
     const fetchPrinters = async () => {
       try {
         const response: any = await window.api.invoke('printer:list');
-        // Handle IPC response structure correctly
-        const printers = response.success ? response.data : response;
-        setPrinterList(Array.isArray(printers) ? printers : []);
+        const printers = response.success ? response.data : [];
+        setPrinterList(printers);
       } catch (err) {
         console.error('Failed to fetch printers:', err);
       }
@@ -568,12 +569,30 @@ function SettingsPage() {
         </div>
         <DatabaseStatus />
       </div>
-
       <div className="settings-section-card debug-card">
         <div className="section-header">
           <h2>Maintenance & Utilities</h2>
         </div>
         <AppMaintenance />
+      </div>
+    </div>
+  );
+
+  const renderPrivacySettings = () => (
+    <div className="tab-content-wrapper fade-in">
+      <div className="settings-section-card">
+        <div className="section-header">
+          <h2>Privacy & Terms</h2>
+        </div>
+        <p className="settings-description">
+          Review our commitment to your data privacy and security.
+        </p>
+
+        <div className="settings-form">
+          <div className="form-group full-width">
+            <PrivacyPolicy showTitle={false} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -619,14 +638,17 @@ function SettingsPage() {
               Data Management
             </button>
             <button
+              className={activeTab === 'privacy' ? 'active' : ''}
+              onClick={() => setActiveTab('privacy')}
+            >
+              Privacy
+            </button>
+            <button
               className={activeTab === 'debug' ? 'active' : ''}
               onClick={() => setActiveTab('debug')}
             >
               System Debug
             </button>
-          </div>
-          <div className="settings-sidebar-footer">
-            <span className="app-version-tag">Version {APP_CONSTANTS.APP_VERSION}</span>
           </div>
         </div>
 
@@ -638,6 +660,7 @@ function SettingsPage() {
             <LicenseSettings onActivate={() => setShowLicenseModal(true)} />
           )}
           {activeTab === 'data' && renderDataManagement()}
+          {activeTab === 'privacy' && renderPrivacySettings()}
           {activeTab === 'debug' && renderSystemDebug()}
         </main>
       </div>

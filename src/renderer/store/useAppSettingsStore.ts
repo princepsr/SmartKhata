@@ -35,6 +35,7 @@ export interface AppSettings {
   lastCloudSync: string | null;
   cloudSyncPending: boolean;
   pendingSyncPath: string | null;
+  privacyPolicyAccepted: boolean;
   updatedAt?: string;
 }
 
@@ -42,7 +43,7 @@ interface AppSettingsState {
   settings: AppSettings;
   isLoading: boolean;
   error: string | null;
-  fetchSettings: () => Promise<void>;
+  fetchSettings: (silent?: boolean) => Promise<void>;
   updateSettings: (settings: Partial<AppSettings>) => void;
   saveSettings: (settings: Partial<AppSettings>) => Promise<{ success: boolean; error?: string }>;
   resetSettings: () => void;
@@ -76,17 +77,20 @@ const defaultSettings: AppSettings = {
   lastCloudSync: null,
   cloudSyncPending: false,
   pendingSyncPath: null,
+  privacyPolicyAccepted: false,
 };
 
 export const useAppSettingsStore = create<AppSettingsState>()(
   devtools(
     (set) => ({
       settings: defaultSettings,
-      isLoading: false,
+      isLoading: true,
       error: null,
 
-      fetchSettings: async () => {
-        set({ isLoading: true });
+      fetchSettings: async (silent = false) => {
+        if (!silent) {
+          set({ isLoading: true });
+        }
         try {
           const response = await window.api.invoke('settings:get');
           if (response.success) {

@@ -1,0 +1,59 @@
+.privacy-policy-container {
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary, #333);
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  line-height: 1.6;
+}
+
+.policy-main-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--primary-color, #2563eb);
+}
+
+.policy-meta {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #666);
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  padding-bottom: 0.5rem;
+}
+
+.policy-content-wrapper {
+  overflow-y: auto;
+  padding-right: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color, #2563eb) transparent;
+}
+
+.policy-content-wrapper::-webkit-scrollbar {
+  width: 6px;
+}
+
+.policy-content-wrapper::-webkit-scrollbar-thumb {
+  background-color: var(--primary-color, #2563eb);
+  border-radius: 10px;
+}
+
+.policy-section {
+  margin-bottom: 1.5rem;
+}
+
+.policy-heading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary, #111);
+}
+
+.policy-text {
+  font-size: 1rem;
+  color: var(--text-secondary, #4b5563);
+  white-space: pre-line;
+}
