@@ -118,6 +118,15 @@ erDiagram
         int billing_only
         int gst_exclusive_mode  /* 1 = Force Exclusive, 0 = Standard */
         int customers_enabled
+        int auto_backup_enabled
+        int auto_backup_interval_days
+        text auto_backup_interval_unit /* 'hours' or 'days' */
+        int auto_backup_retain_count
+        text last_auto_backup
+        int google_drive_sync_enabled
+        text last_cloud_sync
+        int cloud_sync_pending
+        text pending_sync_path
         text updated_at
     }
 
@@ -238,6 +247,15 @@ erDiagram
 - `billing_only`: Feature toggle for inventory tracking bypass
 - `gst_exclusive_mode`: Global master switch for forced exclusive pricing (1 = Force, 0 = Standard)
 - `customers_enabled`: Feature toggle for customer management
+- `auto_backup_enabled`: Feature toggle for automated database backups
+- `auto_backup_interval_days`: Backup frequency value
+- `auto_backup_interval_unit`: Backup frequency unit ('hours' or 'days')
+- `auto_backup_retain_count`: Number of historical backups to keep (1-50)
+- `last_auto_backup`: Timestamp of the last successful backup
+- `google_drive_sync_enabled`: Feature toggle for Google Drive synchronization
+- `last_cloud_sync`: Timestamp of the last successful cloud sync
+- `cloud_sync_pending`: Flag indicating a failed/offline cloud sync that needs retry
+- `pending_sync_path`: Local path to the backup file waiting for cloud sync
 - `updated_at`: Last modification timestamp
 
 **No Foreign Keys:** Standalone configuration table

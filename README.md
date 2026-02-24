@@ -173,6 +173,7 @@ SQLite Database
 - **⚡ Super-Speed Billing**: High-performance transaction engine with virtual barcode support and instant thermal printing.
 - **🛡️ Secure Licensing**: Hardware-bound machine activation with offline support and transparent IST-aligned trial management.
 - **📊 Advanced Analytics**: Daily/Weekly/Monthly trend insights with GST-ready reporting and accurate local time attribution.
+- **☁️ Cloud Sync & Backups**: Automated, configurable background database backups with seamless Google Drive synchronization to prevent data loss.
 
 **See [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) for complete schema documentation.**
 
@@ -319,6 +320,7 @@ pnpm build:win:portable
 - Offline billing
 - Thermal printing
 - Inventory management
+- Automated Backups & Google Drive Sync
 
 ---
 
@@ -334,9 +336,8 @@ SmartKhata includes a robust, offline-first licensing system:
 
 ---
 
-### Phase 2 - Cloud Sync (Optional)
+### Phase 2 - Multi-Device & Mobile (Upcoming)
 
-- Cloud backup
 - Multi-device sync
 - Web dashboard
 - Online reports

@@ -175,5 +175,52 @@ export class SettingsService extends BaseService {
     if (config.billingOnly !== undefined && typeof config.billingOnly !== 'boolean') {
       throw new ValidationError('Billing only must be a boolean value', 'billingOnly');
     }
+
+    // Auto Backup Interval validation
+    if (config.autoBackupIntervalUnit !== undefined) {
+      if (!['days', 'hours'].includes(config.autoBackupIntervalUnit)) {
+        throw new ValidationError('Invalid backup interval unit', 'autoBackupIntervalUnit');
+      }
+    }
+
+    if (config.autoBackupIntervalDays !== undefined) {
+      const unit =
+        config.autoBackupIntervalUnit || this.configCache?.autoBackupIntervalUnit || 'days';
+      if (unit === 'days') {
+        if (
+          !Number.isInteger(config.autoBackupIntervalDays) ||
+          config.autoBackupIntervalDays < 1 ||
+          config.autoBackupIntervalDays > 30
+        ) {
+          throw new ValidationError(
+            'Backup interval must be between 1 and 30 days',
+            'autoBackupIntervalDays'
+          );
+        }
+      } else {
+        // Hours
+        if (
+          !Number.isInteger(config.autoBackupIntervalDays) ||
+          config.autoBackupIntervalDays < 1 ||
+          config.autoBackupIntervalDays > 24
+        ) {
+          throw new ValidationError(
+            'Backup interval must be between 1 and 24 hours',
+            'autoBackupIntervalDays'
+          );
+        }
+      }
+    }
+
+    // Auto Backup Retain Count validation
+    if (config.autoBackupRetainCount !== undefined) {
+      if (
+        !Number.isInteger(config.autoBackupRetainCount) ||
+        config.autoBackupRetainCount < 1 ||
+        config.autoBackupRetainCount > 50
+      ) {
+        throw new ValidationError('Retain count must be between 1 and 50', 'autoBackupRetainCount');
+      }
+    }
   }
 }

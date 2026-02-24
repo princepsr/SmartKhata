@@ -18,6 +18,10 @@ ServiceError (abstract base)
 │   ├── InactiveEntityError
 │   ├── CreditLimitExceededError
 │   └── LicenseError
+├── CloudError
+│   ├── NetworkOfflineError
+│   ├── AuthenticationError
+│   └── RetriableSyncError
 └── NotFoundError
 ```
 
@@ -41,9 +45,9 @@ graph LR
 
 ```typescript
 abstract class ServiceError extends Error {
-  code: string;              // Error code (e.g., 'INSUFFICIENT_STOCK')
-  isOperational: boolean;    // true = expected error, false = bug
-  getUserMessage(): string;  // User-friendly message
+  code: string; // Error code (e.g., 'INSUFFICIENT_STOCK')
+  isOperational: boolean; // true = expected error, false = bug
+  getUserMessage(): string; // User-friendly message
 }
 ```
 
@@ -55,7 +59,7 @@ class InsufficientStockError extends BusinessError {
   productName: string;
   available: number;
   required: number;
-  
+
   getUserMessage(): string {
     return `Not enough stock for ${this.productName}. Only ${this.available} available.`;
   }
@@ -72,7 +76,7 @@ class InsufficientStockError extends BusinessError {
 // In ProductService
 public deductStock(productId: number, quantity: number): void {
   const product = this.productRepo.findById(productId);
-  
+
   if (!product) {
     throw new NotFoundError('Product', productId);
   }
@@ -98,10 +102,10 @@ IPCHandler.handle('product:deductStock', async (data) => {
   try {
     const productService = new ProductService();
     productService.deductStock(data.productId, data.quantity);
-    
+
     return {
       success: true,
-      data: null
+      data: null,
     };
   } catch (error) {
     // Handle specific errors
@@ -112,8 +116,8 @@ IPCHandler.handle('product:deductStock', async (data) => {
         errorCode: error.code,
         context: {
           available: error.available,
-          required: error.required
-        }
+          required: error.required,
+        },
       };
     }
 
@@ -121,7 +125,7 @@ IPCHandler.handle('product:deductStock', async (data) => {
       return {
         success: false,
         error: 'Product not found',
-        errorCode: error.code
+        errorCode: error.code,
       };
     }
 
@@ -129,7 +133,7 @@ IPCHandler.handle('product:deductStock', async (data) => {
     return {
       success: false,
       error: getUserFriendlyMessage(error),
-      errorCode: 'UNKNOWN_ERROR'
+      errorCode: 'UNKNOWN_ERROR',
     };
   }
 });
@@ -141,13 +145,13 @@ IPCHandler.handle('product:deductStock', async (data) => {
 // In UI
 const result = await window.api.product.deductStock({
   productId: 1,
-  quantity: 100
+  quantity: 100,
 });
 
 if (!result.success) {
   // Display user-friendly error
   alert(result.error); // "Not enough stock for Coca Cola. Only 50 available."
-  
+
   // Optional: Handle specific error codes
   if (result.errorCode === 'INSUFFICIENT_STOCK') {
     showStockWarning(result.context.available, result.context.required);
@@ -171,7 +175,7 @@ if (error instanceof ValidationError) {
     success: false,
     error: error.getUserMessage(), // "Invalid quantity: Quantity must be positive"
     errorCode: 'VALIDATION_ERROR',
-    field: error.field
+    field: error.field,
   };
 }
 
@@ -220,7 +224,7 @@ if (error instanceof NotFoundError) {
   return {
     success: false,
     error: error.getUserMessage(), // "Customer not found"
-    errorCode: 'NOT_FOUND'
+    errorCode: 'NOT_FOUND',
   };
 }
 
@@ -234,12 +238,14 @@ alert(result.error);
 
 ### Technical Message → User Message
 
-| Technical Message | User-Friendly Message |
-|-------------------|----------------------|
-| `Product with SKU 'ABC123' already exists` | `This SKU is already in use` |
-| `Insufficient stock. Available: 5, Required: 10` | `Not enough stock for Coca Cola. Only 5 available.` |
-| `Cannot use inactive product` | `This product is inactive and cannot be used` |
-| `Credit limit exceeded. Current: ₹5000, Limit: ₹10000` | `Customer credit limit exceeded. Current balance: ₹5000` |
+| Technical Message                                      | User-Friendly Message                                           |
+| ------------------------------------------------------ | --------------------------------------------------------------- |
+| `Product with SKU 'ABC123' already exists`             | `This SKU is already in use`                                    |
+| `Insufficient stock. Available: 5, Required: 10`       | `Not enough stock for Coca Cola. Only 5 available.`             |
+| `Cannot use inactive product`                          | `This product is inactive and cannot be used`                   |
+| `Credit limit exceeded. Current: ₹5000, Limit: ₹10000` | `Customer credit limit exceeded. Current balance: ₹5000`        |
+| `Network unreachable. Sync pending.`                   | `Offline: Backup saved locally and will sync when connected.`   |
+| `Google OAuth token expired or revoked`                | `Authentication failed. Please link your Google account again.` |
 
 ### Implementation
 
@@ -312,9 +318,9 @@ export class SaleService extends BaseService {
     }
 
     // Business rule check
-    saleData.items.forEach(item => {
+    saleData.items.forEach((item) => {
       const product = this.productRepo.findById(item.productId);
-      
+
       if (!product) {
         throw new NotFoundError('Product', item.productId);
       }
@@ -324,12 +330,7 @@ export class SaleService extends BaseService {
       }
 
       if (product.stockQty < item.quantity) {
-        throw new InsufficientStockError(
-          product.id,
-          product.name,
-          product.stockQty,
-          item.quantity
-        );
+        throw new InsufficientStockError(product.id, product.name, product.stockQty, item.quantity);
       }
     });
 
@@ -346,10 +347,10 @@ IPCHandler.handle('sale:create', async (saleData) => {
   try {
     const saleService = new SaleService();
     const result = saleService.createSale(saleData);
-    
+
     return {
       success: true,
-      data: result
+      data: result,
     };
   } catch (error) {
     // Handle specific errors
@@ -358,7 +359,7 @@ IPCHandler.handle('sale:create', async (saleData) => {
         success: false,
         error: error.getUserMessage(),
         errorCode: error.code,
-        field: error.field
+        field: error.field,
       };
     }
 
@@ -370,8 +371,8 @@ IPCHandler.handle('sale:create', async (saleData) => {
         context: {
           productName: error.productName,
           available: error.available,
-          required: error.required
-        }
+          required: error.required,
+        },
       };
     }
 
@@ -379,7 +380,7 @@ IPCHandler.handle('sale:create', async (saleData) => {
       return {
         success: false,
         error: error.getUserMessage(),
-        errorCode: error.code
+        errorCode: error.code,
       };
     }
 
@@ -388,7 +389,7 @@ IPCHandler.handle('sale:create', async (saleData) => {
     return {
       success: false,
       error: 'Failed to create sale',
-      errorCode: 'UNKNOWN_ERROR'
+      errorCode: 'UNKNOWN_ERROR',
     };
   }
 });
@@ -399,11 +400,11 @@ IPCHandler.handle('sale:create', async (saleData) => {
 ```typescript
 async function createSale(saleData) {
   const result = await window.api.sale.create(saleData);
-  
+
   if (!result.success) {
     // Display error
     alert(result.error);
-    
+
     // Handle specific errors
     switch (result.errorCode) {
       case 'INSUFFICIENT_STOCK':
@@ -416,10 +417,10 @@ async function createSale(saleData) {
         showNotFoundDialog();
         break;
     }
-    
+
     return;
   }
-  
+
   // Success
   console.log('Sale created:', result.data);
 }
@@ -429,19 +430,20 @@ async function createSale(saleData) {
 
 ## Benefits
 
-| Benefit | Description |
-|---------|-------------|
-| **Type Safety** | Typed errors with context |
-| **User-Friendly** | Clear messages for users |
-| **Debuggable** | Technical details in logs |
-| **Actionable** | UI can handle specific errors |
-| **Consistent** | Standard error format |
+| Benefit           | Description                   |
+| ----------------- | ----------------------------- |
+| **Type Safety**   | Typed errors with context     |
+| **User-Friendly** | Clear messages for users      |
+| **Debuggable**    | Technical details in logs     |
+| **Actionable**    | UI can handle specific errors |
+| **Consistent**    | Standard error format         |
 
 ---
 
 ## Summary
 
 **Error Flow:**
+
 1. ✅ Service throws typed `ServiceError`
 2. ✅ IPC handler catches and maps to safe response
 3. ✅ UI displays user-friendly message

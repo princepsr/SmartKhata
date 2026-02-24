@@ -30,11 +30,44 @@ class BackupService {
   }
 
   /**
+   * Helper to execute a synchronous file operation with retries.
+   * Useful for Windows where file locks might not be released immediately.
+   */
+  private executeWithRetry(operation: () => void, maxRetries = 8, delayMs = 300): void {
+    let lastError: any;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        operation();
+        return;
+      } catch (err) {
+        lastError = err;
+        // Only retry on permission (EPERM) or busy (EBUSY/ENOLCK) errors
+        const isLockError =
+          err instanceof Error &&
+          (err.message.includes('EPERM') ||
+            err.message.includes('EBUSY') ||
+            err.message.includes('resource busy'));
+
+        if (isLockError && i < maxRetries - 1) {
+          const start = Date.now();
+          while (Date.now() - start < delayMs) {
+            /* wait sync */
+          }
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastError;
+  }
+
+  /**
    * Opens a folder selection dialog and returns the selected path
    */
-  public async selectFolderForBackup(): Promise<string | null> {
+  public async selectFolderForBackup(defaultPath?: string): Promise<string | null> {
     const { filePaths, canceled } = await dialog.showOpenDialog({
       title: 'Select Backup Location',
+      defaultPath,
       properties: ['openDirectory'],
     });
 
@@ -48,9 +81,12 @@ class BackupService {
   /**
    * Opens a file selection dialog for backup ZIPs and returns path + metadata
    */
-  public async selectBackupFile(): Promise<{ path: string; meta: BackupMeta } | null> {
+  public async selectBackupFile(
+    defaultPath?: string
+  ): Promise<{ path: string; meta: BackupMeta } | null> {
     const { filePaths, canceled } = await dialog.showOpenDialog({
       title: 'Restore Database from Backup',
+      defaultPath,
       properties: ['openFile'],
       filters: [{ name: 'SmartKhata Backup', extensions: ['zip'] }],
     });
@@ -72,6 +108,16 @@ class BackupService {
    * @param targetPath - Path to save the ZIP or directory to save into
    */
   public async createBackup(targetPath: string): Promise<string> {
+    // Ensure target directory exists
+    const targetDir =
+      fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()
+        ? targetPath
+        : path.dirname(targetPath);
+
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
     let finalPath = targetPath;
 
     // If target is a directory, generate filename
@@ -110,7 +156,7 @@ class BackupService {
       const meta = {
         appName: 'SmartKhata',
         version: app.getVersion(),
-        timestamp: new Date().toLocaleString('en-IN'),
+        timestamp: new Date().toISOString(),
         schemaVersion: migrationRunner.getCurrentVersion(),
         shopName: this.settingsService.getConfig().shopName || 'SmartKhata Shop',
       };
@@ -180,7 +226,10 @@ class BackupService {
         fs.mkdirSync(tempExtractDir, { recursive: true });
       }
 
-      const zip = new AdmZip(sourcePath);
+      // Read ZIP into buffer first to avoid file descriptor locking issues on Windows
+      backupLogger.debug('Reading backup file into memory pool');
+      const zipBuffer = fs.readFileSync(sourcePath);
+      const zip = new AdmZip(zipBuffer);
       zip.extractAllTo(tempExtractDir, true);
 
       if (!fs.existsSync(extractedDbPath)) {
@@ -210,17 +259,35 @@ class BackupService {
       backupLogger.debug('Closing active database connection');
       databaseManager.close();
 
-      // Step B: Rename current database to safety backup (Atomic Move)
-      // This is faster and safer than copy
+      // Settle period to allow Windows to release file descriptors
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Step B: Move current database to safety backup (Atomic Move)
       backupLogger.debug('Moving active database to safety backup', { safetyBackupPath });
+
+      const walFile = `${activeDbPath}-wal`;
+      const shmFile = `${activeDbPath}-shm`;
+
       if (fs.existsSync(activeDbPath)) {
         try {
-          fs.renameSync(activeDbPath, safetyBackupPath);
+          // Cleanup WAL/SHM *before* moving the main file to prevent lock interference
+          this.executeWithRetry(() => {
+            if (fs.existsSync(walFile)) {
+              fs.unlinkSync(walFile);
+            }
+            if (fs.existsSync(shmFile)) {
+              fs.unlinkSync(shmFile);
+            }
+          });
+
+          this.executeWithRetry(() => {
+            fs.renameSync(activeDbPath, safetyBackupPath);
+          });
           didMoveToSafety = true;
         } catch (renameError) {
           backupLogger.error('Failed to move active DB to safety', renameError);
           throw new Error(
-            'Failed to prepare for restore. Please check folder permissions and try again.'
+            'The database file is currently in use by another process. Please close any other tools touching the database and try again.'
           );
         }
       }
@@ -228,22 +295,26 @@ class BackupService {
       // Step C: Perform the restore (copy extracted data.db to active location)
       backupLogger.debug('Copying backup data to active database location');
       try {
-        fs.copyFileSync(extractedDbPath, activeDbPath);
+        this.executeWithRetry(() => {
+          fs.copyFileSync(extractedDbPath, activeDbPath);
+        });
       } catch (copyError) {
         backupLogger.error('Failed to copy extracted DB to active', copyError);
         throw new Error(
-          'Not enough space or permission to restore the data. Please check your disk space.'
+          'Could not overwrite the existing database. This usually happens if the file is locked or the disk is full.'
         );
       }
 
-      // Step D: Clean up WAL/SHM files to prevent corruption from mixed states
-      const walFile = `${activeDbPath}-wal`;
-      const shmFile = `${activeDbPath}-shm`;
-      if (fs.existsSync(walFile)) {
-        fs.unlinkSync(walFile);
-      }
-      if (fs.existsSync(shmFile)) {
-        fs.unlinkSync(shmFile);
+      // Step D: Clean up WAL/SHM files to prevent corruption from mixed states (Safety check)
+      try {
+        if (fs.existsSync(walFile)) {
+          fs.unlinkSync(walFile);
+        }
+        if (fs.existsSync(shmFile)) {
+          fs.unlinkSync(shmFile);
+        }
+      } catch {
+        /* ignore, already attempted in Step B */
       }
 
       // Step E: Re-initialize to verify the new file is loadable
@@ -348,10 +419,13 @@ class BackupService {
 
     let zip: AdmZip;
     try {
-      zip = new AdmZip(sourcePath);
-    } catch {
+      // Use buffer to avoid handle locking
+      const buffer = fs.readFileSync(sourcePath);
+      zip = new AdmZip(buffer);
+    } catch (err) {
+      backupLogger.error('Validation read failed', { err, path: sourcePath });
       throw new Error(
-        'The selected file is not a valid SmartKhata backup. Please pick a .zip file created via the "Backup Now" button.'
+        'Could not read the backup file. It might be in use by another application or you may not have read permissions.'
       );
     }
 
@@ -397,7 +471,8 @@ class BackupService {
    */
   public getBackupMetadata(sourcePath: string): BackupMeta {
     try {
-      const zip = new AdmZip(sourcePath);
+      const buffer = fs.readFileSync(sourcePath);
+      const zip = new AdmZip(buffer);
       const metaEntry = zip.getEntry('meta.json');
 
       if (!metaEntry) {
@@ -411,6 +486,49 @@ class BackupService {
     } catch (error) {
       backupLogger.error('Failed to read backup metadata', { error, sourcePath });
       throw error instanceof Error ? error : new Error('Failed to read backup information.');
+    }
+  }
+
+  /**
+   * Delete older backups from a directory, keeping only N latest
+   */
+  public rotateBackups(backupDir: string, retainCount: number): void {
+    try {
+      if (!fs.existsSync(backupDir)) {
+        return;
+      }
+
+      const files = fs
+        .readdirSync(backupDir)
+        .filter((f) => f.endsWith('.zip'))
+        .map((f) => ({
+          name: f,
+          path: path.join(backupDir, f),
+          mtime: fs.statSync(path.join(backupDir, f)).mtime.getTime(),
+        }))
+        .sort((a, b) => b.mtime - a.mtime); // Newest first
+
+      if (files.length > retainCount) {
+        const toDelete = files.slice(retainCount);
+        backupLogger.info(
+          `Rotating backups in ${backupDir}, deleting ${toDelete.length} old files`,
+          {
+            retaining: retainCount,
+            total: files.length,
+          }
+        );
+
+        for (const file of toDelete) {
+          try {
+            fs.unlinkSync(file.path);
+            backupLogger.debug(`Deleted old backup: ${file.name}`);
+          } catch (e) {
+            backupLogger.warn(`Failed to delete old backup: ${file.name}`, e);
+          }
+        }
+      }
+    } catch (error) {
+      backupLogger.error('Failed to rotate backups', error);
     }
   }
 }

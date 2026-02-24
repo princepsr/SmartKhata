@@ -112,6 +112,21 @@ export function registerShutdownHooks(): void {
     'Database Shutdown'
   );
 
+  // Stop background services (HIGH)
+  shutdownManager.registerHook(
+    async () => {
+      try {
+        const { autoBackupService } = await import('../services/auto-backup-service.js');
+        autoBackupService.stop();
+        logger.info('Auto-backup background tasks stopped');
+      } catch (e) {
+        logger.error('Failed to stop auto-backup tasks', e);
+      }
+    },
+    ShutdownPriority.HIGH,
+    'Auto Backup Service Shutdown'
+  );
+
   // 2. Write the clean exit marker (CRITICAL)
   // Since it's registered AFTER the database hook with SAME priority,
   // and we use stable sort (FIFO for same priority), it runs AFTER the database.

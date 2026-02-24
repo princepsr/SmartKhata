@@ -65,14 +65,14 @@ export function DatabaseStatus() {
       )}
 
       {status && (
-        <div className="debug-data-grid">
+        <div className="debug-data-grid database-grid">
           <div className="grid-item">
             <span className="label">Status</span>
             <span className={`value status-badge ${status.isReady ? 'ready' : 'not-ready'}`}>
               {status.isReady ? '✓ Healthy' : '✗ Unreachable'}
             </span>
           </div>
-          <div className="grid-item full-width">
+          <div className="grid-item">
             <span className="label">Database Path</span>
             <span className="value font-mono text-xs">{status.path}</span>
           </div>

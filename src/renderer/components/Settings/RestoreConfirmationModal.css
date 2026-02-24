@@ -1,26 +1,40 @@
 ﻿.modal-content.restore-modal {
-  width: 400px;
+  width: 600px;
+  max-width: 90vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.modal-header h3 {
-  color: var(--color-danger, #dc3545);
-  margin-top: 0;
+.restore-modal .modal-header h3 {
+  color: #dc2626;
+  margin: 0;
 }
 
 .warning-banner {
-  background-color: rgba(220, 53, 69, 0.1);
-  border: 1px solid var(--color-danger, #dc3545);
-  color: var(--color-danger, #dc3545);
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
+  background-color: rgba(220, 38, 38, 0.05);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  color: #dc2626;
+  padding: 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+  font-size: 0.95rem;
 }
 
 .backup-details {
-  background-color: var(--color-background, #f8f9fa);
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
+  background-color: var(--color-bg-secondary);
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.backup-details h4 {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
 }
 
 .backup-details table {
@@ -28,28 +42,35 @@
 }
 
 .backup-details td {
-  padding: 0.5rem 0;
+  padding: 0.4rem 0;
   vertical-align: top;
+  font-size: 0.95rem;
 }
 
 .backup-details td:first-child {
-  width: 100px;
-  color: var(--color-text-muted, #6c757d);
+  width: 120px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.backup-details td:last-child {
+  color: var(--color-text);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.confirmation-text {
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: center;
+  margin: 1rem 0;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  margin-top: 2rem;
-}
-
-.btn-danger {
-  background-color: var(--color-danger, #dc3545);
-  color: white;
-  border: none;
-}
-
-.btn-danger:hover {
-  background-color: #c82333;
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
 }

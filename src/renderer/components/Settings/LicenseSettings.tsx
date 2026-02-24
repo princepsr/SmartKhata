@@ -24,7 +24,7 @@ const LicenseSettings: React.FC<{ onActivate: () => void }> = ({ onActivate }) =
   return (
     <div className="tab-content-wrapper fade-in">
       <div className="settings-section-card">
-        <div className="settings-header-with-action">
+        <div className="section-header">
           <h2>License Information</h2>
           <button className="btn btn-primary" onClick={onActivate}>
             {status.type === 'PAID' ? 'Renew / Update License' : 'Activate Full License'}

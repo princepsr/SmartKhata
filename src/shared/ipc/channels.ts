@@ -90,9 +90,12 @@ export const IPC_CHANNELS = {
   BACKUP_CREATE: 'backup:create',
   BACKUP_RESTORE: 'backup:restore',
   BACKUP_INFO: 'backup:info',
+  BACKUP_OPEN_FOLDER: 'backup:open-folder',
   SYSTEM_EXPORT: 'system:export',
   SYSTEM_IMPORT: 'system:import',
   SYSTEM_PING: 'system:ping',
+  SYSTEM_STATUS: 'system:status',
+  SYSTEM_CONNECTIVITY_CHANGE: 'system:connectivity-change',
   SYSTEM_GET_APP_INFO: 'system:get-app-info',
   SYSTEM_DB_STATUS: 'system:dbStatus',
 
@@ -112,6 +115,7 @@ export const IPC_CHANNELS = {
   APP_LOGS: 'app:logs',
   APP_RESTART: 'app:restart',
   APP_REPORT_ERROR: 'app:report-error',
+  APP_OPEN_USER_DATA: 'app:open-user-data',
 
   // ============================================
   // LICENSE MODULE
@@ -119,6 +123,17 @@ export const IPC_CHANNELS = {
   LICENSE_STATUS: 'license:status',
   LICENSE_ACTIVATE: 'license:activate',
   LICENSE_TRIAL_INFO: 'license:trialInfo',
+
+  // ============================================
+  // GOOGLE MODULE
+  // ============================================
+  GOOGLE_AUTH_URL: 'google:auth-url',
+  GOOGLE_AUTHENTICATE: 'google:authenticate',
+  GOOGLE_PROFILE: 'google:profile',
+  GOOGLE_LOGOUT: 'google:logout',
+  GOOGLE_DRIVE_BACKUP_INFO: 'google:drive-backup-info',
+  GOOGLE_DOWNLOAD_BACKUP: 'google:download-backup',
+  GOOGLE_SYNC_NOW: 'google:sync-now',
 } as const;
 
 /**
@@ -204,12 +219,20 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.REPORT_BILL_WISE,
     IPC_CHANNELS.REPORT_ANALYTICS,
   ],
-  BACKUP: [IPC_CHANNELS.BACKUP_CREATE, IPC_CHANNELS.BACKUP_RESTORE, IPC_CHANNELS.BACKUP_INFO],
+  BACKUP: [
+    IPC_CHANNELS.BACKUP_CREATE,
+    IPC_CHANNELS.BACKUP_RESTORE,
+    IPC_CHANNELS.BACKUP_INFO,
+    IPC_CHANNELS.BACKUP_OPEN_FOLDER,
+  ],
   SYSTEM: [
     IPC_CHANNELS.SYSTEM_EXPORT,
     IPC_CHANNELS.SYSTEM_IMPORT,
     IPC_CHANNELS.SYSTEM_PING,
+    IPC_CHANNELS.SYSTEM_STATUS,
+    IPC_CHANNELS.SYSTEM_CONNECTIVITY_CHANGE,
     IPC_CHANNELS.SYSTEM_GET_APP_INFO,
+    IPC_CHANNELS.SYSTEM_DB_STATUS,
   ],
   SETTINGS: [
     IPC_CHANNELS.SETTINGS_GET,
@@ -217,10 +240,24 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.SETTINGS_RESET,
     IPC_CHANNELS.SETTINGS_TEST_PRINT,
   ],
-  APP: [IPC_CHANNELS.APP_VERSION, IPC_CHANNELS.APP_CONFIG, IPC_CHANNELS.APP_LOGS],
+  APP: [
+    IPC_CHANNELS.APP_VERSION,
+    IPC_CHANNELS.APP_CONFIG,
+    IPC_CHANNELS.APP_LOGS,
+    IPC_CHANNELS.APP_OPEN_USER_DATA,
+  ],
   LICENSE: [
     IPC_CHANNELS.LICENSE_STATUS,
     IPC_CHANNELS.LICENSE_ACTIVATE,
     IPC_CHANNELS.LICENSE_TRIAL_INFO,
+  ],
+  GOOGLE: [
+    IPC_CHANNELS.GOOGLE_AUTH_URL,
+    IPC_CHANNELS.GOOGLE_AUTHENTICATE,
+    IPC_CHANNELS.GOOGLE_PROFILE,
+    IPC_CHANNELS.GOOGLE_LOGOUT,
+    IPC_CHANNELS.GOOGLE_DRIVE_BACKUP_INFO,
+    IPC_CHANNELS.GOOGLE_DOWNLOAD_BACKUP,
+    IPC_CHANNELS.GOOGLE_SYNC_NOW,
   ],
 } as const;

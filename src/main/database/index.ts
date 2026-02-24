@@ -264,10 +264,16 @@ class DatabaseManager {
    */
   public close(): void {
     if (this.db) {
+      const db = this.db;
       try {
-        // Checkpoint WAL file before closing
-        this.db.pragma('wal_checkpoint(TRUNCATE)');
-        this.db.close();
+        // Checkpoint WAL file before closing (attempt)
+        try {
+          db.pragma('wal_checkpoint(TRUNCATE)');
+        } catch (pragmaError) {
+          dbLogger.warn('WAL checkpoint failed during close, proceeding to close', pragmaError);
+        }
+
+        db.close();
         dbLogger.info('Database connection closed');
       } catch (error) {
         dbLogger.error('Error closing database', error);

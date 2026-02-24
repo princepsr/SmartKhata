@@ -77,13 +77,6 @@
   color: #ef4444;
 }
 
-.settings-header-with-action {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
 .mt-4 {
   margin-top: 1.5rem;
 }

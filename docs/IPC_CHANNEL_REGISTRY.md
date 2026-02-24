@@ -57,14 +57,34 @@ export const IPC_CHANNELS = {
   BACKUP_CREATE: 'backup:create',
   BACKUP_RESTORE: 'backup:restore',
   BACKUP_INFO: 'backup:info',
+  BACKUP_OPEN_FOLDER: 'backup:open-folder',
 
   // System module
   SYSTEM_PING: 'system:ping',
+  SYSTEM_STATUS: 'system:status',
+  SYSTEM_CONNECTIVITY_CHANGE: 'system:connectivity-change',
   SYSTEM_GET_APP_INFO: 'system:get-app-info',
   SYSTEM_DB_STATUS: 'system:dbStatus',
 
+  // App module
+  APP_VERSION: 'app:version',
+  APP_CONFIG: 'app:config',
+  APP_LOGS: 'app:logs',
+  APP_RESTART: 'app:restart',
+  APP_REPORT_ERROR: 'app:report-error',
+  APP_OPEN_USER_DATA: 'app:open-user-data',
+
   // Customer module
   CUSTOMER_SEARCH: 'customer:search',
+
+  // Google module (Cloud Sync)
+  GOOGLE_AUTH_URL: 'google:auth-url',
+  GOOGLE_AUTHENTICATE: 'google:authenticate',
+  GOOGLE_PROFILE: 'google:profile',
+  GOOGLE_LOGOUT: 'google:logout',
+  GOOGLE_DRIVE_BACKUP_INFO: 'google:drive-backup-info',
+  GOOGLE_DOWNLOAD_BACKUP: 'google:download-backup',
+  GOOGLE_SYNC_NOW: 'google:sync-now',
 } as const;
 ```
 
@@ -479,5 +499,5 @@ ipcMain.handle(IPC_CHANNELS.PRODUCT_LIST, ...);
 
 ---
 
-**Last updated:** 2026-02-08  
-**Version:** 1.0
+**Last updated:** 2026-02-24  
+**Version:** 1.1 (Added Cloud Sync & Diagnostics Channels)

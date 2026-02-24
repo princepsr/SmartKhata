@@ -1,3 +1,4 @@
+import './env-loader';
 import { app, BrowserWindow, dialog, globalShortcut, protocol } from 'electron';
 import path from 'path';
 import fs from 'fs';
@@ -14,40 +15,13 @@ import { SettingsService } from './services/settings-service';
 import { StabilityService } from './services/stability-service';
 import { PrintService } from './services/print-service';
 import { UpdateService } from './services/update-service';
+import { autoBackupService } from './services/auto-backup-service';
 
 /**
  * Main Electron Process Entry Point
  */
 
 let mainWindow: BrowserWindow | null = null;
-
-// Simple .env loader (since npm install dotenv failed)
-function loadEnv(): void {
-  try {
-    const envPath = path.join(process.cwd(), '.env');
-    if (fs.existsSync(envPath)) {
-      const content = fs.readFileSync(envPath, 'utf8');
-      content.split('\n').forEach((line) => {
-        const trimmed = line.trim();
-        if (trimmed && !trimmed.startsWith('#')) {
-          const [key, ...valueParts] = trimmed.split('=');
-          if (key && valueParts.length > 0) {
-            const value = valueParts
-              .join('=')
-              .trim()
-              .replace(/^["']|["']$/g, '');
-            process.env[key.trim()] = value;
-          }
-        }
-      });
-      logger.info('.env file loaded successfully');
-    }
-  } catch (error) {
-    logger.error('Failed to load .env file', { error });
-  }
-}
-
-loadEnv();
 
 // Register global error handlers FIRST (before any other code)
 registerGlobalErrorHandlers();
@@ -360,6 +334,13 @@ app.whenReady().then(async () => {
         registerIPCHandlers();
       } catch (e) {
         logger.error('IPC init failed', e);
+      }
+    })(),
+    (async () => {
+      try {
+        autoBackupService.start();
+      } catch (e) {
+        logger.error('Auto-backup service start failed', e);
       }
     })(),
   ];

@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, shell } from 'electron';
 import { logger } from '../../utils/logger';
 import { IPCHandler } from '../ipc-handler';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
@@ -37,5 +37,24 @@ export function registerAppHandlers(): void {
       stack: payload.error?.stack,
       componentStack: payload.errorInfo?.componentStack,
     });
+  });
+
+  // Open App Data Folder
+  IPCHandler.handle<void, void>(IPC_CHANNELS.APP_OPEN_USER_DATA, async () => {
+    const userDataPath = app.getPath('userData');
+    logger.info('Opening user data folder', { path: userDataPath });
+
+    // shell.openPath is standard, but if it fails silently on some Windows configs,
+    // we use openExternal with file:// protocol as a fallback.
+    try {
+      const error = await shell.openPath(userDataPath);
+      if (error) {
+        logger.error('shell.openPath failed, trying openExternal', { error });
+        await shell.openExternal(`file://${userDataPath}`);
+      }
+    } catch (err) {
+      logger.error('Failed to open folder', { err });
+      await shell.openExternal(`file://${userDataPath}`);
+    }
   });
 }

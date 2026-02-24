@@ -1,0 +1,78 @@
+.modal-content.success-modal {
+  width: 500px;
+  max-width: 90vw;
+  text-align: center;
+  padding-bottom: 0.5rem;
+}
+
+.success-modal .modal-header h3 {
+  color: var(--color-success);
+  margin: 0;
+}
+
+.success-icon-container {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0 1rem;
+}
+
+.success-check {
+  width: 80px;
+  height: 80px;
+  background-color: rgba(13, 148, 136, 0.1);
+  color: var(--color-success);
+  font-size: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 3px solid var(--color-success);
+  animation: checkPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes checkPop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.success-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.75rem;
+}
+
+.success-message {
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 400px;
+  margin: 0 auto 1.5rem;
+}
+
+.countdown-container {
+  background-color: var(--color-bg-secondary);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  border: 1px dashed var(--color-border);
+  margin-bottom: 1rem;
+}
+
+.countdown-container strong {
+  color: var(--color-primary);
+  font-size: 1.1rem;
+}
+
+.restart-btn {
+  width: 100%;
+  padding: 0.8rem !important;
+  font-size: 1.1rem !important;
+}

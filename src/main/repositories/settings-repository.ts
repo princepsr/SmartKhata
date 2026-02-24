@@ -23,6 +23,15 @@ export interface AppConfig {
   billingOnly: boolean;
   gstExclusiveMode: boolean; // Renamed from gstInclusiveDefault
   customersEnabled: boolean;
+  autoBackupEnabled: boolean;
+  autoBackupIntervalDays: number;
+  autoBackupIntervalUnit: 'days' | 'hours';
+  autoBackupRetainCount: number;
+  lastAutoBackup: string | null;
+  googleDriveSyncEnabled: boolean;
+  lastCloudSync: string | null;
+  cloudSyncPending: boolean;
+  pendingSyncPath: string | null;
   updatedAt: Date;
 }
 
@@ -59,6 +68,15 @@ export class SettingsRepository extends BaseRepository {
       billing_only: number;
       gst_exclusive_mode: number;
       customers_enabled: number;
+      auto_backup_enabled: number;
+      auto_backup_interval_days: number;
+      auto_backup_interval_unit: string;
+      auto_backup_retain_count: number;
+      last_auto_backup: string | null;
+      google_drive_sync_enabled: number;
+      last_cloud_sync: string | null;
+      cloud_sync_pending: number;
+      pending_sync_path: string | null;
       updated_at: string;
     }>(sql);
 
@@ -84,6 +102,15 @@ export class SettingsRepository extends BaseRepository {
         billingOnly: false,
         gstExclusiveMode: false,
         customersEnabled: true,
+        autoBackupEnabled: true,
+        autoBackupIntervalDays: 1,
+        autoBackupIntervalUnit: 'days',
+        autoBackupRetainCount: 5,
+        lastAutoBackup: null,
+        googleDriveSyncEnabled: false,
+        lastCloudSync: null,
+        cloudSyncPending: false,
+        pendingSyncPath: null,
         updatedAt: new Date(),
       };
     }
@@ -120,6 +147,15 @@ export class SettingsRepository extends BaseRepository {
       billingOnly: 'billing_only',
       gstExclusiveMode: 'gst_exclusive_mode',
       customersEnabled: 'customers_enabled',
+      autoBackupEnabled: 'auto_backup_enabled',
+      autoBackupIntervalDays: 'auto_backup_interval_days',
+      autoBackupIntervalUnit: 'auto_backup_interval_unit',
+      autoBackupRetainCount: 'auto_backup_retain_count',
+      lastAutoBackup: 'last_auto_backup',
+      googleDriveSyncEnabled: 'google_drive_sync_enabled',
+      lastCloudSync: 'last_cloud_sync',
+      cloudSyncPending: 'cloud_sync_pending',
+      pendingSyncPath: 'pending_sync_path',
     };
 
     Object.entries(config).forEach(([key, value]) => {
@@ -173,6 +209,15 @@ export class SettingsRepository extends BaseRepository {
     billing_only: number;
     gst_exclusive_mode: number;
     customers_enabled: number;
+    auto_backup_enabled: number;
+    auto_backup_interval_days: number;
+    auto_backup_interval_unit: string;
+    auto_backup_retain_count: number;
+    last_auto_backup: string | null;
+    google_drive_sync_enabled: number;
+    last_cloud_sync: string | null;
+    cloud_sync_pending: number;
+    pending_sync_path: string | null;
     updated_at: string;
   }): AppConfig {
     return {
@@ -194,6 +239,15 @@ export class SettingsRepository extends BaseRepository {
       billingOnly: row.billing_only === 1,
       gstExclusiveMode: row.gst_exclusive_mode === 1,
       customersEnabled: row.customers_enabled === 1,
+      autoBackupEnabled: row.auto_backup_enabled === 1,
+      autoBackupIntervalDays: row.auto_backup_interval_days,
+      autoBackupIntervalUnit: (row.auto_backup_interval_unit as 'days' | 'hours') || 'days',
+      autoBackupRetainCount: row.auto_backup_retain_count,
+      lastAutoBackup: row.last_auto_backup,
+      googleDriveSyncEnabled: row.google_drive_sync_enabled === 1,
+      lastCloudSync: row.last_cloud_sync,
+      cloudSyncPending: row.cloud_sync_pending === 1,
+      pendingSyncPath: row.pending_sync_path,
       updatedAt: this.parseDate(row.updated_at),
     };
   }

@@ -34,24 +34,28 @@ app.quit() (Final exit)
 
 ```typescript
 class ShutdownManager {
-  private hooks: ShutdownHook[] = [];
+  private hooks: RegisteredHook[] = [];
   private isShuttingDown = false;
 
-  // Register a shutdown hook
-  public registerHook(hook: ShutdownHook): void {
-    this.hooks.push(hook);
+  // Register a shutdown hook with priority (100 = Normal, 200 = High, 300 = Critical)
+  public registerHook(
+    hook: ShutdownHook,
+    priority: ShutdownPriority = 100,
+    description?: string
+  ): void {
+    this.hooks.push({ hook, priority, description });
   }
 
-  // Execute all hooks in reverse order (LIFO)
+  // Execute all hooks in priority order (100 -> 200 -> 300)
   public async shutdown(): Promise<void> {
     if (this.isShuttingDown) return;
 
     this.isShuttingDown = true;
-    const reversedHooks = [...this.hooks].reverse();
+    const sortedHooks = [...this.hooks].sort((a, b) => a.priority - b.priority);
 
-    for (const hook of reversedHooks) {
+    for (const h of sortedHooks) {
       try {
-        await hook();
+        await h.hook();
       } catch (error) {
         logger.error('Shutdown hook failed', error);
         // Continue with other hooks
@@ -69,23 +73,38 @@ class ShutdownManager {
 
 ```typescript
 export function registerShutdownHooks(): void {
-  // Hook 1: Close database (future)
-  shutdownManager.registerHook(async () => {
-    logger.info('Shutdown hook: Close database (placeholder)');
-    // TODO: await database.close();
-  });
+  // Hook 1: Close database (CRITICAL priority)
+  shutdownManager.registerHook(
+    async () => {
+      if (databaseManager.isReady()) {
+        databaseManager.close();
+      }
+    },
+    ShutdownPriority.CRITICAL,
+    'Database Shutdown'
+  );
 
-  // Hook 2: Trigger backup (future)
-  shutdownManager.registerHook(async () => {
-    logger.info('Shutdown hook: Trigger backup (placeholder)');
-    // TODO: await backupService.createBackup();
-  });
+  // Hook 2: Stop background tasks (HIGH priority)
+  shutdownManager.registerHook(
+    async () => {
+      const { autoBackupService } = await import('../services/auto-backup-service.js');
+      autoBackupService.stop();
+    },
+    ShutdownPriority.HIGH,
+    'Auto Backup Service Shutdown'
+  );
 
-  // Hook 3: Flush logs (future)
-  shutdownManager.registerHook(async () => {
-    logger.info('Shutdown hook: Flush logs (placeholder)');
-    // TODO: await logger.flush();
-  });
+  // Hook 3: Write clean exit marker (CRITICAL priority, runs after database due to FIFO)
+  shutdownManager.registerHook(
+    () => {
+      fs.writeFileSync(
+        markerPath,
+        JSON.stringify({ timestamp: new Date(), version: app.getVersion() })
+      );
+    },
+    ShutdownPriority.CRITICAL,
+    'Exit Marker'
+  );
 }
 ```
 
@@ -479,24 +498,22 @@ if (didCrashLastTime()) {
 
 ## Summary
 
-| Aspect               | Implementation                  |
-| -------------------- | ------------------------------- |
-| **Shutdown Manager** | Centralized hook system         |
-| **Hook Order**       | LIFO (Last In, First Out)       |
-| **Error Handling**   | Continue on failure, log errors |
-| **Database**         | Placeholder for graceful close  |
-| **Backup**           | Placeholder for shutdown backup |
-| **Logs**             | Placeholder for flush           |
+| Aspect               | Implementation                   |
+| -------------------- | -------------------------------- |
+| **Shutdown Manager** | Priority-based hook system       |
+| **Hook Order**       | ASC Priority (100 -> 200 -> 300) |
+| **Error Handling**   | Continue on failure, log errors  |
+| **Database**         | Gracefully closes & checkpoints  |
+| **Background Tasks** | Cleanly terminates intervals     |
+| **Crash Detection**  | Writes exit marker at very end   |
 
-**Status:** ✅ Infrastructure ready, hooks are placeholders
+**Status:** ✅ Fully implemented
 
 **Next steps:**
 
-1. Implement database connection management
-2. Implement backup service
-3. Add shutdown timeout protection
+1. Add shutdown timeout protection
 
 ---
 
-**Last updated:** 2026-02-08  
+**Last updated:** 2026-02-24  
 **Files:** `src/main/utils/shutdown-manager.ts`, `src/main/index.ts`

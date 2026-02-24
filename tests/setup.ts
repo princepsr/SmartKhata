@@ -8,6 +8,10 @@ import { vi, beforeAll } from 'vitest';
 import path from 'path';
 import { createTestDatabase, getTestDatabase } from './utils/test-db';
 
+// Global environment variables for testing
+process.env.GOOGLE_CLIENT_ID = 'test-client-id';
+process.env.GOOGLE_CLIENT_SECRET = 'test-client-secret';
+
 // Mock Electron's app object
 vi.mock('electron', () => {
   const testDataPath = path.join(process.cwd(), 'test-data');

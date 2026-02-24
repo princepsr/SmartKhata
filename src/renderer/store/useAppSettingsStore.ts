@@ -26,6 +26,15 @@ export interface AppSettings {
   customersEnabled: boolean;
   autoPrint: boolean;
   printCopies: number;
+  autoBackupEnabled: boolean;
+  autoBackupIntervalDays: number;
+  autoBackupIntervalUnit: 'days' | 'hours';
+  autoBackupRetainCount: number;
+  lastAutoBackup: string | null;
+  googleDriveSyncEnabled: boolean;
+  lastCloudSync: string | null;
+  cloudSyncPending: boolean;
+  pendingSyncPath: string | null;
   updatedAt?: string;
 }
 
@@ -58,6 +67,15 @@ const defaultSettings: AppSettings = {
   customersEnabled: true,
   autoPrint: true,
   printCopies: 1,
+  autoBackupEnabled: true,
+  autoBackupIntervalDays: 1,
+  autoBackupIntervalUnit: 'days',
+  autoBackupRetainCount: 5,
+  lastAutoBackup: null,
+  googleDriveSyncEnabled: false,
+  lastCloudSync: null,
+  cloudSyncPending: false,
+  pendingSyncPath: null,
 };
 
 export const useAppSettingsStore = create<AppSettingsState>()(

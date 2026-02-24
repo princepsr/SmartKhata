@@ -190,7 +190,7 @@ kbd {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6); /* Standard neutral overlay */
   display: flex;
   justify-content: center;
   align-items: center; /* Center everything as requested */
@@ -201,11 +201,25 @@ kbd {
 .modal-content {
   background-color: var(--color-bg);
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(0, 0, 0, 0.05); /* Stronger pop and subtle border */
   display: flex;
   flex-direction: column;
   overflow: hidden;
   max-height: 90vh; /* Don't overflow screen */
+  animation: modalPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy entry */
+}
+
+@keyframes modalPopIn {
+  from {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 /* Ensure forms inside modals behave as flex containers so modal-body can scroll */
@@ -286,6 +300,10 @@ kbd {
 .btn-primary:hover:not(:disabled) {
   background-color: var(--color-primary-dark);
   border-color: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .btn-primary:disabled {
@@ -313,6 +331,10 @@ kbd {
 .btn-secondary:hover:not(:disabled) {
   background-color: var(--color-bg-secondary);
   border-color: var(--color-border);
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .btn-secondary:disabled {
@@ -321,17 +343,26 @@ kbd {
 }
 
 .btn-danger {
-  background-color: white;
-  color: var(--color-error);
-  border: 1px solid var(--color-error);
+  background-color: rgba(220, 38, 38, 0.05); /* Very soft red tint */
+  color: #dc2626; /* Modern Red text */
+  border: 1px solid rgba(220, 38, 38, 0.2);
   padding: 0.6rem 1.25rem;
   border-radius: var(--radius-md);
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: #fef2f2;
+  background-color: rgba(220, 38, 38, 0.12); /* Slightly deeper tint on hover */
+  border-color: rgba(220, 38, 38, 0.4);
+  color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }

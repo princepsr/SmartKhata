@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useAppSettingsStore } from '../store';
 import { IPCPoc } from '../components/Debug/IPCPoc';
 import { DatabaseStatus } from '../components/Debug/DatabaseStatus';
+import { CloudHealth } from '../components/Debug/CloudHealth';
+import { AppMaintenance } from '../components/Debug/AppMaintenance';
 import { DataManagement } from '../components/Settings/DataManagement';
 import { useLicense } from '../hooks/useLicense';
 import LicenseActivationModal from '../components/modals/LicenseActivationModal';
@@ -91,10 +93,12 @@ function SettingsPage() {
       <div className="settings-section-card">
         <div className="section-header">
           <h2>Shop Information</h2>
-          {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
-          {saveStatus === 'error' && (
-            <span className="status-msg error">{error || 'Save failed'}</span>
-          )}
+          <div className="status-indicator">
+            {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
+            {saveStatus === 'error' && (
+              <span className="status-msg error">{error || 'Save failed'}</span>
+            )}
+          </div>
         </div>
         <p className="settings-description">
           Configure your shop details that will appear on printed receipts and invoices.
@@ -184,7 +188,9 @@ function SettingsPage() {
       <div className="settings-section-card">
         <div className="section-header">
           <h2>Business Rules</h2>
-          {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
+          <div className="status-indicator">
+            {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
+          </div>
         </div>
         <p className="settings-description">
           Set your preferences for taxes, bill rounding, and standard rates.
@@ -251,18 +257,6 @@ function SettingsPage() {
           </div>
 
           <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.roundOffEnabled}
-                onChange={(e) => updateSettings({ roundOffEnabled: e.target.checked })}
-              />
-              Enable Bill Rounding (to nearest ₹)
-            </label>
-            <p className="help-text">Round bill totals to avoid fractional currency amounts.</p>
-          </div>
-
-          <div className="form-group">
             <label htmlFor="gstPercentage">Standard GST Rate (%)</label>
             <select
               id="gstPercentage"
@@ -277,6 +271,18 @@ function SettingsPage() {
               ))}
             </select>
             <p className="help-text">Default rate used for tax calculations when enabled.</p>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.roundOffEnabled}
+                onChange={(e) => updateSettings({ roundOffEnabled: e.target.checked })}
+              />
+              Enable Bill Rounding (to nearest ₹)
+            </label>
+            <p className="help-text">Round bill totals to avoid fractional currency amounts.</p>
           </div>
         </div>
 
@@ -307,7 +313,9 @@ function SettingsPage() {
       <div className="settings-section-card">
         <div className="section-header">
           <h2>Printer Configuration</h2>
-          {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
+          <div className="status-indicator">
+            {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
+          </div>
         </div>
         <p className="settings-description">
           Set up your thermal printer and customize how your receipts are printed.
@@ -334,20 +342,6 @@ function SettingsPage() {
           </div>
 
           <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.autoPrint}
-                onChange={(e) => updateSettings({ autoPrint: e.target.checked })}
-              />
-              Auto-Print Bill after Checkout
-            </label>
-            <p className="help-text">
-              Automatically trigger printing as soon as a sale is confirmed.
-            </p>
-          </div>
-
-          <div className="form-group">
             <label htmlFor="printCopies">Number of Copies</label>
             <select
               id="printCopies"
@@ -364,15 +358,31 @@ function SettingsPage() {
             <p className="help-text">How many identical receipts should be printed per sale.</p>
           </div>
 
-          <div className="divider full-width" style={{ margin: '1rem 0' }}></div>
-
-          {/* Bill Formatting - Row 2 */}
-          <div className="section-header full-width" style={{ marginBottom: '1rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-              Bill Formatting
-            </h3>
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.autoPrint}
+                onChange={(e) => updateSettings({ autoPrint: e.target.checked })}
+              />
+              Auto-Print Bill after Checkout
+            </label>
+            <p className="help-text">
+              Automatically trigger printing as soon as a sale is confirmed.
+            </p>
           </div>
+        </div>
+      </div>
 
+      <div className="settings-section-card">
+        <div className="section-header">
+          <h2>Bill Formatting</h2>
+        </div>
+        <p className="settings-description">
+          Customize how your receipts look and select paper dimensions.
+        </p>
+
+        <div className="settings-form">
           <div className="form-group">
             <label className="checkbox-label">
               <input
@@ -405,28 +415,27 @@ function SettingsPage() {
             <p className="help-text">Include customer identification on printed bills.</p>
           </div>
 
-          <div className="form-group full-width">
-            <label htmlFor="footerMessage">Footer Message</label>
-            <textarea
-              id="footerMessage"
-              value={settings.footerMessage}
-              onChange={(e) => updateSettings({ footerMessage: e.target.value })}
-              className="form-input"
-              rows={2}
-              maxLength={200}
-              placeholder="e.g. Thank you! Visit Again"
-              style={{ height: 'auto', minHeight: '80px', padding: '12px' }}
-            />
-            <p className="help-text">Custom message printed at the bottom of every bill.</p>
-          </div>
-
-          <div className="divider full-width" style={{ margin: '1rem 0' }}></div>
-
-          {/* Paper Size & Maintenance - Row 3 */}
           <div className="form-group">
             <label>Paper Size</label>
-            <div className="radio-group" style={{ marginTop: '0.5rem' }}>
-              <label className="radio-label">
+            <div
+              className="radio-group"
+              style={{
+                marginTop: '0.8rem',
+                display: 'flex',
+                flexDirection: 'row',
+                gap: '1.5rem',
+              }}
+            >
+              <label
+                className="radio-label"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                }}
+              >
                 <input
                   type="radio"
                   name="paperSize"
@@ -436,7 +445,16 @@ function SettingsPage() {
                 />
                 2-inch (58mm)
               </label>
-              <label className="radio-label">
+              <label
+                className="radio-label"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                }}
+              >
                 <input
                   type="radio"
                   name="paperSize"
@@ -447,7 +465,9 @@ function SettingsPage() {
                 3-inch (80mm)
               </label>
             </div>
-            <p className="help-text">Select paper width based on your printer model.</p>
+            <p className="help-text" style={{ marginTop: '0.5rem' }}>
+              Select paper width based on your printer model.
+            </p>
           </div>
 
           <div className="form-group">
@@ -480,6 +500,21 @@ function SettingsPage() {
               </button>
               <p className="help-text">Prints a test receipt to verify printer connection.</p>
             </div>
+          </div>
+
+          <div className="form-group full-width">
+            <label htmlFor="footerMessage">Footer Message</label>
+            <textarea
+              id="footerMessage"
+              value={settings.footerMessage}
+              onChange={(e) => updateSettings({ footerMessage: e.target.value })}
+              className="form-input"
+              rows={2}
+              maxLength={200}
+              placeholder="e.g. Thank you! Visit Again"
+              style={{ height: 'auto', minHeight: '80px', padding: '12px' }}
+            />
+            <p className="help-text">Custom message printed at the bottom of every bill.</p>
           </div>
         </div>
 
@@ -514,12 +549,31 @@ function SettingsPage() {
   const renderSystemDebug = () => (
     <div className="tab-content-wrapper fade-in debug-section">
       <div className="settings-section-card debug-card">
-        <h2>Communication Bridge</h2>
+        <div className="section-header">
+          <h2>Communication Bridge</h2>
+        </div>
         <IPCPoc />
       </div>
+
       <div className="settings-section-card debug-card">
-        <h2>Storage Health</h2>
+        <div className="section-header">
+          <h2>Cloud Health</h2>
+        </div>
+        <CloudHealth />
+      </div>
+
+      <div className="settings-section-card debug-card">
+        <div className="section-header">
+          <h2>Storage Health</h2>
+        </div>
         <DatabaseStatus />
+      </div>
+
+      <div className="settings-section-card debug-card">
+        <div className="section-header">
+          <h2>Maintenance & Utilities</h2>
+        </div>
+        <AppMaintenance />
       </div>
     </div>
   );

@@ -47,6 +47,11 @@ The Debug tab uses a specific row-based grid system for displaying technical met
 - `.debug-data-grid`: A high-density grid for key-value info.
 - `.debug-alert`: Specialized status containers for diagnostic results.
 
+**Sub-components:**
+
+- **`CloudHealth.tsx`**: Specialized diagnostic view for testing Google Drive API connectivity, verifying OAuth profiles, and manually inspecting remote cloud backups.
+- **`AppMaintenance.tsx`**: Utilities for deeply inspecting the application state, including locating the local `UserData` folder, executing SQLite integrity checks, and checking core application processes.
+
 ---
 
 ## 🔄 Integration
@@ -56,5 +61,5 @@ The Debug tab uses a specific row-based grid system for displaying technical met
 
 ---
 
-**Last updated:** 2026-02-18 (Phase 1 Complete)  
+**Last updated:** 2026-02-24 (Phase 1 Complete + Cloud Sync)  
 **Status:** ✅ Unified configuration hub verified

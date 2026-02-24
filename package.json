@@ -77,6 +77,8 @@
     "adm-zip": "^0.5.16",
     "better-sqlite3": "^12.6.2",
     "electron-updater": "^6.3.9",
+    "google-auth-library": "^10.5.0",
+    "googleapis": "^171.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.13.0",
