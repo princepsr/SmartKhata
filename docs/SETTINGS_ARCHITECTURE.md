@@ -23,6 +23,7 @@ The module is divided into four functional areas:
 - **Inventory**: Stock alert thresholds and management rules.
 - **Printing**: Thermal printer selection, paper size (58mm/80mm), and receipt formatting.
 - **Licensing**: Activation, machine binding, and license status tracking.
+- **Privacy**: Interactive Privacy Policy acceptance and policy review.
 - **Data Management**: Backup, Restore, and Reset operations.
 - **System Debug**: Real-time IPC diagnostics and database status.
 

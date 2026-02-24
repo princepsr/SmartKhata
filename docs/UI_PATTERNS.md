@@ -53,5 +53,25 @@ To jump straight to an action (like "Add Product"), the Command Center passes fl
 
 ---
 
-**Last updated:** 2026-02-23  
+## 💎 Premium Loading Experience
+
+### Branded Initialization
+
+To provide a smooth first impression, SmartKhata uses a premium **Loading Screen** (`LoadingScreen.tsx`) instead of standard browser loaders.
+
+- **Visual Feedback**: Features a pulsing branded logo and spinning rings to indicate background activity.
+- **Contextual Messaging**: Displays dynamic text (e.g., "Initializing...", "Saving Changes...") to keep the user informed.
+- **Non-blocking Overlay**: Once the app is initialized, the loader functions as a non-blocking overlay for background sync operations, preventing the main UI from unmounting.
+
+---
+
+## ⚡ Performance Optimization
+
+### Silent Data Fetching
+
+The application uses a "silent" fetch mode for background data refreshes. This allows the system to update the local state without triggering a full-page loading overlay, ensuring that navigation between pages feels instantaneous.
+
+---
+
+**Last updated:** 2026-02-24 (Premium UI Refinement)
 **Key Files:** `src/renderer/pages/ProductsPage.tsx`, `src/renderer/hooks/useIPC.ts`, `src/renderer/components/ErrorBoundary.tsx`

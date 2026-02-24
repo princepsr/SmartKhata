@@ -16,19 +16,26 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 function AppRouter() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/billing" replace />} />
-          
-          <Route path="billing" element={<BillingPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="customers" element={<CustomersPage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          
-          <Route path="*" element={<Navigate to="/billing" replace />} />
-        </Route>
-      </Routes>
+      {!isInitialized ? (
+        <LoadingScreen message="Initializing SmartKhata..." />
+      ) : !settings.privacyPolicyAccepted ? (
+        <Routes>
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="*" element={<Navigate to="/onboarding" replace />} />
+        </Routes>
+      ) : (
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Navigate to="/billing" replace />} />
+            <Route path="billing" element={<BillingPage />} />
+            <Route path="products" element={<ProductsPage />} />
+            <Route path="customers" element={<CustomersPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/billing" replace />} />
+          </Route>
+        </Routes>
+      )}
     </BrowserRouter>
   );
 }
@@ -38,15 +45,16 @@ function AppRouter() {
 
 ## Routes
 
-| Route | Component | Shortcut | Purpose |
-|-------|-----------|----------|---------|
-| `/` | → `/billing` | - | Default redirect |
-| `/billing` | BillingPage | F2 | POS billing interface |
-| `/products` | ProductsPage | F3 | Product inventory |
-| `/customers` | CustomersPage | F4 | Customer management |
-| `/reports` | ReportsPage | F5 | Sales reports |
-| `/settings` | SettingsPage | F6 | App configuration |
-| `*` | → `/billing` | - | 404 fallback |
+| Route         | Component      | Shortcut | Purpose                  |
+| ------------- | -------------- | -------- | ------------------------ |
+| `/`           | → `/billing`   | -        | Default redirect         |
+| `/onboarding` | OnboardingPage | -        | Mandatory privacy policy |
+| `/billing`    | BillingPage    | F2       | POS billing interface    |
+| `/products`   | ProductsPage   | F3       | Product inventory        |
+| `/customers`  | CustomersPage  | F4       | Customer management      |
+| `/reports`    | ReportsPage    | F5       | Sales reports            |
+| `/settings`   | SettingsPage   | F6       | App configuration        |
+| `*`           | → `/billing`   | -        | 404 fallback             |
 
 ---
 
@@ -55,6 +63,7 @@ function AppRouter() {
 ### BrowserRouter vs HashRouter
 
 **We use `BrowserRouter`:**
+
 ```typescript
 <BrowserRouter>
   {/* routes */}
@@ -63,12 +72,12 @@ function AppRouter() {
 
 **Why not `HashRouter`?**
 
-| Aspect | BrowserRouter | HashRouter |
-|--------|---------------|------------|
-| URLs | `/billing` | `/#/billing` |
-| Electron | ✅ Works | ✅ Works |
-| Cleaner | ✅ Yes | ❌ No |
-| Dev/Prod | ✅ Same | ✅ Same |
+| Aspect   | BrowserRouter | HashRouter   |
+| -------- | ------------- | ------------ |
+| URLs     | `/billing`    | `/#/billing` |
+| Electron | ✅ Works      | ✅ Works     |
+| Cleaner  | ✅ Yes        | ❌ No        |
+| Dev/Prod | ✅ Same       | ✅ Same      |
 
 **Both work in Electron**, but `BrowserRouter` provides cleaner URLs.
 
@@ -79,6 +88,7 @@ function AppRouter() {
 **File:** `src/renderer/components/Layout.tsx`
 
 The Layout component wraps all routes and provides:
+
 - Sidebar navigation
 - Keyboard shortcuts
 - Consistent structure
@@ -90,7 +100,7 @@ function Layout() {
       <aside className="layout-sidebar">
         {/* Navigation */}
       </aside>
-      
+
       <main className="layout-main">
         <Outlet />  {/* Child routes render here */}
       </main>
@@ -116,11 +126,13 @@ function Layout() {
 ```
 
 **Features:**
+
 - Automatically adds `.active` class when route matches
 - Keyboard accessible
 - Shows keyboard shortcuts
 
 **Active styling:**
+
 ```css
 .nav-item.active {
   background-color: rgba(255, 255, 255, 0.2);
@@ -152,25 +164,25 @@ export function useKeyboardShortcuts() {
         e.preventDefault();
         navigate('/billing');
       }
-      
+
       // F3 - Products
       if (e.key === 'F3') {
         e.preventDefault();
         navigate('/products');
       }
-      
+
       // F4 - Customers
       if (e.key === 'F4') {
         e.preventDefault();
         navigate('/customers');
       }
-      
+
       // F5 - Reports
       if (e.key === 'F5') {
         e.preventDefault();
         navigate('/reports');
       }
-      
+
       // F6 - Settings
       if (e.key === 'F6') {
         e.preventDefault();
@@ -191,7 +203,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 function Layout() {
   useKeyboardShortcuts();  // Enable shortcuts
-  
+
   return (
     // ... layout JSX
   );
@@ -235,6 +247,7 @@ const productId = location.state?.productId;
 ### Development
 
 **Vite dev server:**
+
 ```
 http://localhost:5173/
 http://localhost:5173/billing
@@ -242,11 +255,13 @@ http://localhost:5173/products
 ```
 
 **Electron loads:**
+
 ```typescript
 mainWindow.loadURL('http://localhost:5173');
 ```
 
 **Navigation:**
+
 - Click link → URL changes → React Router updates view
 - No page reload
 - HMR works
@@ -256,27 +271,47 @@ mainWindow.loadURL('http://localhost:5173');
 ### Production
 
 **Built files:**
+
 ```
 dist/renderer/index.html
 ```
 
 **Electron loads:**
+
 ```typescript
 mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 ```
 
 **URL in browser:**
+
 ```
 file:///C:/path/to/dist/renderer/index.html
 ```
 
 **Navigation:**
+
 - Click link → URL changes (in memory)
 - React Router updates view
 - No page reload
 - **No actual URL change in address bar** (file:// protocol limitation)
 
 **This is normal and expected for Electron apps!**
+
+---
+
+## Startup & Initialization
+
+### 1. Initialization Phase
+
+Upon application start, the Router remains in an uninitialized state until `isInitialized` is true. During this time, the **Premium Loading Screen** is displayed.
+
+### 2. Mandatory Onboarding
+
+If `privacyPolicyAccepted` is false in the app settings, the user is restricted to the `/onboarding` route. This ensures legal compliance before any POS operations can begin.
+
+### 3. Background Persistence
+
+Once initialized, the Main Layout remains mounted. Background actions (like saving settings) use the `LoadingScreen` as an overlay rather than unmounting the application tree, ensuring a smooth user experience.
 
 ---
 
@@ -356,6 +391,7 @@ window.location.href = '/billing';  // ❌ Reloads app
 **Cause:** Using `<Link>` instead of `<NavLink>`
 
 **Fix:**
+
 ```typescript
 // ❌ Wrong
 <Link to="/billing">Billing</Link>
@@ -378,14 +414,14 @@ window.location.href = '/billing';  // ❌ Reloads app
 
 ## Summary
 
-| Aspect | Implementation |
-|--------|---------------|
-| **Router** | BrowserRouter |
-| **Routes** | 5 main routes + redirects |
-| **Navigation** | NavLink components |
-| **Shortcuts** | F2-F6 for pages |
-| **Layout** | Sidebar + Outlet |
-| **Dev/Prod** | Works in both |
+| Aspect         | Implementation            |
+| -------------- | ------------------------- |
+| **Router**     | BrowserRouter             |
+| **Routes**     | 5 main routes + redirects |
+| **Navigation** | NavLink components        |
+| **Shortcuts**  | F2-F6 for pages           |
+| **Layout**     | Sidebar + Outlet          |
+| **Dev/Prod**   | Works in both             |
 
 **Key principle:** Client-side routing, no page reloads, keyboard-first navigation
 

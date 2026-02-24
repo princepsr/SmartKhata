@@ -500,4 +500,4 @@ ipcMain.handle(IPC_CHANNELS.PRODUCT_LIST, ...);
 ---
 
 **Last updated:** 2026-02-24  
-**Version:** 1.1 (Added Cloud Sync & Diagnostics Channels)
+**Version:** 1.2 (Updated with latest App settings and initialization flow)

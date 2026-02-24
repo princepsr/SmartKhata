@@ -127,6 +127,7 @@ erDiagram
         text last_cloud_sync
         int cloud_sync_pending
         text pending_sync_path
+        int privacy_policy_accepted
         text updated_at
     }
 
@@ -256,6 +257,7 @@ erDiagram
 - `last_cloud_sync`: Timestamp of the last successful cloud sync
 - `cloud_sync_pending`: Flag indicating a failed/offline cloud sync that needs retry
 - `pending_sync_path`: Local path to the backup file waiting for cloud sync
+- `privacy_policy_accepted`: Flag indicating if the user has accepted the Privacy Policy (1 = Accepted, 0 = Pending)
 - `updated_at`: Last modification timestamp
 
 **No Foreign Keys:** Standalone configuration table

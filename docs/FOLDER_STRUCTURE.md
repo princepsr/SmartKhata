@@ -54,6 +54,7 @@ SmartKhata/
 │   │   ├── index.tsx              # React entry point
 │   │   ├── App.tsx                # Root component
 │   │   ├── pages/                 # Flat structure of page files
+│   │   │   ├── OnboardingPage.tsx
 │   │   │   ├── BillingPage.tsx
 │   │   │   ├── ReportsPage.tsx
 │   │   │   ├── ProductsPage.tsx
@@ -67,7 +68,10 @@ SmartKhata/
 │   │   │   └── common/            # Common UI elements
 │   │   │       ├── Button/
 │   │   │       ├── Input/
-│   │   │       └── Modal/
+│   │   │       ├── Modal/
+│   │   │       ├── PrivacyPolicy.tsx
+│   │   │       ├── LoadingScreen.tsx
+│   │   │       └── RestoreSuccessModal.tsx
 │   │   ├── hooks/                 # Custom React hooks
 │   │   │   ├── useIPC.ts
 │   │   │   ├── useLocalStorage.ts
@@ -330,4 +334,4 @@ contextBridge.exposeInMainWorld('electron', {
 
 ---
 
-**Last updated:** 2026-02-22 (Soft Delete & Rupee Migration Complete)
+**Last updated:** 2026-02-24 (Privacy Policy & Onboarding Flow Complete)
