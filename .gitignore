@@ -6,6 +6,7 @@ node_modules/
 .env
 .env.local
 .env.*.local
+src/main/config/env-bundle.ts
 
 # Development data
 dev-data/
@@ -34,6 +35,7 @@ release/
 .env
 .env.local
 .env.*.local
+src/main/config/env-bundle.ts
 
 # IDE / Editor
 .vscode/

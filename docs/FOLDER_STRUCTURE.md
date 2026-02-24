@@ -48,7 +48,8 @@ SmartKhata/
 │   │   │   ├── printer.ts
 │   │   │   └── file-system.ts
 │   │   └── config/                # Configuration
-│   │       └── app-config.ts
+│   │   │   ├── app-config.ts      # Environment-aware config
+│   │   │   └── env-bundle.ts      # Baked-in production secrets
 │   │
 │   ├── renderer/                  # React UI (browser context)
 │   │   ├── index.tsx              # React entry point
@@ -126,6 +127,7 @@ SmartKhata/
 │   └── API.md                     # IPC API documentation
 │
 ├── scripts/                       # Build & utility scripts
+│   ├── prepare-env.js             # Bakes .env into code
 │   ├── build.js
 │   ├── dev.js
 │   └── migrate.js

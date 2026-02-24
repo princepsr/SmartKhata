@@ -10,7 +10,7 @@
     "start:electron": "tsc-alias -p tsconfig.main.json && electron .",
     "build": "pnpm build:renderer && pnpm build:main",
     "build:renderer": "tsc --project tsconfig.renderer.json && vite build",
-    "build:main": "rimraf dist/main && tsc --project tsconfig.main.json && tsc-alias -p tsconfig.main.json && pnpm copy:migrations && javascript-obfuscator ./dist/main --output ./dist/main --compact true --self-defending true --string-array true --string-array-encoding base64 --string-array-threshold 0.75",
+    "build:main": "rimraf dist/main && node scripts/prepare-env.js && tsc --project tsconfig.main.json && tsc-alias -p tsconfig.main.json && pnpm copy:migrations && javascript-obfuscator ./dist/main --output ./dist/main --compact true --self-defending true --string-array true --string-array-encoding base64 --string-array-threshold 0.75",
     "copy:migrations": "copyfiles -u 0 src/main/database/migrations/*.sql dist/main",
     "build:win": "pnpm build && electron-builder --win",
     "build:win:portable": "pnpm build && electron-builder --win portable",

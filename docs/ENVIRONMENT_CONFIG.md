@@ -41,6 +41,7 @@ SmartKhata uses a simple, local-first configuration approach with compile-time c
 **Purpose:** Values that never change at runtime
 
 **What goes here:**
+
 - App metadata (name, version, ID)
 - IPC event channel names
 - Business rules (currency, tax rates)
@@ -49,18 +50,19 @@ SmartKhata uses a simple, local-first configuration approach with compile-time c
 - Error messages
 
 **Example:**
+
 ```typescript
 export const APP_CONSTANTS = {
   APP_NAME: 'SmartKhata',
   APP_VERSION: '0.1.0',
-  
+
   DB_NAME: 'smartkhata.db',
-  
+
   WINDOW: {
     MIN_WIDTH: 1024,
     MIN_HEIGHT: 768,
   },
-  
+
   BUSINESS: {
     CURRENCY: 'INR',
     CURRENCY_SYMBOL: '₹',
@@ -70,6 +72,7 @@ export const APP_CONSTANTS = {
 ```
 
 **Why shared?**
+
 - Both main and renderer need these constants
 - Type-safe (TypeScript `as const`)
 - Single source of truth
@@ -83,6 +86,7 @@ export const APP_CONSTANTS = {
 **Purpose:** Values that vary between dev and production
 
 **What goes here:**
+
 - Environment detection (`isDevelopment`, `isProduction`)
 - File paths (database, logs, backups)
 - User data directory
@@ -91,21 +95,25 @@ export const APP_CONSTANTS = {
 **Key Features:**
 
 #### Environment Detection
+
 ```typescript
 const isDevelopment = process.env.NODE_ENV !== 'production';
 ```
 
 #### Database Path Logic
+
 ```typescript
 // Development: ./dev-data/smartkhata.db (in project root)
 // Production: C:\Users\<User>\AppData\Roaming\SmartKhata\data\smartkhata.db
 ```
 
 **Why different paths?**
+
 - **Dev:** Easy to inspect/delete database during development
 - **Prod:** Follows Windows conventions, survives app updates
 
 #### Automatic Directory Creation
+
 ```typescript
 // Creates these directories on startup:
 // - userData/
@@ -124,18 +132,41 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 **Purpose:** Sensitive data only (rarely needed)
 
 **What goes here:**
+
 - Database encryption keys (if added later)
 - Printer-specific settings (if needed)
 - API keys (if cloud sync added later)
 
 **Example `.env`:**
+
 ```bash
-# Optional - only if needed
-DB_ENCRYPTION_KEY=your-secret-key-here
-PRINTER_NAME=ThermalPrinter
+# Required for Google Drive Integration
+GOOGLE_CLIENT_ID=your-id-here.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-secret-here
+LICENSE_SECRET=your-internal-license-secret
 ```
 
+---
+
+## 4. Production Environment Handling (Secure)
+
+To ensure sensitive data like OAuth secrets are available in the packaged app without exposing them as plain-text files, SmartKhata uses a **Secure Baking** process:
+
+### The Flow
+
+1. **Prepare**: During `build:main`, the `scripts/prepare-env.js` script reads your local `.env`.
+2. **Bake**: It generates `src/main/config/env-bundle.ts`, which contains the variables as a TypeScript object.
+3. **Compile + Obfuscate**: The TypeScript compiler bundles these into the main process, and the **JavaScript Obfuscator** encrypts the strings in the final binary.
+4. **Zero-File Fallback**: The `env-loader.ts` automatically detects if it's running from the bundle when no `.env` file is present.
+
+### Benefits
+
+- **Portability**: Credits survive the "Portable" app deployment where `.env` files are missing.
+- **Security**: Hardens the app against casual string extraction from the binary.
+- **Simplicity**: No need to manually manage different config files for different builds.
+
 **Loading .env (if needed):**
+
 ```bash
 pnpm add dotenv
 ```
@@ -146,9 +177,10 @@ import 'dotenv/config';
 ```
 
 **Current approach:**
-- ❌ NOT using .env files initially
-- ✅ All config is code-based (simpler)
-- ✅ Can add .env later if needed
+
+- ✅ Using `.env` files for development flexibility.
+- ✅ Build-time "Code Baking": `.env` values are baked into `env-bundle.ts` during build.
+- ✅ Automated Obfuscation: Baked-in secrets are encrypted via the JS Obfuscator in production.
 
 ---
 
@@ -177,6 +209,7 @@ C:\Users\<Username>\AppData\Roaming\SmartKhata\
 ```
 
 **How to find user data path:**
+
 ```typescript
 import { app } from 'electron';
 console.log(app.getPath('userData'));
@@ -237,19 +270,23 @@ export function formatCurrency(amount: number): string {
 ```
 1. Electron app starts
    ↓
-2. src/main/index.ts loads
+2. src/main/env-loader.ts initializes
+   - Detects environment (.env vs baked-in bundle)
+   - Populates process.env with secrets
    ↓
-3. ConfigManager initializes
+3. src/main/index.ts loads
+   ↓
+4. ConfigManager initializes
    - Detects environment (NODE_ENV)
    - Gets user data path from Electron
    - Creates required directories
    - Sets database path
    ↓
-4. Main window created
+5. Main window created
    - Loads from localhost:5173 (dev)
    - Loads from dist/renderer/index.html (prod)
    ↓
-5. App ready
+6. App ready
 ```
 
 ---
@@ -259,17 +296,20 @@ export function formatCurrency(amount: number): string {
 ### Desktop App Security
 
 **What we do:**
+
 - ✅ `contextIsolation: true` - Isolate renderer from Node.js
 - ✅ `nodeIntegration: false` - No direct Node.js access in renderer
 - ✅ Preload script - Controlled IPC bridge
 - ✅ No sensitive data in renderer code
 
 **What we DON'T need (local-only app):**
+
 - ❌ API authentication (no server)
 - ❌ HTTPS (no network requests)
 - ❌ Environment variable encryption (no cloud)
 
 **Future considerations (if cloud sync added):**
+
 - Database encryption at rest
 - Secure API key storage
 - User authentication
@@ -284,10 +324,10 @@ export function formatCurrency(amount: number): string {
 // src/shared/constants/app-constants.ts
 export const APP_CONSTANTS = {
   // ... existing constants
-  
+
   BUSINESS: {
     // ... existing business rules
-    MAX_DISCOUNT_PERCENT: 50,  // ← New constant
+    MAX_DISCOUNT_PERCENT: 50, // ← New constant
   },
 } as const;
 ```
@@ -317,7 +357,7 @@ constructor() {
 
 ```typescript
 // Set by build tools
-process.env.NODE_ENV = 'development' | 'production'
+process.env.NODE_ENV = 'development' | 'production';
 
 // In code
 const isDev = process.env.NODE_ENV !== 'production';
@@ -326,18 +366,21 @@ const isDev = process.env.NODE_ENV !== 'production';
 ### Setting NODE_ENV
 
 **Development:**
+
 ```bash
 # Automatically set by Vite and electron
 pnpm dev  # NODE_ENV=development
 ```
 
 **Production:**
+
 ```bash
 # Set during build
 pnpm build  # NODE_ENV=production
 ```
 
 **Manual override (testing):**
+
 ```bash
 # Windows PowerShell
 $env:NODE_ENV="production"; pnpm dev
@@ -355,6 +398,7 @@ set NODE_ENV=production && pnpm dev
 **Symptom:** App can't find database file
 
 **Fix:**
+
 ```typescript
 // Check database path
 import { configManager } from './config/app-config';
@@ -375,6 +419,7 @@ if (!fs.existsSync(dbDir)) {
 **Symptom:** Production app loads dev server
 
 **Fix:**
+
 ```bash
 # Ensure NODE_ENV is set during build
 pnpm build  # Should set NODE_ENV=production
@@ -387,15 +432,16 @@ console.log('NODE_ENV:', process.env.NODE_ENV);
 
 ## Summary
 
-| Aspect | Solution | File |
-|--------|----------|------|
-| **Compile-time constants** | `APP_CONSTANTS` | `src/shared/constants/app-constants.ts` |
-| **Runtime config** | `ConfigManager` | `src/main/config/app-config.ts` |
-| **Environment detection** | `process.env.NODE_ENV` | Automatic |
-| **Database path** | Dev: `./dev-data/`, Prod: `AppData/Roaming/` | `app-config.ts` |
-| **Sensitive data** | `.env` (optional) | `.env` (not committed) |
+| Aspect                     | Solution                                     | File                                    |
+| -------------------------- | -------------------------------------------- | --------------------------------------- |
+| **Compile-time constants** | `APP_CONSTANTS`                              | `src/shared/constants/app-constants.ts` |
+| **Runtime config**         | `ConfigManager`                              | `src/main/config/app-config.ts`         |
+| **Environment detection**  | `process.env.NODE_ENV`                       | Automatic                               |
+| **Database path**          | Dev: `./dev-data/`, Prod: `AppData/Roaming/` | `app-config.ts`                         |
+| **Sensitive data**         | `.env` (optional)                            | `.env` (not committed)                  |
 
 **Philosophy:**
+
 - ✅ Simple, code-based configuration
 - ✅ No complex config files
 - ✅ Automatic directory creation

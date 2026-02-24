@@ -17,6 +17,7 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 ```
 
 **Simple rule:**
+
 - `NODE_ENV === 'production'` → Production mode
 - Anything else (including `undefined`) → Development mode
 
@@ -27,6 +28,13 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 ```
 ┌─────────────────────────────────────────┐
 │  App Starts                             │
+└─────────────────┬───────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────┐
+│  env-loader.ts Initialization           │
+│  - Loads .env OR baked-in secrets       │
+│  - Sets process.env values              │
 └─────────────────┬───────────────────────┘
                   │
                   ▼
@@ -78,12 +86,13 @@ if (config.isDevelopment) {
 
 ```typescript
 if (config.isDevelopment) {
-  mainWindow.loadURL('http://localhost:5173');  // Vite dev server
-  mainWindow.webContents.openDevTools();        // Auto-open DevTools
+  mainWindow.loadURL('http://localhost:5173'); // Vite dev server
+  mainWindow.webContents.openDevTools(); // Auto-open DevTools
 }
 ```
 
 **Features:**
+
 - ✅ Loads from Vite dev server (`http://localhost:5173`)
 - ✅ Hot Module Replacement (HMR)
 - ✅ DevTools auto-open
@@ -91,6 +100,7 @@ if (config.isDevelopment) {
 - ✅ Fast refresh on code changes
 
 **File Paths:**
+
 - Database: `SmartKhata/dev-data/smartkhata.db`
 - Logs: `C:\Users\<User>\AppData\Roaming\SmartKhata\logs\`
 
@@ -114,12 +124,14 @@ else {
 ```
 
 **Features:**
+
 - ✅ Loads from built files (`dist/renderer/index.html`)
 - ✅ No DevTools
 - ✅ Optimized bundle
 - ✅ Works offline
 
 **File Paths:**
+
 - Database: `C:\Users\<User>\AppData\Roaming\SmartKhata\data\smartkhata.db`
 - Logs: `C:\Users\<User>\AppData\Roaming\SmartKhata\logs\`
 
@@ -135,6 +147,7 @@ pnpm dev
 ```
 
 **What happens:**
+
 1. Vite starts dev server (sets `NODE_ENV=development`)
 2. TypeScript compiles main process
 3. Electron launches
@@ -152,6 +165,7 @@ pnpm build
 ```
 
 **What happens:**
+
 1. Vite builds renderer (sets `NODE_ENV=production`)
 2. TypeScript compiles main process
 3. electron-builder packages app
@@ -212,14 +226,15 @@ export const configManager = new ConfigManager();
 
 ### Development Paths
 
-| Resource | Path |
-|----------|------|
-| Database | `SmartKhata/dev-data/smartkhata.db` |
-| Logs | `AppData/Roaming/SmartKhata/logs/` |
-| Backups | `AppData/Roaming/SmartKhata/backups/` |
-| Renderer | `http://localhost:5173` (Vite) |
+| Resource | Path                                  |
+| -------- | ------------------------------------- |
+| Database | `SmartKhata/dev-data/smartkhata.db`   |
+| Logs     | `AppData/Roaming/SmartKhata/logs/`    |
+| Backups  | `AppData/Roaming/SmartKhata/backups/` |
+| Renderer | `http://localhost:5173` (Vite)        |
 
 **Why dev database in project root?**
+
 - Easy to inspect with SQLite browser
 - Easy to delete and reset
 - Doesn't pollute user data directory
@@ -228,14 +243,15 @@ export const configManager = new ConfigManager();
 
 ### Production Paths
 
-| Resource | Path |
-|----------|------|
+| Resource | Path                                            |
+| -------- | ----------------------------------------------- |
 | Database | `AppData/Roaming/SmartKhata/data/smartkhata.db` |
-| Logs | `AppData/Roaming/SmartKhata/logs/` |
-| Backups | `AppData/Roaming/SmartKhata/backups/` |
-| Renderer | `dist/renderer/index.html` (built) |
+| Logs     | `AppData/Roaming/SmartKhata/logs/`              |
+| Backups  | `AppData/Roaming/SmartKhata/backups/`           |
+| Renderer | `dist/renderer/index.html` (built)              |
 
 **Why user data directory?**
+
 - Standard Windows app location
 - Survives app updates
 - User-specific data
@@ -247,21 +263,25 @@ export const configManager = new ConfigManager();
 ### How It Works
 
 **1. Vite starts on port 5173:**
+
 ```bash
 pnpm dev:renderer  # Starts Vite
 ```
 
 **2. Electron waits for Vite:**
+
 ```bash
 pnpm dev:electron  # wait-on http://localhost:5173 && electron .
 ```
 
 **3. Electron loads from Vite:**
+
 ```typescript
 mainWindow.loadURL('http://localhost:5173');
 ```
 
 **4. HMR works automatically:**
+
 - Edit React component
 - Vite recompiles
 - Browser auto-refreshes
@@ -274,21 +294,25 @@ mainWindow.loadURL('http://localhost:5173');
 ### How It Works
 
 **During build:**
+
 ```bash
 pnpm build:win
 ```
 
 **electron-builder sets:**
+
 ```javascript
-process.env.NODE_ENV = 'production'
+process.env.NODE_ENV = 'production';
 ```
 
 **App detects production mode:**
+
 ```typescript
-const isDevelopment = process.env.NODE_ENV !== 'production';  // false
+const isDevelopment = process.env.NODE_ENV !== 'production'; // false
 ```
 
 **Loads built files:**
+
 ```typescript
 mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 ```
@@ -309,7 +333,7 @@ if (config.isDevelopment) {
 }
 
 // Use environment-specific paths
-const dbPath = config.databasePath;  // Auto-switches
+const dbPath = config.databasePath; // Auto-switches
 
 // Check environment once
 const isDev = config.isDevelopment;
@@ -319,15 +343,16 @@ const isDev = config.isDevelopment;
 
 ```typescript
 // Don't check NODE_ENV directly everywhere
-if (process.env.NODE_ENV !== 'production') {  // ❌ Use config instead
+if (process.env.NODE_ENV !== 'production') {
+  // ❌ Use config instead
   // ...
 }
 
 // Don't hardcode paths
-const dbPath = 'C:\\path\\to\\db.sqlite';  // ❌ Use config
+const dbPath = 'C:\\path\\to\\db.sqlite'; // ❌ Use config
 
 // Don't use global variables
-global.isDevelopment = true;  // ❌ Use config manager
+global.isDevelopment = true; // ❌ Use config manager
 ```
 
 ---
@@ -339,11 +364,13 @@ global.isDevelopment = true;  // ❌ Use config manager
 **Symptom:** Blank window in development
 
 **Check:**
+
 1. Is Vite running? (`http://localhost:5173` in browser)
 2. Is `wait-on` working? (check terminal output)
 3. Is port 5173 available?
 
 **Fix:**
+
 ```bash
 # Start Vite manually
 pnpm dev:renderer
@@ -361,6 +388,7 @@ pnpm dev:electron
 **Cause:** `NODE_ENV` not set to `'production'`
 
 **Fix:**
+
 ```bash
 # Ensure you're using build script
 pnpm build:win  # Sets NODE_ENV automatically
@@ -373,9 +401,10 @@ pnpm build:win  # Sets NODE_ENV automatically
 **Symptom:** DevTools don't auto-open
 
 **Check:**
+
 ```typescript
 if (config.isDevelopment) {
-  mainWindow.webContents.openDevTools();  // ✅ Should be here
+  mainWindow.webContents.openDevTools(); // ✅ Should be here
 }
 ```
 
@@ -386,6 +415,7 @@ if (config.isDevelopment) {
 **Symptom:** Can't find dev database
 
 **Check:**
+
 ```typescript
 console.log('Database path:', config.databasePath);
 // Dev: SmartKhata/dev-data/smartkhata.db
@@ -460,14 +490,14 @@ pnpm build:win
 
 ## Summary
 
-| Aspect | Development | Production |
-|--------|-------------|------------|
-| **Detection** | `NODE_ENV !== 'production'` | `NODE_ENV === 'production'` |
-| **Renderer** | `http://localhost:5173` | `dist/renderer/index.html` |
-| **DevTools** | Auto-open | Disabled |
-| **Database** | `dev-data/smartkhata.db` | `AppData/.../data/smartkhata.db` |
-| **HMR** | Enabled | N/A |
-| **Source Maps** | Enabled | Disabled |
+| Aspect          | Development                 | Production                       |
+| --------------- | --------------------------- | -------------------------------- |
+| **Detection**   | `NODE_ENV !== 'production'` | `NODE_ENV === 'production'`      |
+| **Renderer**    | `http://localhost:5173`     | `dist/renderer/index.html`       |
+| **DevTools**    | Auto-open                   | Disabled                         |
+| **Database**    | `dev-data/smartkhata.db`    | `AppData/.../data/smartkhata.db` |
+| **HMR**         | Enabled                     | N/A                              |
+| **Source Maps** | Enabled                     | Disabled                         |
 
 **Key principle:** Same binary, different behavior based on `NODE_ENV`
 

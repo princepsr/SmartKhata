@@ -8,13 +8,12 @@
 import path from 'path';
 import fs from 'fs';
 
+import { bundledEnv } from './config/env-bundle';
+
 export function loadEnv(): void {
   try {
-    // Look for .env in the current working directory (project root during dev)
+    // 1. Try to load from local .env (Development)
     const envPath = path.join(process.cwd(), '.env');
-
-    // Also check for .env in the same directory as the executable/app
-    // This is often needed in production or specific Electron dev environments
     const appPath = path.join(__dirname, '..', '..', '.env');
 
     const finalPath = fs.existsSync(envPath) ? envPath : fs.existsSync(appPath) ? appPath : null;
@@ -36,12 +35,24 @@ export function loadEnv(): void {
           }
         }
       });
-      console.log(`[EARLY_ENV] Loaded ${keys.length} keys from ${finalPath}`);
+      console.warn(`[EARLY_ENV] Loaded ${keys.length} keys from ${finalPath}`);
+      return;
+    }
+
+    // 2. FALLBACK: Use baked-in bundle (Production/ASAR)
+    // secrets are baked into this import and obfuscated during build
+    if (Object.keys(bundledEnv).length > 0) {
+      Object.entries(bundledEnv).forEach(([key, value]) => {
+        process.env[key] = value;
+      });
+      console.warn(
+        `[EARLY_ENV] Loaded ${Object.keys(bundledEnv).length} keys from baked-in bundle`
+      );
     } else {
-      console.error('[EARLY_ENV] No .env file found at:', envPath, 'or', appPath);
+      console.error('[EARLY_ENV] No .env or baked-in secrets found!');
     }
   } catch (error) {
-    console.error('[EARLY_ENV] Failed to load .env file', error);
+    console.error('[EARLY_ENV] Failed to load environment', error);
   }
 }
 
