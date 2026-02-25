@@ -36,6 +36,7 @@ export interface AppSettings {
   cloudSyncPending: boolean;
   pendingSyncPath: string | null;
   privacyPolicyAccepted: boolean;
+  autoUpdateEnabled: boolean;
   updatedAt?: string;
 }
 
@@ -78,6 +79,7 @@ const defaultSettings: AppSettings = {
   cloudSyncPending: false,
   pendingSyncPath: null,
   privacyPolicyAccepted: false,
+  autoUpdateEnabled: true,
 };
 
 export const useAppSettingsStore = create<AppSettingsState>()(

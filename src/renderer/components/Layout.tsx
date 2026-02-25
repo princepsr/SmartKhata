@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import GlobalMessages from './GlobalMessages';
 import LicenseBanner from './layout/LicenseBanner';
 import CommandCenter from './layout/CommandCenter';
+import UpdateBanner from './layout/UpdateBanner';
 import LicenseActivationModal from './modals/LicenseActivationModal';
 import { useAppSettingsStore } from '../store';
 import './Layout.css';
@@ -165,6 +166,9 @@ function Layout() {
 
       {/* Command Center (Ctrl+K) */}
       <CommandCenter />
+
+      {/* Update Banner (Global) */}
+      <UpdateBanner />
 
       {/* License Banner (Global) */}
       <LicenseBanner onActivateClick={() => setIsLicenseModalOpen(true)} />

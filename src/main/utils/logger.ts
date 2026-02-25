@@ -60,9 +60,31 @@ class Logger {
   /**
    * Get log file path for today
    */
+  /**
+   * Get current date in IST (YYYY-MM-DD)
+   */
   private getCurrentLogFilePath(): string {
-    const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const date = new Date(Date.now() + istOffset).toISOString().split('T')[0];
     return path.join(this.logsPath, `app-${date}.log`);
+  }
+
+  /**
+   * Get current timestamp in IST (Readable format: YYYY-MM-DD HH:mm:ss.SSS)
+   */
+  private getISTTimestamp(): string {
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const date = new Date(Date.now() + istOffset);
+
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const mins = String(date.getUTCMinutes()).padStart(2, '0');
+    const secs = String(date.getUTCSeconds()).padStart(2, '0');
+    const ms = String(date.getUTCMilliseconds()).padStart(3, '0');
+
+    return `${year}-${month}-${day} ${hours}:${mins}:${secs}.${ms}`;
   }
 
   /**
@@ -70,7 +92,7 @@ class Logger {
    * Output: [TIMESTAMP][LEVEL][MODULE] Message | {JSON}
    */
   private formatMessage(level: LogLevel, message: string, data?: LogData): string {
-    const timestamp = new Date().toISOString();
+    const timestamp = this.getISTTimestamp();
     const sanitizedData = data ? this.sanitizeData(data) : null;
     const dataStr =
       sanitizedData && Object.keys(sanitizedData).length > 0

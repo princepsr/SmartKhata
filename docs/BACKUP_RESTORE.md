@@ -36,6 +36,12 @@ SmartKhata implements a robust, offline-first Backup & Restore system to ensure 
   - Updates `lastAutoBackup` timestamp.
   - If authenticated with Google, triggers `GoogleDriveService.syncBackup()` and monitors for connectivity changes to retry failed syncs.
 
+3.  **Pre-Update Safety Backup**:
+
+- Automatically triggered by `UpdateService.installUpdate()` before the application restarts to apply a software update.
+- Storage Location: `<userData>/safety-backups/`.
+- Retention Policy: Maintains the last 3 pre-update backups.
+
 ### Cloud Synchronization & Restore (`GoogleDriveService`)
 
 The `GoogleDriveService` manages the cloud persistence layer:
@@ -147,5 +153,5 @@ The restoration process is designed to be "all-or-nothing" to prevent data corru
 
 ---
 
-**Last updated:** 2026-02-24  
-**Version:** 1.2 (Enhanced Cloud Sync, Hourly Intervals & Stability Adjustments)
+**Last updated:** 2026-02-25  
+**Version:** 1.3 (Added Pre-Update Safety Backups)

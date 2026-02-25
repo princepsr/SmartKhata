@@ -225,6 +225,18 @@ describe('MyService - Feature Name', () => {
 - ✅ Bill listing with pagination
 - ✅ Date range validation (Start ≤ End)
 
+### 6. Update Tests
+
+**Files:** `tests/services/update-service.test.ts`, `tests/unit/update-store.test.ts`
+
+**Tests:**
+
+- ✅ Auto-update lifecycle and dev simulation
+- ✅ Pre-update safety backup creation and rotation
+- ✅ IPC status reporting and event handling
+- ✅ Frontend state management and connectivity guards
+- ✅ Settings persistence mapping (bool to int)
+
 ---
 
 ## Best Practices
@@ -347,7 +359,7 @@ jobs:
 - ✅ Vitest - Test framework
 - ✅ In-memory SQLite - Test database
 - ✅ Coverage reports - V8 provider
-- ✅ 70+ test cases - Comprehensive coverage
-- ✅ Pure unit tests - For math and logic
+- ✅ 80+ test cases - Comprehensive coverage
+- ✅ Pure unit tests - For math, logic, and state
 
 **Run tests before committing code!**

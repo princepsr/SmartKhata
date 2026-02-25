@@ -215,6 +215,7 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       billing_only INTEGER DEFAULT 0,
       customers_enabled INTEGER DEFAULT 1,
       gst_exclusive_mode INTEGER DEFAULT 0,
+      auto_update_enabled INTEGER DEFAULT 1,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -296,8 +297,8 @@ export function seedTestData(db: any): void {
     `);
 
     db.exec(`
-      INSERT INTO app_config (id, shop_name, paper_size, gst_enabled, gst_percentage, billing_only, customers_enabled, gst_exclusive_mode)
-      VALUES (1, 'Test Shop', '58mm', 1, 5, 0, 1, 0);
+      INSERT INTO app_config (id, shop_name, paper_size, gst_enabled, gst_percentage, billing_only, customers_enabled, gst_exclusive_mode, auto_update_enabled)
+      VALUES (1, 'Test Shop', '58mm', 1, 5, 0, 1, 0, 1);
     `);
 
     db.exec(`

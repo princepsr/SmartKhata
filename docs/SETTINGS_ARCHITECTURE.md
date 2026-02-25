@@ -52,6 +52,7 @@ The Debug tab uses a specific row-based grid system for displaying technical met
 
 - **`CloudHealth.tsx`**: Specialized diagnostic view for testing Google Drive API connectivity, verifying OAuth profiles, and manually inspecting remote cloud backups.
 - **`AppMaintenance.tsx`**: Utilities for deeply inspecting the application state, including locating the local `UserData` folder, executing SQLite integrity checks, and checking core application processes.
+- **`UpdateSettings.tsx`**: Integration with `UpdateService` to manage application updates, including manual "Check for Updates" triggers and a toggle for "Automatic Updates" on startup.
 
 ---
 
@@ -62,5 +63,5 @@ The Debug tab uses a specific row-based grid system for displaying technical met
 
 ---
 
-**Last updated:** 2026-02-24 (Phase 1 Complete + Cloud Sync)  
+**Last updated:** 2026-02-25 (Software Auto-Update)  
 **Status:** ✅ Unified configuration hub verified

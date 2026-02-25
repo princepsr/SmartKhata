@@ -65,6 +65,13 @@ export const IPC_CHANNELS = {
   SYSTEM_CONNECTIVITY_CHANGE: 'system:connectivity-change',
   SYSTEM_GET_APP_INFO: 'system:get-app-info',
   SYSTEM_DB_STATUS: 'system:dbStatus',
+  SYSTEM_CHECK_CONNECTIVITY: 'system:check-connectivity',
+
+  // Update module
+  UPDATE_CHECK: 'update:check',
+  UPDATE_DOWNLOAD: 'update:download',
+  UPDATE_INSTALL: 'update:install',
+  UPDATE_STATUS: 'update:status',
 
   // App module
   APP_VERSION: 'app:version',
@@ -499,5 +506,5 @@ ipcMain.handle(IPC_CHANNELS.PRODUCT_LIST, ...);
 
 ---
 
-**Last updated:** 2026-02-24  
-**Version:** 1.2 (Updated with latest App settings and initialization flow)
+**Last updated:** 2026-02-25  
+**Version:** 1.3 (Added Software Update & System Connectivity channels)

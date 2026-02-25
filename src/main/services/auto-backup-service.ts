@@ -15,6 +15,7 @@ export class AutoBackupService {
   private checkInterval: NodeJS.Timeout | null = null;
   private readonly backupDir: string;
   private settingsService: SettingsService;
+  private isProcessing: boolean = false;
 
   private constructor() {
     this.backupDir = path.join(app.getPath('userData'), 'autobackups');
@@ -57,9 +58,21 @@ export class AutoBackupService {
     this.checkAndPerformBackup();
 
     // Listen for settings changes to trigger immediate check if enabled/interval changed
-    this.settingsService.onChange(() => {
-      autoBackupLogger.info('Settings changed, checking if auto-backup is due');
-      this.checkAndPerformBackup();
+    // We only care about specific fields to avoid recursion when we update timestamps
+    let lastKnownInterval = this.settingsService.getConfig().autoBackupIntervalDays;
+    let lastKnownEnabled = this.settingsService.getConfig().autoBackupEnabled;
+
+    this.settingsService.onChange((newConfig) => {
+      const intervalChanged = newConfig.autoBackupIntervalDays !== lastKnownInterval;
+      const enabledChanged = newConfig.autoBackupEnabled !== lastKnownEnabled;
+
+      if (intervalChanged || enabledChanged) {
+        lastKnownInterval = newConfig.autoBackupIntervalDays;
+        lastKnownEnabled = newConfig.autoBackupEnabled;
+
+        autoBackupLogger.info('Relevant backup settings changed, checking status');
+        this.checkAndPerformBackup();
+      }
     });
 
     // Check every 15 minutes if a backup is due (was 1 hour)
@@ -86,7 +99,13 @@ export class AutoBackupService {
    * Logic to check if 24h passed and perform backup
    */
   private async checkAndPerformBackup(): Promise<void> {
+    if (this.isProcessing) {
+      autoBackupLogger.debug('Backup check already in progress, skipping');
+      return;
+    }
+
     try {
+      this.isProcessing = true;
       const settings = this.settingsService.getConfig();
 
       if (!settings.autoBackupEnabled) {
@@ -130,6 +149,8 @@ export class AutoBackupService {
       }
     } catch (error) {
       autoBackupLogger.error('Scheduled auto-backup failed', { error });
+    } finally {
+      this.isProcessing = false;
     }
   }
 

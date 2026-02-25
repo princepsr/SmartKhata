@@ -36,31 +36,56 @@ export class GoogleDriveService {
     localFilePath: string
   ): Promise<{ success: boolean; fileId?: string; error?: string }> {
     try {
+      logger.debug('SyncBackup started', { localFilePath });
+
       if (!googleAuthService.isAuthenticated()) {
+        logger.warn('SyncBackup aborted: Not authenticated');
         throw new Error('User not authenticated with Google');
       }
 
       if (!fs.existsSync(localFilePath)) {
+        logger.error('SyncBackup aborted: Local file missing', { localFilePath });
         throw new Error('Local backup file not found');
       }
 
       // 1. Search for existing backup file
-      const existingFileId = await this.findExistingBackup();
+      logger.info('Searching for existing backup on Google Drive...');
+      let existingFileId: string | null = null;
+      try {
+        existingFileId = await this.findExistingBackup();
+        logger.debug('Find existing backup result', { existingFileId });
+      } catch (listError: any) {
+        logger.error('Failed to list files on Google Drive', {
+          message: listError.message,
+          code: listError.code,
+          errors: listError.errors,
+        });
+        throw listError;
+      }
 
       if (existingFileId) {
         // 2. Update existing file
         logger.info('Updating existing backup on Google Drive', { fileId: existingFileId });
-        await this.drive.files.update({
+
+        // Use readFileSync for smaller files to avoid stream issues in some environments
+        const fileContent = fs.readFileSync(localFilePath);
+        logger.debug('File read into buffer', { size: fileContent.length });
+
+        const _response = await this.drive.files.update({
           fileId: existingFileId,
           media: {
             mimeType: GOOGLE_CONFIG.BACKUP_MIME_TYPE,
-            body: fs.createReadStream(localFilePath),
+            body: fileContent,
           },
         });
+
+        logger.info('Google Drive backup updated successfully');
         return { success: true, fileId: existingFileId };
       } else {
         // 3. Create new file
         logger.info('Creating new backup on Google Drive');
+        const fileContent = fs.readFileSync(localFilePath);
+
         const response = await this.drive.files.create({
           requestBody: {
             name: GOOGLE_CONFIG.BACKUP_FILE_NAME,
@@ -68,14 +93,20 @@ export class GoogleDriveService {
           },
           media: {
             mimeType: GOOGLE_CONFIG.BACKUP_MIME_TYPE,
-            body: fs.createReadStream(localFilePath),
+            body: fileContent,
           },
         });
+
+        logger.info('New Google Drive backup created');
         return { success: true, fileId: response.data.id || undefined };
       }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown sync error';
-      logger.error('Google Drive sync failed', { error });
+    } catch (error: any) {
+      const message = error.message || 'Unknown sync error';
+      logger.error('Google Drive sync fatal exception', {
+        message,
+        code: error.code,
+        stack: error.stack,
+      });
       return { success: false, error: message };
     }
   }

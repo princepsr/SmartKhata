@@ -11,6 +11,7 @@ import LicenseActivationModal from '../components/modals/LicenseActivationModal'
 import LicenseSettings from '../components/Settings/LicenseSettings';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import { PrivacyPolicy } from '../components/Settings/PrivacyPolicy';
+import { UpdateSettings } from '../components/Settings/UpdateSettings';
 import './SettingsPage.css';
 
 /**
@@ -549,6 +550,13 @@ function SettingsPage() {
 
   const renderSystemDebug = () => (
     <div className="tab-content-wrapper fade-in debug-section">
+      <div className="settings-section-card debug-card">
+        <div className="section-header">
+          <h2>Application Lifecycle</h2>
+        </div>
+        <UpdateSettings />
+      </div>
+
       <div className="settings-section-card debug-card">
         <div className="section-header">
           <h2>Communication Bridge</h2>

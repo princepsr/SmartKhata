@@ -176,6 +176,11 @@ export class SettingsService extends BaseService {
       throw new ValidationError('Billing only must be a boolean value', 'billingOnly');
     }
 
+    // Auto Update validation
+    if (config.autoUpdateEnabled !== undefined && typeof config.autoUpdateEnabled !== 'boolean') {
+      throw new ValidationError('Auto-update must be a boolean value', 'autoUpdateEnabled');
+    }
+
     // Auto Backup Interval validation
     if (config.autoBackupIntervalUnit !== undefined) {
       if (!['days', 'hours'].includes(config.autoBackupIntervalUnit)) {

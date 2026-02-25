@@ -59,6 +59,19 @@ class ConnectivityService extends EventEmitter {
   }
 
   /**
+   * Manually trigger a connectivity check and return result
+   */
+  public async checkNow(): Promise<boolean> {
+    return new Promise((resolve) => {
+      dns.lookup('google.com', (err) => {
+        const online = !err;
+        this.setStatus(online);
+        resolve(online);
+      });
+    });
+  }
+
+  /**
    * Check status via DNS lookup
    */
   private checkStatus(): void {

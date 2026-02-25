@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { useIPC } from '../../hooks/useIPC';
+import { useUpdateStore } from '../../store/useUpdateStore';
+import NoInternetModal from '../modals/NoInternetModal';
 
 /**
  * Cloud Health Diagnostic Component
@@ -8,6 +10,9 @@ import { useIPC } from '../../hooks/useIPC';
  * Provides visibility into Google Drive sync status.
  */
 export function CloudHealth() {
+  const { checkConnectivity } = useUpdateStore();
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
+
   const { data: profile, execute: fetchProfile } = useIPC<{ email: string } | null>(
     IPC_CHANNELS.GOOGLE_PROFILE
   );
@@ -25,8 +30,19 @@ export function CloudHealth() {
     fetchProfile();
   }, [fetchProfile]);
 
+  const handleFetchMetadata = async () => {
+    const online = await checkConnectivity();
+    if (!online) {
+      setShowOfflineModal(true);
+      return;
+    }
+    refreshBackupInfo();
+  };
+
   return (
     <div className="debug-component-content">
+      <NoInternetModal isOpen={showOfflineModal} onClose={() => setShowOfflineModal(false)} />
+
       <h3 className="debug-sub-title">Cloud Sync Health</h3>
 
       <div className="debug-row">
@@ -49,7 +65,7 @@ export function CloudHealth() {
           </p>
         </div>
         <button
-          onClick={() => refreshBackupInfo()}
+          onClick={handleFetchMetadata}
           disabled={loading || !profile}
           className="btn btn-secondary"
         >

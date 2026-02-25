@@ -98,6 +98,7 @@ export const IPC_CHANNELS = {
   SYSTEM_CONNECTIVITY_CHANGE: 'system:connectivity-change',
   SYSTEM_GET_APP_INFO: 'system:get-app-info',
   SYSTEM_DB_STATUS: 'system:dbStatus',
+  SYSTEM_CHECK_CONNECTIVITY: 'system:check-connectivity',
 
   // ============================================
   // SETTINGS MODULE
@@ -134,6 +135,14 @@ export const IPC_CHANNELS = {
   GOOGLE_DRIVE_BACKUP_INFO: 'google:drive-backup-info',
   GOOGLE_DOWNLOAD_BACKUP: 'google:download-backup',
   GOOGLE_SYNC_NOW: 'google:sync-now',
+
+  // ============================================
+  // UPDATE MODULE
+  // ============================================
+  UPDATE_CHECK: 'update:check',
+  UPDATE_DOWNLOAD: 'update:download',
+  UPDATE_INSTALL: 'update:install',
+  UPDATE_STATUS: 'update:status',
 } as const;
 
 /**
@@ -259,5 +268,11 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.GOOGLE_DRIVE_BACKUP_INFO,
     IPC_CHANNELS.GOOGLE_DOWNLOAD_BACKUP,
     IPC_CHANNELS.GOOGLE_SYNC_NOW,
+  ],
+  UPDATE: [
+    IPC_CHANNELS.UPDATE_CHECK,
+    IPC_CHANNELS.UPDATE_DOWNLOAD,
+    IPC_CHANNELS.UPDATE_INSTALL,
+    IPC_CHANNELS.UPDATE_STATUS,
   ],
 } as const;

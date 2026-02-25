@@ -1,0 +1,92 @@
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  gap: 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 1000;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  animation: bannerSlideIn 0.3s ease-out;
+  border-bottom: 1px solid transparent;
+}
+
+@keyframes bannerSlideIn {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-grow: 1;
+  justify-content: center;
+}
+
+.update-banner.info {
+  background-color: #f1f5f9;
+  color: var(--color-primary);
+  border-bottom-color: #e2e8f0;
+}
+
+.banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.banner-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5px;
+}
+
+.banner-message {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.banner-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.banner-action {
+  background: white;
+  border: 1px solid currentColor;
+  padding: 5px 14px;
+  border-radius: 99px; /* Pill style */
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.banner-action:hover {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.banner-action.secondary {
+  background: transparent;
+  border-color: #cbd5e1;
+  color: #64748b;
+}
+
+.banner-action.secondary:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #475569;
+}

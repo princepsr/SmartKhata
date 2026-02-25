@@ -227,6 +227,11 @@ export function registerSystemHandlers(): void {
     connectivityService.setStatus(online);
   });
 
+  // Manual Connectivity Check
+  IPCHandler.handle<void, boolean>(IPC_CHANNELS.SYSTEM_CHECK_CONNECTIVITY, async () => {
+    return connectivityService.checkNow();
+  });
+
   // Google Drive Backup Info
   IPCHandler.handle<void, { name: string; size: string; modifiedTime: string }>(
     IPC_CHANNELS.GOOGLE_DRIVE_BACKUP_INFO,

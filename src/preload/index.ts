@@ -84,6 +84,26 @@ const api = {
     }
     return Promise.reject(new Error('Invalid URL protocol'));
   },
+
+  /**
+   * Listen for update status changes
+   */
+  onUpdateStatus: (callback: (data: any) => void) => {
+    ipcRenderer.on(IPC_CHANNELS.UPDATE_STATUS, (_event, data) => callback(data));
+    return () => {
+      ipcRenderer.removeAllListeners(IPC_CHANNELS.UPDATE_STATUS);
+    };
+  },
+
+  /**
+   * Listen for download progress
+   */
+  onUpdateProgress: (callback: (data: any) => void) => {
+    ipcRenderer.on('update:progress', (_event, data) => callback(data));
+    return () => {
+      ipcRenderer.removeAllListeners('update:progress');
+    };
+  },
 };
 
 /**

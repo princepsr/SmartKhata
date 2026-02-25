@@ -29,6 +29,11 @@ vi.mock('electron', () => {
       showSaveDialog: vi.fn(),
       showOpenDialog: vi.fn(),
     },
+    BrowserWindow: {
+      getAllWindows: vi.fn(() => []),
+      getFocusedWindow: vi.fn(),
+      fromId: vi.fn(),
+    },
   };
 });
 

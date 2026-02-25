@@ -241,17 +241,26 @@ export class GoogleAuthService {
   private loadTokens() {
     try {
       if (fs.existsSync(this.tokenPath)) {
+        logger.debug('Attempting to load Google tokens from disk...');
         const data = fs.readFileSync(this.tokenPath);
         let tokenStr: string;
 
         if (safeStorage.isEncryptionAvailable()) {
-          tokenStr = safeStorage.decryptString(data);
+          try {
+            tokenStr = safeStorage.decryptString(data);
+          } catch (decryptErr) {
+            logger.error('SafeStorage decryption failed, tokens might be corrupted', decryptErr);
+            return;
+          }
         } else {
           tokenStr = data.toString();
         }
 
         const tokens = JSON.parse(tokenStr);
         this.oauth2Client.setCredentials(tokens);
+        logger.debug('Google tokens loaded successfully');
+      } else {
+        logger.debug('No Google tokens found on disk');
       }
     } catch (error) {
       const err = error as Error;

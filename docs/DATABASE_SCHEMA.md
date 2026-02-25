@@ -127,6 +127,7 @@ erDiagram
         text last_cloud_sync
         int cloud_sync_pending
         text pending_sync_path
+        int auto_update_enabled
         int privacy_policy_accepted
         text updated_at
     }
@@ -258,6 +259,7 @@ erDiagram
 - `cloud_sync_pending`: Flag indicating a failed/offline cloud sync that needs retry
 - `pending_sync_path`: Local path to the backup file waiting for cloud sync
 - `privacy_policy_accepted`: Flag indicating if the user has accepted the Privacy Policy (1 = Accepted, 0 = Pending)
+- `auto_update_enabled`: Flag to enable/disable automated background update checks (1 = Enabled, 0 = Disabled)
 - `updated_at`: Last modification timestamp
 
 **No Foreign Keys:** Standalone configuration table
