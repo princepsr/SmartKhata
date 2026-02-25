@@ -89,6 +89,7 @@
     "appId": "com.smartkhata",
     "productName": "SmartKhata",
     "copyright": "Copyright © 2026 SmartKhata Team",
+    "icon": "resources/icons/icon.ico",
     "artifactName": "SmartKhata_Setup_${version}.exe",
     "asar": true,
     "asarUnpack": [

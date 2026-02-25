@@ -94,8 +94,8 @@ function createWindow(): void {
     },
     title: APP_CONSTANTS.APP_NAME,
     icon: path.join(
-      app.getAppPath(),
-      app.isPackaged ? '../resources/icons/icon.ico' : 'resources/icons/icon.ico'
+      process.cwd(),
+      app.isPackaged ? 'resources/icons/icon.ico' : 'resources/icons/icon.ico'
     ),
     autoHideMenuBar: true,
   });
