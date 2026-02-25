@@ -20,6 +20,9 @@ pnpm build
 
 # Build Windows installer
 pnpm build:win
+
+# Automated Release (Build, Tag, Push)
+pnpm release 1.0.1
 ```
 
 ---
@@ -32,18 +35,20 @@ pnpm build:win
 Runs renderer (Vite), main process (TypeScript watch), and Electron concurrently.
 
 **Under the hood:**
+
 ```bash
 concurrently -k "pnpm dev:renderer" "pnpm dev:main" "pnpm dev:electron"
 ```
 
 **Breakdown:**
 
-| Script | Command | Purpose |
-|--------|---------|---------|
-| `dev:renderer` | `vite` | Start Vite dev server on `http://localhost:5173` |
-| `dev:main` | `tsc-watch` | Compile main process & auto-restart Electron |
+| Script         | Command     | Purpose                                          |
+| -------------- | ----------- | ------------------------------------------------ |
+| `dev:renderer` | `vite`      | Start Vite dev server on `http://localhost:5173` |
+| `dev:main`     | `tsc-watch` | Compile main process & auto-restart Electron     |
 
 **Flags:**
+
 - `-k` - Kill all processes when one exits
 
 ---
@@ -56,31 +61,31 @@ concurrently -k "pnpm dev:renderer" "pnpm dev:main" "pnpm dev:electron"
 1. You run: pnpm dev
    ↓
 2. Concurrently starts 3 processes in parallel:
-   
+
    Process 1: dev:renderer (Vite)
    - Starts Vite dev server on port 5173
    - Serves React app with HMR (Hot Module Replacement)
    - Watches src/renderer/ for changes
-   
+
    Process 2: dev:main (TypeScript Watch)
    - Compiles src/main/ to dist/main/
    - Watches for changes and recompiles
    - Does NOT restart Electron automatically
-   
+
    Process 3: dev:electron (Electron)
    - Waits for Vite server to be ready (wait-on)
    - Launches Electron pointing to http://localhost:5173
    - Loads React app from Vite dev server
-   
+
 3. You make changes:
-   
+
    - Renderer changes (React/UI):
      → Vite HMR updates instantly (no reload)
-   
+
    - Main process changes (Node.js):
      → TypeScript recompiles
      → You MUST manually restart Electron (Ctrl+R or close/reopen)
-   
+
 4. You stop: Ctrl+C
    - All 3 processes terminate
 ```
@@ -120,12 +125,13 @@ pnpm build:renderer && pnpm build:main
 
 **Breakdown:**
 
-| Script | Command | Output |
-|--------|---------|--------|
-| `build:renderer` | `tsc && vite build` | `dist/renderer/` (HTML, JS, CSS) |
-| `build:main` | `tsc --project tsconfig.main.json` | `dist/main/` (compiled Node.js) |
+| Script           | Command                            | Output                           |
+| ---------------- | ---------------------------------- | -------------------------------- |
+| `build:renderer` | `tsc && vite build`                | `dist/renderer/` (HTML, JS, CSS) |
+| `build:main`     | `tsc --project tsconfig.main.json` | `dist/main/` (compiled Node.js)  |
 
 **Output structure:**
+
 ```
 dist/
 ├── main/
@@ -150,6 +156,7 @@ pnpm build && electron-builder --win --x64
 ```
 
 **Output:**
+
 ```
 release/
 ├── SmartKhata Setup 0.1.0.exe    # Installer
@@ -157,6 +164,7 @@ release/
 ```
 
 **Installer types:**
+
 - **NSIS** - Traditional Windows installer (recommended for distribution)
 - **Portable** - Single .exe (no installation required)
 
@@ -228,6 +236,7 @@ pnpm clean  # Remove dist/, build/, out/, release/
 ```
 
 **Why `base: './'`?**
+
 - Electron loads files from `file://` protocol
 - Relative paths ensure assets load correctly
 
@@ -246,10 +255,7 @@ pnpm clean  # Remove dist/, build/, out/, release/
       "output": "release",
       "buildResources": "resources"
     },
-    "files": [
-      "dist/**/*",
-      "package.json"
-    ],
+    "files": ["dist/**/*", "package.json"],
     "win": {
       "target": ["nsis", "portable"],
       "icon": "resources/icons/icon.ico"
@@ -264,6 +270,7 @@ pnpm clean  # Remove dist/, build/, out/, release/
 ```
 
 **Key settings:**
+
 - `files` - Only include `dist/` and `package.json` (keeps installer small)
 - `win.target` - Build both NSIS installer and portable exe
 - `nsis.oneClick: false` - Allow user to choose install directory
@@ -303,6 +310,7 @@ pnpm build:win:portable  # Quick test
 ### What is HMR?
 
 **HMR** = Hot Module Replacement
+
 - Updates React components without full page reload
 - Preserves component state
 - Instant feedback (< 100ms)
@@ -310,11 +318,13 @@ pnpm build:win:portable  # Quick test
 ### What triggers HMR?
 
 ✅ **Instant HMR (no reload):**
+
 - React component changes
 - CSS changes
 - New imports
 
 ❌ **Requires manual restart:**
+
 - Main process changes (Electron restart needed)
 - Preload script changes (Electron restart needed)
 - Shared types changes (both processes need restart)
@@ -328,6 +338,7 @@ pnpm build:win:portable  # Quick test
 **Error:** `Port 5173 is already in use`
 
 **Fix:**
+
 ```bash
 # Kill process on port 5173 (Windows)
 netstat -ano | findstr :5173
@@ -344,6 +355,7 @@ server: { port: 5174 }
 **Error:** `wait-on timeout`
 
 **Fix:**
+
 1. Check if Vite is running: `http://localhost:5173`
 2. Increase timeout:
    ```bash
@@ -357,10 +369,12 @@ server: { port: 5174 }
 **Symptom:** Code changes don't take effect
 
 **Fix:**
+
 - Main process requires **manual Electron restart**
 - Close Electron window and reopen (or Ctrl+R if dev tools open)
 
 **Future improvement:**
+
 - Add `electron-reloader` for auto-restart (optional)
 
 ---
@@ -370,6 +384,7 @@ server: { port: 5174 }
 **Error:** `Cannot find module '@renderer/...'`
 
 **Fix:**
+
 - Ensure path aliases match in `tsconfig.json` and `vite.config.ts`
 - Run `pnpm clean` and rebuild
 
@@ -393,9 +408,12 @@ server: { port: 5174 }
 ### Faster Builds
 
 1. **Skip source maps in production:**
+
    ```typescript
    // vite.config.ts
-   build: { sourcemap: false }
+   build: {
+     sourcemap: false;
+   }
    ```
 
 2. **Use portable build for testing:**
@@ -410,11 +428,13 @@ server: { port: 5174 }
 ### Auto-restart Electron on Main Changes
 
 **Install:**
+
 ```bash
 pnpm add -D electron-reloader
 ```
 
 **In main process:**
+
 ```typescript
 // src/main/index.ts
 if (process.env.NODE_ENV === 'development') {
@@ -425,6 +445,7 @@ if (process.env.NODE_ENV === 'development') {
 ### Separate Vite Config for Main Process
 
 **For advanced users:**
+
 - Use Vite to bundle main process (instead of tsc)
 - Enables tree-shaking and minification
 
@@ -432,18 +453,20 @@ if (process.env.NODE_ENV === 'development') {
 
 ## Summary
 
-| Command | Purpose | When to Use |
-|---------|---------|-------------|
-| `pnpm dev` | Start dev mode | Daily development |
-| `pnpm build` | Production build | Before packaging |
-| `pnpm build:win` | Windows installer | Release to users |
-| `pnpm build:win:portable` | Portable exe | Quick testing |
-| `pnpm lint:fix` | Fix linting | Before commit |
-| `pnpm format` | Format code | Before commit |
-| `pnpm type-check` | Check types | Before commit |
-| `pnpm clean` | Clean build dirs | When build fails |
+| Command                   | Purpose           | When to Use         |
+| ------------------------- | ----------------- | ------------------- |
+| `pnpm dev`                | Start dev mode    | Daily development   |
+| `pnpm build`              | Production build  | Before packaging    |
+| `pnpm build:win`          | Windows installer | Release to users    |
+| `pnpm build:win:portable` | Portable exe      | Quick testing       |
+| `pnpm release`            | Automated Release | Publish new version |
+| `pnpm lint:fix`           | Fix linting       | Before commit       |
+| `pnpm format`             | Format code       | Before commit       |
+| `pnpm type-check`         | Check types       | Before commit       |
+| `pnpm clean`              | Clean build dirs  | When build fails    |
 
 **One-command experience:**
+
 - ✅ `pnpm dev` starts everything
 - ✅ HMR for instant React updates
 - ✅ TypeScript watch for main process

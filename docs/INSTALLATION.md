@@ -147,13 +147,23 @@ Run the automated quality gates to ensure the code is stable:
 pnpm release:check
 ```
 
-### 2. Generate Installer
+### 2. Generate Installer (Local Only)
 
-Run the distribution build command:
+To build the installer locally without tagging:
 
 ```bash
 pnpm build:win
 ```
+
+### 3. Automated Release (GitHub)
+
+To publish a official release to GitHub:
+
+```bash
+pnpm release <version>
+```
+
+This command runs all safety checks, bumps version, tags git, and pushes to trigger the CI/CD pipeline.
 
 ### 3. Distribution Artifacts
 
@@ -182,5 +192,5 @@ After the first launch on a clean system, verify the local data directory:
 
 ---
 
-**Last updated:** 2026-02-18 (Phase 1 Complete)
+**Last updated:** 2026-02-25 (Software Auto-Update)
 **Status:** ✅ Production distribution pipeline verified

@@ -72,6 +72,24 @@ In development mode, calling `checkForUpdates` simulates the following sequence:
 
 ---
 
+## 🚀 Automated Release Process
+
+To simplify publishing new versions to GitHub, a dedicated release script is provided.
+
+- **Command**: `pnpm release <version>` (e.g., `pnpm release 1.0.1`)
+- **Workflow**:
+  1. **Pre-flight Checks**: Runs `lint`, `type-check`, and all unit tests.
+  2. **Version Bump**: Updates `version` in `package.json`.
+  3. **Git Commit**: Commits the version change with a standard message.
+  4. **Tagging**: Creates a git tag for the new version.
+  5. **Push**: Pushes both the commit and the tag to GitHub.
+  6. **CI/CD**: Triggers the `Build/Release` GitHub Action to build and publish the `.exe`.
+
+> [!IMPORTANT]
+> Always commit your feature code changes before running the release command. The script only handles the version bump and tagging.
+
+---
+
 ## 🔄 Update Lifecycle Flow
 
 1. **Check**: `UpdateService` triggers check (startup or manual).

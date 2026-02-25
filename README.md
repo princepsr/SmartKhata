@@ -127,6 +127,7 @@ pnpm build:win        # Windows installer (NSIS + portable)
 pnpm build:win:portable  # Portable .exe only
 
 # Utilities
+pnpm release 1.0.1    # Automated Release (Lint + Test + Tag + Push)
 pnpm clean            # Remove build directories
 ```
 
@@ -264,6 +265,7 @@ pnpm build:win:portable
 | [CUSTOMER_MANAGEMENT.md](docs/CUSTOMER_MANAGEMENT.md)           | Profiles and Ledger Integration       |
 | [PRINT_SERVICE.md](docs/PRINT_SERVICE.md)                       | Thermal printing & window pooling     |
 | [REPORTS_ARCHITECTURE.md](docs/REPORTS_ARCHITECTURE.md)         | Analytics & multi-format exports      |
+| [SOFTWARE_UPDATE.md](docs/SOFTWARE_UPDATE.md)                   | **Auto-update & Release lifecycle**   |
 
 ### �️ System Reliability
 

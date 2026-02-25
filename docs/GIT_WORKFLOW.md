@@ -13,6 +13,7 @@ feature/* (short-lived)
 **Decision:** Single `main` branch with short-lived feature branches
 
 **Rationale:**
+
 - **Small team (2-3 devs)**: No need for complex GitFlow
 - **Fast iteration**: Merge to main frequently (daily/weekly)
 - **Simple CI/CD**: Single branch to deploy from
@@ -31,6 +32,7 @@ chore/update-dependencies
 **Format:** `<type>/<short-description>`
 
 **Types:**
+
 - `feature/` - New functionality
 - `fix/` - Bug fixes
 - `hotfix/` - Critical production fixes
@@ -66,6 +68,7 @@ git commit -m "feat: add product search with barcode scanner"
 ```
 
 **Commit message format:**
+
 ```
 <type>: <short description>
 
@@ -152,6 +155,7 @@ git push origin hotfix/critical-crash
 ## Protected Branch Settings (GitHub/GitLab)
 
 **For `main` branch:**
+
 - ✅ Require PR before merging
 - ✅ Require 1 approval
 - ✅ Require status checks to pass (CI)
@@ -163,6 +167,7 @@ git push origin hotfix/critical-crash
 ## Daily Workflow Example
 
 **Developer A (working on billing):**
+
 ```bash
 git checkout -b feature/billing-screen
 # ... work ...
@@ -172,6 +177,7 @@ git push origin feature/billing-screen
 ```
 
 **Developer B (working on inventory):**
+
 ```bash
 git checkout -b feature/inventory-list
 # ... work ...
@@ -181,6 +187,7 @@ git push origin feature/inventory-list
 ```
 
 **Both sync daily:**
+
 ```bash
 git checkout main
 git pull origin main
@@ -198,13 +205,33 @@ git pull origin main
 
 ---
 
+## 🚀 Release Process
+
+Version tagging and deployment are automated via a release script to ensure consistency and reliability.
+
+### Steps to Release:
+
+1. **Prepare**: Ensure all feature branches are merged and `main` is up-to-date.
+2. **Execute**: Run the automated release command:
+   ```bash
+   pnpm release <version>
+   ```
+3. **Validation**: The script will:
+   - Run tests, linting, and type-checks.
+   - Bump version in `package.json`.
+   - Create a git tag (e.g., `v1.0.1`).
+   - Push to `main` and push the tag.
+4. **Deploy**: The push triggers a GitHub Action to build and publish the Windows installer.
+
+---
+
 ## Summary
 
-| Aspect | Decision | Why |
-|--------|----------|-----|
-| **Branch strategy** | Trunk-based (main + feature/*) | Simple, fast, small team |
-| **PR approval** | 1 required | Lightweight but safe |
-| **Merge strategy** | Squash and merge | Clean history |
-| **Branch lifetime** | < 3 days ideal | Fast iteration |
+| Aspect              | Decision                        | Why                      |
+| ------------------- | ------------------------------- | ------------------------ |
+| **Branch strategy** | Trunk-based (main + feature/\*) | Simple, fast, small team |
+| **PR approval**     | 1 required                      | Lightweight but safe     |
+| **Merge strategy**  | Squash and merge                | Clean history            |
+| **Branch lifetime** | < 3 days ideal                  | Fast iteration           |
 
 ---
