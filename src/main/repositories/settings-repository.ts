@@ -34,6 +34,7 @@ export interface AppConfig {
   pendingSyncPath: string | null;
   privacyPolicyAccepted: boolean;
   autoUpdateEnabled: boolean;
+  lastReferralBannerSeen: string | null;
   updatedAt: Date;
 }
 
@@ -81,6 +82,7 @@ export class SettingsRepository extends BaseRepository {
       pending_sync_path: string | null;
       privacy_policy_accepted: number;
       auto_update_enabled: number;
+      last_referral_banner_seen: string | null;
       updated_at: string;
     }>(sql);
 
@@ -117,6 +119,7 @@ export class SettingsRepository extends BaseRepository {
         pendingSyncPath: null,
         privacyPolicyAccepted: false,
         autoUpdateEnabled: true,
+        lastReferralBannerSeen: null,
         updatedAt: new Date(),
       };
     }
@@ -164,6 +167,7 @@ export class SettingsRepository extends BaseRepository {
       pendingSyncPath: 'pending_sync_path',
       privacyPolicyAccepted: 'privacy_policy_accepted',
       autoUpdateEnabled: 'auto_update_enabled',
+      lastReferralBannerSeen: 'last_referral_banner_seen',
     };
 
     Object.entries(config).forEach(([key, value]) => {
@@ -228,6 +232,7 @@ export class SettingsRepository extends BaseRepository {
     pending_sync_path: string | null;
     privacy_policy_accepted: number;
     auto_update_enabled: number;
+    last_referral_banner_seen: string | null;
     updated_at: string;
   }): AppConfig {
     return {
@@ -260,6 +265,7 @@ export class SettingsRepository extends BaseRepository {
       pendingSyncPath: row.pending_sync_path,
       privacyPolicyAccepted: row.privacy_policy_accepted === 1,
       autoUpdateEnabled: row.auto_update_enabled === 1,
+      lastReferralBannerSeen: row.last_referral_banner_seen,
       updatedAt: this.parseDate(row.updated_at),
     };
   }

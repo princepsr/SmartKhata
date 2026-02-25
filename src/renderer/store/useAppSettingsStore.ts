@@ -37,6 +37,7 @@ export interface AppSettings {
   pendingSyncPath: string | null;
   privacyPolicyAccepted: boolean;
   autoUpdateEnabled: boolean;
+  lastReferralBannerSeen: string | null;
   updatedAt?: string;
 }
 
@@ -80,6 +81,7 @@ const defaultSettings: AppSettings = {
   pendingSyncPath: null,
   privacyPolicyAccepted: false,
   autoUpdateEnabled: true,
+  lastReferralBannerSeen: null,
 };
 
 export const useAppSettingsStore = create<AppSettingsState>()(

@@ -58,6 +58,8 @@ node scripts/generate-key.js <SYSTEM_ID> lifetime
 node scripts/generate-key.js <SYSTEM_ID> 0
 ```
 
+_Note: In all modes, the script will output both the generated **License Key** and the easy-to-spell **Customer ID**._
+
 ## 3. How it Works (Technical)
 
 The generated 12-character key is a **Base32-encoded 60-bit number** containing:

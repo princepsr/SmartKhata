@@ -227,5 +227,14 @@ export class SettingsService extends BaseService {
         throw new ValidationError('Retain count must be between 1 and 50', 'autoBackupRetainCount');
       }
     }
+
+    if (config.lastReferralBannerSeen !== undefined && config.lastReferralBannerSeen !== null) {
+      if (isNaN(Date.parse(config.lastReferralBannerSeen))) {
+        throw new ValidationError(
+          'Invalid date for last referral banner seen',
+          'lastReferralBannerSeen'
+        );
+      }
+    }
   }
 }

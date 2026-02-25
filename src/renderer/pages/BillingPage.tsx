@@ -18,6 +18,7 @@ import { useAppSettingsStore } from '../store';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { reportApi } from '@renderer/services/report-api';
 import type { DailySalesSummary } from '@shared/types/report.types';
+import { ReferralModal } from '../components/modals/ReferralModal';
 
 /**
  * Billing Page
@@ -989,6 +990,9 @@ function BillingPage() {
         type={alertState.type}
         isAlert={true}
       />
+
+      {/* Referral Program Modal (Daily popup on login) */}
+      <ReferralModal />
     </div>
   );
 }

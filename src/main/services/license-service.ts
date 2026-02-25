@@ -51,6 +51,7 @@ export interface LicenseStatus {
   maxDays: number;
   activated: boolean;
   deviceId: string;
+  customerId: string;
 }
 
 /**
@@ -593,6 +594,7 @@ export class LicenseService extends BaseService {
           maxDays: Infinity,
           activated: true,
           deviceId: machineFingerprint,
+          customerId: this.getCustomerId(machineFingerprint),
         };
       } catch (error) {
         // If verification fails (e.g. signature tampered, wrong machine), we treat it as no license
@@ -648,7 +650,43 @@ export class LicenseService extends BaseService {
       maxDays: this.TRIAL_DAYS,
       activated: false,
       deviceId: machineFingerprint,
+      customerId: this.getCustomerId(machineFingerprint),
     };
+  }
+
+  /**
+   * Generate an easy-to-spell Customer ID (Crockford Base32 subset)
+   *
+   * @param deviceId Optional device hash to generate an ID for
+   */
+  public getCustomerId(deviceId?: string): string {
+    const targetId = deviceId || this._getMachineFingerprint();
+    const hash = crypto.createHash('sha256').update(targetId).digest('hex');
+
+    // We want 8 characters from a 32-character unambiguous alphabet
+    const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+    // Take first 10 hex characters (40 bits). 5 bits per char -> 8 chars.
+    const subset = hash.substring(0, 10);
+    // Parse as integer (40 bits fits in JS Number safely, up to 53 bits)
+    let val = parseInt(subset, 16);
+
+    let customerId = '';
+    for (let i = 0; i < 8; i++) {
+      customerId = alphabet[val % 32] + customerId;
+      val = Math.floor(val / 32);
+    }
+
+    // Format as XXXX-XXXX
+    return `${customerId.substring(0, 4)}-${customerId.substring(4)}`;
+  }
+
+  /**
+   * Get unique Referral ID for this machine
+   * Derived from the machine fingerprint for stability across trial/paid states.
+   */
+  public getReferralCode(): string {
+    return this.getCustomerId();
   }
 
   /**

@@ -83,6 +83,26 @@ function generateKey(deviceId, expiryDays) {
   return `KRN-${rawKey.substring(0, 4)}-${rawKey.substring(4, 8)}-${rawKey.substring(8, 12)}`;
 }
 
+function generateCustomerId(deviceId) {
+  const hash = crypto.createHash('sha256').update(deviceId).digest('hex');
+
+  // We want 8 characters from a 32-character unambiguous alphabet
+  const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+  // Take first 10 hex characters (40 bits). 5 bits per char -> 8 chars.
+  const subset = hash.substring(0, 10);
+  // Parse as integer
+  let val = parseInt(subset, 16);
+
+  let customerId = '';
+  for (let i = 0; i < 8; i++) {
+    customerId = alphabet[val % 32] + customerId;
+    val = Math.floor(val / 32);
+  }
+
+  return `${customerId.substring(0, 4)}-${customerId.substring(4)}`;
+}
+
 // CLI Execution
 if (process.argv.length < 4) {
   console.log('Usage: node generate-key.js <device_id> <expiry_days_or_date> [secret_key]');
@@ -139,6 +159,7 @@ const actualExpiry =
 
 console.log('\n--- SmartKhata License Key Generator ---');
 console.log(`Device ID:      ${deviceId}`);
+console.log(`Customer ID:    ${generateCustomerId(deviceId)}`);
 console.log(`Expiry Target:  ${actualExpiry}`);
 console.log(`Key:            ${key}`);
 console.log('----------------------------------------\n');

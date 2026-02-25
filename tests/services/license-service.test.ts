@@ -225,3 +225,45 @@ describe('LicenseService - Machine Fingerprint', () => {
     expect(status.isExpired).toBe(true);
   });
 });
+
+describe('LicenseService - Customer ID Generation', () => {
+  let db: any;
+  let licenseService: LicenseService;
+
+  beforeEach(async () => {
+    db = await createTestDatabase();
+    licenseService = new LicenseService();
+  });
+
+  afterEach(() => {
+    resetTestDatabase(db);
+  });
+
+  it('should generate a valid 9-character Customer ID (XXXX-XXXX format)', () => {
+    const customerId = licenseService.getCustomerId();
+    expect(customerId).toBeDefined();
+    expect(typeof customerId).toBe('string');
+    expect(customerId.length).toBe(9);
+    expect(customerId).toMatch(
+      /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}$/
+    );
+  });
+
+  it('should generate the same Customer ID for a given machine fingerprint deterministically', () => {
+    const id1 = licenseService.getCustomerId('TEST_MACHINE_123');
+    const id2 = licenseService.getCustomerId('TEST_MACHINE_123');
+    expect(id1).toBe(id2);
+  });
+
+  it('should generate different Customer IDs for different machine fingerprints', () => {
+    const id1 = licenseService.getCustomerId('MACHINE_A');
+    const id2 = licenseService.getCustomerId('MACHINE_B');
+    expect(id1).not.toBe(id2);
+  });
+
+  it('getReferralCode should alias getCustomerId', () => {
+    const aliasId = licenseService.getReferralCode();
+    const customerId = licenseService.getCustomerId();
+    expect(aliasId).toBe(customerId);
+  });
+});

@@ -173,6 +173,7 @@ SQLite Database
 - **🚀 Command Center**: Unified hub for zero-friction navigation and high-frequency actions (Add Product/Customer, Reports, Settings).
 - **⚡ Super-Speed Billing**: High-performance transaction engine with virtual barcode support and instant thermal printing.
 - **🛡️ Secure Licensing**: Hardware-bound machine activation with offline support and transparent IST-aligned trial management.
+- **🎁 Referral Program**: Built-in 10% cashback referral system driven by deterministically generated, easy-to-spell Customer IDs (Crockford Base32) designed for offline data safety.
 - **📊 Advanced Analytics**: Daily/Weekly/Monthly trend insights with GST-ready reporting and accurate local time attribution.
 - **☁️ Cloud Sync & Backups**: Automated, configurable background database backups with seamless Google Drive synchronization to prevent data loss.
 

@@ -124,6 +124,7 @@ export const IPC_CHANNELS = {
   LICENSE_STATUS: 'license:status',
   LICENSE_ACTIVATE: 'license:activate',
   LICENSE_TRIAL_INFO: 'license:trialInfo',
+  LICENSE_REFERRAL_CODE: 'license:referralCode',
 
   // ============================================
   // GOOGLE MODULE
@@ -259,6 +260,7 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.LICENSE_STATUS,
     IPC_CHANNELS.LICENSE_ACTIVATE,
     IPC_CHANNELS.LICENSE_TRIAL_INFO,
+    IPC_CHANNELS.LICENSE_REFERRAL_CODE,
   ],
   GOOGLE: [
     IPC_CHANNELS.GOOGLE_AUTH_URL,

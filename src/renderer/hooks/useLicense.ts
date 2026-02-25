@@ -14,6 +14,7 @@ export interface LicenseStatus {
   maxDays: number;
   activated: boolean;
   deviceId: string;
+  customerId: string;
 }
 
 export function useLicense() {

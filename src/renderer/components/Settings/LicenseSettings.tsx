@@ -55,6 +55,15 @@ const LicenseSettings: React.FC<{ onActivate: () => void }> = ({ onActivate }) =
             </span>
           </div>
 
+          {status.type === 'PAID' && (
+            <div className="info-item">
+              <span className="info-label">Customer ID</span>
+              <span className="info-value code-text font-bold text-lg select-all text-indigo-400">
+                {status.customerId}
+              </span>
+            </div>
+          )}
+
           <div className="info-item">
             <span className="info-label">Expires On</span>
             <span className="info-value">

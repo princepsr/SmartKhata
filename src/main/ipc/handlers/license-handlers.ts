@@ -60,4 +60,17 @@ export function registerLicenseHandlers(): void {
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );
+
+  /**
+   * Get unique Referral Code
+   */
+  IPCHandler.handle<void, string>(
+    IPC_CHANNELS.LICENSE_REFERRAL_CODE,
+    async () => {
+      return licenseService.getReferralCode();
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
 }
