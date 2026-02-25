@@ -146,9 +146,16 @@ export class AutoBackupService {
         autoBackupLogger.info('Automated backup cycle completed successfully', {
           path: backupPath,
         });
+      } else {
+        // Interval not reached, but we should still check for pending cloud syncs
+        // as a redundant failsafe to the connectivity event listener
+        if (settings.cloudSyncPending) {
+          autoBackupLogger.debug('Checking for pending cloud sync during interval');
+          await this.processPendingSync();
+        }
       }
     } catch (error) {
-      autoBackupLogger.error('Scheduled auto-backup failed', { error });
+      autoBackupLogger.error('Scheduled auto-backup cycle failed', { error });
     } finally {
       this.isProcessing = false;
     }

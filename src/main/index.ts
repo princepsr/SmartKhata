@@ -430,19 +430,36 @@ app.whenReady().then(async () => {
   });
 });
 
+let forceQuit = false;
+
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
 });
 
 app.on('before-quit', async (event) => {
+  if (forceQuit) {
+    logger.debug('Force-quit flag set, allowing Electron to exit');
+    return;
+  }
+
   if (!shutdownManager.isShutdownInProgress()) {
     event.preventDefault();
     logger.info('App quit requested, starting graceful shutdown');
+
     try {
+      // Add a failsafe global timeout for the entire shutdown process
+      // If the app hasn't exited in 5 seconds, force it.
+      setTimeout(() => {
+        logger.warn('Graceful shutdown timed out (5s), forcing exit via process.exit(0)');
+        process.exit(0);
+      }, 5000);
+
       await shutdownManager.shutdown();
+      logger.info('Hooks completed, triggering final quit');
     } catch (error) {
       logger.error('Graceful shutdown failed', error);
     } finally {
+      forceQuit = true;
       app.quit();
     }
   }

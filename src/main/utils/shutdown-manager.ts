@@ -72,9 +72,19 @@ class ShutdownManager {
       try {
         const label = h.description || 'unnamed hook';
         logger.info(`Executing shutdown hook: ${label} (Priority: ${h.priority})`);
-        await h.hook();
+
+        // Add a timeout to prevent hanging hooks from blocking shutdown
+        // Default 2 seconds per hook
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`Shutdown hook "${label}" timed out after 2000ms`)),
+            2000
+          )
+        );
+
+        await Promise.race([h.hook(), timeoutPromise]);
       } catch (error) {
-        logger.error(`Shutdown hook failed: ${h.description}`, error);
+        logger.error(`Shutdown hook failed or timed out: ${h.description}`, error);
       }
     }
 
