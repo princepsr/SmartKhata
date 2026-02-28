@@ -167,15 +167,20 @@ describe('AutoBackupService', () => {
   });
 
   it('should trigger backup check when settings change', async () => {
-    // The start method registers the listener
+    // The start method registers the listener AND immediately calls checkAndPerformBackup()
+    // We must wait for that first call to finish before testing onChange, otherwise
+    // the isProcessing flag blocks the second call.
     service.start();
 
     expect(mockSettingsInstance.onChange).toHaveBeenCalled();
 
+    // Wait for the initial checkAndPerformBackup() (fire-and-forget in start()) to settle
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
     // Simulate settings change
     const [callback] = mockSettingsInstance.onChange.mock.calls[0];
 
-    // Reset createBackup call count
+    // Reset createBackup call count (may have been called by the initial check in start())
     (backupService.createBackup as any).mockClear();
 
     // Set up mock to trigger backup
@@ -184,7 +189,17 @@ describe('AutoBackupService', () => {
       lastAutoBackup: null,
     });
 
-    await callback();
+    // To trigger checkAndPerformBackup, the newConfig must DIFFER from what start() saw
+    // (start() reads getConfig() which returns { autoBackupIntervalDays: 1, autoBackupEnabled: true, ... })
+    // We change autoBackupIntervalDays from 1 to 2 so intervalChanged=true fires the backup check
+    const newConfig = {
+      autoBackupEnabled: true,
+      autoBackupIntervalDays: 2, // Different from initial (1) to trigger intervalChanged
+      autoBackupIntervalUnit: 'days',
+      autoBackupRetainCount: 3,
+      lastAutoBackup: null, // null means backup WILL trigger
+    };
+    await callback(newConfig);
 
     expect(backupService.createBackup).toHaveBeenCalled();
   });

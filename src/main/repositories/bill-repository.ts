@@ -12,9 +12,13 @@ export interface Bill {
   customerName?: string | null;
   subtotal: number; // In rupees
   gstTotal: number; // In rupees
+  cgstAmount: number; // CGST portion
+  sgstAmount: number; // SGST portion
+  igstAmount: number; // IGST (inter-state)
   discountAmount: number; // In rupees
   grandTotal: number; // In rupees
   paymentMode: 'cash' | 'upi' | 'mixed';
+  isPrinted: boolean; // Invoice lock: true after first print
   createdAt: Date;
 }
 
@@ -29,7 +33,13 @@ export interface BillItem {
   quantity: number;
   unitPrice: number; // In rupees
   gstPercent: number; // As decimal (e.g., 18.00)
+  hsnSnapshot: string | null; // HSN code at time of sale
   purchasePrice?: number; // Snapshot of cost
+  lineSubtotal: number;
+  lineGst: number;
+  lineCgst: number;
+  lineSgst: number;
+  lineIgst: number;
   lineTotal: number; // In rupees
 }
 
@@ -49,9 +59,13 @@ export interface CreateBillInput {
   customerId?: number;
   subtotal: number; // In rupees
   gstTotal: number; // In rupees
+  cgstAmount?: number; // CGST portion
+  sgstAmount?: number; // SGST portion
+  igstAmount?: number; // IGST (inter-state)
   discountAmount?: number; // In rupees
   grandTotal: number; // In rupees
   paymentMode: 'cash' | 'upi' | 'mixed';
+  paymentReceived: number;
 }
 
 /**
@@ -63,7 +77,13 @@ export interface CreateBillItemInput {
   quantity: number;
   unitPrice: number; // In rupees
   gstPercent: number; // As decimal
+  hsnSnapshot?: string | null;
   purchasePrice?: number; // Snapshot of cost
+  lineSubtotal: number;
+  lineGst: number;
+  lineCgst: number;
+  lineSgst: number;
+  lineIgst: number;
   lineTotal: number; // In rupees
 }
 
@@ -100,9 +120,10 @@ export class BillRepository extends BaseRepository {
       // 2. Create bill header
       const billSql = `
         INSERT INTO bills (
-          bill_number, customer_id, subtotal, gst_total, 
+          bill_number, customer_id, subtotal, gst_total,
+          cgst_amount, sgst_amount, igst_amount,
           discount_amount, grand_total, payment_mode
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const params = [
@@ -110,6 +131,9 @@ export class BillRepository extends BaseRepository {
         billData.customerId || null,
         billData.subtotal,
         billData.gstTotal,
+        billData.cgstAmount || 0,
+        billData.sgstAmount || 0,
+        billData.igstAmount || 0,
         billData.discountAmount || 0,
         billData.grandTotal,
         billData.paymentMode,
@@ -123,8 +147,9 @@ export class BillRepository extends BaseRepository {
       const insertItem = this.db.prepare(`
         INSERT INTO bill_items (
           bill_id, product_id, product_name_snapshot, 
-          quantity, unit_price, gst_percent, purchase_price, line_total
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          quantity, unit_price, gst_percent, hsn_snapshot, purchase_price,
+          line_subtotal, line_gst, line_cgst, line_sgst, line_igst, line_total
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       const createdItems: BillItem[] = [];
@@ -137,7 +162,13 @@ export class BillRepository extends BaseRepository {
           item.quantity,
           item.unitPrice,
           item.gstPercent,
+          item.hsnSnapshot ?? null,
           item.purchasePrice ?? null,
+          item.lineSubtotal,
+          item.lineGst,
+          item.lineCgst,
+          item.lineSgst,
+          item.lineIgst,
           item.lineTotal
         );
 
@@ -149,7 +180,13 @@ export class BillRepository extends BaseRepository {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           gstPercent: item.gstPercent,
+          hsnSnapshot: item.hsnSnapshot ?? null,
           purchasePrice: item.purchasePrice,
+          lineSubtotal: item.lineSubtotal,
+          lineGst: item.lineGst,
+          lineCgst: item.lineCgst,
+          lineSgst: item.lineSgst,
+          lineIgst: item.lineIgst,
           lineTotal: item.lineTotal,
         });
       }
@@ -168,9 +205,13 @@ export class BillRepository extends BaseRepository {
           customerId: billData.customerId || null,
           subtotal: billData.subtotal,
           gstTotal: billData.gstTotal,
+          cgstAmount: billData.cgstAmount || 0,
+          sgstAmount: billData.sgstAmount || 0,
+          igstAmount: billData.igstAmount || 0,
           discountAmount: billData.discountAmount || 0,
           grandTotal: billData.grandTotal,
           paymentMode: billData.paymentMode,
+          isPrinted: false,
           createdAt: new Date(), // Local time
         },
         items: createdItems,
@@ -181,6 +222,18 @@ export class BillRepository extends BaseRepository {
     // - All inserts succeed OR all are rolled back
     // - No partial bills in database
     // - Atomic operation
+  }
+
+  /**
+   * Mark a bill as printed (invoice lock)
+   * Once printed, bill details are immutable
+   */
+  public markAsPrinted(billId: number): void {
+    const sql = `UPDATE bills SET is_printed = 1 WHERE id = ?`;
+    const result = this.execute(sql, [billId]);
+    if (result.changes > 0) {
+      logger.info('Bill marked as printed (locked)', { billId });
+    }
   }
 
   /**
@@ -387,6 +440,23 @@ export class BillRepository extends BaseRepository {
     };
   }
 
+  public generateBillNumber(): string {
+    const today = new Date();
+    const prefix = `BILL-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}-`;
+    const lastBill = this.findLastBillNumberByPrefix(prefix);
+
+    let nextNumber = 1;
+    if (lastBill) {
+      const parts = lastBill.split('-');
+      const lastSeq = parseInt(parts[parts.length - 1]);
+      if (!isNaN(lastSeq)) {
+        nextNumber = lastSeq + 1;
+      }
+    }
+
+    return `${prefix}${String(nextNumber).padStart(3, '0')}`;
+  }
+
   /**
    * Find last bill number by prefix
    * Used for generating sequential bill numbers
@@ -418,9 +488,13 @@ export class BillRepository extends BaseRepository {
       customerName: row.customer_name,
       subtotal: row.subtotal, // Direct Rupees
       gstTotal: row.gst_total,
+      cgstAmount: row.cgst_amount || 0,
+      sgstAmount: row.sgst_amount || 0,
+      igstAmount: row.igst_amount || 0,
       discountAmount: row.discount_amount,
       grandTotal: row.grand_total,
       paymentMode: row.payment_mode,
+      isPrinted: row.is_printed === 1,
       createdAt: this.parseDate(row.created_at),
     };
   }
@@ -437,7 +511,13 @@ export class BillRepository extends BaseRepository {
       quantity: row.quantity,
       unitPrice: row.unit_price, // Direct Rupees
       gstPercent: row.gst_percent, // Direct Percent
+      hsnSnapshot: row.hsn_snapshot,
       purchasePrice: row.purchase_price, // Snapshot of cost
+      lineSubtotal: row.line_subtotal || 0,
+      lineGst: row.line_gst || 0,
+      lineCgst: row.line_cgst || 0,
+      lineSgst: row.line_sgst || 0,
+      lineIgst: row.line_igst || 0,
       lineTotal: row.line_total, // Direct Rupees
     };
   }

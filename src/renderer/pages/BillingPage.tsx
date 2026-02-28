@@ -9,9 +9,9 @@ import { BillHistoryModal } from '../components/billing/BillHistoryModal';
 import { formatCurrency, toLocalDateISO } from '../utils/formatters';
 import {
   calculateBillPreview,
-  type BillCalculation,
   calculateDiscountAmount,
-} from '../utils/billing-math';
+  BillCalculation,
+} from '@shared/utils/billing-math';
 import './BillingPage.css';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useAppSettingsStore } from '../store';
@@ -39,6 +39,8 @@ import { ReferralModal } from '../components/modals/ReferralModal';
 interface BillItemInput {
   productId: number;
   quantity: number;
+  discountValue?: number;
+  discountType?: 'amount' | 'percent';
 }
 
 interface FinalizeBillInput {
@@ -54,6 +56,8 @@ interface FinalizeBillInput {
 interface CartItem {
   product: Product;
   quantity: number;
+  discountValue?: number;
+  discountType?: 'amount' | 'percent';
 }
 
 // Customer Type
@@ -230,6 +234,20 @@ function BillingPage() {
     [setCart]
   );
 
+  // Update cart item discount
+  const updateDiscount = useCallback(
+    (productId: number, value: number, type: 'amount' | 'percent') => {
+      setCart((prev) =>
+        prev.map((item) =>
+          item.product.id === productId
+            ? { ...item, discountValue: value, discountType: type }
+            : item
+        )
+      );
+    },
+    [setCart]
+  );
+
   // Remove item from cart
   const removeFromCart = useCallback(
     (productId: number) => {
@@ -397,6 +415,8 @@ function BillingPage() {
       items: cart.map((item) => ({
         productId: item.product.id,
         quantity: item.quantity,
+        discountValue: item.discountValue,
+        discountType: item.discountType,
       })),
       discountAmount: discountAmount > 0 ? discountAmount : undefined,
       paymentMode,
@@ -529,13 +549,21 @@ function BillingPage() {
         cart,
         discountAmount,
         settings.gstEnabled,
-        settings.gstExclusiveMode
+        settings.gstExclusiveMode,
+        settings.supplyType
       );
       setCalculation(preview);
     } else {
       setCalculation(null);
     }
-  }, [cart, discountAmount, settings.gstEnabled, settings.gstExclusiveMode, setCalculation]);
+  }, [
+    cart,
+    discountAmount,
+    settings.gstEnabled,
+    settings.gstExclusiveMode,
+    settings.supplyType,
+    setCalculation,
+  ]);
 
   return (
     <div className="page billing-page">
@@ -754,7 +782,13 @@ function BillingPage() {
         <div className="billing-content">
           {/* 2. Bill Items List (Left Column) */}
           <div className="cart-panel">
-            <BillItemList cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeFromCart} />
+            <BillItemList
+              cart={cart}
+              calculatedItems={calculation?.items || []}
+              onUpdateQuantity={updateQuantity}
+              onUpdateDiscount={updateDiscount}
+              onRemove={removeFromCart}
+            />
           </div>
 
           {/* 3. Totals & Actions (Right Column) */}
@@ -764,10 +798,11 @@ function BillingPage() {
                 <span>Subtotal</span>
                 <span>{calculation ? formatCurrency(calculation.subtotal) : '₹ 0.00'}</span>
               </div>
-              <div className="summary-row">
+              <div className="summary-row gst-row">
                 <span>GST</span>
                 <span>{calculation ? formatCurrency(calculation.gstTotal) : '₹ 0.00'}</span>
               </div>
+
               <div className="summary-row discount-row">
                 <span>Discount</span>
                 <div className="discount-controls">

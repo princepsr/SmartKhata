@@ -140,6 +140,23 @@ export class SettingsService extends BaseService {
       }
     }
 
+    // State Code validation (2-digit string like '29')
+    if (config.stateCode !== undefined && config.stateCode !== null && config.stateCode !== '') {
+      if (!/^\d{2}$/.test(config.stateCode)) {
+        throw new ValidationError(
+          'State code must be a 2-digit number (e.g. 29 for Karnataka)',
+          'stateCode'
+        );
+      }
+    }
+
+    // Supply Type validation
+    if (config.supplyType !== undefined) {
+      if (!['intrastate', 'interstate'].includes(config.supplyType)) {
+        throw new ValidationError('Supply type must be intrastate or interstate', 'supplyType');
+      }
+    }
+
     // GST Percentage validation
     if (config.gstPercentage !== undefined) {
       if (![0, 5, 12, 18, 28].includes(config.gstPercentage)) {

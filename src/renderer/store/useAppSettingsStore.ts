@@ -38,6 +38,10 @@ export interface AppSettings {
   privacyPolicyAccepted: boolean;
   autoUpdateEnabled: boolean;
   lastReferralBannerSeen: string | null;
+  // GST compliance fields
+  supplyType: 'intrastate' | 'interstate';
+  stateCode: string | null;
+  placeOfSupply: string | null;
   updatedAt?: string;
 }
 
@@ -82,6 +86,9 @@ const defaultSettings: AppSettings = {
   privacyPolicyAccepted: false,
   autoUpdateEnabled: true,
   lastReferralBannerSeen: null,
+  supplyType: 'intrastate',
+  stateCode: null,
+  placeOfSupply: null,
 };
 
 export const useAppSettingsStore = create<AppSettingsState>()(

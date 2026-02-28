@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useIPC } from '../hooks/useIPC';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import { formatCurrency } from '../utils/billing-math';
+import { formatCurrency } from '../utils/formatters';
 import { useAppSettingsStore } from '../store/useAppSettingsStore';
 import { ProductFormModal } from '../components/products/ProductFormModal';
 import { StockAdjustmentModal } from '../components/products/StockAdjustmentModal';

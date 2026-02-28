@@ -16,6 +16,8 @@ import { registerReportHandlers } from './handlers/report-handlers';
 import { registerSettingsHandlers } from './handlers/settings-handlers';
 import { registerLicenseHandlers } from './handlers/license-handlers';
 import { registerUpdateHandlers } from './handlers/update-handlers';
+import { registerCreditNoteHandlers } from './handlers/credit-note-handlers';
+import { registerPurchaseHandlers } from './handlers/purchase-handlers';
 
 /**
  * Register all IPC handlers
@@ -36,6 +38,8 @@ export function registerIPCHandlers(): void {
     registerLicenseHandlers();
     registerCustomerHandlers();
     registerUpdateHandlers();
+    registerCreditNoteHandlers();
+    registerPurchaseHandlers();
     // registerSaleHandlers();      // TODO: Implement if needed (Bill handles most sales)
 
     logger.info('=== IPC Handlers Registered Successfully ===');

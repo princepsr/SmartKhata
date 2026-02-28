@@ -58,6 +58,7 @@ export const CreateProductSchema = z.object({
   trackInventory: z.boolean().optional(),
   isGstInclusive: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  hsnCode: z.string().max(20, 'HSN Code must be less than 20 characters').optional().nullable(),
 });
 
 // Infer TypeScript type from schema
@@ -116,6 +117,8 @@ export const UpdateProductSchema = z.object({
       isGstInclusive: z.boolean().optional(),
 
       isActive: z.boolean().optional(),
+
+      hsnCode: z.string().max(20, 'HSN Code must be less than 20 characters').optional().nullable(),
     })
     .refine((data) => Object.keys(data).length > 0, {
       message: 'At least one field must be provided for update',

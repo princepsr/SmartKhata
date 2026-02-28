@@ -37,6 +37,7 @@ export interface AddProductInput {
   trackInventory?: boolean;
   isGstInclusive?: boolean;
   isActive?: boolean;
+  hsnCode?: string | null;
 }
 
 /**
@@ -53,6 +54,7 @@ export interface UpdateProductData {
   isActive?: boolean;
   isGstInclusive?: boolean;
   trackInventory?: boolean;
+  hsnCode?: string | null;
 }
 
 /**
@@ -112,6 +114,7 @@ export class ProductService extends BaseService {
       lowStockAlert: input.lowStockAlert,
       trackInventory: input.trackInventory,
       isGstInclusive: input.isGstInclusive,
+      hsnCode: input.hsnCode,
     };
 
     try {
@@ -159,6 +162,7 @@ export class ProductService extends BaseService {
       lowStockAlert: input.lowStockAlert,
       trackInventory: input.trackInventory,
       isGstInclusive: input.isGstInclusive,
+      hsnCode: input.hsnCode,
     }));
 
     // 3. Execute batch create
@@ -228,6 +232,7 @@ export class ProductService extends BaseService {
       isActive: updates.isActive,
       isGstInclusive: updates.isGstInclusive,
       trackInventory: updates.trackInventory,
+      hsnCode: updates.hsnCode,
     };
 
     try {

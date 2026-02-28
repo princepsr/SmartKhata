@@ -16,6 +16,7 @@ import { BillDetailModal } from '../components/billing/BillDetailModal';
 import { ipcClient } from '../utils/ipc';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { RichSelect } from '../components/ui/RichSelect';
+import { useAppSettingsStore } from '../store';
 
 type Tab = 'sales' | 'gst' | 'stock' | 'analytics';
 
@@ -305,6 +306,8 @@ const ReportsPage: React.FC = () => {
   const [trendGranularity, setTrendGranularity] = useState<'day' | 'week' | 'month'>('day');
   const [trendLookback, setTrendLookback] = useState<string>('last_7_days');
   const [analyticsData, setAnalyticsData] = useState<TrendAnalytics | null>(null);
+  const [itcSummary, setItcSummary] = useState<{ totalItc: number; breakdown: any[] } | null>(null);
+  const [netLiability, setNetLiability] = useState<number | null>(null);
   const [searchParams] = useSearchParams();
 
   // Handle global tab switching
@@ -365,6 +368,25 @@ const ReportsPage: React.FC = () => {
       } else if (activeTab === 'gst') {
         const gst = await reportApi.getGstSummary(dateRange);
         setGstReport(gst);
+
+        // Fetch ITC and Net Liability
+        try {
+          const itc = await ipcClient.call<any>(IPC_CHANNELS.PURCHASE_ITC_SUMMARY, dateRange);
+          if (itc.success && itc.data) {
+            setItcSummary(itc.data);
+          }
+          if (gst) {
+            const net = await ipcClient.call<any>(IPC_CHANNELS.PURCHASE_NET_GST_LIABILITY, {
+              ...dateRange,
+              outputGst: gst.totalGst,
+            });
+            if (net.success && net.data !== undefined) {
+              setNetLiability(net.data);
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch ITC data:', e);
+        }
       } else if (activeTab === 'stock') {
         const stock = await reportApi.getStockSummary(stockFilter);
         setStockSummary(stock);
@@ -383,6 +405,14 @@ const ReportsPage: React.FC = () => {
   useEffect(() => {
     loadReportData();
   }, [loadReportData]);
+
+  // Handle GST feature toggle synchronization
+  const { settings } = useAppSettingsStore();
+  useEffect(() => {
+    if (!settings.gstEnabled && activeTab === 'gst') {
+      setActiveTab('sales');
+    }
+  }, [settings.gstEnabled, activeTab]);
 
   const [selectedBillNo, setSelectedBillNo] = useState<string | null>(null);
 
@@ -587,6 +617,7 @@ const ReportsPage: React.FC = () => {
           formattedDateRange
         );
       } else if (activeTab === 'gst' && gstReport) {
+        // Renaming to GSTR-1 Export for GST tab
         await reportApi.exportExcel('gst', gstReport, formattedDateRange);
       } else if (activeTab === 'stock' && stockSummary) {
         await reportApi.exportExcel(
@@ -619,7 +650,7 @@ const ReportsPage: React.FC = () => {
               onClick={handleExportExcel}
               disabled={loading}
             >
-              Export Excel
+              {activeTab === 'gst' ? 'Export GSTR-1' : 'Export Excel'}
             </button>
             <button className="btn-secondary btn-pdf" onClick={handleExportPdf} disabled={loading}>
               Save PDF
@@ -750,12 +781,14 @@ const ReportsPage: React.FC = () => {
             >
               Sales
             </button>
-            <button
-              className={activeTab === 'gst' ? 'active' : ''}
-              onClick={() => setActiveTab('gst')}
-            >
-              GST
-            </button>
+            {settings.gstEnabled && (
+              <button
+                className={activeTab === 'gst' ? 'active' : ''}
+                onClick={() => setActiveTab('gst')}
+              >
+                GST
+              </button>
+            )}
             <button
               className={activeTab === 'stock' ? 'active' : ''}
               onClick={() => setActiveTab('stock')}
@@ -772,10 +805,150 @@ const ReportsPage: React.FC = () => {
         </div>
 
         <div className="reports-content">
-          {loading && !dailySummary && !gstReport && !stockSummary && !analyticsData ? (
+          {loading &&
+          ((activeTab === 'sales' && !dailySummary) ||
+            (activeTab === 'gst' && !gstReport) ||
+            (activeTab === 'stock' && !stockSummary) ||
+            (activeTab === 'analytics' && !analyticsData)) ? (
             <SkeletonLoader type={activeTab === 'analytics' ? 'sales' : activeTab} />
           ) : (
             <div className="tab-content-wrapper animate-fade-in" key={activeTab}>
+              {activeTab === 'gst' &&
+                (!gstReport || gstReport.slabs.length === 0 ? (
+                  <EmptyState
+                    title="No GST Data"
+                    message="We couldn't find any taxable transactions for the selected date range. Try adjusting your filters."
+                    icon="🧾"
+                  />
+                ) : (
+                  <div className="report-view gst-view animate-fade-in">
+                    {/* Supply Type Banner */}
+                    <div
+                      className="reports-info-row animate-fade-in"
+                      style={{ marginBottom: '1rem' }}
+                    >
+                      <span className="info-icon">🏷️</span>
+                      <span className="info-text">
+                        <strong>
+                          {gstReport.supplyType === 'interstate'
+                            ? 'Inter-State Supply (IGST)'
+                            : 'Intra-State Supply (CGST + SGST)'}
+                        </strong>
+                        {' — '}Tax collected is split accordingly. Total GST payable to Government.
+                      </span>
+                    </div>
+
+                    <div
+                      className="itc-summary-panel animate-fade-in"
+                      style={{
+                        background: 'white',
+                        padding: '1.5rem',
+                        borderRadius: '12px',
+                        marginBottom: '2rem',
+                        display: 'flex',
+                        gap: '2rem',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                      }}
+                    >
+                      <div className="itc-col" style={{ flex: 1 }}>
+                        <h4 style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                          OUTPUT GST (Total Collected)
+                        </h4>
+                        <h2 style={{ fontSize: '1.8rem', color: '#dc3545' }}>
+                          ₹{gstReport.totalGst.toLocaleString('en-IN')}
+                        </h2>
+                      </div>
+                      <div className="itc-divider" style={{ width: '1px', background: '#eee' }} />
+                      <div className="itc-col" style={{ flex: 1 }}>
+                        <h4 style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                          INPUT TAX CREDIT (ITC Available)
+                        </h4>
+                        <h2 style={{ fontSize: '1.8rem', color: '#28a745' }}>
+                          ₹{(itcSummary?.totalItc || 0).toLocaleString('en-IN')}
+                        </h2>
+                      </div>
+                      <div className="itc-divider" style={{ width: '1px', background: '#eee' }} />
+                      <div className="itc-col" style={{ flex: 1 }}>
+                        <h4 style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                          NET GST LIABILITY
+                        </h4>
+                        <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>
+                          {formatCurrency(
+                            netLiability !== null
+                              ? netLiability
+                              : gstReport.totalGst - (itcSummary?.totalItc || 0)
+                          )}
+                        </h2>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          Output - Input Credit
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="summary-cards">
+                      <div className="card card-gross">
+                        <div className="card-header-row">
+                          <h3>Taxable Value</h3>
+                          <div className="icon-box icon-gross">📈</div>
+                        </div>
+                        <div className="value">{formatCurrency(gstReport.totalTaxable)}</div>
+                      </div>
+
+                      <div className="card card-net">
+                        <div className="card-header-row">
+                          <h3>Total GST</h3>
+                          <div className="icon-box icon-net">💰</div>
+                        </div>
+                        <div className="value highlight">{formatCurrency(gstReport.totalGst)}</div>
+                      </div>
+
+                      <div className="card card-profit">
+                        <div className="card-header-row">
+                          <h3>Grand Total</h3>
+                          <div className="icon-box icon-profit">💸</div>
+                        </div>
+                        <div className="value">{formatCurrency(gstReport.totalAmount)}</div>
+                      </div>
+                    </div>
+
+                    <div className="table-section">
+                      <div className="reports-section-header">
+                        <div className="reports-section-title">
+                          GST Slab Summary ({gstReport.supplyType.toUpperCase()})
+                        </div>
+                      </div>
+                      <div className="data-table-container">
+                        <div className="data-table-header grid-gst">
+                          <div>Slab</div>
+                          <div className="text-right">Taxable</div>
+                          <div className="text-right">CGST</div>
+                          <div className="text-right">SGST</div>
+                          <div className="text-right">IGST</div>
+                          <div className="text-right">GST Total</div>
+                        </div>
+                        {gstReport.slabs.map((slab) => (
+                          <div key={slab.gstPercent} className="data-table-row grid-gst">
+                            <div>{slab.gstPercent}%</div>
+                            <div className="text-right">{formatCurrency(slab.taxableAmount)}</div>
+                            <div className="text-right">{formatCurrency(slab.cgstAmount)}</div>
+                            <div className="text-right">{formatCurrency(slab.sgstAmount)}</div>
+                            <div className="text-right">{formatCurrency(slab.igstAmount)}</div>
+                            <div className="text-right">{formatCurrency(slab.gstAmount)}</div>
+                          </div>
+                        ))}
+                        <div className="data-table-row grid-gst data-table-footer">
+                          <div>Total</div>
+                          <div className="text-right">{formatCurrency(gstReport.totalTaxable)}</div>
+                          <div className="text-right">{formatCurrency(gstReport.totalCgst)}</div>
+                          <div className="text-right">{formatCurrency(gstReport.totalSgst)}</div>
+                          <div className="text-right">{formatCurrency(gstReport.totalIgst)}</div>
+                          <div className="text-right">{formatCurrency(gstReport.totalGst)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
               {activeTab === 'sales' &&
                 (!dailySummary || dailySummary.billCount === 0 ? (
                   <EmptyState
@@ -939,8 +1112,8 @@ const ReportsPage: React.FC = () => {
                     </div>
 
                     <div className="table-section">
-                      <div className="section-header">
-                        <div className="section-title">Billwise Details</div>
+                      <div className="reports-section-header">
+                        <div className="reports-section-title">Billwise Details</div>
                       </div>
                       <div className="data-table-container">
                         <div className="data-table-header grid-sales">
@@ -999,73 +1172,6 @@ const ReportsPage: React.FC = () => {
                   </div>
                 ))}
 
-              {activeTab === 'gst' && gstReport && (
-                <div className="report-view gst-view">
-                  <div className="summary-cards">
-                    <RichTooltip
-                      title="Taxable Amount"
-                      meta="Total net amount before GST. This is your core business revenue."
-                    >
-                      <div className="card card-bills">
-                        <div className="card-header-row">
-                          <h3>Taxable</h3>
-                          <div className="icon-box icon-bills">📊</div>
-                        </div>
-                        <div className="value">{formatCurrency(gstReport.totalTaxable)}</div>
-                      </div>
-                    </RichTooltip>
-
-                    <RichTooltip
-                      title="Total GST"
-                      meta="Total Goods and Services Tax collected from customers, to be paid to government."
-                    >
-                      <div className="card card-net">
-                        <div className="card-header-row">
-                          <h3>GST</h3>
-                          <div className="icon-box icon-net">💸</div>
-                        </div>
-                        <div className="value highlight">{formatCurrency(gstReport.totalGst)}</div>
-                      </div>
-                    </RichTooltip>
-
-                    <RichTooltip
-                      title="Revenue"
-                      meta="Total amount collected (Taxable Amount + GST). This matches your total bill receivables."
-                    >
-                      <div className="card card-net">
-                        <div className="card-header-row">
-                          <h3>Revenue</h3>
-                          <div className="icon-box icon-net">💰</div>
-                        </div>
-                        <div className="value highlight">
-                          {formatCurrency(gstReport.totalAmount)}
-                        </div>
-                      </div>
-                    </RichTooltip>
-                  </div>
-                  <div className="table-section">
-                    <div className="data-table-container">
-                      <div className="data-table-header grid-gst">
-                        <div>Slab</div>
-                        <div className="text-right">Taxable</div>
-                        <div className="text-right">GST</div>
-                        <div className="text-right">Total</div>
-                      </div>
-                      {gstReport.slabs.map((slab) => (
-                        <div key={slab.gstPercent} className="data-table-row grid-gst">
-                          <div className="font-bold">{slab.gstPercent}%</div>
-                          <div className="text-right">{formatCurrency(slab.taxableAmount)}</div>
-                          <div className="text-right">{formatCurrency(slab.gstAmount)}</div>
-                          <div className="text-right font-bold">
-                            {formatCurrency(slab.totalAmount)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {activeTab === 'stock' && stockSummary && (
                 <div className="report-view stock-view animate-fade-in">
                   <div className="summary-cards">
@@ -1099,7 +1205,7 @@ const ReportsPage: React.FC = () => {
                   </div>
 
                   <div className="table-section">
-                    <div className="section-header">
+                    <div className="reports-section-header">
                       <label
                         style={{
                           display: 'flex',

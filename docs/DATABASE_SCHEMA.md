@@ -25,6 +25,10 @@ erDiagram
     customers ||--o{ bills : places
     bills ||--|{ bill_items : has
     products ||--o{ inventory_logs : logs
+    bills ||--o{ credit_notes : "reversed by"
+    customers ||--o{ credit_notes : issues
+    credit_notes ||--|{ credit_note_items : has
+    purchases ||--|{ purchase_items : has
 
     products {
         int id PK
@@ -277,6 +281,39 @@ erDiagram
 - `machine_fingerprint`: Unique hardware ID
 - `expires_at`: License expiration date
 - `activated_at`: Activation timestamp
+
+- **Anti-tamper**: License records are protected against manual modification.
+
+---
+
+### 8. `credit_notes`
+
+**Purpose:** Sales returns and GST reversals
+
+**Key Fields:**
+
+- `id`: Primary key
+- `credit_note_number`: Unique identifier (CN-YYYYMMDD-XXXX)
+- `original_bill_id`: Link to the original sale
+- `refund_amount`: Total amount returned (inclusive of reversed GST)
+- `taxable_amount`: Reversal base value
+- `gst_total`: Total Output GST reversed (deducted from liabilities)
+
+---
+
+### 9. `purchases`
+
+**Purpose:** Supplier invoices and Input Tax Credit (ITC) tracking
+
+**Key Fields:**
+
+- `id`: Primary key
+- `purchase_number`: Auto-generated ID (PUR-YYYYMMDD-XXXX)
+- `supplier_name`: Vendor name
+- `invoice_date`: Date on supplier's invoice
+- `total_taxable`: Base purchase value
+- `gst_total`: Total GST paid (available for ITC claim)
+- `grand_total`: Total amount paid to supplier
 
 ---
 

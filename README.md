@@ -174,7 +174,7 @@ SQLite Database
 - **⚡ Super-Speed Billing**: High-performance transaction engine with virtual barcode support and instant thermal printing.
 - **🛡️ Secure Licensing**: Hardware-bound machine activation with offline support and transparent IST-aligned trial management.
 - **🎁 Referral Program**: Built-in 10% cashback referral system driven by deterministically generated, easy-to-spell Customer IDs (Crockford Base32) designed for offline data safety.
-- **📊 Advanced Analytics**: Daily/Weekly/Monthly trend insights with GST-ready reporting and accurate local time attribution.
+- **📊 Advanced Analytics**: Daily/Weekly/Monthly trend insights with full GST-ready reporting, including **Sales Returns (Credit Notes)** and **Input Tax Credit (ITC)** from purchases.
 - **☁️ Cloud Sync & Backups**: Automated, configurable background database backups with seamless Google Drive synchronization to prevent data loss.
 
 **See [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) for complete schema documentation.**
@@ -263,6 +263,7 @@ pnpm build:win:portable
 | [BILLING_SERVICE_FLOW.md](docs/BILLING_SERVICE_FLOW.md)         | State machine for atomic billing      |
 | [BILLING_TRANSACTION_FLOW.md](docs/BILLING_TRANSACTION_FLOW.md) | Step-by-step transaction logic        |
 | [TAXATION_AND_DISCOUNTS.md](docs/TAXATION_AND_DISCOUNTS.md)     | GST Models and Proportional Discounts |
+| [GST_REPORTING_GUIDE.md](docs/GST_REPORTING_GUIDE.md)           | **Full End-to-End GST Manual**        |
 | [CUSTOMER_MANAGEMENT.md](docs/CUSTOMER_MANAGEMENT.md)           | Profiles and Ledger Integration       |
 | [PRINT_SERVICE.md](docs/PRINT_SERVICE.md)                       | Thermal printing & window pooling     |
 | [REPORTS_ARCHITECTURE.md](docs/REPORTS_ARCHITECTURE.md)         | Analytics & multi-format exports      |

@@ -6,63 +6,14 @@
  */
 
 import { BaseService } from './base-service';
-import { ProductRepository, Product } from '../repositories/product-repository';
+import { ProductRepository } from '../repositories/product-repository';
 import { CustomerRepository } from '../repositories/customer-repository';
 import { BillRepository, BillWithItems } from '../repositories/bill-repository';
 import { SettingsService } from './settings-service';
-import { BillingTransactionService, CreateSaleInput } from './billing-transaction-service';
-import {
-  ValidationError,
-  NotFoundError,
-  InactiveEntityError,
-  DuplicateEntryError,
-  InvalidQuantityError,
-} from './errors/service-errors';
-
-/**
- * Bill Item Input (from UI)
- */
-export interface BillItemInput {
-  productId: number;
-  quantity: number;
-}
-
-/**
- * Bill Calculation Result
- */
-export interface BillCalculation {
-  items: CalculatedLineItem[];
-  subtotal: number;
-  gstTotal: number;
-  discountAmount: number;
-  grandTotal: number;
-}
-
-/**
- * Calculated Line Item
- */
-export interface CalculatedLineItem {
-  productId: number;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  gstPercent: number;
-  lineSubtotal: number;
-  lineGst: number;
-  lineTotal: number;
-}
-
-/**
- * Finalize Bill Input
- */
-export interface FinalizeBillInput {
-  billNumber?: string;
-  customerId?: number;
-  items: BillItemInput[];
-  discountAmount?: number;
-  paymentMode: 'cash' | 'upi' | 'mixed';
-  paymentReceived?: number;
-}
+import { BillingTransactionService } from './billing-transaction-service';
+import { ValidationError, NotFoundError, InactiveEntityError } from './errors/service-errors';
+import { BillItemInput, BillCalculation, FinalizeBillInput } from '@shared/types/ipc';
+import { calculateBillPreview } from '@shared/utils/billing-math';
 
 /**
  * Billing Service
@@ -87,111 +38,52 @@ export class BillingService extends BaseService {
    * This method calculates all totals WITHOUT creating a bill.
    * Useful for showing preview to user before finalizing.
    */
-  public calculateBill(items: BillItemInput[], discountAmount: number = 0): BillCalculation {
+  public async calculateBill(
+    items: BillItemInput[],
+    discountAmount: number = 0
+  ): Promise<BillCalculation> {
     // 1. Validate items
     if (!items || items.length === 0) {
       throw new ValidationError('Bill must have at least one item', 'items');
     }
 
-    // 2. Validate discount
+    // 2. Validate discount amount
     if (discountAmount < 0) {
-      throw new ValidationError('Discount cannot be negative', 'discountAmount');
+      throw new ValidationError('Discount amount cannot be negative', 'discountAmount');
     }
 
-    // 3. Pre-calculate totals for discount distribution
-    const itemMetas: { product: Product; quantity: number; baseTotal: number }[] = [];
-    let totalGrossAmount = 0;
     const settings = SettingsService.getInstance().getConfig();
+    const productIds = items.map((i) => i.productId);
+    const products = await this.productRepo.findByIds(productIds);
+    const productMap = new Map(products.map((p) => [p.id, p]));
 
-    items.forEach((item, index) => {
-      if (!item.quantity || item.quantity <= 0) {
-        throw new InvalidQuantityError(
-          `Quantity must be positive for item ${index + 1}`,
-          item.quantity
-        );
-      }
-      const product = this.productRepo.findById(item.productId);
+    const previewItems = items.map((item) => {
+      const product = productMap.get(item.productId);
       if (!product || !product.isActive) {
         throw new NotFoundError('Product', item.productId);
       }
-
-      const isGstInclusive = settings.gstExclusiveMode ? false : product.isGstInclusive;
-      let baseTotal: number;
-      if (isGstInclusive) {
-        baseTotal = product.salePrice * item.quantity;
-      } else {
-        const sub = product.salePrice * item.quantity;
-        const gst = settings.gstEnabled ? (sub * product.gstPercent) / 100 : 0;
-        baseTotal = sub + gst;
-      }
-
-      totalGrossAmount += baseTotal;
-      itemMetas.push({ product, quantity: item.quantity, baseTotal });
+      return {
+        product,
+        quantity: item.quantity,
+        discountValue: item.discountValue,
+        discountType: item.discountType,
+      };
     });
 
-    // 3. Validate discount vs gross
-    if (discountAmount > totalGrossAmount) {
-      throw new ValidationError(
-        `Discount (₹${discountAmount}) cannot exceed Gross Total (₹${totalGrossAmount})`,
-        'discountAmount'
-      );
-    }
-
-    const discountFactor =
-      totalGrossAmount > 0 ? (totalGrossAmount - discountAmount) / totalGrossAmount : 0;
-
-    // 4. Calculate discounted line items
-    const calculatedItems: CalculatedLineItem[] = [];
-    let subtotal = 0;
-    let gstTotal = 0;
-
-    itemMetas.forEach(({ product, quantity, baseTotal }) => {
-      const discountedTotal = Math.round(baseTotal * discountFactor * 100) / 100;
-
-      let lineSubtotal: number;
-      let lineGst: number;
-
-      if (settings.gstEnabled && product.gstPercent > 0) {
-        lineSubtotal = Math.round((discountedTotal / (1 + product.gstPercent / 100)) * 100) / 100;
-        lineGst = Math.round((discountedTotal - lineSubtotal) * 100) / 100;
-      } else {
-        lineSubtotal = discountedTotal;
-        lineGst = 0;
-      }
-
-      subtotal = Math.round((subtotal + lineSubtotal) * 100) / 100;
-      gstTotal = Math.round((gstTotal + lineGst) * 100) / 100;
-
-      calculatedItems.push({
-        productId: product.id,
-        productName: product.name,
-        quantity: quantity,
-        unitPrice: product.salePrice,
-        gstPercent: product.gstPercent,
-        lineSubtotal,
-        lineGst,
-        lineTotal: discountedTotal,
-      });
-    });
-
-    // 4. Calculate grand total
-    const grandTotal = Math.round((subtotal + gstTotal) * 100) / 100;
-
-    // 5. Validate grand total is positive
-    if (grandTotal < 0) {
-      throw new ValidationError(
-        'Grand total cannot be negative. Discount is too high.',
-        'discountAmount'
-      );
-    }
-
-    return {
-      items: calculatedItems,
-      subtotal,
-      gstTotal,
+    const result = calculateBillPreview(
+      previewItems,
       discountAmount,
-      grandTotal,
-    };
+      settings.gstEnabled,
+      settings.gstExclusiveMode,
+      settings.supplyType || 'intrastate'
+    );
+
+    // 3. Validate result
+    if (result.grandTotal < 0) {
+      throw new ValidationError('Discount amount exceeds the bill total', 'discountAmount');
+    }
+
+    return result;
   }
 
   /**
@@ -205,29 +97,16 @@ export class BillingService extends BaseService {
    * 5. Logs inventory
    * 6. Updates customer balance
    */
-  public finalizeBill(input: FinalizeBillInput): BillWithItems {
-    // 1. Generate bill number if not provided
-    if (!input.billNumber) {
-      input.billNumber = this.generateBillNumber();
-    }
-
-    // Validate bill number format (sanity check)
-    this._validateBillNumber(input.billNumber);
-
-    // 2. Validate items
+  public async finalizeBill(input: FinalizeBillInput): Promise<BillWithItems> {
+    // 1. Validate items
     if (!input.items || input.items.length === 0) {
       throw new ValidationError('Bill must have at least one item', 'items');
     }
 
-    // 3. Validate payment mode
+    // 2. Validate payment mode
     this._validatePaymentMode(input.paymentMode);
 
-    // 4. Validate discount
-    if (input.discountAmount && input.discountAmount < 0) {
-      throw new ValidationError('Discount cannot be negative', 'discountAmount');
-    }
-
-    // 5. Validate customer (if provided)
+    // 3. Validate customer (if provided)
     if (input.customerId) {
       const customer = this.customerRepo.findById(input.customerId);
       if (!customer) {
@@ -238,41 +117,24 @@ export class BillingService extends BaseService {
       }
     }
 
-    // 6. Validate payment received
+    // 4. Validate payment received
     if (input.paymentReceived !== undefined && input.paymentReceived < 0) {
       throw new ValidationError('Payment received cannot be negative', 'paymentReceived');
     }
 
-    // 8. Check for duplicate bill number
-    const existingBill = this.billRepo.findByBillNumber(input.billNumber);
-    if (existingBill) {
-      throw new DuplicateEntryError('Bill', 'bill number', input.billNumber);
-    }
+    // 5. Execute atomic transaction
+    const result = await this.transactionService.createSale(input);
 
-    // 9. Create sale input for transaction service
-    const saleInput: CreateSaleInput = {
-      billNumber: input.billNumber,
-      customerId: input.customerId,
-      items: input.items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-      })),
-      paymentMode: input.paymentMode,
-      paymentReceived: input.paymentReceived,
-      discountAmount: input.discountAmount || 0,
-    };
-
-    // 10. Execute atomic transaction
-    const result = this.transactionService.createSale(saleInput);
+    // 6. Fetch the full bill with items to return
+    const finalBill = this.getBillById(result.id);
 
     this.logInfo('Bill finalized', {
-      billNumber: input.billNumber,
-      billId: result.bill.id,
-      grandTotal: result.bill.grandTotal,
-      itemCount: result.items.length,
+      billNumber: finalBill.bill.billNumber,
+      billId: finalBill.bill.id,
+      grandTotal: finalBill.bill.grandTotal,
     });
 
-    return result;
+    return finalBill;
   }
 
   /**
@@ -298,32 +160,8 @@ export class BillingService extends BaseService {
    *
    * Uses database to find the last number to ensure no collisions.
    */
-  public generateBillNumber(): string {
-    const today = new Date();
-    // Use local time for bill number to avoid UTC issues
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const dateStr = `${year}${month}${day}`;
-    const prefix = `BILL-${dateStr}-`;
-
-    // Get last bill number from DB
-    const lastBillNumber = this.billRepo.findLastBillNumberByPrefix(prefix);
-
-    let nextSequence = 1;
-
-    if (lastBillNumber) {
-      // Extract sequence part (last 4 digits)
-      const parts = lastBillNumber.split('-');
-      if (parts.length >= 3) {
-        const lastSeq = parseInt(parts[parts.length - 1], 10);
-        if (!isNaN(lastSeq)) {
-          nextSequence = lastSeq + 1;
-        }
-      }
-    }
-
-    return `${prefix}${String(nextSequence).padStart(4, '0')}`;
+  public async generateBillNumber(): Promise<string> {
+    return this.billRepo.generateBillNumber();
   }
 
   /**
@@ -336,19 +174,6 @@ export class BillingService extends BaseService {
         `Invalid payment mode. Must be one of: ${validModes.join(', ')}`,
         'paymentMode'
       );
-    }
-  }
-
-  /**
-   * Validate bill number
-   */
-  private _validateBillNumber(billNumber: string): void {
-    if (!billNumber || billNumber.trim() === '') {
-      throw new ValidationError('Bill number is required', 'billNumber');
-    }
-
-    if (billNumber.length > 50) {
-      throw new ValidationError('Bill number is too long (max 50 characters)', 'billNumber');
     }
   }
 

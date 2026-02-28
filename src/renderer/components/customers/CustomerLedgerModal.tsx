@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useIPC } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import { formatCurrency } from '../../utils/billing-math';
+import { formatCurrency } from '../../utils/formatters';
 import { BillDetailModal } from '../billing/BillDetailModal';
 import './CustomerLedgerModal.css';
 

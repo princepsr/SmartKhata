@@ -1,27 +1,33 @@
 import React, { useRef, useEffect } from 'react';
 import type { Product } from '@shared/types/ipc';
-import { formatCurrency } from '../../utils/billing-math';
+import { formatCurrency } from '../../utils/formatters';
+import { CalculatedLineItem } from '@shared/utils/billing-math';
 
 interface BillItemRowProps {
   item: {
     product: Product;
     quantity: number;
+    discountValue?: number;
+    discountType?: 'amount' | 'percent';
   };
+  calculatedLine?: CalculatedLineItem;
   index: number;
   onUpdateQuantity: (productId: number, quantity: number) => void;
+  onUpdateDiscount: (productId: number, value: number, type: 'amount' | 'percent') => void;
   onRemove: (productId: number) => void;
   autoFocus?: boolean;
 }
 
-export const BillItemRow: React.FC<BillItemRowProps> = ({
+const BillItemRowComponent: React.FC<BillItemRowProps> = ({
   item,
+  calculatedLine,
   index,
   onUpdateQuantity,
+  onUpdateDiscount,
   onRemove,
   autoFocus,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-
   // Local state for input value to allow empty string manipulation
   const [inputValue, setInputValue] = React.useState(item.quantity.toString());
 
@@ -29,6 +35,11 @@ export const BillItemRow: React.FC<BillItemRowProps> = ({
   useEffect(() => {
     setInputValue(item.quantity.toString());
   }, [item.quantity]);
+
+  const [discValueStr, setDiscValueStr] = React.useState(item.discountValue?.toString() || '');
+  useEffect(() => {
+    setDiscValueStr(item.discountValue?.toString() || '');
+  }, [item.discountValue]);
 
   // High contrast for readability
   const isEven = index % 2 === 0;
@@ -42,13 +53,10 @@ export const BillItemRow: React.FC<BillItemRowProps> = ({
 
   const handleBlur = () => {
     const newVal = parseInt(inputValue);
-    // If empty or invalid, reset to 1 (or removal? User said "remove only if user puts 0")
-    // If 0, remove.
     if (isNaN(newVal) || newVal <= 0) {
       if (inputValue === '0') {
         onRemove(item.product.id);
       } else {
-        // Reset to 1 if empty or invalid but not explicitly 0
         onUpdateQuantity(item.product.id, 1);
         setInputValue('1');
       }
@@ -69,13 +77,24 @@ export const BillItemRow: React.FC<BillItemRowProps> = ({
       e.preventDefault();
       onUpdateQuantity(item.product.id, Math.max(1, item.quantity - 1));
     } else if (e.key === 'Delete') {
-      // Only remove if not editing text (or maybe shift+delete?)
-      // For now, let's keep Delete key removal
       e.preventDefault();
       onRemove(item.product.id);
     } else if (e.key === 'Enter') {
-      inputRef.current?.blur(); // Trigger handleBlur
+      inputRef.current?.blur();
     }
+  };
+
+  const handleDiscBlur = () => {
+    const val = parseFloat(discValueStr) || 0;
+    onUpdateDiscount(item.product.id, val, item.discountType || 'amount');
+  };
+
+  const toggleDiscType = () => {
+    onUpdateDiscount(
+      item.product.id,
+      parseFloat(discValueStr) || 0,
+      item.discountType === 'percent' ? 'amount' : 'percent'
+    );
   };
 
   return (
@@ -94,7 +113,7 @@ export const BillItemRow: React.FC<BillItemRowProps> = ({
         <button
           className="btn-icon"
           onClick={() => onUpdateQuantity(item.product.id, item.quantity - 1)}
-          tabIndex={-1} // Skip tab index to keep flow fast
+          tabIndex={-1}
           style={{
             width: '2rem',
             height: '2rem',
@@ -154,9 +173,49 @@ export const BillItemRow: React.FC<BillItemRowProps> = ({
       {/* Unit Price */}
       <div style={{ textAlign: 'right' }}>{formatCurrency(item.product.salePrice)}</div>
 
-      {/* Line Total (Instant Calc) */}
+      {/* Item Discount */}
+      <div
+        className="item-discount-cell"
+        style={{ display: 'flex', gap: '2px', alignItems: 'center' }}
+      >
+        <input
+          type="number"
+          value={discValueStr}
+          onChange={(e) => setDiscValueStr(e.target.value)}
+          onBlur={handleDiscBlur}
+          placeholder="0"
+          style={{
+            width: '3.5rem',
+            padding: '2px 4px',
+            border: '1px solid #d1d5db',
+            borderRadius: '4px',
+            fontSize: '0.9rem',
+            textAlign: 'right',
+          }}
+        />
+        <button
+          onClick={toggleDiscType}
+          style={{
+            padding: '2px 4px',
+            border: '1px solid #d1d5db',
+            borderRadius: '4px',
+            fontSize: '0.75rem',
+            background: item.discountType === 'percent' ? 'var(--color-primary)' : '#f3f4f6',
+            color: item.discountType === 'percent' ? 'white' : '#374151',
+            cursor: 'pointer',
+            minWidth: '1.5rem',
+          }}
+          title="Toggle between ₹ and %"
+        >
+          {item.discountType === 'percent' ? '%' : '₹'}
+        </button>
+      </div>
+
+      {/* Line Total (Precise Blueprint Calc) */}
       <div style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--color-primary)' }}>
-        {formatCurrency(item.product.salePrice * item.quantity)}
+        {formatCurrency(
+          calculatedLine ? calculatedLine.lineTotal : item.product.salePrice * item.quantity
+        )}
       </div>
 
       {/* Remove Action */}
@@ -171,3 +230,5 @@ export const BillItemRow: React.FC<BillItemRowProps> = ({
     </div>
   );
 };
+
+export const BillItemRow = React.memo(BillItemRowComponent);

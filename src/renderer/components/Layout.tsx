@@ -84,6 +84,22 @@ const ReportsIcon = () => (
     <line x1="6" y1="20" x2="6" y2="14"></line>
   </svg>
 );
+const PurchasesIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+    <path d="M3 6h18" />
+    <path d="M16 10a4 4 0 0 1-8 0" />
+  </svg>
+);
 
 const SettingsIcon = () => (
   <svg
@@ -147,6 +163,12 @@ function Layout() {
           navigate('/reports');
           break;
         case 'F6':
+          if (settings.gstEnabled) {
+            e.preventDefault();
+            navigate('/purchases');
+          }
+          break;
+        case 'F7':
           e.preventDefault();
           navigate('/settings');
           break;
@@ -157,7 +179,7 @@ function Layout() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, settings.customersEnabled]);
+  }, [navigate, settings.customersEnabled, settings.gstEnabled]);
 
   return (
     <div className="app-container">
@@ -222,12 +244,22 @@ function Layout() {
               <kbd className="nav-shortcut">F5</kbd>
             </NavLink>
 
+            {settings.gstEnabled && (
+              <NavLink to="/purchases" className="nav-item">
+                <span className="nav-icon">
+                  <PurchasesIcon />
+                </span>
+                <span className="nav-label">Purchases</span>
+                <kbd className="nav-shortcut">F6</kbd>
+              </NavLink>
+            )}
+
             <NavLink to="/settings" className="nav-item">
               <span className="nav-icon">
                 <SettingsIcon />
               </span>
               <span className="nav-label">Settings</span>
-              <kbd className="nav-shortcut">F6</kbd>
+              <kbd className="nav-shortcut">F7</kbd>
             </NavLink>
           </nav>
 

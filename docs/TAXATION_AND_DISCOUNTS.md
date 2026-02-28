@@ -49,6 +49,26 @@ This ensures that the discount reduces the **taxable base** proportionally, a cr
 
 ---
 
+## 🔄 Sales Returns & GST Reversal
+
+When a sale is returned, the system generates a **Credit Note**. This triggers a legal reversal of the GST originally collected.
+
+- **Taxable Reversal**: The taxable value of the returned quantity is removed from the periodic liability.
+- **GST Reversal**: CGST, SGST, or IGST are reversed based on the original bill's `supply_type`.
+- **Consistency**: Line-level unit prices in returns are SNAPSHOTTED from the original bill (inclusive of any proportional discounts applied at the time of sale) to ensure exact financial reversal.
+
+---
+
+## 📦 Input Tax Credit (ITC)
+
+SmartKhata tracks GST paid on supplier purchases, known as **Input Tax Credit**, which can be set off against the GST collected on sales (Output Tax).
+
+- **Output GST**: Tax collected from customers on bills.
+- **Input ITC**: Tax paid to suppliers on purchases.
+- **Net Payable**: `(Gross Output GST - Credit Note GST) - Input ITC`.
+
+---
+
 ## 📈 Round-Off Behavior
 
 SmartKhata implements a standard mathematical round-off to the nearest rupee:

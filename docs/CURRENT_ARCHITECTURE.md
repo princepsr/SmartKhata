@@ -1,4 +1,4 @@
-# Current Architecture (As of 2026-02-22 - Phase 1.1)
+# Current Architecture (As of 2026-02-27 - Phase 1.2)
 
 ## Overview
 
@@ -44,7 +44,7 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
 │                                                                │
 │  Services:                                                    │
 │  - StabilityService (Watchdog, Memory, Resource Tracking)     │
-│  - Support Services (Product, Billing, Customer, etc.)        │
+│  - Support Services (Product, Billing, Customer, Returns, etc.)│
 │  - PrintService (Hidden Windows + Cleanup Timeouts)           │
 └──────────────────────────────────────────────────────────────┘
                             ↓
@@ -178,20 +178,22 @@ IPCHandler.handle('product:create', async (request) => {
 
 **Services:**
 
-| Service              | Responsibilities                                                                                               |
-| -------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **ProductService**   | Product CRUD, stock adjustments, duplicate prevention, margin calculation                                      |
-| **BillingService**   | Bill calculations, finalization, validation, bill number generation                                            |
-| **CustomerService**  | Customer CRUD, phone validation, balance tracking                                                              |
-| **InventoryService** | Stock availability, deduction rules, integrity verification                                                    |
-| **ReportService**    | Data aggregation for sales, GST, payment modes, and trend analytics                                            |
-| **ExportService**    | CSV/PDF generation, file system interactions for report exports                                                |
-| **PrintService**     | Thermal receipt formatting, printer driver communication, status checks                                        |
-| **SettingsService**  | Configuration management, caching, validation                                                                  |
-| **LicenseService**   | License validation, expiry checking, machine binding, redundant marker persistence, and anti-time-tamper logic |
-| **Support Services** | Product, Billing, Customer, and Command Center context dispatching                                             |
-| **UpdateService**    | Background version checking, `autoUpdater` event handling, and update log integration                          |
-| **BackupService**    | Atomic database archival and ZIP-based restoration flow                                                        |
+| Service               | Responsibilities                                                                                               |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **ProductService**    | Product CRUD, stock adjustments, duplicate prevention, margin calculation                                      |
+| **BillingService**    | Bill calculations, finalization, validation, bill number generation                                            |
+| **CustomerService**   | Customer CRUD, phone validation, balance tracking                                                              |
+| **InventoryService**  | Stock availability, deduction rules, integrity verification                                                    |
+| **ReportService**     | Data aggregation for sales, GST, payment modes, and trend analytics                                            |
+| **ExportService**     | CSV/PDF generation, file system interactions for report exports                                                |
+| **PrintService**      | Thermal receipt formatting, printer driver communication, status checks                                        |
+| **SettingsService**   | Configuration management, caching, validation                                                                  |
+| **LicenseService**    | License validation, expiry checking, machine binding, redundant marker persistence, and anti-time-tamper logic |
+| **Support Services**  | Product, Billing, Customer, and Command Center context dispatching                                             |
+| **UpdateService**     | Background version checking, `autoUpdater` event handling, and update log integration                          |
+| **BackupService**     | Atomic database archival and ZIP-based restoration flow                                                        |
+| **CreditNoteService** | Sales returns reversal, linked bill validation, and GST reversal math                                          |
+| **PurchaseService**   | Recording supplier invoices, ITC calculation, and net GST liability mapping                                    |
 
 **Example:**
 
@@ -234,15 +236,17 @@ export class BillingService extends BaseService {
 
 **Repositories:**
 
-| Repository              | Responsibilities                                          |
-| ----------------------- | --------------------------------------------------------- |
-| **ProductRepository**   | Product CRUD, stock updates, SKU/barcode lookup           |
-| **BillRepository**      | Bill creation, queries, sales summaries                   |
-| **CustomerRepository**  | Customer CRUD, balance updates, phone lookup              |
-| **InventoryRepository** | Inventory logging, stock history                          |
-| **ReportRepository**    | Advanced aggregation, GST slabs, and trend analytics data |
-| **SettingsRepository**  | Key-value storage, UPSERT operations                      |
-| **LicenseRepository**   | Single-row license management                             |
+| Repository               | Responsibilities                                          |
+| ------------------------ | --------------------------------------------------------- |
+| **ProductRepository**    | Product CRUD, stock updates, SKU/barcode lookup           |
+| **BillRepository**       | Bill creation, queries, sales summaries                   |
+| **CustomerRepository**   | Customer CRUD, balance updates, phone lookup              |
+| **InventoryRepository**  | Inventory logging, stock history                          |
+| **ReportRepository**     | Advanced aggregation, GST slabs, and trend analytics data |
+| **SettingsRepository**   | Key-value storage, UPSERT operations                      |
+| **LicenseRepository**    | Single-row license management                             |
+| **CreditNoteRepository** | Sales return storage and bill linking                     |
+| **PurchaseRepository**   | Supplier purchase storage and ITC tracking                |
 
 **Example:**
 
@@ -282,7 +286,7 @@ export class ProductRepository extends BaseRepository {
 
 **Schema:**
 
-- 8 tables (products, customers, bills, bill_items, inventory_logs, settings, license, schema_migrations)
+- 12 tables (products, customers, bills, bill_items, inventory_logs, settings, license, schema_migrations, credit_notes, credit_note_items, purchases, purchase_items)
 - Monetary values stored as decimals (rupees)
 - Percentages stored as percentage (e.g., 18.0)
 - Timestamps stored as ISO 8601 strings
@@ -404,10 +408,12 @@ UI displays error to user
 
 **Test Coverage:**
 
-- ✅ BillingService (18 tests)
-- ✅ ProductService (15 tests)
-- ✅ CustomerService (10 tests)
-- ✅ LicenseService (9 tests)
+- ✅ BillingService (22 tests)
+- ✅ ProductService (18 tests)
+- ✅ CustomerService (12 tests)
+- ✅ LicenseService (10 tests)
+- ✅ CreditNoteService (12 tests)
+- ✅ PurchaseService (10 tests)
 
 **Run Tests:**
 

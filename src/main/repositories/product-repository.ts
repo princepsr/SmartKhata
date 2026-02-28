@@ -13,6 +13,7 @@ export interface Product {
   salePrice: number; // In rupees (e.g., 40.00)
   purchasePrice: number | null; // In rupees
   gstPercent: number; // As decimal (e.g., 18.00 for 18%)
+  hsnCode: string | null; // HSN/SAC code for GST compliance
   stockQty: number;
   lowStockAlert: number | null;
   isActive: boolean;
@@ -32,6 +33,7 @@ export interface CreateProductInput {
   salePrice: number; // In rupees
   purchasePrice?: number; // In rupees
   gstPercent?: number; // As decimal (default 5%)
+  hsnCode?: string; // HSN/SAC code
   stockQty?: number;
   lowStockAlert?: number;
   trackInventory?: boolean;
@@ -49,6 +51,7 @@ export interface UpdateProductInput {
   salePrice?: number; // In rupees
   purchasePrice?: number | null; // In rupees
   gstPercent?: number; // As decimal
+  hsnCode?: string | null; // HSN/SAC code
   stockQty?: number;
   lowStockAlert?: number;
   isActive?: boolean;
@@ -70,10 +73,10 @@ export class ProductRepository extends BaseRepository {
     const now = new Date();
     const sql = `
       INSERT INTO products (
-        name, sku, barcode, sale_price, purchase_price, gst_percent, 
+        name, sku, barcode, sale_price, purchase_price, gst_percent, hsn_code,
         stock_qty, low_stock_alert, track_inventory, is_gst_inclusive, is_active,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const result = this.execute(sql, [
@@ -83,6 +86,7 @@ export class ProductRepository extends BaseRepository {
       data.salePrice, // Direct Rupees
       data.purchasePrice ?? null,
       data.gstPercent ?? 0, // Fallback to 0 if not provided by service
+      data.hsnCode ?? null,
       data.stockQty ?? 0,
       data.lowStockAlert ?? null,
       data.trackInventory === false ? 0 : 1, // Explicitly handle false (Default true)
@@ -162,6 +166,10 @@ export class ProductRepository extends BaseRepository {
       fields.push('is_gst_inclusive = ?');
       values.push(data.isGstInclusive ? 1 : 0);
     }
+    if (data.hsnCode !== undefined) {
+      fields.push('hsn_code = ?');
+      values.push(data.hsnCode ?? null);
+    }
 
     if (fields.length === 0) {
       throw new Error('No fields to update');
@@ -200,6 +208,19 @@ export class ProductRepository extends BaseRepository {
     const sql = `SELECT * FROM products WHERE id = ?`;
     const row = this.queryOne<any>(sql, [id]);
     return row ? this._mapToProduct(row) : null;
+  }
+
+  /**
+   * Find multiple products by their IDs
+   */
+  public findByIds(ids: number[]): Product[] {
+    if (!ids || ids.length === 0) {
+      return [];
+    }
+    const placeholders = ids.map(() => '?').join(',');
+    const sql = `SELECT * FROM products WHERE id IN (${placeholders})`;
+    const rows = this.queryAll<any>(sql, ids);
+    return rows.map((row) => this._mapToProduct(row));
   }
 
   /**
@@ -406,6 +427,7 @@ export class ProductRepository extends BaseRepository {
       salePrice: row.sale_price, // Direct Rupees
       purchasePrice: row.purchase_price,
       gstPercent: row.gst_percent, // Direct Percent
+      hsnCode: row.hsn_code ?? null,
       stockQty: row.stock_qty,
       lowStockAlert: row.low_stock_alert,
       isActive: row.is_active === 1, // INTEGER → boolean

@@ -7,7 +7,8 @@
 
 import { IPCHandler } from '../ipc-handler';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import { BillingService, FinalizeBillInput, BillItemInput } from '../../services/billing-service';
+import { BillingService } from '../../services/billing-service';
+import { FinalizeBillInput, BillItemInput } from '@shared/types/ipc';
 import { BillRepository } from '../../repositories/bill-repository';
 import { PrintService } from '../../services/print-service'; // Import
 import { LicenseService } from '../../services/license-service';
@@ -30,7 +31,7 @@ export function registerBillHandlers(): void {
     'bill:calculate',
     // ... existing implementation ...
     async ({ items, discountAmount }) => {
-      const calculation = billingService.calculateBill(items, discountAmount || 0);
+      const calculation = await billingService.calculateBill(items, discountAmount || 0);
 
       return {
         items: calculation.items.map((item) => ({
@@ -41,10 +42,16 @@ export function registerBillHandlers(): void {
           gstPercent: item.gstPercent,
           lineSubtotal: item.lineSubtotal,
           lineGst: item.lineGst,
+          lineCgst: item.lineCgst,
+          lineSgst: item.lineSgst,
+          lineIgst: item.lineIgst,
           lineTotal: item.lineTotal,
         })),
         subtotal: calculation.subtotal,
         gstTotal: calculation.gstTotal,
+        cgstTotal: calculation.cgstTotal,
+        sgstTotal: calculation.sgstTotal,
+        igstTotal: calculation.igstTotal,
         discountAmount: calculation.discountAmount,
         grandTotal: calculation.grandTotal,
       };
@@ -66,7 +73,7 @@ export function registerBillHandlers(): void {
         throw new Error('Trial or License has expired. Please activate to continue billing.');
       }
 
-      const result = billingService.finalizeBill(billInput);
+      const result = await billingService.finalizeBill(billInput);
 
       // 1. Auto-print if enabled in settings
       const settings = new SettingsService().getConfig();
@@ -87,9 +94,13 @@ export function registerBillHandlers(): void {
           customerName: result.bill.customerName,
           subtotal: result.bill.subtotal,
           gstTotal: result.bill.gstTotal,
+          cgstAmount: result.bill.cgstAmount,
+          sgstAmount: result.bill.sgstAmount,
+          igstAmount: result.bill.igstAmount,
           discountAmount: result.bill.discountAmount,
           grandTotal: result.bill.grandTotal,
           paymentMode: result.bill.paymentMode,
+          isPrinted: result.bill.isPrinted,
           createdAt: result.bill.createdAt.getTime(),
         },
         items: result.items.map((item) => ({
@@ -189,7 +200,7 @@ export function registerBillHandlers(): void {
   IPCHandler.handle<void, string>(
     'bill:generateNumber',
     async () => {
-      return billingService.generateBillNumber();
+      return await billingService.generateBillNumber();
     },
     {
       transformError: (err) => getUserFriendlyMessage(err),

@@ -24,6 +24,8 @@ SmartKhata/
 │   │   │   ├── settings-service.ts
 │   │   │   ├── license-service.ts
 │   │   │   ├── backup-service.ts
+│   │   │   ├── credit-note-service.ts
+│   │   │   ├── purchase-service.ts
 │   │   │   └── update-service.ts
 │   │   ├── repositories/          # Data access layer (SQLite)
 │   │   │   ├── product-repository.ts
@@ -31,6 +33,8 @@ SmartKhata/
 │   │   │   ├── customer-repository.ts
 │   │   │   ├── inventory-repository.ts
 │   │   │   ├── report-repository.ts
+│   │   │   ├── credit-note-repository.ts
+│   │   │   ├── purchase-repository.ts
 │   │   │   └── base-repository.ts
 │   │   ├── ipc/                   # IPC logic & handlers
 │   │   │   ├── handlers/          # Specific logic handlers
@@ -40,7 +44,8 @@ SmartKhata/
 │   │   │   ├── connection.ts
 │   │   │   ├── migrations/
 │   │   │   │   ├── 001_initial_schema.sql
-│   │   │   │   └── 002_add_inventory.sql
+│   │   │   │   ├── 025_credit_notes.sql
+│   │   │   │   └── 026_itc_purchases.sql
 │   │   │   └── seeds/
 │   │   │       └── dev-data.sql
 │   │   ├── utils/                 # Main process utilities
@@ -120,6 +125,7 @@ SmartKhata/
 ├── docs/                          # Project documentation
 │   ├── ARCHITECTURE_DECISIONS.md
 │   ├── CURRENT_ARCHITECTURE.md
+│   ├── GST_REPORTING_GUIDE.md
 │   ├── COMMAND_CENTER.md
 │   ├── FOLDER_STRUCTURE.md
 │   ├── UI_ARCHITECTURE.md
@@ -336,4 +342,4 @@ contextBridge.exposeInMainWorld('electron', {
 
 ---
 
-**Last updated:** 2026-02-24 (Privacy Policy & Onboarding Flow Complete)
+**Last updated:** 2026-02-27 (GST Robustness Fixed & Documented)

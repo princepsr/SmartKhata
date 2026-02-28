@@ -17,8 +17,8 @@ Phase 1 focused on building a rock-solid, local-first Point of Sale application 
 
 ### Reporting & Analytics
 
-- ✅ **Financial Summaries**: Daily sales, net vs. gross revenue, and discount tracking.
-- ✅ **Taxation**: Automated GST slab-wise reporting (5%, 12%, 18%).
+- ✅ **Financial Summaries**: Daily sales, net vs. gross revenue, and profit margin tracking.
+- ✅ **Full GST Reporting**: Automated slab-wise reporting with **Sales Returns (Credit Notes)** reversal and **Input Tax Credit (ITC)** from purchases.
 - ✅ **Trend Analytics**: Growth tracking across daily, weekly, and monthly intervals.
 - ✅ **Stock Safety**: Low-stock auditing and value summary.
 - ✅ **Exports**: Professional-grade PDF, Excel (.xlsx), and CSV exports.

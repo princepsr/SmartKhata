@@ -10,6 +10,7 @@ interface Product {
   name: string;
   sku?: string;
   barcode?: string;
+  hsnCode?: string | null;
   salePrice: number;
   purchasePrice?: number;
   gstPercent?: number;
@@ -31,6 +32,7 @@ interface FormData {
   name: string;
   sku: string;
   barcode: string;
+  hsnCode: string;
   salePrice: string;
   purchasePrice: string;
   gstPercent: string;
@@ -45,6 +47,7 @@ const INITIAL_STATE: FormData = {
   name: '',
   sku: '',
   barcode: '',
+  hsnCode: '',
   salePrice: '',
   purchasePrice: '',
   gstPercent: '0',
@@ -105,6 +108,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           name: initialData.name,
           sku: initialData.sku || '',
           barcode: initialData.barcode || '',
+          hsnCode: initialData.hsnCode || '',
           salePrice: initialData.salePrice.toFixed(2),
           purchasePrice: initialData.purchasePrice ? initialData.purchasePrice.toFixed(2) : '',
           gstPercent: initialData.gstPercent?.toString() || '0',
@@ -217,12 +221,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       name: formData.name,
       sku: formData.sku || undefined,
       barcode: formData.barcode || undefined,
+      hsnCode: formData.hsnCode || undefined,
       salePrice: parseFloat(formData.salePrice),
       cost: formData.purchasePrice
         ? parseFloat(formData.purchasePrice)
         : isEditMode
           ? null
-          : undefined, // Allow clearing in edit mode
+          : undefined,
       gstPercent: parseFloat(formData.gstPercent || '0'),
       stockQty: parseFloat(formData.stockQty || '0'),
       lowStockAlert: parseFloat(formData.lowStockAlert || '0'),
@@ -301,6 +306,20 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   disabled={isLoading}
                 />
               </div>
+              {settings.gstEnabled && (
+                <div className="form-group">
+                  <label>HSN / SAC (Optional)</label>
+                  <input
+                    type="text"
+                    name="hsnCode"
+                    value={formData.hsnCode}
+                    onChange={handleChange}
+                    placeholder="8-digit code"
+                    disabled={isLoading}
+                    maxLength={8}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="form-row">

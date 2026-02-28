@@ -21,7 +21,8 @@ src/main/database/
     ├── 014_customer_ledger.sql     # Customer balance tracking and ledger tables
     ├── 015_customer_address_email.sql # Extended customer profile attributes
     ├── 016_bill_items_purchase_price.sql # Profit tracking via cost-price snapshots
-    └── ...
+    ├── 025_credit_notes.sql        # Sales returns and GST reversal tables
+    └── 026_itc_purchases.sql       # Supplier purchases and ITC tracking
 ```
 
 ---

@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { useIPC } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import { formatCurrency } from '../../utils/billing-math';
+import { formatCurrency } from '../../utils/formatters';
+import { useAppSettingsStore } from '../../store';
+import { CreditNoteModal } from './CreditNoteModal';
 import './BillDetailModal.css';
 
 interface BillItem {
@@ -25,6 +27,10 @@ interface BillDetail {
     customerName: string | null;
     paymentMode: string;
     createdAt: number;
+    cgstAmount?: number;
+    sgstAmount?: number;
+    igstAmount?: number;
+    isPrinted?: boolean;
   };
   items: BillItem[];
 }
@@ -40,6 +46,8 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
   onClose,
   billNumber,
 }) => {
+  const [isCreditNoteModalOpen, setIsCreditNoteModalOpen] = React.useState(false);
+  const { settings } = useAppSettingsStore();
   const { data, loading, error, execute: fetchBill } = useIPC<BillDetail>(IPC_CHANNELS.BILL_GET);
 
   useEffect(() => {
@@ -83,6 +91,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
                   <span className={`mode-badge ${data.bill.paymentMode.toLowerCase()}`}>
                     {data.bill.paymentMode.toUpperCase()}
                   </span>
+                  {data.bill.isPrinted && <span className="lock-badge-ui">🔒 LOCKED</span>}
                 </div>
 
                 <div
@@ -123,10 +132,40 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
                     <span>Subtotal:</span>
                     <span>{formatCurrency(data.bill.subtotal)}</span>
                   </div>
-                  <div className="summary-row">
-                    <span>GST:</span>
-                    <span>{formatCurrency(data.bill.gstTotal)}</span>
-                  </div>
+
+                  {settings.gstEnabled && (
+                    <>
+                      {data.bill.igstAmount !== undefined && data.bill.igstAmount > 0 ? (
+                        <div className="summary-row">
+                          <span>IGST:</span>
+                          <span>{formatCurrency(data.bill.igstAmount)}</span>
+                        </div>
+                      ) : (
+                        <>
+                          {data.bill.cgstAmount !== undefined && data.bill.cgstAmount > 0 && (
+                            <div className="summary-row">
+                              <span>CGST:</span>
+                              <span>{formatCurrency(data.bill.cgstAmount)}</span>
+                            </div>
+                          )}
+                          {data.bill.sgstAmount !== undefined && data.bill.sgstAmount > 0 && (
+                            <div className="summary-row">
+                              <span>SGST:</span>
+                              <span>{formatCurrency(data.bill.sgstAmount)}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {!data.bill.cgstAmount && !data.bill.igstAmount && data.bill.gstTotal > 0 && (
+                    <div className="summary-row">
+                      <span>GST:</span>
+                      <span>{formatCurrency(data.bill.gstTotal)}</span>
+                    </div>
+                  )}
+
                   {data.bill.discountAmount > 0 && (
                     <div className="summary-row discount">
                       <span>Discount:</span>
@@ -144,11 +183,28 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
         </div>
 
         <div className="modal-footer">
+          {settings.gstEnabled && (
+            <button className="btn-outline-danger" onClick={() => setIsCreditNoteModalOpen(true)}>
+              Issue Credit Note
+            </button>
+          )}
           <button className="btn-secondary" onClick={onClose}>
             Close
           </button>
         </div>
       </div>
+
+      {isCreditNoteModalOpen && data && (
+        <CreditNoteModal
+          isOpen={isCreditNoteModalOpen}
+          onClose={() => setIsCreditNoteModalOpen(false)}
+          billDetail={data}
+          onSuccess={() => {
+            setIsCreditNoteModalOpen(false);
+            onClose();
+          }}
+        />
+      )}
     </div>
   );
 };

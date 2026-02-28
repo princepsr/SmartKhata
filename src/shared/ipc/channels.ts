@@ -46,6 +46,7 @@ export const IPC_CHANNELS = {
   BILL_SALES_SUMMARY: 'bill:salesSummary',
   BILL_PRINT: 'bill:print',
   BILL_REPRINT_LAST: 'bill:reprint-last',
+  BILL_MARK_AS_PRINTED: 'bill:markAsPrinted',
   PRINTER_LIST: 'printer:list',
   PRINTER_TEST_PRINT: 'printer:testPrint',
 
@@ -136,6 +137,24 @@ export const IPC_CHANNELS = {
   GOOGLE_DRIVE_BACKUP_INFO: 'google:drive-backup-info',
   GOOGLE_DOWNLOAD_BACKUP: 'google:download-backup',
   GOOGLE_SYNC_NOW: 'google:sync-now',
+
+  // ============================================
+  // CREDIT NOTE MODULE
+  // ============================================
+  CREDIT_NOTE_CREATE: 'creditNote:create',
+  CREDIT_NOTE_LIST: 'creditNote:list',
+  CREDIT_NOTE_GET_BY_ID: 'creditNote:getById',
+  CREDIT_NOTE_GENERATE_NUMBER: 'creditNote:generateNumber',
+
+  // ============================================
+  // PURCHASE / ITC MODULE
+  // ============================================
+  PURCHASE_RECORD: 'purchase:record',
+  PURCHASE_LIST: 'purchase:list',
+  PURCHASE_GET_BY_ID: 'purchase:getById',
+  PURCHASE_ITC_SUMMARY: 'purchase:itcSummary',
+  PURCHASE_NET_GST_LIABILITY: 'purchase:netGstLiability',
+  PURCHASE_GENERATE_NUMBER: 'purchase:generateNumber',
 
   // ============================================
   // UPDATE MODULE

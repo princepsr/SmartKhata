@@ -124,6 +124,7 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       sale_price REAL NOT NULL CHECK(sale_price >= 0),
       purchase_price REAL DEFAULT 0 CHECK(purchase_price >= 0),
       gst_percent REAL NOT NULL DEFAULT 0 CHECK(gst_percent >= 0),
+      hsn_code TEXT,
       stock_qty INTEGER NOT NULL DEFAULT 0,
       low_stock_alert INTEGER DEFAULT 0 CHECK(low_stock_alert >= 0),
       is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
@@ -140,6 +141,9 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       customer_id INTEGER,
       subtotal REAL NOT NULL CHECK(subtotal >= 0),
       gst_total REAL NOT NULL DEFAULT 0 CHECK(gst_total >= 0),
+      cgst_amount REAL DEFAULT 0,
+      sgst_amount REAL DEFAULT 0,
+      igst_amount REAL DEFAULT 0,
       discount_amount REAL NOT NULL DEFAULT 0 CHECK(discount_amount >= 0),
       grand_total REAL NOT NULL CHECK(grand_total >= 0),
       payment_mode TEXT NOT NULL DEFAULT 'cash' CHECK(payment_mode IN ('cash', 'upi', 'mixed')),
@@ -157,6 +161,12 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       unit_price REAL NOT NULL CHECK(unit_price >= 0),
       purchase_price REAL DEFAULT 0,
       gst_percent REAL NOT NULL DEFAULT 0,
+      hsn_snapshot TEXT,
+      line_subtotal REAL DEFAULT 0,
+      line_gst REAL DEFAULT 0,
+      line_cgst REAL DEFAULT 0,
+      line_sgst REAL DEFAULT 0,
+      line_igst REAL DEFAULT 0,
       line_total REAL NOT NULL CHECK(line_total >= 0),
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE,
@@ -216,6 +226,7 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       customers_enabled INTEGER DEFAULT 1,
       gst_exclusive_mode INTEGER DEFAULT 0,
       auto_update_enabled INTEGER DEFAULT 1,
+      supply_type TEXT DEFAULT 'intrastate',
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -230,6 +241,83 @@ export async function createTestDatabase(): Promise<BetterSqliteCompatibleDataba
       is_trial INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Credit Notes table
+    CREATE TABLE IF NOT EXISTS credit_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      credit_note_number TEXT UNIQUE NOT NULL,
+      original_bill_id INTEGER,
+      original_bill_number TEXT,
+      customer_id INTEGER,
+      reason TEXT NOT NULL,
+      refund_amount REAL NOT NULL CHECK(refund_amount >= 0),
+      taxable_amount REAL NOT NULL DEFAULT 0,
+      cgst_amount REAL NOT NULL DEFAULT 0,
+      sgst_amount REAL NOT NULL DEFAULT 0,
+      igst_amount REAL NOT NULL DEFAULT 0,
+      gst_total REAL NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (original_bill_id) REFERENCES bills(id) ON DELETE SET NULL,
+      FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
+    );
+
+    -- Credit Note Items table
+    CREATE TABLE IF NOT EXISTS credit_note_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      credit_note_id INTEGER NOT NULL,
+      product_id INTEGER NOT NULL,
+      product_name_snapshot TEXT NOT NULL,
+      hsn_code TEXT,
+      quantity INTEGER NOT NULL CHECK(quantity > 0),
+      unit_price REAL NOT NULL CHECK(unit_price >= 0),
+      gst_percent REAL NOT NULL CHECK(gst_percent >= 0),
+      line_taxable REAL NOT NULL DEFAULT 0,
+      line_cgst REAL NOT NULL DEFAULT 0,
+      line_sgst REAL NOT NULL DEFAULT 0,
+      line_igst REAL NOT NULL DEFAULT 0,
+      line_total REAL NOT NULL CHECK(line_total >= 0),
+      FOREIGN KEY (credit_note_id) REFERENCES credit_notes(id) ON DELETE CASCADE,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
+    );
+
+    -- Purchases table
+    CREATE TABLE IF NOT EXISTS purchases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      purchase_number TEXT UNIQUE NOT NULL,
+      supplier_name TEXT NOT NULL,
+      supplier_gstin TEXT,
+      invoice_number TEXT,
+      invoice_date TEXT NOT NULL,
+      total_taxable REAL NOT NULL CHECK(total_taxable >= 0),
+      cgst_amount REAL NOT NULL DEFAULT 0,
+      sgst_amount REAL NOT NULL DEFAULT 0,
+      igst_amount REAL NOT NULL DEFAULT 0,
+      gst_total REAL NOT NULL DEFAULT 0,
+      grand_total REAL NOT NULL CHECK(grand_total >= 0),
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Purchase Items table
+    CREATE TABLE IF NOT EXISTS purchase_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      purchase_id INTEGER NOT NULL,
+      product_id INTEGER,
+      product_name TEXT NOT NULL,
+      hsn_code TEXT,
+      quantity REAL NOT NULL CHECK(quantity > 0),
+      unit_price REAL NOT NULL CHECK(unit_price >= 0),
+      gst_percent REAL NOT NULL DEFAULT 0 CHECK(gst_percent >= 0),
+      line_taxable REAL NOT NULL DEFAULT 0,
+      line_cgst REAL NOT NULL DEFAULT 0,
+      line_sgst REAL NOT NULL DEFAULT 0,
+      line_igst REAL NOT NULL DEFAULT 0,
+      line_total REAL NOT NULL CHECK(line_total >= 0),
+      FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
     );
   `;
 
@@ -250,6 +338,10 @@ export function resetTestDatabase(db: any): void {
     db.exec(`
       DELETE FROM customer_ledger;
       DELETE FROM app_config;
+      DELETE FROM credit_note_items;
+      DELETE FROM credit_notes;
+      DELETE FROM purchase_items;
+      DELETE FROM purchases;
       DELETE FROM bill_items;
       DELETE FROM bills;
       DELETE FROM inventory_logs;
@@ -297,8 +389,8 @@ export function seedTestData(db: any): void {
     `);
 
     db.exec(`
-      INSERT INTO app_config (id, shop_name, paper_size, gst_enabled, gst_percentage, billing_only, customers_enabled, gst_exclusive_mode, auto_update_enabled)
-      VALUES (1, 'Test Shop', '58mm', 1, 5, 0, 1, 0, 1);
+      INSERT INTO app_config (id, shop_name, paper_size, gst_enabled, gst_percentage, billing_only, customers_enabled, gst_exclusive_mode, auto_update_enabled, supply_type)
+      VALUES (1, 'Test Shop', '58mm', 1, 5, 0, 1, 0, 1, 'intrastate');
     `);
 
     db.exec(`

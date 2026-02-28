@@ -59,6 +59,7 @@ export function registerProductHandlers(): void {
         isActive: p.isActive,
         isGstInclusive: p.isGstInclusive,
         trackInventory: p.trackInventory,
+        hsnCode: p.hsnCode,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
       }));
@@ -96,6 +97,7 @@ export function registerProductHandlers(): void {
         isActive: product.isActive,
         isGstInclusive: product.isGstInclusive,
         trackInventory: product.trackInventory,
+        hsnCode: product.hsnCode,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
       };
@@ -130,6 +132,7 @@ export function registerProductHandlers(): void {
         trackInventory: request.trackInventory,
         isGstInclusive: request.isGstInclusive,
         isActive: request.isActive,
+        hsnCode: request.hsnCode,
       };
 
       const product = productService.addProduct(input);
@@ -146,6 +149,7 @@ export function registerProductHandlers(): void {
         lowStockAlert: product.lowStockAlert,
         isActive: product.isActive,
         trackInventory: product.trackInventory,
+        hsnCode: product.hsnCode,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
       };
@@ -179,6 +183,7 @@ export function registerProductHandlers(): void {
         lowStockAlert: req.lowStockAlert,
         trackInventory: req.trackInventory,
         isGstInclusive: req.isGstInclusive,
+        hsnCode: req.hsnCode,
       }));
 
       const products = productService.importProducts(inputs);
@@ -196,6 +201,7 @@ export function registerProductHandlers(): void {
         isActive: product.isActive,
         isGstInclusive: product.isGstInclusive,
         trackInventory: product.trackInventory,
+        hsnCode: product.hsnCode,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
       }));
@@ -229,6 +235,7 @@ export function registerProductHandlers(): void {
         isActive: request.data.isActive,
         isGstInclusive: request.data.isGstInclusive,
         trackInventory: request.data.trackInventory,
+        hsnCode: request.data.hsnCode,
       };
 
       const product = productService.updateProduct(request.id, updates);
@@ -245,6 +252,7 @@ export function registerProductHandlers(): void {
         lowStockAlert: product.lowStockAlert,
         isActive: product.isActive,
         trackInventory: product.trackInventory,
+        hsnCode: product.hsnCode,
         createdAt: product.createdAt.toISOString(),
         updatedAt: product.updatedAt.toISOString(),
       };
@@ -280,6 +288,7 @@ export function registerProductHandlers(): void {
           isActive: p.isActive,
           isGstInclusive: p.isGstInclusive,
           trackInventory: p.trackInventory,
+          hsnCode: p.hsnCode,
         })),
         totalCount: result.totalCount,
         hasMore: result.hasMore,

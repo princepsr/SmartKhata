@@ -173,9 +173,52 @@ export class ReportRepository extends BaseRepository {
   }
 
   /**
-   * Get GST Breakdown Summary
+   * Get GST Breakdown Summary — includes CGST/SGST/IGST from bills table
    */
   public getGstSummary(startDate: string, endDate: string): GstReport {
+    // Get supply type from settings to determine CGST/SGST vs IGST split
+    const configRow = this.db.prepare(`SELECT supply_type FROM app_config LIMIT 1`).get() as
+      | { supply_type: string }
+      | undefined;
+    const supplyType = configRow?.supply_type || 'intrastate';
+    const isIntrastate = supplyType !== 'interstate';
+
+    // Aggregate CGST/SGST/IGST directly from bills table (already computed at billing time)
+    const billTotalsQuery = `
+      SELECT
+        COALESCE(SUM(cgst_amount), 0) as totalCgst,
+        COALESCE(SUM(sgst_amount), 0) as totalSgst,
+        COALESCE(SUM(igst_amount), 0) as totalIgst
+      FROM bills
+      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
+    `;
+    const billTotals = this.db.prepare(billTotalsQuery).get(startDate, endDate) as {
+      totalCgst: number;
+      totalSgst: number;
+      totalIgst: number;
+    };
+
+    // --- NEW: FETCH CREDIT NOTE RETURNS ---
+    const cnQuery = `
+      SELECT COALESCE(SUM(gst_total), 0) as totalCnGst
+      FROM credit_notes
+      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
+    `;
+    const cnResult = this.db.prepare(cnQuery).get(startDate, endDate) as {
+      totalCnGst: number;
+    };
+
+    // --- NEW: FETCH PURCHASE ITC ---
+    const purchaseQuery = `
+      SELECT COALESCE(SUM(gst_total), 0) as totalItc
+      FROM purchases
+      WHERE date(invoice_date) BETWEEN date(?) AND date(?)
+    `;
+    const purchaseResult = this.db.prepare(purchaseQuery).get(startDate, endDate) as {
+      totalItc: number;
+    };
+
+    // Slab-level query (taxable / gst / total per GST rate)
     const query = `
       SELECT 
         bi.gst_percent as gstPercent,
@@ -201,28 +244,47 @@ export class ReportRepository extends BaseRepository {
       ORDER BY bi.gst_percent ASC
     `;
 
-    const slabs = this.db.prepare(query).all(startDate, endDate) as GstTaxSlab[];
+    const rawSlabs = this.db.prepare(query).all(startDate, endDate) as {
+      gstPercent: number;
+      taxableAmount: number;
+      gstAmount: number;
+      totalAmount: number;
+    }[];
 
     let totalTaxable = 0;
-    let totalGst = 0;
     let totalAmount = 0;
 
-    slabs.forEach((slab) => {
+    rawSlabs.forEach((slab) => {
       totalTaxable += slab.taxableAmount;
-      totalGst += slab.gstAmount;
       totalAmount += slab.totalAmount;
     });
 
+    // Build typed slabs with CGST/SGST/IGST split per slab
+    const slabs: GstTaxSlab[] = rawSlabs.map((s) => ({
+      gstPercent: s.gstPercent,
+      taxableAmount: s.taxableAmount,
+      gstAmount: s.gstAmount,
+      cgstAmount: isIntrastate ? Math.round((s.gstAmount / 2) * 100) / 100 : 0,
+      sgstAmount: isIntrastate ? Math.round((s.gstAmount / 2) * 100) / 100 : 0,
+      igstAmount: isIntrastate ? 0 : s.gstAmount,
+      totalAmount: s.totalAmount,
+    }));
+
+    const grossGst = billTotals.totalCgst + billTotals.totalSgst + billTotals.totalIgst;
+    const netGstPayable = Math.max(0, grossGst - cnResult.totalCnGst - purchaseResult.totalItc);
+
     return {
-      slabs: slabs.map((s) => ({
-        ...s,
-        taxableAmount: s.taxableAmount, // Direct Rupees
-        gstAmount: s.gstAmount,
-        totalAmount: s.totalAmount,
-      })),
-      totalTaxable: totalTaxable,
-      totalGst: totalGst,
-      totalAmount: totalAmount,
+      slabs,
+      totalTaxable,
+      totalGst: grossGst,
+      totalCgst: billTotals.totalCgst,
+      totalSgst: billTotals.totalSgst,
+      totalIgst: billTotals.totalIgst,
+      totalCreditNoteGst: cnResult.totalCnGst,
+      totalPurchaseItc: purchaseResult.totalItc,
+      netGstPayable: Math.round(netGstPayable * 100) / 100,
+      totalAmount,
+      supplyType,
     };
   }
 

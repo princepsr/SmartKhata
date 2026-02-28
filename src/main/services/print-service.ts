@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron';
+﻿import { app, BrowserWindow, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
@@ -605,7 +605,15 @@ export class PrintService extends BaseService {
   }
 
   /**
-   * Generates the HTML for a thermal receipt
+   * Generates the HTML for a GST-compliant Tax Invoice / Bill of Supply
+   *
+   * Follows CGST Act Rule 46 requirements:
+   * - "TAX INVOICE" header when GSTIN is configured, else "BILL OF SUPPLY"
+   * - GSTIN of supplier
+   * - HSN/SAC code per item
+   * - CGST + SGST (intra-state) or IGST (inter-state) split
+   * - Amount in Words
+   * - Invoice lock indicator
    */
   private generateReceiptHtml(
     data: BillWithItems,
@@ -615,6 +623,17 @@ export class PrintService extends BaseService {
     const { bill, items } = data;
     const settings = SettingsService.getInstance().getConfig();
     const width = this._getPaperWidth(paperSize);
+    const hasGstin = !!(settings.gstNumber && settings.gstNumber.trim());
+    const isGstEnabled = settings.gstEnabled;
+    const isIntrastate = settings.supplyType !== 'interstate';
+
+    let invoiceTitle = 'RETAIL INVOICE';
+    let invoiceType = '';
+    if (isGstEnabled) {
+      invoiceTitle = hasGstin ? 'TAX INVOICE' : 'BILL OF SUPPLY';
+      // Inward rule: if customer has name/phone = B2B (registered), else B2C (unregistered)
+      invoiceType = customer && customer.name ? 'B2B' : 'B2C';
+    }
 
     const date = new Date(bill.createdAt).toLocaleDateString('en-IN', {
       day: '2-digit',
@@ -629,252 +648,335 @@ export class PrintService extends BaseService {
       timeZone: 'Asia/Kolkata',
     });
 
-    // 58mm specialized layout (Condensed)
-    if (paperSize === '58mm') {
-      return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { 
-              font-family: 'Courier New', Courier, monospace; 
-              font-size: 11px; 
-              margin: 0; 
-              padding: 2px; 
-              width: ${width}; 
-              min-height: 100px;
-              color: #000; 
-              background: #fff; 
-              overflow: hidden;
-              line-height: 1.2;
-            }
-            .center { text-align: center; }
-            .right { text-align: right; }
-            .bold { font-weight: bold; }
-            .header h1 { margin: 0; font-size: 15px; text-transform: uppercase; }
-            .header p { margin: 1px 0; font-size: 10px; }
-            .divider { border-top: 1px dashed #000; margin: 4px 0; }
-            .info-row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 1px; }
-            
-            /* Item Layout: 2 lines for 58mm */
-            .item-container { margin-bottom: 5px; }
-            .item-name { display: block; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
-            .item-details { display: flex; justify-content: space-between; }
-            
-            .totals { margin-top: 5px; }
-            .total-row { display: flex; justify-content: space-between; margin-bottom: 1px; }
-            .grand-total { font-size: 14px; margin-top: 4px; border-top: 1px dashed #000; padding-top: 4px; }
-            .footer { margin-top: 10px; font-size: 9px; line-height: 1.1; }
-          </style>
-        </head>
-        <body>
-          <div class="header center">
-            <h1>${settings.shopName}</h1>
-            ${settings.address ? `<p>${settings.address}</p>` : ''}
-            ${settings.phone ? `<p>PH: ${settings.phone}</p>` : ''}
-            ${settings.gstNumber ? `<p>GSTIN: ${settings.gstNumber}</p>` : ''}
-          </div>
-          <div class="divider"></div>
-          <div class="info-row">
-            <span>#${bill.billNumber}</span>
-            <span>${date} ${time}</span>
-          </div>
-          ${
-            customer && settings.showCustomerDetails
-              ? `
-          <div class="divider"></div>
-          <div class="info-row bold">
-            <span>CUST: ${customer.name}</span>
-          </div>
-          ${customer.phone ? `<div class="info-row"><span>PH: ${customer.phone}</span></div>` : ''}
-          ${customer.address ? `<div class="info-row" style="font-size: 10px;"><span>${customer.address}</span></div>` : ''}
-          `
-              : ''
-          }
-          <div class="divider"></div>
-          
-          <div class="items">
-            ${items
-              .map(
-                (item) => `
-              <div class="item-container">
-                <span class="item-name">${item.productNameSnapshot}</span>
-                <div class="item-details">
-                  <span>${item.quantity} x ${item.unitPrice.toFixed(2)}</span>
-                  <span class="bold">${item.lineTotal.toFixed(2)}</span>
-                </div>
-              </div>
-            `
-              )
-              .join('')}
-          </div>
-          
-          <div class="divider"></div>
-          <div class="totals">
-            <div class="total-row"><span>Subtotal:</span><span>${bill.subtotal.toFixed(2)}</span></div>
-            <div class="total-row"><span>GST:</span><span>${bill.gstTotal.toFixed(2)}</span></div>
-            ${
-              bill.discountAmount > 0
-                ? `<div class="total-row"><span>Discount:</span><span>-${bill.discountAmount.toFixed(2)}</span></div>`
-                : ''
-            }
-            <div class="total-row bold grand-total">
-              <span>TOTAL:</span>
-              <span>₹${bill.grandTotal.toFixed(2)}</span>
-            </div>
-            <div class="total-row" style="font-size: 9px; margin-top: 2px;">
-              <span>Mode: ${bill.paymentMode.toUpperCase()}</span>
-            </div>
-          </div>
-          
-          <div class="footer center">
-            <p>${settings.footerMessage || 'Thank you! Visit Again'}</p>
-            <p>SmartKhata POS</p>
-          </div>
-        </body>
-        </html>
-      `;
-    }
+    // Helper: Amount in Words (Indian system)
+    const amountInWords = (amount: number): string => {
+      const ones = [
+        '',
+        'One',
+        'Two',
+        'Three',
+        'Four',
+        'Five',
+        'Six',
+        'Seven',
+        'Eight',
+        'Nine',
+        'Ten',
+        'Eleven',
+        'Twelve',
+        'Thirteen',
+        'Fourteen',
+        'Fifteen',
+        'Sixteen',
+        'Seventeen',
+        'Eighteen',
+        'Nineteen',
+      ];
+      const tens = [
+        '',
+        '',
+        'Twenty',
+        'Thirty',
+        'Forty',
+        'Fifty',
+        'Sixty',
+        'Seventy',
+        'Eighty',
+        'Ninety',
+      ];
 
-    // 80mm standard layout (Professional Single-line)
+      const numToWords = (n: number): string => {
+        if (n === 0) {
+          return '';
+        }
+        if (n < 20) {
+          return ones[n];
+        }
+        if (n < 100) {
+          return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+        }
+        if (n < 1000) {
+          return (
+            ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + numToWords(n % 100) : '')
+          );
+        }
+        if (n < 100000) {
+          return (
+            numToWords(Math.floor(n / 1000)) +
+            ' Thousand' +
+            (n % 1000 ? ' ' + numToWords(n % 1000) : '')
+          );
+        }
+        if (n < 10000000) {
+          return (
+            numToWords(Math.floor(n / 100000)) +
+            ' Lakh' +
+            (n % 100000 ? ' ' + numToWords(n % 100000) : '')
+          );
+        }
+        return (
+          numToWords(Math.floor(n / 10000000)) +
+          ' Crore' +
+          (n % 10000000 ? ' ' + numToWords(n % 10000000) : '')
+        );
+      };
+
+      const rupees = Math.floor(amount);
+      const paise = Math.round((amount - rupees) * 100);
+      let words = numToWords(rupees) + ' Rupees';
+      if (paise > 0) {
+        words += ' and ' + numToWords(paise) + ' Paise';
+      }
+      return words + ' Only';
+    };
+
+    // Calculate Slab-wise Tax Summary using stored values
+    const slabs: Record<
+      number,
+      { taxable: number; gst: number; cgst: number; sgst: number; igst: number }
+    > = {};
+    items.forEach((item) => {
+      const rate = item.gstPercent;
+
+      if (!slabs[rate]) {
+        slabs[rate] = { taxable: 0, gst: 0, cgst: 0, sgst: 0, igst: 0 };
+      }
+
+      slabs[rate].taxable += item.lineSubtotal;
+      slabs[rate].gst += item.lineGst;
+      slabs[rate].cgst += item.lineCgst;
+      slabs[rate].sgst += item.lineSgst;
+      slabs[rate].igst += item.lineIgst;
+    });
+
+    const isExclusive = settings.gstExclusiveMode;
+    const totalGross = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const totalSavings = isExclusive
+      ? totalGross - bill.subtotal
+      : totalGross - (bill.subtotal + bill.gstTotal);
+
+    const lockBadge = bill.isPrinted ? `<span class="lock-badge">🔒 LOCKED</span>` : '';
+
     return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>${bill.billNumber}</title>
         <style>
           body { 
             font-family: 'Courier New', Courier, monospace; 
-            font-size: 13px; 
+            font-size: 12px; 
             margin: 0; 
-            padding: 5px; 
+            padding: 2px; 
             width: ${width}; 
-            min-height: 100px;
             color: #000; 
             background: #fff; 
-            overflow: hidden;
-            line-height: 1.4;
+            line-height: 1.3;
           }
           .center { text-align: center; }
           .right { text-align: right; }
           .bold { font-weight: bold; }
+          .header h1 { margin: 0; font-size: 16px; text-transform: uppercase; }
+          .header p { margin: 1px 0; font-size: 11px; }
+          .divider { border-top: 1px dashed #000; margin: 5px 0; }
+          .meta-section { margin: 5px 0; font-size: 11px; }
+          .meta-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+          .invoice-title { font-size: 13px; font-weight: bold; text-align: center; margin: 5px 0; text-decoration: underline; }
           
-          .header h1 { margin: 0; font-size: 20px; font-weight: bold; text-transform: uppercase; }
-          .header p { margin: 2px 0; font-size: 12px; }
-          .divider { border-top: 1px dashed #000; margin: 8px 0; }
-          .meta-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px; }
+          table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+          th { text-align: left; border-bottom: 1px dashed #000; padding: 2px 0; font-size: 11px; }
+          td { padding: 3px 0; vertical-align: top; }
           
-          /* Table Layout for 80mm (Spacious) */
-          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-          th { text-align: left; border-bottom: 1px dashed #000; padding: 4px 0; font-size: 12px; }
-          td { padding: 6px 0; vertical-align: top; font-size: 13px; }
+          .col-qty { width: 15%; text-align: center; }
+          .col-rate { width: 20%; text-align: right; }
+          .col-amt { width: 20%; text-align: right; font-weight: bold; }
           
-          .col-name { width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-          .col-qty { width: 12%; text-align: center; }
-          .col-rate { width: 18%; text-align: right; }
-          .col-total { width: 25%; text-align: right; }
-
-          .totals { margin-top: 15px; }
-          .total-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
-          .grand-total { font-size: 18px; font-weight: bold; margin-top: 8px; border-top: 1px dashed #000; padding-top: 8px; }
+          .item-row { display: flex; justify-content: space-between; font-weight: bold; }
+          .item-sub { font-size: 10px; color: #444; margin-bottom: 4px; }
           
-          .footer { text-align: center; margin-top: 25px; font-size: 11px; }
-          .logo-placeholder { 
-            border: 1px dashed #ccc; padding: 10px; margin-bottom: 10px; 
-            display: ${settings.showLogo ? 'block' : 'none'}; font-size: 10px;
-          }
+          .total-section { margin-top: 5px; }
+          .total-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+          .grand-total { font-size: 15px; font-weight: bold; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 4px 0; margin-top: 5px; }
+          
+          .tax-summary { margin-top: 10px; font-size: 11px; }
+          .tax-summary-title { font-weight: bold; text-align: center; margin-bottom: 4px; }
+          
+          .amount-words { font-size: 10px; margin: 8px 0; font-style: italic; text-align: center; }
+          .footer { margin-top: 15px; font-size: 10px; line-height: 1.4; }
+          .lock-badge { font-size: 9px; background: #000; color: #fff; padding: 1px 4px; border-radius: 2px; margin-left: 4px; }
         </style>
       </head>
       <body>
         <div class="header center">
-          <div class="logo-placeholder">LOGO SPACE</div>
           <h1>${settings.shopName}</h1>
-          <p>${settings.address || 'SmartKhata Retail Solution'}</p>
-          <p>PH: ${settings.phone || '-'}</p>
-          ${settings.gstNumber ? `<p>GSTIN: ${settings.gstNumber}</p>` : ''}
+          ${settings.address ? `<p>${settings.address}</p>` : ''}
+          ${
+            isGstEnabled && hasGstin
+              ? `<p class="bold" style="margin-bottom: 2px;">GSTIN: ${settings.gstNumber}</p>
+                 <p style="font-size: 10px; margin-top: 0;">Reverse Charge: No</p>`
+              : ''
+          }
+          ${settings.phone ? `<p>Ph: ${settings.phone}</p>` : ''}
         </div>
-        
-        <div class="divider"></div>
-        
-        <div class="meta-row">
-          <span>Bill No: ${bill.billNumber}</span>
-          <span>${date} ${time}</span>
+
+        <div class="invoice-title">${invoiceTitle}${lockBadge}</div>
+
+        <div class="meta-section">
+          <div class="meta-row"><span>Invoice No : <b>${bill.billNumber}</b></span></div>
+          <div class="meta-row"><span>Date       : ${date}</span></div>
+          ${
+            isGstEnabled
+              ? `<div class="meta-row"><span>Type       : ${invoiceType}</span></div>
+                 <div class="meta-row"><span>State Code : ${settings.stateCode || 'N/A'}</span></div>
+                 <div class="meta-row"><span>Supply Type: ${settings.supplyType.toUpperCase()}</span></div>`
+              : ''
+          }
         </div>
+
         ${
           customer && settings.showCustomerDetails
             ? `
-        <div class="meta-row">
-          <span><b>Customer: ${customer.name}</b></span>
-          ${customer.phone ? `<span>Ph: ${customer.phone}</span>` : ''}
-        </div>
-        ${customer.address ? `<div class="meta-row" style="font-size: 11px;"><span>${customer.address}</span></div>` : ''}
+          <div class="divider"></div>
+          <div class="meta-section">
+            <div class="meta-row"><span><b>To:</b> ${customer.name}</span>${customer.phone ? `<span>PH: ${customer.phone}</span>` : ''}</div>
+            ${customer.address ? `<div class="meta-row" style="font-size:10px;"><span>${customer.address}</span></div>` : ''}
+          </div>
         `
             : ''
         }
-        
+
         <div class="divider"></div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th class="col-name">ITEM</th>
-              <th class="col-qty">QTY</th>
-              <th class="col-rate">RATE</th>
-              <th class="col-total">TOTAL</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items
+        <div class="meta-row bold">
+          <span style="width:45%">Item</span>
+          <span style="width:15%; text-align:center">Qty</span>
+          <span style="width:20%; text-align:right">Rate</span>
+          <span style="width:20%; text-align:right">Amt</span>
+        </div>
+        <div class="divider"></div>
+
+        <div class="items">
+          ${items
+            .map((item) => {
+              const lineGross = item.quantity * item.unitPrice;
+              const discountAmount = isExclusive
+                ? lineGross - item.lineSubtotal
+                : lineGross - item.lineTotal;
+
+              return `
+            <div class="item-container">
+              <div class="item-row">
+                <span style="width:45%">${item.productNameSnapshot}</span>
+                <span style="width:15%; text-align:center">${item.quantity}</span>
+                <span style="width:20%; text-align:right">${item.unitPrice.toFixed(2)}</span>
+                <span style="width:20%; text-align:right">${lineGross.toFixed(2)}</span>
+              </div>
+              ${
+                discountAmount > 0.01
+                  ? `<div class="item-row item-sub"><span style="width:70%; text-align:right">Less: Discount</span><span style="width:30%; text-align:right">-${discountAmount.toFixed(2)}</span></div>
+                     <div class="item-row item-sub"><span style="width:70%; text-align:right">Net Amount</span><span style="width:30%; text-align:right">${(lineGross - discountAmount).toFixed(2)}</span></div>`
+                  : ''
+              }
+              ${isGstEnabled ? `<div class="item-sub">HSN:${item.hsnSnapshot || 'N/A'}  GST:${item.gstPercent}%</div>` : ''}
+            </div>
+          `;
+            })
+            .join('')}
+        </div>
+
+        <div class="divider"></div>
+        <div class="total-row">
+          <span>Gross Total</span>
+          <span class="bold">${totalGross.toFixed(2)}</span>
+        </div>
+        ${
+          totalSavings > 0.01
+            ? `
+        <div class="total-row">
+          <span>Total Savings</span>
+          <span>-${totalSavings.toFixed(2)}</span>
+        </div>
+        `
+            : ''
+        }
+        <div class="divider"></div>
+        <div class="total-row">
+          <span>Taxable Amount</span>
+          <span class="bold">${bill.subtotal.toFixed(2)}</span>
+        </div>
+
+        ${
+          hasGstin && bill.gstTotal > 0
+            ? `
+          <div class="tax-summary">
+            <div class="tax-summary-title">TAX SUMMARY</div>
+            <div class="divider"></div>
+            ${Object.entries(slabs)
+              .sort(([a], [b]) => Number(a) - Number(b))
               .map(
-                (item) => `
-              <tr>
-                <td class="col-name">${item.productNameSnapshot}</td>
-                <td class="col-qty">${item.quantity}</td>
-                <td class="col-rate">${item.unitPrice.toFixed(2)}</td>
-                <td class="col-total bold">${item.lineTotal.toFixed(2)}</td>
-              </tr>
+                ([rate, data]) => `
+              <div style="margin-bottom: 6px;">
+                <div class="total-row"><span>Taxable @${rate}%</span><span class="right">${data.taxable.toFixed(2)}</span></div>
+                ${
+                  isIntrastate
+                    ? `
+                  <div class="total-row"><span>CGST ${Number(rate) / 2}%</span><span class="right">${data.cgst.toFixed(2)}</span></div>
+                  <div class="total-row"><span>SGST ${Number(rate) / 2}%</span><span class="right">${data.sgst.toFixed(2)}</span></div>
+                `
+                    : `
+                  <div class="total-row"><span>IGST ${rate}%</span><span class="right">${data.igst.toFixed(2)}</span></div>
+                `
+                }
+              </div>
             `
               )
               .join('')}
-          </tbody>
-        </table>
-        
-        <div class="divider"></div>
-        
-        <div class="totals">
-          <div class="total-row">
-            <span>Subtotal:</span>
-            <span>${bill.subtotal.toFixed(2)}</span>
+            <div class="divider"></div>
           </div>
-          <div class="total-row">
-            <span>GST:</span>
-            <span>${bill.gstTotal.toFixed(2)}</span>
-          </div>
+        `
+            : ''
+        }
+
+        ${
+          isGstEnabled
+            ? `<div style="text-align: center; font-style: italic; font-size: 10px; margin: 6px 0;">* Prices are ${isExclusive ? 'Exclusive' : 'Inclusive'} of GST</div>`
+            : ''
+        }
+
+        <div class="total-section">
+          ${bill.gstTotal > 0 ? `<div class="total-row"><span>Total GST</span><span>${bill.gstTotal.toFixed(2)}</span></div>` : ''}
           ${
-            bill.discountAmount > 0
+            Math.abs(bill.grandTotal - (bill.subtotal + bill.gstTotal)) >= 0.01
               ? `
-            <div class="total-row">
-              <span>Discount:</span>
-              <span style="color: #000;">-${bill.discountAmount.toFixed(2)}</span>
-            </div>
+            <div class="total-row"><span>Round Off</span><span>${(bill.grandTotal - (bill.subtotal + bill.gstTotal)).toFixed(2)}</span></div>
           `
               : ''
           }
           <div class="total-row grand-total">
-            <span>NET TOTAL:</span>
-            <span>₹${bill.grandTotal.toFixed(2)}</span>
-          </div>
-          <div class="total-row" style="margin-top:4px; font-size:11px;">
-            <span>Payment Mode: ${bill.paymentMode.toUpperCase()}</span>
+            <span>GRAND TOTAL</span>
+            <span>&#8377;${bill.grandTotal.toFixed(2)}</span>
           </div>
         </div>
-        
-        <div class="footer">
-          <p>${settings.footerMessage || 'Thank you for shopping with us!'}</p>
-          <p>Visit again!</p>
-          <p style="font-size: 9px; margin-top: 10px;">Generated by SmartKhata POS</p>
+
+        <div class="amount-words">
+          <b>Amount in Words:</b><br/>
+          ${amountInWords(bill.grandTotal)}
+        </div>
+
+        <div class="divider"></div>
+        <div class="meta-row">
+          <span>Payment Mode: <b>${bill.paymentMode.toUpperCase()}</b></span>
+        </div>
+
+        <div style="text-align: right; margin-top: 20px; margin-bottom: 10px; font-size: 11px;">
+          <p style="margin: 0;">For <b>${settings.shopName}</b></p>
+          <br/><br/>
+          <p style="margin: 0;">Authorized Signatory</p>
+        </div>
+
+        <div class="footer center">
+          <p class="bold">Thank You! Visit Again</p>
+          <p>SmartKhata POS</p>
+          <p style="font-size: 8px; margin-top: 10px;">${date} ${time}</p>
         </div>
       </body>
       </html>

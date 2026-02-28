@@ -10,6 +10,9 @@ export interface AppConfig {
   address: string | null;
   phone: string | null;
   gstNumber: string | null;
+  stateCode: string; // 2-digit Indian state code (e.g. '29' for Karnataka)
+  supplyType: 'intrastate' | 'interstate'; // For CGST+SGST vs IGST
+  placeOfSupply: string | null; // Optional override
   printerName: string | null;
   paperSize: '58mm' | '80mm';
   gstEnabled: boolean;
@@ -58,6 +61,9 @@ export class SettingsRepository extends BaseRepository {
       address: string | null;
       phone: string | null;
       gst_number: string | null;
+      state_code: string | null;
+      supply_type: string | null;
+      place_of_supply: string | null;
       printer_name: string | null;
       paper_size: string;
       gst_enabled: number;
@@ -95,6 +101,9 @@ export class SettingsRepository extends BaseRepository {
         address: null,
         phone: null,
         gstNumber: null,
+        stateCode: '29',
+        supplyType: 'intrastate',
+        placeOfSupply: null,
         printerName: null,
         paperSize: '58mm',
         gstEnabled: true,
@@ -143,6 +152,9 @@ export class SettingsRepository extends BaseRepository {
       address: 'address',
       phone: 'phone',
       gstNumber: 'gst_number',
+      stateCode: 'state_code',
+      supplyType: 'supply_type',
+      placeOfSupply: 'place_of_supply',
       printerName: 'printer_name',
       paperSize: 'paper_size',
       gstEnabled: 'gst_enabled',
@@ -208,6 +220,9 @@ export class SettingsRepository extends BaseRepository {
     address: string | null;
     phone: string | null;
     gst_number: string | null;
+    state_code: string | null;
+    supply_type: string | null;
+    place_of_supply: string | null;
     printer_name: string | null;
     paper_size: string;
     gst_enabled: number;
@@ -241,6 +256,9 @@ export class SettingsRepository extends BaseRepository {
       address: row.address,
       phone: row.phone,
       gstNumber: row.gst_number,
+      stateCode: row.state_code || '29',
+      supplyType: (row.supply_type as 'intrastate' | 'interstate') || 'intrastate',
+      placeOfSupply: row.place_of_supply,
       printerName: row.printer_name,
       paperSize: row.paper_size as '58mm' | '80mm',
       gstEnabled: row.gst_enabled === 1,

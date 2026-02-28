@@ -64,21 +64,45 @@ describe('ExportService', () => {
     });
 
     it('should generate valid GST CSV', () => {
+      // Must match full GstReport shape including cgstAmount, sgstAmount, igstAmount in slabs
+      // and totalCgst, totalSgst, totalIgst in root
       const data = {
+        supplyType: 'intrastate',
         slabs: [
-          { gstPercent: 5, taxableAmount: 100, gstAmount: 5, totalAmount: 105 },
-          { gstPercent: 18, taxableAmount: 200, gstAmount: 36, totalAmount: 236 },
+          {
+            gstPercent: 5,
+            taxableAmount: 100,
+            cgstAmount: 2.5,
+            sgstAmount: 2.5,
+            igstAmount: 0,
+            gstAmount: 5,
+            totalAmount: 105,
+          },
+          {
+            gstPercent: 18,
+            taxableAmount: 200,
+            cgstAmount: 18,
+            sgstAmount: 18,
+            igstAmount: 0,
+            gstAmount: 36,
+            totalAmount: 236,
+          },
         ],
         totalTaxable: 300,
+        totalCgst: 20.5,
+        totalSgst: 20.5,
+        totalIgst: 0,
         totalGst: 41,
         totalAmount: 341,
       };
 
       const csv = (service as any).generateCsvContent('gst', data, '2023-01-01');
       expect(csv).toContain('GST SUMMARY');
-      expect(csv).toContain('5,100.00,5.00,105.00');
-      expect(csv).toContain('18,200.00,36.00,236.00');
-      expect(csv).toContain('TOTALS,300.00,41.00,341.00');
+      // Row format: gstPercent, taxableAmount, cgstAmount, sgstAmount, igstAmount, gstAmount, totalAmount
+      expect(csv).toContain('5,100.00,2.50,2.50,0.00,5.00,105.00');
+      expect(csv).toContain('18,200.00,18.00,18.00,0.00,36.00,236.00');
+      // Totals row
+      expect(csv).toContain('TOTALS,300.00,20.50,20.50,0.00,41.00,341.00');
     });
 
     it('should generate valid Stock CSV', () => {

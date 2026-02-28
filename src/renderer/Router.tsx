@@ -6,6 +6,7 @@ import ProductsPage from './pages/ProductsPage';
 import CustomersPage from './pages/CustomersPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import PurchasesPage from './pages/PurchasesPage';
 import OnboardingPage from './pages/OnboardingPage';
 import LoadingScreen from './components/common/LoadingScreen';
 import { useAppSettingsStore } from './store/useAppSettingsStore';
@@ -55,6 +56,7 @@ function AppRouter() {
             <Route path="products" element={<ProductsPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="purchases" element={<PurchasesPage />} />
             <Route path="settings" element={<SettingsPage />} />
 
             {/* 404 - redirect to billing */}

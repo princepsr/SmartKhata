@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import fs from 'fs';
 import { GoogleDriveService } from '../../src/main/services/google-drive-service';
 
 const { mockGoogleApiClient, mockGoogleDrive, mockGoogleOAuth2 } = vi.hoisted(() => {
@@ -51,41 +50,57 @@ vi.mock('../../src/main/utils/logger', () => ({
     error: vi.fn(),
     warn: vi.fn(),
     debug: vi.fn(),
+    forModule: vi.fn().mockReturnThis(),
   },
 }));
 
-// Mock stream for downloadBackup
-vi.mock('fs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('fs')>();
-  return {
-    ...actual,
-    createReadStream: vi.fn(),
-    createWriteStream: vi.fn().mockReturnValue({
-      on: vi.fn().mockReturnThis(),
-      pipe: vi.fn().mockReturnThis(),
-    }),
-    existsSync: vi.fn(),
-  };
-});
+// Mock fs to prevent actual file system access
+// Must use vi.hoisted() so these fns are available when vi.mock() factory runs
+const mockFsFns = vi.hoisted(() => ({
+  existsSync: vi.fn().mockReturnValue(true),
+  readFileSync: vi.fn().mockReturnValue(Buffer.from('mock-file-content')),
+  createReadStream: vi.fn().mockReturnValue({}),
+  createWriteStream: vi.fn().mockReturnValue({
+    on: vi.fn().mockReturnThis(),
+    pipe: vi.fn().mockReturnThis(),
+  }),
+  writeFileSync: vi.fn(),
+  mkdirSync: vi.fn(),
+  copyFileSync: vi.fn(),
+  renameSync: vi.fn(),
+  unlinkSync: vi.fn(),
+  statSync: vi.fn().mockReturnValue({ size: 1024 }),
+}));
 
-import { googleAuthService } from '../../src/main/services/google-auth-service';
+vi.mock('fs', () => ({
+  default: mockFsFns,
+  ...mockFsFns,
+}));
+
+import fs from 'fs';
 
 describe('GoogleDriveService', () => {
   let service: GoogleDriveService;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset existing mock return values to safe defaults after clearAllMocks
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('mock-file-content'));
+    vi.mocked(fs.createReadStream).mockReturnValue({} as any);
+    vi.mocked(fs.createWriteStream).mockReturnValue({
+      on: vi.fn().mockReturnThis(),
+      pipe: vi.fn().mockReturnThis(),
+    } as any);
+
     (GoogleDriveService as any).instance = undefined;
     service = GoogleDriveService.getInstance();
-    // Debug: Check if drive is mocked
-    console.log('DEBUG: service.drive exists:', !!(service as any).drive);
-    console.log('DEBUG: service.drive.files exists:', !!(service as any).drive?.files);
   });
 
   describe('syncBackup', () => {
     it('should create a new file if backup does not exist on Drive', async () => {
-      vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-      vi.spyOn(fs as any, 'createReadStream').mockReturnValue({} as any);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('mock-content'));
 
       mockGoogleDrive.files.list.mockResolvedValue({ data: { files: [] } });
       mockGoogleDrive.files.create.mockResolvedValue({ data: { id: 'new-id' } });
@@ -98,8 +113,8 @@ describe('GoogleDriveService', () => {
     });
 
     it('should update existing file if backup exists on Drive', async () => {
-      vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-      vi.spyOn(fs as any, 'createReadStream').mockReturnValue({} as any);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('mock-content'));
 
       mockGoogleDrive.files.list.mockResolvedValue({ data: { files: [{ id: 'existing-id' }] } });
       mockGoogleDrive.files.update.mockResolvedValue({ data: { id: 'existing-id' } });

@@ -1,6 +1,17 @@
 import { dialog } from 'electron';
 import fs from 'fs';
 import { logger } from '../utils/logger';
+import {
+  DailySalesSummary,
+  PaymentModeSummary,
+  GstReport,
+  StockSummary,
+} from '../../shared/types/report.types';
+
+type ExportData =
+  | { summary: DailySalesSummary; modes: PaymentModeSummary[] }
+  | GstReport
+  | StockSummary;
 
 /**
  * Export Service
@@ -12,8 +23,8 @@ export class ExportService {
    * Export data to CSV/Excel
    */
   async exportToExcel(
-    type: 'sales' | 'gst' | 'stock',
-    data: any, // Keeping any for complex union types, or could define ExportData
+    type: 'sales' | 'gst' | 'stock' | 'analytics',
+    data: ExportData | any,
     dateRange: string
   ): Promise<boolean> {
     logger.info(`Starting excel export for report: ${type}`);
@@ -48,7 +59,7 @@ export class ExportService {
   /**
    * Generates CSV string based on report type
    */
-  private generateCsvContent(type: string, data: any, dateRange: string): string {
+  private generateCsvContent(type: string, data: ExportData, dateRange: string): string {
     const rows: string[][] = [];
 
     // Header Metadata
@@ -59,7 +70,10 @@ export class ExportService {
     rows.push([]); // Empty row
 
     if (type === 'sales') {
-      const { summary, modes } = data;
+      const { summary, modes } = data as {
+        summary: DailySalesSummary;
+        modes: PaymentModeSummary[];
+      };
       rows.push(['SALES OVERVIEW']);
       rows.push(['Total Bills', summary.billCount.toString()]);
       rows.push(['Total Sales', summary.totalSales.toFixed(2)]);
@@ -69,16 +83,30 @@ export class ExportService {
 
       rows.push(['PAYMENT MODES']);
       rows.push(['Mode', 'Count', 'Amount']);
-      modes.forEach((m: any) => {
+      modes.forEach((m: PaymentModeSummary) => {
         rows.push([m.mode.toUpperCase(), m.count.toString(), m.totalAmount.toFixed(2)]);
       });
     } else if (type === 'gst') {
-      rows.push(['GST SUMMARY']);
-      rows.push(['GST Rate (%)', 'Taxable Amount', 'GST Amount', 'Total Amount']);
-      data.slabs.forEach((s: any) => {
+      const gst = data as GstReport;
+      rows.push(['GST SUMMARY (GSTR-1 Breakdown)']);
+      rows.push(['Supply Type', gst.supplyType.toUpperCase()]);
+      rows.push([]);
+      rows.push([
+        'GST Rate (%)',
+        'Taxable Amount',
+        'CGST',
+        'SGST',
+        'IGST',
+        'Total GST',
+        'Total (Incl. Tax)',
+      ]);
+      gst.slabs.forEach((s) => {
         rows.push([
           s.gstPercent.toFixed(0),
           s.taxableAmount.toFixed(2),
+          s.cgstAmount.toFixed(2),
+          s.sgstAmount.toFixed(2),
+          s.igstAmount.toFixed(2),
           s.gstAmount.toFixed(2),
           s.totalAmount.toFixed(2),
         ]);
@@ -86,21 +114,25 @@ export class ExportService {
       rows.push([]);
       rows.push([
         'TOTALS',
-        data.totalTaxable.toFixed(2),
-        data.totalGst.toFixed(2),
-        data.totalAmount.toFixed(2),
+        gst.totalTaxable.toFixed(2),
+        gst.totalCgst.toFixed(2),
+        gst.totalSgst.toFixed(2),
+        gst.totalIgst.toFixed(2),
+        gst.totalGst.toFixed(2),
+        gst.totalAmount.toFixed(2),
       ]);
     } else if (type === 'stock') {
+      const stock = data as StockSummary;
       rows.push(['STOCK SUMMARY']);
-      rows.push(['Total Items', data.totalItems.toString()]);
-      rows.push(['Total StockValue', data.totalStockValue.toFixed(2)]);
-      rows.push(['Low Stock Items', data.lowStockCount.toString()]);
+      rows.push(['Total Items', stock.totalItems.toString()]);
+      rows.push(['Total StockValue', stock.totalStockValue.toFixed(2)]);
+      rows.push(['Low Stock Items', stock.lowStockCount.toString()]);
       rows.push([]);
 
-      if (data.items && data.items.length > 0) {
+      if (stock.items && stock.items.length > 0) {
         rows.push(['ITEM LIST']);
         rows.push(['SKU', 'Name', 'Current Stock', 'Low Stock Alert', 'Sale Price']);
-        data.items.forEach((item: any) => {
+        stock.items.forEach((item) => {
           rows.push([
             item.sku || '',
             item.name,
@@ -117,7 +149,7 @@ export class ExportService {
       .map((row) =>
         row
           .map((val) => {
-            const stringVal = val.toString();
+            const stringVal = val?.toString() || '';
             if (stringVal.includes(',') || stringVal.includes('"') || stringVal.includes('\n')) {
               return `"${stringVal.replace(/"/g, '""')}"`;
             }

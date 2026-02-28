@@ -9,6 +9,7 @@ import { backupService } from '../../src/main/services/backup-service';
 import { databaseManager } from '../../src/main/database';
 import { migrationRunner } from '../../src/main/database/migrations';
 import { createTestDatabase, BetterSqliteCompatibleDatabase, seedTestData } from '../utils/test-db';
+import { SettingsService } from '../../src/main/services/settings-service';
 
 describe('BackupService', () => {
   let db: BetterSqliteCompatibleDatabase;
@@ -128,7 +129,7 @@ describe('BackupService', () => {
     );
 
     await expect(backupService.restoreFromBackup(testBackupPath)).rejects.toThrow(
-      'Not enough space or permission to restore'
+      'Could not overwrite the existing database'
     );
 
     const restoredContent = fs.readFileSync(activeDbPath, 'utf-8');
@@ -155,7 +156,7 @@ describe('BackupService', () => {
     });
 
     await expect(backupService.restoreFromBackup(testBackupPath)).rejects.toThrow(
-      'Failed to prepare for restore'
+      'The database file is currently in use'
     );
 
     const restoredContent = fs.readFileSync(activeDbPath, 'utf-8');
@@ -177,7 +178,7 @@ describe('BackupService', () => {
     it('should fail if backup is not a valid ZIP', async () => {
       fs.writeFileSync(testBackupPath, 'invalid zip content');
       await expect(backupService.validateBackup(testBackupPath)).rejects.toThrow(
-        'The selected file is not a valid SmartKhata backup'
+        'Could not read the backup file'
       );
     });
 

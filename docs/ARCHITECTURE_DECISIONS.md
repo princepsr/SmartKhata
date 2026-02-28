@@ -194,6 +194,19 @@ src/
 - **Business Transparency**: Ensures profit reports for previous months remain accurate even if current product costs change.
 - **Data Integrity**: Decouples historical performance from future price fluctuations.
 - **Reporting Clarity**: Allows for "Coverage" metrics to be calculated reliably by checking for snapshots in historical data.
+- **Traceability**: Audit trail of product cost changes over time.
+
+---
+
+### 7. Consolidated GST Liability ✅
+
+**Decision**: Integrating Sales, Returns, and Purchases into a single "Net GST Payable" report.
+
+**Rationale**:
+
+- **Legal Compliance**: Tax liability must account for reversals (returns) and set-offs (ITC).
+- **User Convenience**: Providing a single figure for periodic tax filing.
+- **Data Integrity**: Cross-referencing three different domains (Sales, Credit Notes, Purchases) ensures mathematical consistency across the app.
 
 ---
 

@@ -1,0 +1,101 @@
+/* CreditNoteModal.css */
+.credit-note-modal {
+  width: 750px !important;
+}
+
+.bill-ref {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid var(--primary-color);
+}
+
+.return-items-list {
+  margin-bottom: 2rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.return-items-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.return-items-list th {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 2px solid #eee;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.return-items-list td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.qty-input {
+  width: 70px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.cn-form {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.cn-form .form-group {
+  flex: 1;
+}
+
+.cn-form select,
+.cn-form textarea {
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.cn-form textarea {
+  height: 80px;
+  resize: none;
+}
+
+.refund-summary {
+  background: #fff9db;
+  padding: 1.5rem;
+  border-radius: 10px;
+  border: 1px solid #ffe066;
+}
+
+.refund-summary .summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  color: #666;
+}
+
+.grand-refund {
+  margin-top: 10px;
+  padding-top: 10px !important;
+  border-top: 1px solid #ffe066;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #e67700;
+}
+
+.btn-danger {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #fff !important;
+}
+
+.btn-danger:hover {
+  background-color: #c82333 !important;
+  color: #fff !important;
+}

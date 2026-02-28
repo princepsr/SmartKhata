@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import { formatCurrency } from '../../utils/billing-math';
+import { formatCurrency } from '../../utils/formatters';
 
 interface Customer {
   id: number;

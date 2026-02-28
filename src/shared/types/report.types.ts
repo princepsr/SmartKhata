@@ -55,17 +55,27 @@ export interface PaymentModeSummary {
 
 // 3. GST Summary
 export interface GstTaxSlab {
-  gstPercent: number; // e.g., 1800 (18%)
+  gstPercent: number; // e.g., 18 (18%)
   taxableAmount: number; // Sum of line_subtotal
   gstAmount: number; // Sum of line_gst
+  cgstAmount: number; // CGST portion (intra-state)
+  sgstAmount: number; // SGST portion (intra-state)
+  igstAmount: number; // IGST (inter-state)
   totalAmount: number; // Sum of line_total
 }
 
 export interface GstReport {
   slabs: GstTaxSlab[];
   totalTaxable: number;
-  totalGst: number;
+  totalGst: number; // Gross Output GST
+  totalCgst: number;
+  totalSgst: number;
+  totalIgst: number;
+  totalCreditNoteGst: number; // Total GST reversed via Credit Notes
+  totalPurchaseItc: number; // Total ITC from purchases
+  netGstPayable: number; // totalGst - totalCreditNoteGst - totalPurchaseItc
   totalAmount: number;
+  supplyType: string;
 }
 
 // 4. Stock Summary

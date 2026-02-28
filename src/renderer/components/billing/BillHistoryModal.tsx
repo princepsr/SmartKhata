@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useIPC, useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import { formatCurrency } from '../../utils/billing-math';
+import { formatCurrency } from '../../utils/formatters';
 import { BillDetailModal } from './BillDetailModal';
 import { useAppSettingsStore } from '../../store';
 import './BillHistoryModal.css';

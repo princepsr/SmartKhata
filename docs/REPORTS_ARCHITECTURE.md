@@ -22,7 +22,7 @@ The reporting system provide real-time insights into sales, GST, inventory, and 
 - **Purpose**: Optimized SQL queries for data aggregation.
 - **Queries**:
   - **Daily Sales**: Aggregates `bills` and `bill_items` by date. Calculates profit by subtracting snapshotted `purchase_price` from taxable revenue (Sales Price - Discount). Crucially, it only subtracts GST from profit if GST was actually charged on the bill (`gst_total > 0`), preventing artificial profit loss on non-GST bills.
-  - **GST Summary**: Groups items by tax slab (e.g., 5%, 12%, 18%). Returns `totalTaxable`, `totalGst`, and `totalAmount` (Revenue).
+  - **GST Summary**: Groups items by tax slab (e.g., 5%, 12%, 18%). Returns `totalTaxable`, `totalGst` (Gross Output), `totalCreditNoteGst` (Returns), `totalPurchaseItc` (ITC), and the final `netGstPayable`.
   - **Trend Analytics**: Uses SQLite `strftime` to group data by Day, Week, or Month.
   - **Profit & Coverage**: Calculates "Coverage" percentage based on items having cost data (`purchase_price > 0`).
   - **Stock Summary**: Identifies products below their `low_stock_alert` threshold.
