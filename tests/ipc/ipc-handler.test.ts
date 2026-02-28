@@ -10,20 +10,6 @@ vi.mock('electron', () => ({
   },
 }));
 
-// Mock Logger
-vi.mock('../../src/main/utils/logger', () => ({
-  logger: {
-    forModule: vi.fn(() => ({
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    })),
-    info: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
 describe('IPCHandler - Timeout', () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -27,6 +27,7 @@ export const IPC_CHANNELS = {
   PRODUCT_DELETE: 'product:delete',
   PRODUCT_SEARCH: 'product:search',
   PRODUCT_IMPORT: 'product:import',
+  PRODUCT_PARSE_EXCEL: 'product:parseExcel',
   PRODUCT_HISTORY: 'product:history',
   PRODUCT_TOGGLE_STATUS: 'product:toggleStatus',
 
@@ -84,6 +85,14 @@ export const IPC_CHANNELS = {
   REPORT_EXPORT_PDF: 'report:export-pdf',
   REPORT_EXPORT_EXCEL: 'report:export-excel',
   REPORT_ANALYTICS: 'report:analytics',
+  REPORT_WHATSAPP_SUMMARY: 'report:whatsapp-summary',
+  REPORT_STOCK_AGING: 'report:stock-aging',
+
+  // Medical Specialization
+  MEDICAL_DRUG_WARNING: 'medical:drug-warning',
+  MEDICAL_EXPIRING: 'medical:expiring',
+  MEDICAL_SALT_SUGGESTIONS: 'medical:salt-suggestions',
+  MEDICAL_ALTERNATIVES: 'medical:alternatives',
 
   // ============================================
   // BACKUP MODULE
@@ -163,6 +172,34 @@ export const IPC_CHANNELS = {
   UPDATE_DOWNLOAD: 'update:download',
   UPDATE_INSTALL: 'update:install',
   UPDATE_STATUS: 'update:status',
+
+  // ============================================
+  // PRO / ENHANCED MODULES
+  // ============================================
+  EXPENSE_CREATE: 'expense:create',
+  EXPENSE_LIST: 'expense:list',
+  EXPENSE_GET: 'expense:get',
+
+  QUOTATION_CREATE: 'quotation:create',
+  QUOTATION_LIST: 'quotation:list',
+  QUOTATION_GET: 'quotation:get',
+
+  SUPPLIER_LIST: 'supplier:list',
+  SUPPLIER_CREATE: 'supplier:create',
+  SUPPLIER_GET: 'supplier:get',
+  SUPPLIER_UPDATE: 'supplier:update',
+  SUPPLIER_SEARCH: 'supplier:search',
+
+  PO_LIST: 'po:list',
+  PO_GET: 'po:get',
+  PO_CREATE: 'po:create',
+  PO_CONVERT: 'po:convert',
+  PO_UPDATE: 'po:update',
+
+  DEBIT_NOTE_CREATE: 'debitNote:create',
+  DEBIT_NOTE_LIST: 'debitNote:list',
+
+  UTILITY_GENERATE_BARCODE: 'utility:generateBarcode',
 } as const;
 
 /**
@@ -205,6 +242,7 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.PRODUCT_DELETE,
     IPC_CHANNELS.PRODUCT_SEARCH,
     IPC_CHANNELS.PRODUCT_IMPORT,
+    IPC_CHANNELS.PRODUCT_PARSE_EXCEL,
     IPC_CHANNELS.PRODUCT_COUNT,
     IPC_CHANNELS.PRODUCT_LOW_STOCK,
     IPC_CHANNELS.PRODUCT_ADJUST_STOCK,
@@ -295,5 +333,12 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.UPDATE_DOWNLOAD,
     IPC_CHANNELS.UPDATE_INSTALL,
     IPC_CHANNELS.UPDATE_STATUS,
+  ],
+  SUPPLIER: [
+    IPC_CHANNELS.SUPPLIER_LIST,
+    IPC_CHANNELS.SUPPLIER_CREATE,
+    IPC_CHANNELS.SUPPLIER_GET,
+    IPC_CHANNELS.SUPPLIER_UPDATE,
+    IPC_CHANNELS.SUPPLIER_SEARCH,
   ],
 } as const;

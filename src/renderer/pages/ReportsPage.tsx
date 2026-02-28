@@ -11,7 +11,7 @@ import {
   BillSummary,
   TrendAnalytics,
 } from '@shared/types/report.types';
-import { formatCurrency, toLocalDateISO } from '@renderer/utils/formatters';
+import { formatCurrency, toLocalDateISO, formatDate } from '@renderer/utils/formatters';
 import { BillDetailModal } from '../components/billing/BillDetailModal';
 import { ipcClient } from '../utils/ipc';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
@@ -161,19 +161,31 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
           </div>
         </RichTooltip>
 
-        <RichTooltip
-          title="Est. Profit"
-          meta="Taxable Revenue (excluding GST) minus the recorded purchase cost of items sold."
-        >
+        <RichTooltip title="Expenses" meta="Total operating expenses recorded for this period.">
+          <div className="card card-discount">
+            <div className="card-header-row">
+              <h3>Expenses</h3>
+              <div className="icon-box icon-discount">📉</div>
+            </div>
+            <div className="value">
+              ₹
+              {data.periods
+                .reduce((acc, p) => acc + (p.totalExpenses || 0), 0)
+                .toLocaleString('en-IN')}
+            </div>
+          </div>
+        </RichTooltip>
+
+        <RichTooltip title="Net Profit" meta="Estimated Gross Profit minus recorded Expenses.">
           <div className="card card-profit">
             <div className="card-header-row">
-              <h3>Est. Profit</h3>
+              <h3>Net Profit</h3>
               <div className="icon-box icon-profit">💰</div>
             </div>
             <div className="value highlight">
               ₹
               {data.periods
-                .reduce((acc, p) => acc + (p.totalProfit || 0), 0)
+                .reduce((acc, p) => acc + (p.trueNetProfit || 0), 0)
                 .toLocaleString('en-IN')}
             </div>
           </div>
@@ -224,7 +236,9 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
               <th className="text-right">Bills</th>
               <th className="text-right">Gross Sales</th>
               <th className="text-right">Revenue</th>
-              <th className="text-right">Est. Profit</th>
+              <th className="text-right">Gross Profit</th>
+              <th className="text-right">Expenses</th>
+              <th className="text-right">Net Profit</th>
               <th className="text-right">Margin</th>
               <th className="text-right">Coverage</th>
               <th className="text-right">Growth</th>
@@ -243,6 +257,18 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
                 </td>
                 <td className="text-right">
                   ₹{(row.totalProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </td>
+                <td className="text-right">
+                  ₹{(row.totalExpenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </td>
+                <td
+                  className="text-right font-bold"
+                  style={{
+                    color:
+                      (row.trueNetProfit || 0) < 0 ? 'var(--color-danger)' : 'var(--color-success)',
+                  }}
+                >
+                  ₹{(row.trueNetProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </td>
                 <td className="text-right">
                   {row.marginPercent && row.marginPercent > 0 ? (
@@ -286,6 +312,65 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
   );
 };
 
+const StockAgingView: React.FC<{ data: any[] | null; loading: boolean }> = ({ data, loading }) => {
+  if (loading) {
+    return <SkeletonLoader type="stock" />;
+  }
+  if (!data || data.length === 0) {
+    return (
+      <EmptyState
+        title="No Aged Stock Found"
+        message="All your inventory has recent sales activity or is fresh. Good job!"
+        icon="✨"
+      />
+    );
+  }
+
+  return (
+    <div className="report-view aging-view animate-fade-in">
+      <div className="reports-info-row mb-4">
+        <span className="info-icon">🕒</span>
+        <span className="info-text">
+          Showing items that haven't been sold for over <strong>30 days</strong>. Consider running
+          promotions on these items.
+        </span>
+      </div>
+      <div className="table-container">
+        <table className="report-table">
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th>SKU</th>
+              <th className="text-right">Current Stock</th>
+              <th className="text-right">Last Sold</th>
+              <th className="text-right">Idle Days</th>
+              <th className="text-right">Stock Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item) => (
+              <tr key={item.id} className={item.idleDays > 60 ? 'critical-aging' : ''}>
+                <td>{item.name}</td>
+                <td>{item.sku || '-'}</td>
+                <td className="text-right">{item.stockQty}</td>
+                <td className="text-right">{formatDate(item.lastSaleDate)}</td>
+                <td className="text-right">
+                  <span
+                    className={`badge ${item.idleDays > 60 ? 'badge-danger' : 'badge-warning'}`}
+                  >
+                    {item.idleDays} Days
+                  </span>
+                </td>
+                <td className="text-right">₹{item.stockValue.toLocaleString('en-IN')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 const ReportsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('sales');
   const [dateRange, setDateRange] = useState({
@@ -307,7 +392,9 @@ const ReportsPage: React.FC = () => {
   const [trendLookback, setTrendLookback] = useState<string>('last_7_days');
   const [analyticsData, setAnalyticsData] = useState<TrendAnalytics | null>(null);
   const [itcSummary, setItcSummary] = useState<{ totalItc: number; breakdown: any[] } | null>(null);
-  const [netLiability, setNetLiability] = useState<number | null>(null);
+  const [stockAgingData, setStockAgingData] = useState<any[] | null>(null);
+  const [activeStockTab, setActiveStockTab] = useState<'current' | 'aging'>('current');
+  const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
   const [searchParams] = useSearchParams();
 
   // Handle global tab switching
@@ -369,20 +456,11 @@ const ReportsPage: React.FC = () => {
         const gst = await reportApi.getGstSummary(dateRange);
         setGstReport(gst);
 
-        // Fetch ITC and Net Liability
+        // Fetch ITC
         try {
           const itc = await ipcClient.call<any>(IPC_CHANNELS.PURCHASE_ITC_SUMMARY, dateRange);
           if (itc.success && itc.data) {
             setItcSummary(itc.data);
-          }
-          if (gst) {
-            const net = await ipcClient.call<any>(IPC_CHANNELS.PURCHASE_NET_GST_LIABILITY, {
-              ...dateRange,
-              outputGst: gst.totalGst,
-            });
-            if (net.success && net.data !== undefined) {
-              setNetLiability(net.data);
-            }
           }
         } catch (e) {
           console.error('Failed to fetch ITC data:', e);
@@ -391,28 +469,41 @@ const ReportsPage: React.FC = () => {
         const stock = await reportApi.getStockSummary(stockFilter);
         setStockSummary(stock);
       } else if (activeTab === 'analytics') {
-        const { startDate, endDate } = getTrendDates(trendLookback);
-        const data = await reportApi.getTrendAnalytics(startDate, endDate, trendGranularity);
+        const trendDates = getTrendDates(trendLookback);
+        const data = await reportApi.getTrendAnalytics(
+          trendDates.startDate,
+          trendDates.endDate,
+          trendGranularity
+        );
         setAnalyticsData(data);
+      }
+
+      // Independent fetch for stock aging if on stock tab
+      if (activeTab === 'stock' && activeStockTab === 'aging') {
+        const aging = await reportApi.getStockAgingReport(30);
+        setStockAgingData(aging);
       }
     } catch (error) {
       console.error('Failed to load report data:', error);
     } finally {
       setLoading(false);
     }
-  }, [activeTab, dateRange, stockFilter, trendGranularity, trendLookback]);
+  }, [activeTab, dateRange, stockFilter, trendGranularity, trendLookback, activeStockTab]);
 
   useEffect(() => {
     loadReportData();
   }, [loadReportData]);
 
-  // Handle GST feature toggle synchronization
+  // Handle GST and Billing feature toggle synchronization
   const { settings } = useAppSettingsStore();
   useEffect(() => {
     if (!settings.gstEnabled && activeTab === 'gst') {
       setActiveTab('sales');
     }
-  }, [settings.gstEnabled, activeTab]);
+    if (settings.billingOnly && activeTab === 'stock') {
+      setActiveTab('sales');
+    }
+  }, [settings.gstEnabled, settings.billingOnly, activeTab]);
 
   const [selectedBillNo, setSelectedBillNo] = useState<string | null>(null);
 
@@ -639,6 +730,21 @@ const ReportsPage: React.FC = () => {
     }
   };
 
+  const handleWhatsAppShare = async () => {
+    try {
+      setSharingWhatsApp(true);
+      const text = await reportApi.getWhatsAppSummary(dateRange);
+      if (text) {
+        const encodedText = encodeURIComponent(text);
+        window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+      }
+    } catch (err) {
+      console.error('WhatsApp share failed:', err);
+    } finally {
+      setSharingWhatsApp(false);
+    }
+  };
+
   return (
     <div className="page reports-page">
       <div className="page-content-wrapper animate-fade-in">
@@ -658,6 +764,15 @@ const ReportsPage: React.FC = () => {
             <button className="btn-primary" onClick={handlePrint} disabled={loading}>
               Print Report
             </button>
+            {activeTab === 'sales' && (
+              <button
+                className="btn-whatsapp"
+                onClick={handleWhatsAppShare}
+                disabled={loading || sharingWhatsApp}
+              >
+                {sharingWhatsApp ? 'Generating...' : '📱 Share WhatsApp'}
+              </button>
+            )}
           </div>
         </header>
 
@@ -789,12 +904,14 @@ const ReportsPage: React.FC = () => {
                 GST
               </button>
             )}
-            <button
-              className={activeTab === 'stock' ? 'active' : ''}
-              onClick={() => setActiveTab('stock')}
-            >
-              Stock
-            </button>
+            {!settings.billingOnly && (
+              <button
+                className={activeTab === 'stock' ? 'active' : ''}
+                onClick={() => setActiveTab('stock')}
+              >
+                Stock {activeStockTab === 'aging' ? '(Aging)' : ''}
+              </button>
+            )}
             <button
               className={activeTab === 'analytics' ? 'active' : ''}
               onClick={() => setActiveTab('analytics')}
@@ -870,17 +987,14 @@ const ReportsPage: React.FC = () => {
                       <div className="itc-divider" style={{ width: '1px', background: '#eee' }} />
                       <div className="itc-col" style={{ flex: 1 }}>
                         <h4 style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                          NET GST LIABILITY
+                          NET GST PAYABLE
                         </h4>
                         <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>
-                          {formatCurrency(
-                            netLiability !== null
-                              ? netLiability
-                              : gstReport.totalGst - (itcSummary?.totalItc || 0)
-                          )}
+                          {formatCurrency(gstReport.netGstPayable)}
                         </h2>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                          Output - Input Credit
+                          Output - ITC - Credit Notes (
+                          {formatCurrency(gstReport.totalCreditNoteGst)})
                         </p>
                       </div>
                     </div>
@@ -1024,25 +1138,43 @@ const ReportsPage: React.FC = () => {
                         </div>
                       </RichTooltip>
 
+                      <RichTooltip title="Expenses" meta="Operating expenses recorded for today.">
+                        <div className="card card-discount">
+                          <div className="card-header-row">
+                            <h3>Expenses</h3>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              {dailySummary.comparison?.totalExpenses && (
+                                <TrendChip
+                                  value={`${dailySummary.comparison.totalExpenses.change}%`}
+                                  trend={dailySummary.comparison.totalExpenses.trend}
+                                />
+                              )}
+                              <div className="icon-box icon-discount">📉</div>
+                            </div>
+                          </div>
+                          <div className="value">{formatCurrency(dailySummary.totalExpenses)}</div>
+                        </div>
+                      </RichTooltip>
+
                       <RichTooltip
-                        title="Est. Profit"
-                        meta="Taxable revenue minus the purchase cost of items sold."
+                        title="Net Profit"
+                        meta="Estimated Gross Profit minus recorded Expenses."
                       >
                         <div className="card card-profit">
                           <div className="card-header-row">
-                            <h3>Est. Profit</h3>
+                            <h3>Net Profit</h3>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              {dailySummary.comparison?.totalProfit && (
+                              {dailySummary.comparison?.trueNetProfit && (
                                 <TrendChip
-                                  value={`${dailySummary.comparison.totalProfit.change}%`}
-                                  trend={dailySummary.comparison.totalProfit.trend}
+                                  value={`${dailySummary.comparison.trueNetProfit.change}%`}
+                                  trend={dailySummary.comparison.trueNetProfit.trend}
                                 />
                               )}
                               <div className="icon-box icon-profit">💰</div>
                             </div>
                           </div>
                           <div className="value highlight">
-                            {formatCurrency(dailySummary.totalProfit)}
+                            {formatCurrency(dailySummary.trueNetProfit)}
                           </div>
                         </div>
                       </RichTooltip>
@@ -1172,92 +1304,151 @@ const ReportsPage: React.FC = () => {
                   </div>
                 ))}
 
-              {activeTab === 'stock' && stockSummary && (
-                <div className="report-view stock-view animate-fade-in">
-                  <div className="summary-cards">
-                    <RichTooltip
-                      title="Total Items"
-                      meta="Unique number of products currently in your active inventory."
+              {activeTab === 'stock' && (
+                <div className="stock-view-container animate-fade-in">
+                  <div
+                    className="sub-tabs mb-4"
+                    style={{
+                      display: 'flex',
+                      gap: '1.5rem',
+                      marginBottom: '1.5rem',
+                      borderBottom: '1px solid #e2e8f0',
+                    }}
+                  >
+                    <button
+                      className={`sub-tab ${activeStockTab === 'current' ? 'active' : ''}`}
+                      onClick={() => setActiveStockTab('current')}
+                      style={{
+                        padding: '0.75rem 0.5rem',
+                        border: 'none',
+                        background: 'none',
+                        cursor: 'pointer',
+                        color: activeStockTab === 'current' ? 'var(--color-primary)' : '#64748b',
+                        borderBottom:
+                          activeStockTab === 'current' ? '2px solid var(--color-primary)' : 'none',
+                        fontWeight: activeStockTab === 'current' ? '600' : '500',
+                        fontSize: '0.95rem',
+                        transition: 'all 0.2s',
+                      }}
                     >
-                      <div className="card card-bills">
-                        <div className="card-header-row">
-                          <h3>Items</h3>
-                          <div className="icon-box icon-bills">📦</div>
-                        </div>
-                        <div className="value">{stockSummary.totalItems}</div>
-                      </div>
-                    </RichTooltip>
-
-                    <RichTooltip
-                      title="Total Value"
-                      meta="Total monetary value of your stock, calculated as Sum(Stock Qty * Purchase Price)."
+                      📦 Current Stock
+                    </button>
+                    <button
+                      className={`sub-tab ${activeStockTab === 'aging' ? 'active' : ''}`}
+                      onClick={() => setActiveStockTab('aging')}
+                      style={{
+                        padding: '0.75rem 0.5rem',
+                        border: 'none',
+                        background: 'none',
+                        cursor: 'pointer',
+                        color: activeStockTab === 'aging' ? 'var(--color-primary)' : '#64748b',
+                        borderBottom:
+                          activeStockTab === 'aging' ? '2px solid var(--color-primary)' : 'none',
+                        fontWeight: activeStockTab === 'aging' ? '600' : '500',
+                        fontSize: '0.95rem',
+                        transition: 'all 0.2s',
+                      }}
                     >
-                      <div className="card card-net">
-                        <div className="card-header-row">
-                          <h3>Value</h3>
-                          <div className="icon-box icon-net">💎</div>
-                        </div>
-                        <div className="value highlight">
-                          {formatCurrency(stockSummary.totalStockValue)}
-                        </div>
-                      </div>
-                    </RichTooltip>
+                      🕒 Stock Aging (Slow Moving)
+                    </button>
                   </div>
 
-                  <div className="table-section">
-                    <div className="reports-section-header">
-                      <label
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={stockFilter === 'low_stock'}
-                          onChange={(e) => setStockFilter(e.target.checked ? 'low_stock' : 'all')}
-                        />
-                        <span>Low Stock Only</span>
-                      </label>
-                    </div>
-
-                    <div className="data-table-container">
-                      <div className="data-table-header grid-stock">
-                        <div>Product</div>
-                        <div className="text-right">Stock</div>
-                        <div className="text-right">Alert</div>
-                        <div className="text-center">Status</div>
-                      </div>
-                      {stockSummary.items.map((item) => (
-                        <div key={item.id} className="data-table-row grid-stock">
-                          <div className="col-name">{item.name}</div>
-                          <div className="text-right">
-                            <span
-                              className={
-                                item.stockQty <= 0
-                                  ? 'stock-out'
-                                  : item.stockQty <= (item.lowStockAlert || 0)
-                                    ? 'stock-low'
-                                    : 'stock-qty'
-                              }
+                  {activeStockTab === 'current' ? (
+                    <div className="report-view stock-view animate-fade-in">
+                      {stockSummary && (
+                        <>
+                          <div className="summary-cards">
+                            <RichTooltip
+                              title="Total Items"
+                              meta="Unique number of products currently in your active inventory."
                             >
-                              {item.stockQty}
-                            </span>
+                              <div className="card card-bills">
+                                <div className="card-header-row">
+                                  <h3>Items</h3>
+                                  <div className="icon-box icon-bills">📦</div>
+                                </div>
+                                <div className="value">{stockSummary.totalItems}</div>
+                              </div>
+                            </RichTooltip>
+
+                            <RichTooltip
+                              title="Total Value"
+                              meta="Total monetary value of your stock, calculated as Sum(Stock Qty * Purchase Price)."
+                            >
+                              <div className="card card-net">
+                                <div className="card-header-row">
+                                  <h3>Value</h3>
+                                  <div className="icon-box icon-net">💎</div>
+                                </div>
+                                <div className="value highlight">
+                                  {formatCurrency(stockSummary.totalStockValue)}
+                                </div>
+                              </div>
+                            </RichTooltip>
                           </div>
-                          <div className="text-right">{item.lowStockAlert}</div>
-                          <div className="text-center">
-                            {item.stockQty <= (item.lowStockAlert || 0) ? (
-                              <span className="status-badge status-critical">LOW</span>
-                            ) : (
-                              <span className="status-badge status-ok">OK</span>
-                            )}
+
+                          <div className="table-section">
+                            <div className="reports-section-header">
+                              <label
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={stockFilter === 'low_stock'}
+                                  onChange={(e) =>
+                                    setStockFilter(e.target.checked ? 'low_stock' : 'all')
+                                  }
+                                />
+                                <span>Low Stock Only</span>
+                              </label>
+                            </div>
+
+                            <div className="data-table-container">
+                              <div className="data-table-header grid-stock">
+                                <div>Product</div>
+                                <div className="text-right">Stock</div>
+                                <div className="text-right">Alert</div>
+                                <div className="text-center">Status</div>
+                              </div>
+                              {stockSummary.items.map((item) => (
+                                <div key={item.id} className="data-table-row grid-stock">
+                                  <div className="col-name">{item.name}</div>
+                                  <div className="text-right">
+                                    <span
+                                      className={
+                                        item.stockQty <= 0
+                                          ? 'stock-out'
+                                          : item.stockQty <= (item.lowStockAlert || 0)
+                                            ? 'stock-low'
+                                            : 'stock-qty'
+                                      }
+                                    >
+                                      {item.stockQty}
+                                    </span>
+                                  </div>
+                                  <div className="text-right">{item.lowStockAlert}</div>
+                                  <div className="text-center">
+                                    {item.stockQty <= (item.lowStockAlert || 0) ? (
+                                      <span className="status-badge status-critical">LOW</span>
+                                    ) : (
+                                      <span className="status-badge status-ok">OK</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        </>
+                      )}
                     </div>
-                  </div>
+                  ) : (
+                    <StockAgingView data={stockAgingData} loading={loading} />
+                  )}
                 </div>
               )}
               {activeTab === 'analytics' && <AnalyticsView data={analyticsData} />}

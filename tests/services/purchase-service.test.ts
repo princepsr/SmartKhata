@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createTestDatabase, seedTestData, BetterSqliteCompatibleDatabase } from '../utils/test-db';
+import { createTestDatabase, seedTestData } from '../utils/test-db';
 import { PurchaseService } from '../../src/main/services/purchase-service';
 import { SettingsService } from '../../src/main/services/settings-service';
 
 describe('PurchaseService Integration Tests', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let purchaseService: PurchaseService;
 
   beforeEach(async () => {

@@ -5,15 +5,10 @@ import { SettingsService } from '../../src/main/services/settings-service';
 import { CreditNoteService } from '../../src/main/services/credit-note-service';
 import { PurchaseService } from '../../src/main/services/purchase-service';
 
-import {
-  createTestDatabase,
-  resetTestDatabase,
-  seedTestData,
-  type BetterSqliteCompatibleDatabase,
-} from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
 
 describe('ReportService Integration Tests', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let reportService: ReportService;
   let billingService: BillingService;
 
@@ -151,7 +146,7 @@ describe('ReportService Integration Tests', () => {
       INSERT INTO bills (bill_number, subtotal, gst_total, discount_amount, grand_total, payment_mode, created_at)
       VALUES ('REPORT-1', 60, 4.4, 0, 64.4, 'cash', '${todayStr}')
     `);
-    const billRow = db.prepare('SELECT id FROM bills WHERE bill_number = "REPORT-1"').get() as {
+    const billRow = db.prepare("SELECT id FROM bills WHERE bill_number = 'REPORT-1'").get() as {
       id: number;
     };
     const billId = billRow.id;
@@ -183,7 +178,7 @@ describe('ReportService Integration Tests', () => {
       INSERT INTO bills (bill_number, subtotal, gst_total, discount_amount, grand_total, payment_mode, created_at)
       VALUES ('GST-ZERO-1', 42, 0, 0, 42, 'cash', '${todayStr}')
     `);
-    const billRow2 = db.prepare('SELECT id FROM bills WHERE bill_number = "GST-ZERO-1"').get() as {
+    const billRow2 = db.prepare("SELECT id FROM bills WHERE bill_number = 'GST-ZERO-1'").get() as {
       id: number;
     };
     const billId2 = billRow2.id;
@@ -197,7 +192,7 @@ describe('ReportService Integration Tests', () => {
 });
 
 describe('ReportService New API Tests', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let reportService: ReportService;
   let billingService: BillingService;
 
@@ -291,7 +286,7 @@ describe('ReportService New API Tests', () => {
 });
 
 describe('ReportService Trend Analytics', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let reportService: ReportService;
   let billingService: BillingService;
 
@@ -406,7 +401,7 @@ describe('ReportService Trend Analytics', () => {
 });
 
 describe('ReportService GST Robustness', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let reportService: ReportService;
   let billingService: BillingService;
   let creditNoteService: CreditNoteService;

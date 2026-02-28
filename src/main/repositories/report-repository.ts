@@ -133,6 +133,8 @@ export class ReportRepository extends BaseRepository {
       totalGst: result.totalGst,
       totalDiscount: result.totalDiscount,
       totalProfit: result.totalProfit,
+      totalExpenses: 0,
+      trueNetProfit: 0,
       marginPercent: marginPercent,
       salesWithCost: result.salesWithCost,
       totalItemSales: result.totalItemSales,
@@ -480,12 +482,14 @@ export class ReportRepository extends BaseRepository {
     let runningTotalSales = 0;
     let runningNetSales = 0;
     let runningBills = 0;
+    let runningProfit = 0;
 
     const periods: AnalyticsPeriod[] = rows.map((row, index) => {
       const currentSales = row.totalSales;
       runningTotalSales += currentSales;
       runningNetSales += row.netSales;
       runningBills += row.billCount;
+      runningProfit += row.totalProfit;
 
       let growth = 0;
       if (index > 0) {
@@ -518,6 +522,8 @@ export class ReportRepository extends BaseRepository {
         totalSales: row.totalSales,
         netSales: row.netSales,
         totalProfit: row.totalProfit,
+        totalExpenses: 0,
+        trueNetProfit: 0,
         salesWithCost: row.salesWithCost,
         totalItemSales: row.totalItemSales,
         marginPercent:
@@ -535,6 +541,8 @@ export class ReportRepository extends BaseRepository {
       granularity,
       totalSales: runningTotalSales,
       totalNet: runningNetSales,
+      totalExpenses: 0,
+      totalProfit: runningProfit,
       totalBills: runningBills,
       periods,
     };

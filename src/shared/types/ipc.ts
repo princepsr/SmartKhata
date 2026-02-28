@@ -37,6 +37,14 @@ export interface Product {
   isActive: boolean;
   isGstInclusive: boolean;
   trackInventory: boolean;
+  batchNumber?: string | null;
+  expiryDate?: string | null;
+  saltName?: string | null;
+  uom: string;
+  isWeightBased: boolean;
+  stripSize: number;
+  drugCategory?: string | null;
+  variantGroupId?: string | null;
   createdAt: string | Date; // ISO date string over IPC, Date object in main repo
   updatedAt: string | Date; // ISO date string over IPC, Date object in main repo
 }
@@ -76,6 +84,36 @@ export interface Purchase {
   grandTotal: number;
   notes?: string;
   createdAt: number | Date;
+}
+
+/**
+ * Purchase Order Entity
+ */
+export interface PurchaseOrderItem {
+  id?: number;
+  productId?: number;
+  productName: string;
+  hsnCode?: string;
+  quantity: number;
+  unitPrice: number;
+  gstPercent: number;
+  lineTotal: number;
+}
+
+export interface PurchaseOrder {
+  id: number;
+  poNumber: string;
+  supplierId: number;
+  supplierName: string;
+  poDate: string;
+  totalTaxable: number;
+  gstTotal: number;
+  grandTotal: number;
+  status: 'PENDING' | 'RECEIVED' | 'CANCELLED';
+  notes?: string;
+  items?: PurchaseOrderItem[];
+  createdAt: string | Date;
+  updatedAt: string | Date;
 }
 
 /**

@@ -117,3 +117,43 @@
     opacity: 1;
   }
 }
+/* Salt Suggestions Dropdown */
+.salt-suggestions-container {
+  position: relative;
+  width: 100%;
+}
+
+.salt-suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.salt-suggestion-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #334155;
+  transition: background 0.2s;
+}
+
+.salt-suggestion-item:hover {
+  background: #f1f5f9;
+  color: var(--color-primary);
+}
+
+.salt-suggestion-item:not(:last-child) {
+  border-bottom: 1px solid #f1f5f9;
+}

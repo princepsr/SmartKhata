@@ -6,6 +6,13 @@
 
 import { vi, beforeAll } from 'vitest';
 import path from 'path';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const Database = require('better-sqlite3');
+
+console.error('DEBUG: Vitest Node Version:', process.version);
+console.error('DEBUG: Vitest Modules Version:', process.versions.modules);
+
 import { createTestDatabase, getTestDatabase } from './utils/test-db';
 
 // Global environment variables for testing
@@ -41,6 +48,10 @@ vi.mock('electron', () => {
 const databaseMock = {
   initialize: vi.fn(),
   close: vi.fn(),
+  createTestDatabase: async () => {
+    const db = new Database(':memory:');
+    return db;
+  },
   getDatabase: vi.fn(() => {
     try {
       return getTestDatabase();

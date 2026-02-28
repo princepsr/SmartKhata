@@ -9,15 +9,10 @@ import { BillingTransactionService } from '../../src/main/services/billing-trans
 import { ProductRepository } from '../../src/main/repositories/product-repository';
 import { CustomerRepository } from '../../src/main/repositories/customer-repository';
 import { SettingsService } from '../../src/main/services/settings-service';
-import {
-  createTestDatabase,
-  resetTestDatabase,
-  seedTestData,
-  type BetterSqliteCompatibleDatabase,
-} from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
 
 describe('BillingTransactionService - Atomic Sales', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let transactionService: BillingTransactionService;
   let productRepo: ProductRepository;
   let customerRepo: CustomerRepository;

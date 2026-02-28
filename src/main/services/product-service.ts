@@ -38,6 +38,12 @@ export interface AddProductInput {
   isGstInclusive?: boolean;
   isActive?: boolean;
   hsnCode?: string | null;
+  batchNumber?: string;
+  expiryDate?: string;
+  saltName?: string;
+  uom?: string;
+  isWeightBased?: boolean;
+  stripSize?: number;
 }
 
 /**
@@ -55,6 +61,12 @@ export interface UpdateProductData {
   isGstInclusive?: boolean;
   trackInventory?: boolean;
   hsnCode?: string | null;
+  batchNumber?: string;
+  expiryDate?: string;
+  saltName?: string;
+  uom?: string;
+  isWeightBased?: boolean;
+  stripSize?: number;
 }
 
 /**
@@ -115,6 +127,12 @@ export class ProductService extends BaseService {
       trackInventory: input.trackInventory,
       isGstInclusive: input.isGstInclusive,
       hsnCode: input.hsnCode,
+      batchNumber: input.batchNumber,
+      expiryDate: input.expiryDate,
+      saltName: input.saltName,
+      uom: input.uom,
+      isWeightBased: input.isWeightBased,
+      stripSize: input.stripSize,
     };
 
     try {

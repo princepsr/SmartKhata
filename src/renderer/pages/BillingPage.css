@@ -60,8 +60,21 @@
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   margin: 0;
   letter-spacing: -0.025em;
+}
+
+.badge-quotation {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid #fcd34d;
 }
 
 /* --- Layout Grid --- */
@@ -663,4 +676,44 @@
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
+}
+
+/* Salt Alternatives (Medical Mode) */
+.salt-alternatives-section {
+  border-top: 2px solid #e2e8f0;
+  background: #f8fafc;
+  padding-bottom: 0.5rem;
+}
+
+.salt-alternatives-header {
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f1f5f9;
+}
+
+.product-item.alt {
+  background: transparent;
+  border-left: 3px solid transparent;
+  grid-template-columns: 1fr 1fr 100px; /* Slimmer price for alt items */
+}
+
+.product-item.alt:hover {
+  background: #eff6ff;
+  border-left-color: var(--color-primary);
+}
+
+.product-item.alt .product-name {
+  color: #475569;
+  font-size: 1rem;
+}
+
+.product-item.alt .product-price {
+  font-size: 1.1rem;
 }

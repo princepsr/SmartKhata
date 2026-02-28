@@ -13,6 +13,8 @@ import './OnboardingPage.css';
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const { settings, saveSettings } = useAppSettingsStore();
+  const [step, setStep] = useState(1); // 1: Welcome/Mode, 2: Privacy
+  const [selectedMode, setSelectedMode] = useState<'GENERAL' | 'KIRANA' | 'MEDICAL'>('GENERAL');
   const [hasReadToBottom, setHasReadToBottom] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -26,7 +28,57 @@ export default function OnboardingPage() {
   const handleAccept = async () => {
     setIsSubmitting(true);
     try {
-      const result = await saveSettings({ privacyPolicyAccepted: true });
+      let modeDefaults = {};
+      if (selectedMode === 'GENERAL') {
+        modeDefaults = {
+          billingOnly: true,
+          gstEnabled: false,
+          customersEnabled: false,
+          expensesEnabled: false,
+          quotationsEnabled: false,
+          barcodeGenEnabled: false,
+          enableBatchTracking: false,
+          roundOffEnabled: true,
+          paperSize: '58mm',
+          footerMessage: 'Thank you! Visit Again',
+        };
+      } else if (selectedMode === 'KIRANA') {
+        modeDefaults = {
+          billingOnly: false,
+          gstEnabled: false,
+          customersEnabled: true,
+          expensesEnabled: true,
+          quotationsEnabled: true,
+          barcodeGenEnabled: true,
+          enableBatchTracking: false,
+          roundOffEnabled: true,
+          paperSize: '58mm',
+          footerMessage: 'Thank you for shopping with us!',
+        };
+      } else if (selectedMode === 'MEDICAL') {
+        modeDefaults = {
+          billingOnly: false,
+          gstEnabled: true,
+          customersEnabled: true,
+          expensesEnabled: true,
+          quotationsEnabled: true,
+          barcodeGenEnabled: true,
+          enableBatchTracking: true,
+          roundOffEnabled: true,
+          paperSize: '80mm',
+          showCustomerDetails: true,
+          footerMessage: 'Get Well Soon!',
+        };
+      }
+
+      // Initialize app with mode using the IPC if available,
+      // or just update settings store which syncs to repo
+      const result = await saveSettings({
+        privacyPolicyAccepted: true,
+        appMode: selectedMode,
+        ...modeDefaults,
+      });
+
       if (result.success) {
         navigate('/billing', { replace: true });
       } else {
@@ -34,7 +86,7 @@ export default function OnboardingPage() {
         setIsSubmitting(false);
       }
     } catch (error) {
-      console.error('Error accepting privacy policy:', error);
+      console.error('Error during onboarding:', error);
       setIsSubmitting(false);
     }
   };
@@ -47,41 +99,97 @@ export default function OnboardingPage() {
             <img src="/icon.ico" alt="SmartKhata Logo" />
           </div>
           <h1>Welcome to SmartKhata</h1>
-          <p>Your local-first Kirana POS solution</p>
+          <p>The Pro POS for your business</p>
         </div>
 
         <div className="onboarding-body">
-          <p className="intro-text">
-            Before we begin, please review and accept our Privacy Policy to ensure you understand
-            how we protect your business data.
-          </p>
+          {step === 1 ? (
+            <div className="mode-selection animate-fade-in">
+              <h3>Select Your Business Type</h3>
+              <p>Choose the mode that best fits your operations.</p>
 
-          <div className="policy-viewer">
-            <PrivacyPolicy
-              showTitle={false}
-              maxHeight="350px"
-              onScrollBottom={() => setHasReadToBottom(true)}
-            />
-          </div>
+              <div className="mode-options">
+                <div
+                  className={`mode-card ${selectedMode === 'GENERAL' ? 'active' : ''}`}
+                  onClick={() => setSelectedMode('GENERAL')}
+                >
+                  <div className="mode-icon">🏪</div>
+                  <h4>Retail / General</h4>
+                  <p>Standard billing for any retail shop.</p>
+                </div>
+                <div
+                  className={`mode-card ${selectedMode === 'MEDICAL' ? 'active' : ''}`}
+                  onClick={() => setSelectedMode('MEDICAL')}
+                >
+                  <div className="mode-icon">💊</div>
+                  <h4>Medical Store</h4>
+                  <p>Pharma features: Batch, Expiry, and Salt Search.</p>
+                </div>
+                <div
+                  className={`mode-card ${selectedMode === 'KIRANA' ? 'active' : ''}`}
+                  onClick={() => setSelectedMode('KIRANA')}
+                >
+                  <div className="mode-icon">🌾</div>
+                  <h4>Kirana / Grocery</h4>
+                  <p>Grocery features: Weights and Quick-pick items.</p>
+                </div>
+              </div>
 
-          {!hasReadToBottom && (
-            <div className="scroll-hint">
-              <span>Scroll to the bottom to continue</span>
+              <button
+                className="btn btn-primary"
+                style={{ marginTop: '2rem', width: '100%' }}
+                onClick={() => setStep(2)}
+              >
+                Continue with{' '}
+                {selectedMode === 'GENERAL'
+                  ? 'General'
+                  : selectedMode === 'MEDICAL'
+                    ? 'Medical'
+                    : 'Kirana'}
+              </button>
+            </div>
+          ) : (
+            <div className="privacy-step animate-fade-in">
+              <p className="intro-text">
+                Please review and accept our Privacy Policy to finish setup.
+              </p>
+
+              <div className="policy-viewer">
+                <PrivacyPolicy
+                  showTitle={false}
+                  maxHeight="300px"
+                  onScrollBottom={() => setHasReadToBottom(true)}
+                />
+              </div>
+
+              {!hasReadToBottom && (
+                <div className="scroll-hint">
+                  <span>Scroll to the bottom to continue</span>
+                </div>
+              )}
+
+              <div
+                className="step-actions"
+                style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}
+              >
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setStep(1)}
+                  disabled={isSubmitting}
+                >
+                  Back
+                </button>
+                <button
+                  className={`btn btn-primary accept-btn ${!hasReadToBottom || isSubmitting ? 'disabled' : ''}`}
+                  disabled={!hasReadToBottom || isSubmitting}
+                  onClick={handleAccept}
+                  style={{ flex: 1 }}
+                >
+                  {isSubmitting ? 'Starting...' : 'Complete Setup'}
+                </button>
+              </div>
             </div>
           )}
-        </div>
-
-        <div className="onboarding-footer">
-          <button
-            className={`btn btn-primary accept-btn ${!hasReadToBottom || isSubmitting ? 'disabled' : ''}`}
-            disabled={!hasReadToBottom || isSubmitting}
-            onClick={handleAccept}
-          >
-            {isSubmitting ? 'Saving...' : 'Accept & Continue'}
-          </button>
-          <p className="footer-note">
-            By clicking "Accept & Continue", you agree to the conditions stated above.
-          </p>
         </div>
       </div>
     </div>

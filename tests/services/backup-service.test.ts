@@ -8,11 +8,11 @@ import AdmZip from 'adm-zip';
 import { backupService } from '../../src/main/services/backup-service';
 import { databaseManager } from '../../src/main/database';
 import { migrationRunner } from '../../src/main/database/migrations';
-import { createTestDatabase, BetterSqliteCompatibleDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, seedTestData } from '../utils/test-db';
 import { SettingsService } from '../../src/main/services/settings-service';
 
 describe('BackupService', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   const testBackupPath = path.resolve(process.cwd(), 'test-data', 'test_backup.zip');
   const activeDbPath = path.resolve(process.cwd(), 'test-data', 'active.sqlite');
   const tempDir = path.resolve(process.cwd(), 'test-data', 'temp');
@@ -46,6 +46,7 @@ describe('BackupService', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it('should create a structured ZIP backup', async () => {
@@ -270,13 +271,10 @@ describe('BackupService', () => {
       }
       fs.mkdirSync(backupDir, { recursive: true });
 
-      // Mock Date to have consistent timestamps for testing the counter
-      const mockDate = new Date('2023-01-01T12:00:00Z');
-      vi.useFakeTimers();
-      vi.setSystemTime(mockDate);
+      // Use a consistent timestamp dynamically instead of mocking the whole Date object
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
 
-      // Mock Date: Jan 1, 2023, 12:00:00 UTC -> 17:30 IST
-      const timestamp = '20230101_1730';
       const firstPath = path.join(backupDir, `backup_${timestamp}.zip`);
       fs.writeFileSync(firstPath, 'dummy content');
 
@@ -284,8 +282,6 @@ describe('BackupService', () => {
 
       expect(secondPath).toContain(`backup_${timestamp}_1.zip`);
       expect(fs.existsSync(secondPath)).toBe(true);
-
-      vi.useRealTimers();
     });
   });
 

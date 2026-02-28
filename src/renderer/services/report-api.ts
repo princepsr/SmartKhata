@@ -135,4 +135,20 @@ export const reportApi = {
     });
     return result.data || false;
   },
+
+  /**
+   * Get WhatsApp Summary Text
+   */
+  getWhatsAppSummary: async (dateRange: DateRange): Promise<string | null> => {
+    const result = await ipcClient.call<string>(IPC_CHANNELS.REPORT_WHATSAPP_SUMMARY, dateRange);
+    return result.data;
+  },
+
+  /**
+   * Get Stock Aging Report
+   */
+  getStockAgingReport: async (days: number = 30): Promise<any[] | null> => {
+    const result = await ipcClient.call<any[]>(IPC_CHANNELS.REPORT_STOCK_AGING, days);
+    return result.data;
+  },
 };

@@ -8,16 +8,11 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { InventoryService } from '../../src/main/services/inventory-service';
 import { InventoryRepository } from '../../src/main/repositories/inventory-repository';
 import { ProductRepository } from '../../src/main/repositories/product-repository';
-import {
-  createTestDatabase,
-  resetTestDatabase,
-  seedTestData,
-  type BetterSqliteCompatibleDatabase,
-} from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
 import { NotFoundError } from '../../src/main/services/errors/service-errors';
 
-describe('InventoryService', () => {
-  let db: BetterSqliteCompatibleDatabase;
+describe('InventoryService Integration Tests', () => {
+  let db: any;
   let inventoryService: InventoryService;
   let productRepo: ProductRepository;
   let inventoryRepo: InventoryRepository;

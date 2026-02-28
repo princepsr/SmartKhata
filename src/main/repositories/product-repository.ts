@@ -19,6 +19,15 @@ export interface Product {
   isActive: boolean;
   isGstInclusive: boolean;
   trackInventory: boolean;
+  batchNumber: string | null;
+  expiryDate: string | null;
+  saltName: string | null;
+  uom: string;
+  isWeightBased: boolean;
+  stripSize: number;
+  drugCategory: string | null; // Schedule H, Narcotic, etc.
+  lastSaleDate: string | null; // YYYY-MM-DD
+  variantGroupId: string | null; // For garments
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +48,15 @@ export interface CreateProductInput {
   trackInventory?: boolean;
   isGstInclusive?: boolean;
   isActive?: boolean;
+  batchNumber?: string;
+  expiryDate?: string;
+  saltName?: string;
+  uom?: string;
+  isWeightBased?: boolean;
+  stripSize?: number;
+  drugCategory?: string;
+  lastSaleDate?: string;
+  variantGroupId?: string;
 }
 
 /**
@@ -57,6 +75,15 @@ export interface UpdateProductInput {
   isActive?: boolean;
   isGstInclusive?: boolean;
   trackInventory?: boolean;
+  batchNumber?: string | null;
+  expiryDate?: string | null;
+  saltName?: string | null;
+  uom?: string;
+  isWeightBased?: boolean;
+  stripSize?: number;
+  drugCategory?: string | null;
+  lastSaleDate?: string | null;
+  variantGroupId?: string | null;
 }
 
 /**
@@ -75,8 +102,10 @@ export class ProductRepository extends BaseRepository {
       INSERT INTO products (
         name, sku, barcode, sale_price, purchase_price, gst_percent, hsn_code,
         stock_qty, low_stock_alert, track_inventory, is_gst_inclusive, is_active,
+        batch_number, expiry_date, salt_name, uom, is_weight_based, strip_size,
+        drug_category, last_sale_date, variant_group_id,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const result = this.execute(sql, [
@@ -92,6 +121,15 @@ export class ProductRepository extends BaseRepository {
       data.trackInventory === false ? 0 : 1, // Explicitly handle false (Default true)
       data.isGstInclusive ? 1 : 0,
       data.isActive !== false ? 1 : 0, // Default active
+      data.batchNumber ?? null,
+      data.expiryDate ?? null,
+      data.saltName ?? null,
+      data.uom ?? 'Pcs',
+      data.isWeightBased ? 1 : 0,
+      data.stripSize ?? 1,
+      data.drugCategory ?? null,
+      data.lastSaleDate ?? null,
+      data.variantGroupId ?? null,
       this.formatDateForSql(now),
       this.formatDateForSql(now),
     ]);
@@ -169,6 +207,42 @@ export class ProductRepository extends BaseRepository {
     if (data.hsnCode !== undefined) {
       fields.push('hsn_code = ?');
       values.push(data.hsnCode ?? null);
+    }
+    if (data.batchNumber !== undefined) {
+      fields.push('batch_number = ?');
+      values.push(data.batchNumber ?? null);
+    }
+    if (data.expiryDate !== undefined) {
+      fields.push('expiry_date = ?');
+      values.push(data.expiryDate ?? null);
+    }
+    if (data.saltName !== undefined) {
+      fields.push('salt_name = ?');
+      values.push(data.saltName ?? null);
+    }
+    if (data.uom !== undefined) {
+      fields.push('uom = ?');
+      values.push(data.uom);
+    }
+    if (data.isWeightBased !== undefined) {
+      fields.push('is_weight_based = ?');
+      values.push(data.isWeightBased ? 1 : 0);
+    }
+    if (data.stripSize !== undefined) {
+      fields.push('strip_size = ?');
+      values.push(data.stripSize);
+    }
+    if (data.drugCategory !== undefined) {
+      fields.push('drug_category = ?');
+      values.push(data.drugCategory || null);
+    }
+    if (data.lastSaleDate !== undefined) {
+      fields.push('last_sale_date = ?');
+      values.push(data.lastSaleDate || null);
+    }
+    if (data.variantGroupId !== undefined) {
+      fields.push('variant_group_id = ?');
+      values.push(data.variantGroupId || null);
     }
 
     if (fields.length === 0) {
@@ -270,13 +344,13 @@ export class ProductRepository extends BaseRepository {
   ): Product[] {
     let sql = `
       SELECT * FROM products
-      WHERE (name LIKE ? OR sku LIKE ? OR barcode LIKE ?)
+      WHERE (name LIKE ? OR sku LIKE ? OR barcode LIKE ? OR salt_name LIKE ?)
       ${includeInactive ? '' : 'AND is_active = 1'}
       ORDER BY name ASC
     `;
 
     const searchPattern = `%${query}%`;
-    const params: any[] = [searchPattern, searchPattern, searchPattern];
+    const params: any[] = [searchPattern, searchPattern, searchPattern, searchPattern];
 
     if (limit !== undefined) {
       sql += ` LIMIT ?`;
@@ -297,7 +371,7 @@ export class ProductRepository extends BaseRepository {
   public countSearch(query: string, includeInactive: boolean = false): number {
     const sql = `
       SELECT COUNT(*) as count FROM products
-      WHERE (name LIKE ? OR sku LIKE ? OR barcode LIKE ?)
+      WHERE (name LIKE ? OR sku LIKE ? OR barcode LIKE ? OR salt_name LIKE ?)
       ${includeInactive ? '' : 'AND is_active = 1'}
     `;
     const searchPattern = `%${query}%`;
@@ -305,8 +379,26 @@ export class ProductRepository extends BaseRepository {
       searchPattern,
       searchPattern,
       searchPattern,
+      searchPattern,
     ]);
     return row ? row.count : 0;
+  }
+
+  /**
+   * Update last sale date
+   */
+  public updateLastSaleDate(id: number, date: string): void {
+    const sql = `UPDATE products SET last_sale_date = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`;
+    this.execute(sql, [date, id]);
+  }
+
+  /**
+   * Dedicated Generic/Salt search
+   */
+  public searchBySalt(query: string): Product[] {
+    const sql = `SELECT * FROM products WHERE salt_name LIKE ? AND is_active = 1 ORDER BY name ASC`;
+    const rows = this.queryAll<any>(sql, [`%${query}%`]);
+    return rows.map((row) => this._mapToProduct(row));
   }
 
   /**
@@ -433,6 +525,15 @@ export class ProductRepository extends BaseRepository {
       isActive: row.is_active === 1, // INTEGER → boolean
       isGstInclusive: row.is_gst_inclusive === 1,
       trackInventory: row.track_inventory === 1,
+      batchNumber: row.batch_number,
+      expiryDate: row.expiry_date,
+      saltName: row.salt_name,
+      uom: row.uom || 'Pcs',
+      isWeightBased: row.is_weight_based === 1,
+      stripSize: row.strip_size ?? 1,
+      drugCategory: row.drug_category,
+      lastSaleDate: row.last_sale_date,
+      variantGroupId: row.variant_group_id,
       createdAt: this.parseDate(row.created_at), // TEXT → Date
       updatedAt: this.parseDate(row.updated_at),
     };

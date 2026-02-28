@@ -132,4 +132,30 @@ export function registerReportHandlers(): void {
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );
+
+  // ============================================
+  // WHATSAPP SUMMARY
+  // ============================================
+  IPCHandler.handle<{ startDate: string; endDate: string }, string>(
+    IPC_CHANNELS.REPORT_WHATSAPP_SUMMARY,
+    async ({ startDate, endDate }) => {
+      return reportService.generateWhatsAppSummary(startDate, endDate);
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
+
+  // ============================================
+  // STOCK AGING
+  // ============================================
+  IPCHandler.handle<number, any[]>(
+    IPC_CHANNELS.REPORT_STOCK_AGING,
+    async (days) => {
+      return reportService.getStockAgingReport(days);
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
 }

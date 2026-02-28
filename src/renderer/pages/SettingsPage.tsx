@@ -308,22 +308,17 @@ function SettingsPage() {
             </p>
           </div>
 
-          {settings.gstEnabled && (
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={settings.gstExclusiveMode}
-                  onChange={(e) => updateSettings({ gstExclusiveMode: e.target.checked })}
-                />
-                GST Exclusive Mode (Master Switch)
-              </label>
-              <p className="help-text">
-                When enabled, all products use tax-exclusive pricing and individual GST toggles are
-                hidden. When disabled, products default to GST Inclusive (MRP).
-              </p>
-            </div>
-          )}
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.roundOffEnabled}
+                onChange={(e) => updateSettings({ roundOffEnabled: e.target.checked })}
+              />
+              Enable Bill Rounding (to nearest ₹)
+            </label>
+            <p className="help-text">Round bill totals to avoid fractional currency amounts.</p>
+          </div>
 
           <div className="form-group">
             <label className="checkbox-label">
@@ -373,16 +368,107 @@ function SettingsPage() {
             </div>
           )}
 
+          {settings.gstEnabled && (
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={settings.gstExclusiveMode}
+                  onChange={(e) => updateSettings({ gstExclusiveMode: e.target.checked })}
+                />
+                GST Exclusive Mode (Master Switch)
+              </label>
+              <p className="help-text">
+                When enabled, all products use tax-exclusive pricing and individual GST toggles are
+                hidden. When disabled, products default to GST Inclusive (MRP).
+              </p>
+            </div>
+          )}
+
           <div className="form-group">
             <label className="checkbox-label">
               <input
                 type="checkbox"
-                checked={settings.roundOffEnabled}
-                onChange={(e) => updateSettings({ roundOffEnabled: e.target.checked })}
+                checked={settings.enableBatchTracking}
+                onChange={(e) => updateSettings({ enableBatchTracking: e.target.checked })}
               />
-              Enable Bill Rounding (to nearest ₹)
+              Enable Batch & Expiry Tracking
             </label>
-            <p className="help-text">Round bill totals to avoid fractional currency amounts.</p>
+            <p className="help-text">
+              Track expiry dates and unique batch numbers for your inventory.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.expensesEnabled}
+                onChange={(e) => updateSettings({ expensesEnabled: e.target.checked })}
+              />
+              Enable Expense Tracking
+            </label>
+            <p className="help-text">Track and manage your day-to-day business expenses.</p>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.quotationsEnabled}
+                onChange={(e) => updateSettings({ quotationsEnabled: e.target.checked })}
+              />
+              Enable Quotations / Estimates
+            </label>
+            <p className="help-text">Create and print pre-sale estimates for your customers.</p>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.barcodeGenEnabled}
+                onChange={(e) => updateSettings({ barcodeGenEnabled: e.target.checked })}
+              />
+              Enable Barcode Generator
+            </label>
+            <p className="help-text">Generate and print custom barcode labels for your products.</p>
+          </div>
+        </div>
+
+        {/* Payment Integrations */}
+        <div className="section-header" style={{ marginTop: '2rem' }}>
+          <h3>💸 Payment Integrations</h3>
+          <p>Configure dynamic payment methods for checkout</p>
+        </div>
+
+        <div className="settings-grid">
+          <div className="form-group">
+            <label htmlFor="upiId">Store UPI ID (VPA)</label>
+            <input
+              type="text"
+              id="upiId"
+              value={settings.upiId || ''}
+              onChange={(e) => updateSettings({ upiId: e.target.value })}
+              className="form-input"
+              placeholder="e.g. 9876543210@paytm"
+            />
+            <p className="help-text">
+              Used to dynamically generate a payment QR code during billing.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="upiName">Payee Name</label>
+            <input
+              type="text"
+              id="upiName"
+              value={settings.upiName || ''}
+              onChange={(e) => updateSettings({ upiName: e.target.value })}
+              className="form-input"
+              placeholder="e.g. SmartKhata Store"
+            />
+            <p className="help-text">The display name shown when the customer scans the QR code.</p>
           </div>
         </div>
 

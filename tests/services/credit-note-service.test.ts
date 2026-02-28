@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createTestDatabase, seedTestData, BetterSqliteCompatibleDatabase } from '../utils/test-db';
+import { createTestDatabase, seedTestData } from '../utils/test-db';
 import { CreditNoteService } from '../../src/main/services/credit-note-service';
 import { BillingTransactionService } from '../../src/main/services/billing-transaction-service';
 import { SettingsService } from '../../src/main/services/settings-service';
 import { ProductRepository } from '../../src/main/repositories/product-repository';
 
 describe('CreditNoteService Integration Tests', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let creditNoteService: CreditNoteService;
   let transactionService: BillingTransactionService;
   let productRepo: ProductRepository;

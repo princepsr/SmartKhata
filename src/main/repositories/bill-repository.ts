@@ -18,6 +18,9 @@ export interface Bill {
   discountAmount: number; // In rupees
   grandTotal: number; // In rupees
   paymentMode: 'cash' | 'upi' | 'mixed';
+  customerGstinSnapshot?: string | null;
+  billingAddressSnapshot?: string | null;
+  shippingAddressSnapshot?: string | null;
   isPrinted: boolean; // Invoice lock: true after first print
   createdAt: Date;
 }
@@ -66,6 +69,9 @@ export interface CreateBillInput {
   grandTotal: number; // In rupees
   paymentMode: 'cash' | 'upi' | 'mixed';
   paymentReceived: number;
+  customerGstinSnapshot?: string | null;
+  billingAddressSnapshot?: string | null;
+  shippingAddressSnapshot?: string | null;
 }
 
 /**
@@ -122,8 +128,9 @@ export class BillRepository extends BaseRepository {
         INSERT INTO bills (
           bill_number, customer_id, subtotal, gst_total,
           cgst_amount, sgst_amount, igst_amount,
-          discount_amount, grand_total, payment_mode
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          discount_amount, grand_total, payment_mode,
+          customer_gstin_snapshot, billing_address_snapshot, shipping_address_snapshot
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const params = [
@@ -137,6 +144,9 @@ export class BillRepository extends BaseRepository {
         billData.discountAmount || 0,
         billData.grandTotal,
         billData.paymentMode,
+        billData.customerGstinSnapshot || null,
+        billData.billingAddressSnapshot || null,
+        billData.shippingAddressSnapshot || null,
       ];
 
       const billResult = this.execute(billSql, params);
@@ -211,6 +221,9 @@ export class BillRepository extends BaseRepository {
           discountAmount: billData.discountAmount || 0,
           grandTotal: billData.grandTotal,
           paymentMode: billData.paymentMode,
+          customerGstinSnapshot: billData.customerGstinSnapshot || null,
+          billingAddressSnapshot: billData.billingAddressSnapshot || null,
+          shippingAddressSnapshot: billData.shippingAddressSnapshot || null,
           isPrinted: false,
           createdAt: new Date(), // Local time
         },
@@ -494,6 +507,9 @@ export class BillRepository extends BaseRepository {
       discountAmount: row.discount_amount,
       grandTotal: row.grand_total,
       paymentMode: row.payment_mode,
+      customerGstinSnapshot: row.customer_gstin_snapshot,
+      billingAddressSnapshot: row.billing_address_snapshot,
+      shippingAddressSnapshot: row.shipping_address_snapshot,
       isPrinted: row.is_printed === 1,
       createdAt: this.parseDate(row.created_at),
     };

@@ -8,12 +8,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ProductService } from '../../src/main/services/product-service';
 import { ProductRepository } from '../../src/main/repositories/product-repository';
 import { InventoryRepository } from '../../src/main/repositories/inventory-repository';
-import {
-  createTestDatabase,
-  resetTestDatabase,
-  seedTestData,
-  type BetterSqliteCompatibleDatabase,
-} from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
 import {
   ValidationError,
   DuplicateEntryError,
@@ -22,7 +17,7 @@ import {
 import { SettingsService } from '../../src/main/services/settings-service';
 
 describe('ProductService - Add Product', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let productService: ProductService;
 
   beforeEach(async () => {
@@ -143,7 +138,7 @@ describe('ProductService - Add Product', () => {
 });
 
 describe('ProductService - Stock Adjustment', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let productService: ProductService;
   let productRepo: ProductRepository;
   let inventoryRepo: InventoryRepository;
@@ -305,7 +300,7 @@ describe('ProductService - Stock Adjustment', () => {
 });
 
 describe('ProductService - Search and Query', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let productService: ProductService;
 
   beforeEach(async () => {

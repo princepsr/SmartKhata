@@ -24,22 +24,77 @@
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.layout-sidebar.collapsed {
+  width: 72px !important;
+  min-width: 72px !important;
+  max-width: 72px !important;
 }
 
 .sidebar-header {
-  padding: var(--spacing-lg);
+  padding: var(--spacing-lg) var(--spacing-md);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.layout-sidebar.collapsed .sidebar-header {
+  padding: var(--spacing-lg) 0;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.layout-sidebar.collapsed .header-top {
+  justify-content: center;
+}
+
+.sidebar-toggle-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  opacity: 0.7;
+}
+
+.sidebar-toggle-btn:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.brand-container {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
 .sidebar-title {
-  font-size: var(--font-size-xl);
+  font-size: 1.2rem;
   font-weight: 700;
-  margin-bottom: var(--spacing-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
 }
 
 .sidebar-version {
-  font-size: var(--font-size-sm);
-  opacity: 0.8;
+  font-size: 0.65rem;
+  opacity: 0.5;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Navigation */
@@ -49,6 +104,37 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+  overflow-y: auto;
+  overflow-x: hidden;
+  justify-content: flex-start;
+  scrollbar-gutter: stable;
+}
+
+.layout-sidebar.collapsed .sidebar-nav {
+  scrollbar-gutter: stable !important;
+  padding: var(--spacing-md) 0 !important;
+  align-items: center !important;
+  width: 72px !important;
+  min-width: 72px !important;
+  max-width: 72px !important;
+}
+
+/* Custom scrollbar for sidebar */
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .nav-item {
@@ -64,6 +150,20 @@
   position: relative;
   margin: 0 var(--spacing-sm);
   border-radius: var(--radius-md);
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.layout-sidebar.collapsed .nav-item {
+  width: 72px !important;
+  min-width: 72px !important;
+  max-width: 72px !important;
+  justify-content: center !important;
+  padding: var(--spacing-md) 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
+  border-radius: 0 !important;
 }
 
 .nav-item:hover {
@@ -76,6 +176,10 @@
   color: var(--color-primary);
   font-weight: 700;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.nav-item.active .nav-icon svg {
+  stroke: var(--color-primary);
 }
 
 .nav-item.active .nav-shortcut {
@@ -100,10 +204,23 @@
 .nav-icon svg {
   width: 24px;
   height: 24px;
+  stroke: currentColor;
 }
 
 .nav-label {
   flex: 1;
+  transition: opacity 0.2s;
+}
+
+.layout-sidebar.collapsed .nav-label,
+.layout-sidebar.collapsed .nav-shortcut,
+.layout-sidebar.collapsed .nav-dropdown-btn {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none;
 }
 
 .nav-shortcut {
@@ -113,20 +230,31 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   font-weight: 600;
-  padding: 1px 6px;
+  padding: 1px 0;
+  border-radius: var(--radius-sm);
+  min-width: 32px;
+  text-align: center;
 }
 
 /* Sidebar Footer */
 .sidebar-footer {
-  padding: var(--spacing-lg);
+  padding: var(--spacing-lg) var(--spacing-md);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background-color: rgba(0, 0, 0, 0.05);
+}
+
+.layout-sidebar.collapsed .sidebar-footer {
+  padding: var(--spacing-lg) 0;
 }
 
 .store-info {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+}
+
+.layout-sidebar.collapsed .store-info {
+  align-items: center;
 }
 
 .store-name {
@@ -138,35 +266,77 @@
   text-overflow: ellipsis;
 }
 
-.system-status {
+.layout-sidebar.collapsed .settings-link {
+  margin-top: auto !important;
+  padding-top: var(--spacing-md) !important;
+  width: 72px !important;
+}
+
+/* More Dropdown Section */
+.nav-section-container {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.more-toggle {
+  cursor: pointer;
+}
+
+.nav-dropdown-btn {
+  width: 32px;
+  height: 24px;
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  font-size: 0.75rem;
-  opacity: 0.8;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+  color: white;
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  background-color: #10b981; /* Emerald-500 */
-  border-radius: 50%;
-  box-shadow: 0 0 8px #10b981;
-  animation: pulse 2s infinite;
+.nav-item:hover .nav-dropdown-btn {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+.nav-section-container.expanded .nav-dropdown-btn svg {
+  transform: rotate(180deg);
+}
+
+.nav-dropdown-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.more-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.layout-sidebar.collapsed .more-items-list {
+  width: 72px !important;
+  align-items: center !important;
+}
+
+.layout-sidebar.collapsed .more-items-list .nav-item {
+  width: 72px !important;
+  min-width: 72px !important;
+  max-width: 72px !important;
+  justify-content: center !important;
+  padding: var(--spacing-md) 0 !important;
+  margin: 0 !important;
+}
+
+.animate-pure-fade {
+  animation: pureFade 0.3s ease-out forwards;
+}
+
+@keyframes pureFade {
+  from {
+    opacity: 0;
   }
-  70% {
-    transform: scale(1);
-    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
-  }
-  100% {
-    transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  to {
+    opacity: 1;
   }
 }
 

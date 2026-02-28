@@ -20,6 +20,11 @@ export default defineConfig({
         'src/preload/**/*',
       ],
     },
+    server: {
+      deps: {
+        inline: ['better-sqlite3'],
+      },
+    },
   },
   resolve: {
     alias: {

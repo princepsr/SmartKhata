@@ -41,17 +41,6 @@ vi.mock('electron', () => ({
   },
 }));
 
-// Mock Logger
-vi.mock('../../src/main/utils/logger', () => ({
-  logger: {
-    forModule: vi.fn(() => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() })),
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-  },
-}));
-
 describe('Print IPC Handlers - Detachment', () => {
   beforeEach(() => {
     vi.clearAllMocks();

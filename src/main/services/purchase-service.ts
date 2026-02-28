@@ -12,6 +12,8 @@ import {
   CreatePurchaseItemInput,
   ITCSummary,
 } from '../repositories/purchase-repository';
+import { ProductRepository } from '../repositories/product-repository';
+import { SupplierRepository } from '../repositories/supplier-repository';
 import { SettingsService } from './settings-service';
 import { ValidationError } from './errors/service-errors';
 import { logger } from '../utils/logger';
@@ -32,6 +34,8 @@ export interface RecordPurchaseInput {
   invoiceDate: string; // YYYY-MM-DD
   items: PurchaseItemServiceInput[];
   notes?: string;
+  updateInventory?: boolean; // Default true in Pro
+  supplierId?: number; // Optional: link to supplier table
 }
 
 export interface PurchaseNetGstLiability {
@@ -124,7 +128,7 @@ export class PurchaseService extends BaseService {
       gstTotal,
     });
 
-    return this.purchaseRepo.createPurchaseWithItems(
+    const purchase = this.purchaseRepo.createPurchaseWithItems(
       {
         purchaseNumber,
         supplierName: input.supplierName.trim(),
@@ -141,6 +145,46 @@ export class PurchaseService extends BaseService {
       },
       repoItems
     );
+
+    // Automation: Update Inventory stock
+    if (input.updateInventory !== false) {
+      const productRepo = new ProductRepository();
+      input.items.forEach((item) => {
+        if (item.productId) {
+          try {
+            productRepo.updateStock(item.productId, item.quantity);
+            logger.info('Auto-updated stock from purchase', {
+              productId: item.productId,
+              qtyAdded: item.quantity,
+            });
+          } catch (err) {
+            logger.error('Failed to update stock for product', {
+              productId: item.productId,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+      });
+    }
+
+    // Automation: Update Supplier Balance
+    if (input.supplierId) {
+      const supplierRepo = new SupplierRepository();
+      try {
+        supplierRepo.updateBalance(input.supplierId, grandTotal);
+        logger.info('Updated supplier balance from purchase', {
+          supplierId: input.supplierId,
+          amountAdded: grandTotal,
+        });
+      } catch (err) {
+        logger.error('Failed to update supplier balance', {
+          supplierId: input.supplierId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    return purchase;
   }
 
   /**

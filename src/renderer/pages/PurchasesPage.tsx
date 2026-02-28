@@ -5,6 +5,8 @@ import { Purchase } from '@shared/types/ipc';
 import { formatCurrency } from '../utils/formatters';
 import { useAppSettingsStore } from '../store';
 import EmptyState from '../components/common/EmptyState';
+import SuppliersPage from './SuppliersPage';
+import PurchaseOrdersTab from '../components/purchases/PurchaseOrdersTab';
 import './PurchasesPage.css';
 
 // Local item type for the form
@@ -21,6 +23,7 @@ interface PurchaseItem {
 const PurchasesPage: React.FC = () => {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [viewingPurchaseId, setViewingPurchaseId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'purchases' | 'suppliers' | 'orders'>('purchases');
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
@@ -55,99 +58,132 @@ const PurchasesPage: React.FC = () => {
   return (
     <div className="page purchases-page">
       <div className="page-content-wrapper animate-fade-in">
-        <header className="page-header">
-          <h1 className="page-title">Purchases & ITC</h1>
-          <div className="header-actions">
-            <div className="filters">
-              <input
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-              />
-              <span>to</span>
-              <input
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-              />
-            </div>
-            <button className="btn-primary" onClick={() => setIsAddingNew(true)}>
-              + Record Purchase
-            </button>
-          </div>
-        </header>
-
-        <div className="purchases-content">
-          {loading ? (
-            <div className="loading-state">Loading purchases...</div>
-          ) : !purchases || purchases.data.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">📦</div>
-              <h3>No purchases found</h3>
-              <p>Start recording your supplier invoices to track Input Tax Credit (ITC).</p>
-              <button className="btn-secondary" onClick={() => setIsAddingNew(true)}>
-                Record Your First Purchase
+        <header className="page-header" style={{ marginBottom: '0.5rem' }}>
+          <h1 className="page-title">Procurement</h1>
+          {activeTab === 'purchases' && (
+            <div className="header-actions">
+              <div className="filters">
+                <input
+                  type="date"
+                  value={dateRange.startDate}
+                  onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                />
+                <span>to</span>
+                <input
+                  type="date"
+                  value={dateRange.endDate}
+                  onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                />
+              </div>
+              <button className="btn-primary" onClick={() => setIsAddingNew(true)}>
+                + Record Purchase
               </button>
             </div>
-          ) : (
-            <div className="data-table-container">
-              <div className="data-table-header">
-                <div className="col-date">Date</div>
-                <div className="col-purchase-no">Purchase #</div>
-                <div className="col-supplier">Supplier</div>
-                <div className="col-inv">Inv #</div>
-                <div className="col-total text-right">GST Total</div>
-                <div className="col-grand-total text-right">Grand Total</div>
-                <div className="col-actions text-center">Actions</div>
-              </div>
+          )}
+        </header>
 
-              {purchases.data.map((p) => (
-                <div className="data-table-row" key={p.id}>
-                  <div className="col-date">
-                    {new Date(p.invoiceDate).toLocaleDateString('en-IN')}
-                  </div>
-                  <div className="col-purchase-no font-mono">{p.purchaseNumber}</div>
-                  <div className="col-supplier">
-                    <div className="supplier-info">
-                      <span className="name">{p.supplierName}</span>
-                      {p.supplierGstin && <span className="gstin">{p.supplierGstin}</span>}
+        <div className="purchases-tabs">
+          <button
+            className={`tab-btn ${activeTab === 'purchases' ? 'active' : ''}`}
+            onClick={() => setActiveTab('purchases')}
+          >
+            Purchases & Invoices
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
+            onClick={() => setActiveTab('orders')}
+          >
+            Purchase Orders
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'suppliers' ? 'active' : ''}`}
+            onClick={() => setActiveTab('suppliers')}
+          >
+            Suppliers & Ledgers
+          </button>
+        </div>
+
+        {activeTab === 'purchases' ? (
+          <div className="purchases-content">
+            {loading ? (
+              <div className="loading-state">Loading purchases...</div>
+            ) : !purchases || purchases.data.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">📦</div>
+                <h3>No purchases found</h3>
+                <p>Start recording your supplier invoices to track Input Tax Credit (ITC).</p>
+                <button className="btn-secondary" onClick={() => setIsAddingNew(true)}>
+                  Record Your First Purchase
+                </button>
+              </div>
+            ) : (
+              <div className="data-table-container">
+                <div className="data-table-header">
+                  <div className="col-date">Date</div>
+                  <div className="col-purchase-no">Purchase #</div>
+                  <div className="col-supplier">Supplier</div>
+                  <div className="col-inv">Inv #</div>
+                  <div className="col-total text-right">GST Total</div>
+                  <div className="col-grand-total text-right">Grand Total</div>
+                  <div className="col-actions text-center">Actions</div>
+                </div>
+
+                {purchases.data.map((p) => (
+                  <div className="data-table-row" key={p.id}>
+                    <div className="col-date">
+                      {new Date(p.invoiceDate).toLocaleDateString('en-IN')}
+                    </div>
+                    <div className="col-purchase-no font-mono">{p.purchaseNumber}</div>
+                    <div className="col-supplier">
+                      <div className="supplier-info">
+                        <span className="name">{p.supplierName}</span>
+                        {p.supplierGstin && <span className="gstin">{p.supplierGstin}</span>}
+                      </div>
+                    </div>
+                    <div className="col-inv">{p.invoiceNumber || '-'}</div>
+                    <div className="col-total text-right text-muted">
+                      {formatCurrency(p.gstTotal)}
+                    </div>
+                    <div className="col-grand-total text-right font-bold">
+                      {formatCurrency(p.grandTotal)}
+                    </div>
+                    <div className="col-actions" style={{ justifyContent: 'center' }}>
+                      <button
+                        className="action-icon-btn"
+                        title="View Details"
+                        onClick={() => setViewingPurchaseId(p.id)}
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
-                  <div className="col-inv">{p.invoiceNumber || '-'}</div>
-                  <div className="col-total text-right text-muted">
-                    {formatCurrency(p.gstTotal)}
-                  </div>
-                  <div className="col-grand-total text-right font-bold">
-                    {formatCurrency(p.grandTotal)}
-                  </div>
-                  <div className="col-actions" style={{ justifyContent: 'center' }}>
-                    <button
-                      className="action-icon-btn"
-                      title="View Details"
-                      onClick={() => setViewingPurchaseId(p.id)}
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'orders' ? (
+          <PurchaseOrdersTab />
+        ) : (
+          <div
+            className="animate-fade-in"
+            style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+          >
+            <SuppliersPage />
+          </div>
+        )}
       </div>
-
       {isAddingNew && (
         <PurchaseFormModal
           onClose={() => setIsAddingNew(false)}

@@ -3,6 +3,7 @@ import { useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { useAppSettingsStore } from '../../store';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
+import { medicalApi } from '../../services/medical-api';
 import './ProductFormModal.css';
 
 interface Product {
@@ -19,6 +20,14 @@ interface Product {
   isActive: boolean;
   trackInventory: boolean;
   isGstInclusive: boolean;
+  saltName?: string;
+  batchNumber?: string;
+  expiryDate?: string;
+  uom?: string;
+  isWeightBased?: boolean;
+  stripSize?: number;
+  drugCategory?: string;
+  variantGroupId?: string | null;
 }
 
 interface ProductFormModalProps {
@@ -41,6 +50,13 @@ interface FormData {
   isActive: boolean;
   trackInventory: boolean;
   isGstInclusive: boolean;
+  saltName: string;
+  batchNumber: string;
+  expiryDate: string;
+  uom: string;
+  isWeightBased: boolean;
+  stripSize: string;
+  drugCategory: string;
 }
 
 const INITIAL_STATE: FormData = {
@@ -56,6 +72,13 @@ const INITIAL_STATE: FormData = {
   isActive: true,
   trackInventory: true,
   isGstInclusive: false,
+  saltName: '',
+  batchNumber: '',
+  expiryDate: '',
+  uom: 'Pcs',
+  isWeightBased: false,
+  stripSize: '10',
+  drugCategory: '',
 };
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
@@ -66,6 +89,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 }) => {
   const [formData, setFormData] = useState<FormData>(INITIAL_STATE);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  const [saltSuggestions, setSaltSuggestions] = useState<string[]>([]);
   const firstInputRef = useRef<HTMLInputElement>(null);
   const { settings } = useAppSettingsStore();
 
@@ -117,12 +141,21 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           isActive: initialData.isActive ?? true,
           isGstInclusive: initialData.isGstInclusive ?? false,
           trackInventory: initialData.trackInventory ?? true,
+          saltName: initialData.saltName || '',
+          batchNumber: initialData.batchNumber || '',
+          expiryDate: initialData.expiryDate || '',
+          uom: initialData.uom || 'Pcs',
+          isWeightBased: initialData.isWeightBased || false,
+          stripSize: initialData.stripSize?.toString() || '10',
+          drugCategory: initialData.drugCategory || '',
         });
       } else {
         setFormData({
           ...INITIAL_STATE,
           gstPercent: (settings?.gstPercentage ?? 18).toString(),
           isGstInclusive: settings?.gstExclusiveMode ? false : true,
+          uom:
+            settings.appMode === 'MEDICAL' ? 'Strip' : settings.appMode === 'KIRANA' ? 'Kg' : 'Pcs',
         });
       }
       setErrors({});
@@ -234,6 +267,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       isActive: formData.isActive,
       isGstInclusive: formData.isGstInclusive,
       trackInventory: formData.trackInventory,
+      saltName: formData.saltName || undefined,
+      batchNumber: formData.batchNumber || undefined,
+      expiryDate: formData.expiryDate || undefined,
+      uom: formData.uom,
+      isWeightBased: formData.isWeightBased,
+      stripSize: parseInt(formData.stripSize) || 10,
+      drugCategory: formData.drugCategory || undefined,
     };
 
     try {
@@ -283,6 +323,48 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               {errors.name && <span className="error-text">{errors.name}</span>}
             </div>
 
+            {settings.appMode === 'MEDICAL' && (
+              <div className="form-group salt-suggestions-container">
+                <label>Generic Salt Name (Optional)</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    name="saltName"
+                    value={formData.saltName}
+                    onChange={async (e) => {
+                      handleChange(e);
+                      const val = e.target.value;
+                      if (val.length >= 2) {
+                        const suggestions = await medicalApi.getSaltSuggestions(val);
+                        setSaltSuggestions(suggestions);
+                      } else {
+                        setSaltSuggestions([]);
+                      }
+                    }}
+                    placeholder="e.g. Paracetamol"
+                    disabled={isLoading}
+                    autoComplete="off"
+                  />
+                  {saltSuggestions.length > 0 && (
+                    <ul className="salt-suggestions-dropdown">
+                      {saltSuggestions.map((salt) => (
+                        <li
+                          key={salt}
+                          className="salt-suggestion-item"
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, saltName: salt }));
+                            setSaltSuggestions([]);
+                          }}
+                        >
+                          {salt}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="form-row">
               <div className="form-group">
                 <label>SKU (Optional)</label>
@@ -321,6 +403,86 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </div>
               )}
             </div>
+
+            {settings.enableBatchTracking && (
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Batch Number (Optional)</label>
+                  <input
+                    type="text"
+                    name="batchNumber"
+                    value={formData.batchNumber}
+                    onChange={handleChange}
+                    placeholder="e.g. B12345"
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Expiry Date (Optional)</label>
+                  <input
+                    type="date"
+                    name="expiryDate"
+                    value={formData.expiryDate}
+                    onChange={handleChange}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+            )}
+
+            {settings.appMode === 'MEDICAL' && (
+              <div
+                className="form-group animate-fade-in"
+                style={{
+                  marginTop: '1.5rem',
+                  padding: '1rem',
+                  background: '#f8fafc',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                }}
+              >
+                <label
+                  style={{
+                    fontWeight: 600,
+                    color: '#334155',
+                    marginBottom: '0.5rem',
+                    display: 'block',
+                  }}
+                >
+                  💊 Medical Classification
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label htmlFor="drugCategory" style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                    Drug Category (for Safety Warnings)
+                  </label>
+                  <select
+                    id="drugCategory"
+                    name="drugCategory"
+                    value={formData.drugCategory}
+                    onChange={handleChange}
+                    disabled={isLoading}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      backgroundColor: 'white',
+                      fontSize: '0.95rem',
+                    }}
+                  >
+                    <option value="">None (General Medicine / OTC)</option>
+                    <option value="H">Schedule H (Prescription Only)</option>
+                    <option value="H1">Schedule H1 (Controlled Drug)</option>
+                    <option value="X">Schedule X (Psychotropic/Narcotic)</option>
+                    <option value="G">Schedule G (Medical Supervision Required)</option>
+                  </select>
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>
+                    Setting a schedule category will show a billing alert for prescription
+                    verification.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="form-row">
               <div className="form-group">
@@ -429,6 +591,34 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       }}
                     />
                     GST Inclusive (MRP)
+                  </label>
+                )}
+
+                {settings.appMode === 'KIRANA' && (
+                  <label
+                    style={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontWeight: '500',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name="isWeightBased"
+                      checked={formData.isWeightBased}
+                      onChange={handleChange}
+                      disabled={isLoading}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                        transform: 'scale(1.1)',
+                        accentColor: 'var(--color-primary)',
+                      }}
+                    />
+                    Sold by Weight (Weighing Scale)
                   </label>
                 )}
               </div>

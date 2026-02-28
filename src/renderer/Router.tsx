@@ -8,6 +8,9 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import PurchasesPage from './pages/PurchasesPage';
 import OnboardingPage from './pages/OnboardingPage';
+import ExpensesPage from './pages/ExpensesPage';
+import QuotationsPage from './pages/QuotationsPage';
+import BarcodeGenPage from './pages/BarcodeGenPage';
 import LoadingScreen from './components/common/LoadingScreen';
 import { useAppSettingsStore } from './store/useAppSettingsStore';
 import { useEffect, useState } from 'react';
@@ -57,6 +60,9 @@ function AppRouter() {
             <Route path="customers" element={<CustomersPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="purchases" element={<PurchasesPage />} />
+            <Route path="expenses" element={<ExpensesPage />} />
+            <Route path="quotations" element={<QuotationsPage />} />
+            <Route path="barcode-gen" element={<BarcodeGenPage />} />
             <Route path="settings" element={<SettingsPage />} />
 
             {/* 404 - redirect to billing */}

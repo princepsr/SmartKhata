@@ -1,0 +1,23 @@
+.suppliers-page {
+  padding: var(--spacing-md);
+}
+
+.supplier-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.supplier-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.balance-due {
+  color: var(--danger-color);
+  font-weight: 600;
+}
+
+.balance-settled {
+  color: var(--success-color);
+}

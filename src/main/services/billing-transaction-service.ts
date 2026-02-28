@@ -96,15 +96,28 @@ export class BillingTransactionService {
         paymentReceived: input.paymentReceived || 0,
       };
 
+      // B2B Snapshots
+      if (input.customerId) {
+        const customer = this.customerRepo.findById(input.customerId);
+        if (customer) {
+          billInput.customerGstinSnapshot = customer.gstin;
+          billInput.billingAddressSnapshot = customer.billingAddress;
+          billInput.shippingAddressSnapshot = customer.shippingAddress;
+        }
+      }
+
       const billId = this.billRepo.createBillWithItems(billInput, calculatedItems);
 
       // 7. Update Stock (Skip if billing only mode is enabled)
       if (!config.billingOnly) {
+        const today = new Date().toISOString().split('T')[0];
         for (const item of input.items) {
           const product = productMap.get(item.productId);
           if (product && product.trackInventory) {
             this.productRepo.updateStock(item.productId, -item.quantity);
           }
+          // Always update last sale date regardless of stock tracking
+          this.productRepo.updateLastSaleDate(item.productId, today);
         }
       }
 

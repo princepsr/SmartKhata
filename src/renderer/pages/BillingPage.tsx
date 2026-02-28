@@ -17,8 +17,10 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { useAppSettingsStore } from '../store';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { reportApi } from '@renderer/services/report-api';
+import { medicalApi } from '@renderer/services/medical-api';
 import type { DailySalesSummary } from '@shared/types/report.types';
 import { ReferralModal } from '../components/modals/ReferralModal';
+import { QRCodeSVG } from 'qrcode.react';
 
 /**
  * Billing Page
@@ -71,6 +73,8 @@ interface Customer {
 function BillingPage() {
   // Settings (for billing-only mode)
   const { settings } = useAppSettingsStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isQuotationMode = searchParams.get('type') === 'quotation';
 
   // State
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,6 +112,9 @@ function BillingPage() {
   // Dashboard State
   const [todaySummary, setTodaySummary] = useState<DailySalesSummary | null>(null);
 
+  // Medical Alternatives State
+  const [saltAlternatives, setSaltAlternatives] = useState<Product[]>([]);
+
   // Alert State (for custom styled alerts)
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
@@ -120,8 +127,6 @@ function BillingPage() {
     message: '',
     type: 'warning',
   });
-
-  const [searchParams, setSearchParams] = useSearchParams();
 
   // Handle global actions
   useEffect(() => {
@@ -264,6 +269,16 @@ function BillingPage() {
         const existingItem = prevCart.find((item) => item.product.id === product.id);
         const currentQtyInCart = existingItem ? existingItem.quantity : 0;
 
+        // Medical Specialization: Drug Warnings
+        if (product.drugCategory && ['H', 'H1', 'X', 'G'].includes(product.drugCategory)) {
+          setAlertState({
+            isOpen: true,
+            title: `Schedule ${product.drugCategory} Drug Warning`,
+            message: `"${product.name}" is a controlled drug. Ensure you have a valid prescription and record doctor details if required.`,
+            type: 'warning',
+          });
+        }
+
         // Skip stock check in billing-only mode OR if product doesn't track inventory
         if (
           !settings.billingOnly &&
@@ -371,6 +386,30 @@ function BillingPage() {
     }
   }, [searchResults, searchQuery, addToCart]);
 
+  // Fetch alternatives when selected index changes
+  useEffect(() => {
+    const fetchAlternatives = async () => {
+      if (
+        settings.appMode === 'MEDICAL' &&
+        searchResults?.items &&
+        selectedResultIndex !== -1 &&
+        searchResults.items[selectedResultIndex]
+      ) {
+        const product = searchResults.items[selectedResultIndex];
+        if (product.saltName) {
+          const alternatives = await medicalApi.getAlternatives(product.saltName, product.id);
+          setSaltAlternatives(alternatives);
+        } else {
+          setSaltAlternatives([]);
+        }
+      } else {
+        setSaltAlternatives([]);
+      }
+    };
+
+    fetchAlternatives();
+  }, [selectedResultIndex, searchResults, settings.appMode]);
+
   // Reset Bill State (Next Sale)
   const resetBill = useCallback(() => {
     setCart([]);
@@ -424,6 +463,25 @@ function BillingPage() {
         selectedCustomer && amountPaid !== '' ? parseFloat(amountPaid) : calculation.grandTotal,
     };
 
+    if (isQuotationMode) {
+      const result = (await window.api.invoke(IPC_CHANNELS.QUOTATION_CREATE, {
+        customerId: selectedCustomer?.id,
+        items: input.items,
+        totalAmount: calculation.grandTotal,
+        validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days valid
+      })) as any;
+
+      if (result.success) {
+        setSuccessMessage({
+          billNumber: result.data.quotationNumber,
+          total: formatCurrency(calculation.grandTotal),
+          customerName: selectedCustomer?.name,
+        });
+        resetBill();
+      }
+      return;
+    }
+
     const result = await finalizeBill(input);
 
     if (result) {
@@ -450,6 +508,7 @@ function BillingPage() {
     finalizeBill,
     resetBill,
     fetchTodaySummary,
+    isQuotationMode,
     amountPaid,
     setSuccessMessage,
   ]);
@@ -588,7 +647,10 @@ function BillingPage() {
         )}
 
         <header className="page-header">
-          <h1 className="page-title">Billing - New Sale</h1>
+          <h1 className="page-title">
+            {isQuotationMode ? 'Billing - New Quotation' : 'Billing - New Sale'}
+            {isQuotationMode && <span className="badge-quotation">Quotation Mode</span>}
+          </h1>
 
           {/* Actions & Customer Section (Right aligned) */}
           <div className="header-actions">
@@ -668,6 +730,47 @@ function BillingPage() {
                     ) : (
                       <div className="no-results" style={{ padding: '1rem', textAlign: 'center' }}>
                         No products found.
+                      </div>
+                    )}
+
+                    {/* Salt Alternatives Partition */}
+                    {settings.appMode === 'MEDICAL' && saltAlternatives.length > 0 && (
+                      <div className="salt-alternatives-section">
+                        <div className="salt-alternatives-header">
+                          💊 Alternatives with same Salt ({saltAlternatives[0].saltName})
+                        </div>
+                        {saltAlternatives.map((alt) => (
+                          <div
+                            key={alt.id}
+                            className="product-item alt"
+                            onClick={() => addToCart(alt)}
+                          >
+                            <span className="product-name">{alt.name}</span>
+                            <span className="product-meta">
+                              {alt.sku || alt.barcode || 'Shared Salt'}
+                            </span>
+                            <div className="product-price">
+                              {!settings.billingOnly && alt.trackInventory && (
+                                <span
+                                  className={`search-stock-status ${
+                                    alt.stockQty <= 0
+                                      ? 'out'
+                                      : alt.stockQty <= (alt.lowStockAlert || 0)
+                                        ? 'low'
+                                        : 'ok'
+                                  }`}
+                                >
+                                  {alt.stockQty <= 0
+                                    ? 'Out'
+                                    : alt.stockQty <= (alt.lowStockAlert || 0)
+                                      ? `Low (${alt.stockQty})`
+                                      : `Stock: ${alt.stockQty}`}
+                                </span>
+                              )}
+                              {formatCurrency(alt.salePrice)}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -798,10 +901,12 @@ function BillingPage() {
                 <span>Subtotal</span>
                 <span>{calculation ? formatCurrency(calculation.subtotal) : '₹ 0.00'}</span>
               </div>
-              <div className="summary-row gst-row">
-                <span>GST</span>
-                <span>{calculation ? formatCurrency(calculation.gstTotal) : '₹ 0.00'}</span>
-              </div>
+              {settings.gstEnabled && (
+                <div className="summary-row gst-row">
+                  <span>GST</span>
+                  <span>{calculation ? formatCurrency(calculation.gstTotal) : '₹ 0.00'}</span>
+                </div>
+              )}
 
               <div className="summary-row discount-row">
                 <span>Discount</span>
@@ -880,6 +985,59 @@ function BillingPage() {
                 onModeChange={setPaymentMode}
                 disabled={finalizing}
               />
+
+              {/* Dynamic UPI QR Code */}
+              {paymentMode === 'upi' && calculation && calculation.grandTotal > 0 && (
+                <div
+                  className="upi-qr-container animate-fade-in"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '1rem',
+                    background: 'white',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #e2e8f0',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  {settings.upiId ? (
+                    <>
+                      <div
+                        style={{
+                          background: 'white',
+                          padding: '0.5rem',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #e2e8f0',
+                          marginBottom: '0.5rem',
+                        }}
+                      >
+                        <QRCodeSVG
+                          value={`upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(
+                            settings.upiName || settings.shopName || 'Merchant'
+                          )}&am=${calculation.grandTotal}&cu=INR`}
+                          size={140}
+                          level="M"
+                        />
+                      </div>
+                      <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>
+                        Scan to pay <strong>{formatCurrency(calculation.grandTotal)}</strong>
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        {settings.upiId}
+                      </span>
+                    </>
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                      <p style={{ margin: '0 0 0.5rem 0' }}>UPI is not configured.</p>
+                      <p style={{ margin: 0 }}>
+                        Go to <strong>Settings &gt; Business Rules</strong> to add your Store UPI
+                        ID.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {finalizingError && (
                 <div

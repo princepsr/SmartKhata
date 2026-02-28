@@ -10,19 +10,14 @@ import { ProductRepository } from '../../src/main/repositories/product-repositor
 import { CustomerRepository } from '../../src/main/repositories/customer-repository';
 import { BillRepository } from '../../src/main/repositories/bill-repository';
 import { SettingsService } from '../../src/main/services/settings-service';
-import {
-  createTestDatabase,
-  resetTestDatabase,
-  seedTestData,
-  type BetterSqliteCompatibleDatabase,
-} from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
 import {
   ValidationError,
   DuplicateEntryError,
 } from '../../src/main/services/errors/service-errors';
 
 describe('BillingService - Calculations', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let billingService: BillingService;
 
   beforeEach(async () => {
@@ -180,7 +175,7 @@ describe('BillingService - Calculations', () => {
 });
 
 describe('BillingService - Finalize Bill', () => {
-  let db: BetterSqliteCompatibleDatabase;
+  let db: any;
   let billingService: BillingService;
   let productRepo: ProductRepository;
   let billRepo: BillRepository;

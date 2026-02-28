@@ -117,12 +117,67 @@ const SettingsIcon = () => (
   </svg>
 );
 
+const ExpensesIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+  </svg>
+);
+
+const QuotationsIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
+const BarcodeIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14" />
+  </svg>
+);
+
 function Layout() {
   const [appVersion, setAppVersion] = useState<string>('');
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+  const [isMoreExpanded, setIsMoreExpanded] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sidebarCollapsed') === 'true';
+  });
   const { settings, fetchSettings } = useAppSettingsStore();
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', isSidebarCollapsed.toString());
+  }, [isSidebarCollapsed]);
 
   useEffect(() => {
     const fetchVersion = async () => {
@@ -139,6 +194,14 @@ function Layout() {
     fetchVersion();
     fetchSettings(true);
   }, [fetchSettings]);
+
+  // Auto-expand "More" section if current path is a sub-item
+  useEffect(() => {
+    const subPaths = ['/purchases', '/expenses', '/quotations', '/barcode-gen'];
+    if (subPaths.some((path) => window.location.pathname.includes(path))) {
+      setIsMoreExpanded(true);
+    }
+  }, []);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -163,14 +226,36 @@ function Layout() {
           navigate('/reports');
           break;
         case 'F6':
+          e.preventDefault();
+          navigate('/settings');
+          break;
+        case 'F7':
           if (settings.gstEnabled) {
             e.preventDefault();
+            setIsMoreExpanded(true);
             navigate('/purchases');
           }
           break;
-        case 'F7':
-          e.preventDefault();
-          navigate('/settings');
+        case 'F8':
+          if (settings.expensesEnabled) {
+            e.preventDefault();
+            setIsMoreExpanded(true);
+            navigate('/expenses');
+          }
+          break;
+        case 'F9':
+          if (settings.quotationsEnabled) {
+            e.preventDefault();
+            setIsMoreExpanded(true);
+            navigate('/quotations');
+          }
+          break;
+        case 'F10':
+          if (settings.barcodeGenEnabled) {
+            e.preventDefault();
+            setIsMoreExpanded(true);
+            navigate('/barcode-gen');
+          }
           break;
         default:
           break;
@@ -179,7 +264,20 @@ function Layout() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, settings.customersEnabled, settings.gstEnabled]);
+  }, [
+    navigate,
+    settings.customersEnabled,
+    settings.gstEnabled,
+    settings.expensesEnabled,
+    settings.quotationsEnabled,
+    settings.barcodeGenEnabled,
+  ]);
+
+  const hasMoreItems =
+    settings.gstEnabled ||
+    settings.expensesEnabled ||
+    settings.quotationsEnabled ||
+    settings.barcodeGenEnabled;
 
   return (
     <div className="app-container">
@@ -203,10 +301,36 @@ function Layout() {
 
       <div className="layout">
         {/* Sidebar Navigation */}
-        <aside className="layout-sidebar">
+        <aside className={`layout-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
           <div className="sidebar-header">
-            <h1 className="sidebar-title">SmartKhata</h1>
-            <p className="sidebar-version">v{appVersion}</p>
+            <div className="header-top">
+              {!isSidebarCollapsed && (
+                <div className="brand-container">
+                  <h1 className="sidebar-title">SmartKhata</h1>
+                  <span className="sidebar-version">v{appVersion}</span>
+                </div>
+              )}
+              <button
+                className="sidebar-toggle-btn"
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="3" y1="12" x2="21" y2="12"></line>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+              </button>
+            </div>
           </div>
 
           <nav className="sidebar-nav">
@@ -244,32 +368,103 @@ function Layout() {
               <kbd className="nav-shortcut">F5</kbd>
             </NavLink>
 
-            {settings.gstEnabled && (
-              <NavLink to="/purchases" className="nav-item">
-                <span className="nav-icon">
-                  <PurchasesIcon />
-                </span>
-                <span className="nav-label">Purchases</span>
-                <kbd className="nav-shortcut">F6</kbd>
-              </NavLink>
+            {hasMoreItems && (
+              <div className={`nav-section-container ${isMoreExpanded ? 'expanded' : ''}`}>
+                <div
+                  className="nav-item more-toggle"
+                  onClick={() => setIsMoreExpanded(!isMoreExpanded)}
+                >
+                  <span className="nav-icon">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="1"></circle>
+                      <circle cx="19" cy="12" r="1"></circle>
+                      <circle cx="5" cy="12" r="1"></circle>
+                    </svg>
+                  </span>
+                  <span className="nav-label">More</span>
+                  <div className="nav-dropdown-btn">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
+                </div>
+
+                {isMoreExpanded && (
+                  <div className="more-items-list animate-pure-fade">
+                    {settings.gstEnabled && (
+                      <NavLink to="/purchases" className="nav-item">
+                        <span className="nav-icon">
+                          <PurchasesIcon />
+                        </span>
+                        <span className="nav-label">Purchases</span>
+                        <kbd className="nav-shortcut">F7</kbd>
+                      </NavLink>
+                    )}
+
+                    {settings.expensesEnabled && (
+                      <NavLink to="/expenses" className="nav-item">
+                        <span className="nav-icon">
+                          <ExpensesIcon />
+                        </span>
+                        <span className="nav-label">Expenses</span>
+                        <kbd className="nav-shortcut">F8</kbd>
+                      </NavLink>
+                    )}
+
+                    {settings.quotationsEnabled && (
+                      <NavLink to="/quotations" className="nav-item">
+                        <span className="nav-icon">
+                          <QuotationsIcon />
+                        </span>
+                        <span className="nav-label">Quotations</span>
+                        <kbd className="nav-shortcut">F9</kbd>
+                      </NavLink>
+                    )}
+
+                    {settings.barcodeGenEnabled && (
+                      <NavLink to="/barcode-gen" className="nav-item">
+                        <span className="nav-icon">
+                          <BarcodeIcon />
+                        </span>
+                        <span className="nav-label">Barcodes</span>
+                        <kbd className="nav-shortcut">F10</kbd>
+                      </NavLink>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
-            <NavLink to="/settings" className="nav-item">
+            <NavLink to="/settings" className="nav-item settings-link">
               <span className="nav-icon">
                 <SettingsIcon />
               </span>
               <span className="nav-label">Settings</span>
-              <kbd className="nav-shortcut">F7</kbd>
+              <kbd className="nav-shortcut">F6</kbd>
             </NavLink>
           </nav>
 
           <div className="sidebar-footer">
             <div className="store-info">
-              <span className="store-name">{settings.shopName}</span>
-              <div className="system-status">
-                <span className="status-dot"></span>
-                <span className="status-text">System Active</span>
-              </div>
+              {!isSidebarCollapsed && <span className="store-name">{settings.shopName}</span>}
             </div>
           </div>
         </aside>

@@ -51,9 +51,64 @@
 
 .onboarding-header h1 {
   font-size: 2rem;
-  font-weight: 800;
-  color: #111;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.mode-selection h3 {
+  text-align: center;
   margin-bottom: 0.5rem;
+}
+
+.mode-selection p {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+.mode-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+.mode-card {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.mode-card:hover {
+  border-color: var(--color-primary-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.mode-card.active {
+  border-color: var(--color-primary);
+  background: #eff6ff;
+}
+
+.mode-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.mode-card h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-text-primary);
+}
+
+.mode-card p {
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0 0;
+  line-height: 1.2;
 }
 
 .onboarding-header p {

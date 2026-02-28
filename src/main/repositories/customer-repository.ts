@@ -11,6 +11,9 @@ export interface Customer {
   phone: string | null;
   address?: string;
   email?: string;
+  gstin: string | null;
+  billingAddress: string | null;
+  shippingAddress: string | null;
   balanceDue: number; // In rupees (positive = owes, negative = advance)
   isActive: boolean;
   createdAt: Date;
@@ -39,6 +42,9 @@ export interface CreateCustomerInput {
   phone?: string;
   address?: string;
   email?: string;
+  gstin?: string;
+  billingAddress?: string;
+  shippingAddress?: string;
   balanceDue?: number; // In rupees (default 0)
 }
 
@@ -50,6 +56,9 @@ export interface UpdateCustomerInput {
   phone?: string;
   address?: string;
   email?: string;
+  gstin?: string;
+  billingAddress?: string;
+  shippingAddress?: string;
   balanceDue?: number; // In rupees
   isActive?: boolean;
 }
@@ -66,16 +75,19 @@ export class CustomerRepository extends BaseRepository {
    */
   public create(data: CreateCustomerInput): Customer {
     const sql = `
-      INSERT INTO customers (name, phone, address, email, balance_due)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO customers (name, phone, email, address, gstin, billing_address, shipping_address, balance_due)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const result = this.execute(sql, [
       data.name,
       data.phone || null,
-      data.address || null,
       data.email || null,
-      data.balanceDue || 0, // Direct Rupees
+      data.address || null,
+      data.gstin || null,
+      data.billingAddress || null,
+      data.shippingAddress || null,
+      data.balanceDue || 0,
     ]);
 
     logger.info('Customer created', { id: result.lastInsertRowid, name: data.name });
@@ -110,6 +122,18 @@ export class CustomerRepository extends BaseRepository {
     if (data.email !== undefined) {
       fields.push('email = ?');
       values.push(data.email || null);
+    }
+    if (data.gstin !== undefined) {
+      fields.push('gstin = ?');
+      values.push(data.gstin || null);
+    }
+    if (data.billingAddress !== undefined) {
+      fields.push('billing_address = ?');
+      values.push(data.billingAddress || null);
+    }
+    if (data.shippingAddress !== undefined) {
+      fields.push('shipping_address = ?');
+      values.push(data.shippingAddress || null);
     }
     if (data.balanceDue !== undefined) {
       fields.push('balance_due = ?');
@@ -389,6 +413,9 @@ export class CustomerRepository extends BaseRepository {
       phone: row.phone,
       address: row.address,
       email: row.email,
+      gstin: row.gstin,
+      billingAddress: row.billing_address,
+      shippingAddress: row.shipping_address,
       balanceDue: row.balance_due, // Direct Rupees
       isActive: row.is_active === 1, // INTEGER → boolean
       createdAt: this.parseDate(row.created_at), // TEXT → Date

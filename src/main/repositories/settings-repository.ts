@@ -26,6 +26,12 @@ export interface AppConfig {
   billingOnly: boolean;
   gstExclusiveMode: boolean; // Renamed from gstInclusiveDefault
   customersEnabled: boolean;
+  expensesEnabled: boolean;
+  quotationsEnabled: boolean;
+  barcodeGenEnabled: boolean;
+  enableBatchTracking: boolean;
+  upiId: string;
+  upiName: string;
   autoBackupEnabled: boolean;
   autoBackupIntervalDays: number;
   autoBackupIntervalUnit: 'days' | 'hours';
@@ -38,6 +44,7 @@ export interface AppConfig {
   privacyPolicyAccepted: boolean;
   autoUpdateEnabled: boolean;
   lastReferralBannerSeen: string | null;
+  appMode: 'GENERAL' | 'KIRANA' | 'MEDICAL';
   updatedAt: Date;
 }
 
@@ -77,6 +84,12 @@ export class SettingsRepository extends BaseRepository {
       billing_only: number;
       gst_exclusive_mode: number;
       customers_enabled: number;
+      expenses_enabled: number;
+      quotations_enabled: number;
+      barcode_gen_enabled: number;
+      enable_batch_tracking: number;
+      upi_id: string | null;
+      upi_name: string | null;
       auto_backup_enabled: number;
       auto_backup_interval_days: number;
       auto_backup_interval_unit: string;
@@ -89,6 +102,7 @@ export class SettingsRepository extends BaseRepository {
       privacy_policy_accepted: number;
       auto_update_enabled: number;
       last_referral_banner_seen: string | null;
+      app_mode: string;
       updated_at: string;
     }>(sql);
 
@@ -117,6 +131,12 @@ export class SettingsRepository extends BaseRepository {
         billingOnly: false,
         gstExclusiveMode: false,
         customersEnabled: true,
+        expensesEnabled: true,
+        quotationsEnabled: true,
+        barcodeGenEnabled: true,
+        enableBatchTracking: false,
+        upiId: '',
+        upiName: '',
         autoBackupEnabled: true,
         autoBackupIntervalDays: 1,
         autoBackupIntervalUnit: 'days',
@@ -129,6 +149,7 @@ export class SettingsRepository extends BaseRepository {
         privacyPolicyAccepted: false,
         autoUpdateEnabled: true,
         lastReferralBannerSeen: null,
+        appMode: 'GENERAL',
         updatedAt: new Date(),
       };
     }
@@ -168,6 +189,12 @@ export class SettingsRepository extends BaseRepository {
       billingOnly: 'billing_only',
       gstExclusiveMode: 'gst_exclusive_mode',
       customersEnabled: 'customers_enabled',
+      expensesEnabled: 'expenses_enabled',
+      quotationsEnabled: 'quotations_enabled',
+      barcodeGenEnabled: 'barcode_gen_enabled',
+      enableBatchTracking: 'enable_batch_tracking',
+      upiId: 'upi_id',
+      upiName: 'upi_name',
       autoBackupEnabled: 'auto_backup_enabled',
       autoBackupIntervalDays: 'auto_backup_interval_days',
       autoBackupIntervalUnit: 'auto_backup_interval_unit',
@@ -180,6 +207,7 @@ export class SettingsRepository extends BaseRepository {
       privacyPolicyAccepted: 'privacy_policy_accepted',
       autoUpdateEnabled: 'auto_update_enabled',
       lastReferralBannerSeen: 'last_referral_banner_seen',
+      appMode: 'app_mode',
     };
 
     Object.entries(config).forEach(([key, value]) => {
@@ -236,6 +264,12 @@ export class SettingsRepository extends BaseRepository {
     billing_only: number;
     gst_exclusive_mode: number;
     customers_enabled: number;
+    expenses_enabled: number;
+    quotations_enabled: number;
+    barcode_gen_enabled: number;
+    enable_batch_tracking: number;
+    upi_id: string | null;
+    upi_name: string | null;
     auto_backup_enabled: number;
     auto_backup_interval_days: number;
     auto_backup_interval_unit: string;
@@ -248,6 +282,7 @@ export class SettingsRepository extends BaseRepository {
     privacy_policy_accepted: number;
     auto_update_enabled: number;
     last_referral_banner_seen: string | null;
+    app_mode: string;
     updated_at: string;
   }): AppConfig {
     return {
@@ -272,6 +307,12 @@ export class SettingsRepository extends BaseRepository {
       billingOnly: row.billing_only === 1,
       gstExclusiveMode: row.gst_exclusive_mode === 1,
       customersEnabled: row.customers_enabled === 1,
+      expensesEnabled: row.expenses_enabled !== 0,
+      quotationsEnabled: row.quotations_enabled !== 0,
+      barcodeGenEnabled: row.barcode_gen_enabled !== 0,
+      enableBatchTracking: row.enable_batch_tracking === 1,
+      upiId: row.upi_id || '',
+      upiName: row.upi_name || '',
       autoBackupEnabled: row.auto_backup_enabled === 1,
       autoBackupIntervalDays: row.auto_backup_interval_days,
       autoBackupIntervalUnit: (row.auto_backup_interval_unit as 'days' | 'hours') || 'days',
@@ -284,6 +325,7 @@ export class SettingsRepository extends BaseRepository {
       privacyPolicyAccepted: row.privacy_policy_accepted === 1,
       autoUpdateEnabled: row.auto_update_enabled === 1,
       lastReferralBannerSeen: row.last_referral_banner_seen,
+      appMode: (row.app_mode as 'GENERAL' | 'KIRANA' | 'MEDICAL') || 'GENERAL',
       updatedAt: this.parseDate(row.updated_at),
     };
   }

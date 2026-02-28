@@ -56,6 +56,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
     isGstInclusive: '',
   });
   const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importMessage, setImportMessage] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,6 +65,10 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
     loading,
     error: ipcError,
   } = useIPCMutation(IPC_CHANNELS.PRODUCT_IMPORT);
+
+  const { execute: parseExcelFile } = useIPCMutation<string, ParsedCSV>(
+    IPC_CHANNELS.PRODUCT_PARSE_EXCEL
+  );
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -75,36 +80,27 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
         let result: ParsedCSV;
 
         if (selectedFile.name.toLowerCase().endsWith('.pdf')) {
-          // Parse PDF
-          const rows = await parsePDF(selectedFile);
+          // Parse PDF with Progress support
+          setStage('IMPORTING'); // Show loading early for PDF/OCR
+          const rows = await parsePDF(selectedFile, (msg) => {
+            setImportMessage(msg);
+          });
+
           if (rows.length === 0) {
             throw new Error('No text found in PDF');
           }
-          // Convert 2D array to ParsedCSV structure
-          // Assume first row is header if it looks like one, or just data
-          // Simple heuristic: First row is header
           result = {
             headers: rows[0],
-            data: rows.slice(1).map((r) => {
-              // Map row array to object with numeric keys matching headers logic?
-              // Wait, ParsedCSV usually expects specific structure?
-              // csv-parser returns headers: string[], data: any[].
-              // where data[i] is object with keys matching headers? Or just array?
-              // Let's check csv-parser.ts. It returns { headers, data: any[] }.
-              // Actually csv-parser usuall returns row objects keyed by header name.
-              // But our BulkImportModal preview logic maps by INDEX (0, 1, 2) inside the object?
-              // Let's look at BulkImportModal.tsx again.
-              /*
-                 previewData mapping:
-                 const colIdx = parseInt(mapping[field.key]);
-                 row[colIdx]
-               */
-              // It expects `row` to be an array-like object where row[0] gives column 0.
-              // So `rows` from PDF can be used almost directly if we wrap it right.
-              return r;
-            }),
+            data: rows.slice(1),
             totalRows: rows.length - 1,
           };
+        } else if (selectedFile.name.toLowerCase().match(/\.xlsx?$/)) {
+          setStage('IMPORTING'); // Show loading for excel parsing
+          const response = await parseExcelFile(selectedFile.path);
+          if (!response) {
+            throw new Error('Failed to parse Excel file');
+          }
+          result = response;
         } else {
           // Parse CSV
           result = await parseCSV(selectedFile);
@@ -118,16 +114,16 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
         result.headers.forEach((header, index) => {
           const lowerHeader = header.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-          if (['productname', 'name', 'item', 'description'].includes(lowerHeader)) {
+          if (['productname', 'name', 'item', 'description', 'particulars'].includes(lowerHeader)) {
             newMapping.name = index.toString();
           }
-          if (['price', 'saleprice', 'mrp', 'rate'].includes(lowerHeader)) {
+          if (['price', 'saleprice', 'mrp', 'rate', 'unitprice', 'val'].includes(lowerHeader)) {
             newMapping.salePrice = index.toString();
           }
-          if (['cost', 'purchaseprice', 'buyprice'].includes(lowerHeader)) {
+          if (['cost', 'purchaseprice', 'buyprice', 'purrate'].includes(lowerHeader)) {
             newMapping.purchasePrice = index.toString();
           }
-          if (['stock', 'qty', 'quantity', 'inventory'].includes(lowerHeader)) {
+          if (['stock', 'qty', 'quantity', 'inventory', 'cnt', 'pcs'].includes(lowerHeader)) {
             newMapping.stockQty = index.toString();
           }
           if (['sku', 'code', 'itemcode'].includes(lowerHeader)) {
@@ -166,9 +162,9 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
       return [];
     }
 
-    return parsedData.data.slice(0, 5).map((row, i) => {
+    return parsedData.data.slice(0, 5).map((row) => {
       // Create a preview object based on mapping
-      const previewRow: any = {};
+      const previewRow: Record<string, string> = {};
       SYSTEM_FIELDS.forEach((field) => {
         const colIdx = parseInt(mapping[field.key]);
         if (!isNaN(colIdx) && row[colIdx] !== undefined) {
@@ -237,8 +233,9 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
         onSuccess();
         onClose();
       }, 1500);
-    } catch (e) {
+    } catch (err) {
       setStage('PREVIEW'); // Go back to preview on error
+      console.error('Import failed', err);
     }
   };
 
@@ -335,7 +332,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
             {stage === 'IMPORTING' && (
               <div className="loading-state">
                 <div className="spinner"></div>
-                <p>Importing products...</p>
+                <p>{importMessage || 'Processing file...'}</p>
               </div>
             )}
 

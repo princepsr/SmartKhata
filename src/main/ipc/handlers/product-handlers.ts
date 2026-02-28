@@ -7,6 +7,8 @@
 
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { IPCHandler } from '../ipc-handler';
+import ExcelJS from 'exceljs';
+import fs from 'fs';
 import {
   UpdateProductSchema,
   ProductIdSchema,
@@ -19,6 +21,7 @@ import {
   type UpdateProductRequest,
 } from '@shared/validation/schemas';
 import { ProductService, AddProductInput, UpdateProductData } from '../../services/product-service';
+import { MedicalService } from '../../services/medical-service';
 import { LicenseService } from '../../services/license-service';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 
@@ -60,6 +63,10 @@ export function registerProductHandlers(): void {
         isGstInclusive: p.isGstInclusive,
         trackInventory: p.trackInventory,
         hsnCode: p.hsnCode,
+        batchNumber: p.batchNumber,
+        expiryDate: p.expiryDate,
+        saltName: p.saltName,
+        drugCategory: p.drugCategory,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
       }));
@@ -213,6 +220,61 @@ export function registerProductHandlers(): void {
   );
 
   // ============================================
+  // PARSE EXCEL FOR IMPORT
+  // ============================================
+  IPCHandler.handle<string, { headers: string[]; data: string[][]; totalRows: number }>(
+    IPC_CHANNELS.PRODUCT_PARSE_EXCEL,
+    async (filePath) => {
+      if (!fs.existsSync(filePath)) {
+        throw new Error('File not found');
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(filePath);
+
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) {
+        throw new Error('No worksheets found in the Excel file');
+      }
+
+      const headers: string[] = [];
+      const data: string[][] = [];
+
+      let isFirstRow = true;
+      worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+        const rowValues: string[] = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          rowValues[colNumber - 1] = cell.text ? String(cell.text).trim() : '';
+        });
+
+        if (isFirstRow) {
+          // Remove empty trailing cells from headers
+          for (let i = 0; i < rowValues.length; i++) {
+            headers.push(rowValues[i] || `Column ${i + 1}`);
+          }
+          isFirstRow = false;
+        } else {
+          // Ensure data row has same length as headers
+          const paddedRow = Array.from({ length: headers.length }, (_, i) => rowValues[i] || '');
+          // Skip completely empty rows
+          if (paddedRow.some((val) => val !== '')) {
+            data.push(paddedRow);
+          }
+        }
+      });
+
+      return {
+        headers,
+        data,
+        totalRows: data.length,
+      };
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
+
+  // ============================================
   // UPDATE PRODUCT
   // ============================================
   IPCHandler.handle<UpdateProductRequest, any>(
@@ -289,6 +351,10 @@ export function registerProductHandlers(): void {
           isGstInclusive: p.isGstInclusive,
           trackInventory: p.trackInventory,
           hsnCode: p.hsnCode,
+          batchNumber: p.batchNumber,
+          expiryDate: p.expiryDate,
+          saltName: p.saltName,
+          drugCategory: p.drugCategory,
         })),
         totalCount: result.totalCount,
         hasMore: result.hasMore,
@@ -401,6 +467,50 @@ export function registerProductHandlers(): void {
     },
     {
       schema: ProductToggleStatusSchema,
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
+
+  // ============================================
+  // MEDICAL SPECIALIZATION
+  // ============================================
+  const medicalService = new MedicalService();
+
+  IPCHandler.handle<number, string | null>(
+    IPC_CHANNELS.MEDICAL_DRUG_WARNING,
+    async (productId) => {
+      const product = productService.getProduct(productId);
+      return medicalService.getDrugWarning(product);
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
+
+  IPCHandler.handle<string, string[]>(
+    IPC_CHANNELS.MEDICAL_SALT_SUGGESTIONS,
+    async (query) => {
+      return medicalService.getSaltSuggestions(query);
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
+
+  IPCHandler.handle<{ saltName: string; excludeProductId: number }, any[]>(
+    IPC_CHANNELS.MEDICAL_ALTERNATIVES,
+    async ({ saltName, excludeProductId }) => {
+      const alternatives = medicalService.getAlternativesBySalt(saltName, excludeProductId);
+      return alternatives.map((p) => ({
+        id: p.id,
+        name: p.name,
+        salePrice: p.salePrice,
+        stockQty: p.stockQty,
+        saltName: p.saltName,
+        drugCategory: p.drugCategory,
+      }));
+    },
+    {
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );

@@ -1,0 +1,29 @@
+.quotations-page {
+  padding: 2rem;
+}
+
+.font-mono {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.text-gray-500 {
+  color: #6b7280;
+}
+
+.btn-icon-alt {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.btn-icon-alt:hover {
+  background: #f3f4f6;
+}

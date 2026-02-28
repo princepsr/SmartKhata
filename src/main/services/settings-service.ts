@@ -8,6 +8,7 @@
 import { EventEmitter } from 'events';
 import { BaseService } from './base-service';
 import { SettingsRepository, AppConfig } from '../repositories/settings-repository';
+export type { AppConfig };
 import { ValidationError } from './errors/service-errors';
 
 /**

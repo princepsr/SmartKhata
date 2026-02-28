@@ -24,6 +24,12 @@ export interface AppSettings {
   billingOnly: boolean;
   gstExclusiveMode: boolean;
   customersEnabled: boolean;
+  expensesEnabled: boolean;
+  quotationsEnabled: boolean;
+  barcodeGenEnabled: boolean;
+  enableBatchTracking: boolean;
+  upiId: string;
+  upiName: string;
   autoPrint: boolean;
   printCopies: number;
   autoBackupEnabled: boolean;
@@ -42,6 +48,7 @@ export interface AppSettings {
   supplyType: 'intrastate' | 'interstate';
   stateCode: string | null;
   placeOfSupply: string | null;
+  appMode: 'GENERAL' | 'KIRANA' | 'MEDICAL';
   updatedAt?: string;
 }
 
@@ -72,6 +79,12 @@ const defaultSettings: AppSettings = {
   billingOnly: false,
   gstExclusiveMode: false,
   customersEnabled: true,
+  expensesEnabled: true,
+  quotationsEnabled: true,
+  barcodeGenEnabled: true,
+  enableBatchTracking: false,
+  upiId: '',
+  upiName: '',
   autoPrint: true,
   printCopies: 1,
   autoBackupEnabled: true,
@@ -89,6 +102,7 @@ const defaultSettings: AppSettings = {
   supplyType: 'intrastate',
   stateCode: null,
   placeOfSupply: null,
+  appMode: 'GENERAL',
 };
 
 export const useAppSettingsStore = create<AppSettingsState>()(

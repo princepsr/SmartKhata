@@ -109,7 +109,7 @@ CREATE TABLE customers (
 | `created_at` | TEXT    | NOT NULL         | Creation timestamp (ISO 8601)    |
 | `updated_at` | TEXT    | NOT NULL         | Last update timestamp (ISO 8601) |
 
-**Same as products table** (see DATABASE_SCHEMA_RULES.md)
+**Same as products table** (see [DATABASE_SCHEMA_RULES.md](../database/DATABASE_SCHEMA_RULES.md))
 
 ---
 
