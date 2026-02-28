@@ -241,7 +241,7 @@ export function registerProductHandlers(): void {
       const data: string[][] = [];
 
       let isFirstRow = true;
-      worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      worksheet.eachRow({ includeEmpty: false }, (row, _rowNumber) => {
         const rowValues: string[] = [];
         row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
           rowValues[colNumber - 1] = cell.text ? String(cell.text).trim() : '';

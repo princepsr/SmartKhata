@@ -43,12 +43,6 @@ export const parseCSV = async (file: File): Promise<ParsedCSV> => {
         // 3. Parse Headers
         // Basic split by delimiter, handling quotes would need more logic
         const parseLine = (line: string) => {
-          // This regex splits by delimiter but ignores delimiters inside quotes
-          // It's a "good enough" regex for standard CSVs
-          const regex = new RegExp(`(\\s*${delimiter}\\s*|\\r?\\n|\\r)`, 'g');
-          // Actually, a simple split might fail on "Item, Name".
-          // Let's use a proper simple parser function
-
           const row: string[] = [];
           let currentVal = '';
           let inQuotes = false;

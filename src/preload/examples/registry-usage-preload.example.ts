@@ -149,7 +149,7 @@ export function exampleRuntimeValidation(): void {
   // Intercept all IPC calls for logging/validation
   const createValidatedAPI = () => {
     return new Proxy({} as any, {
-      get: (target, module: string) => {
+      get: (_target, module: string) => {
         return new Proxy({}, {
           get: (_, action: string) => {
             return (...args: any[]) => {

@@ -11,7 +11,6 @@
  */
 
 import type { IPCChannel } from '@shared/ipc/channels';
-import type { IPCResponse } from '@shared/types/ipc';
 
 /**
  * IPC Call Options

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useIPC } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { Product } from '@shared/types/ipc';

@@ -19,7 +19,7 @@
  */
 
 import { contextBridge, ipcRenderer, shell } from 'electron';
-import { IPC_CHANNELS, isValidChannel, type IPCChannel } from '@shared/ipc/channels';
+import { IPC_CHANNELS, isValidChannel } from '@shared/ipc/channels';
 import type { IPCResponse } from '@shared/types/ipc';
 
 /**

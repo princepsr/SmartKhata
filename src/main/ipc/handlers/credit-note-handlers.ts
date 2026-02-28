@@ -9,13 +9,11 @@ import {
   CreditNoteService,
   CreateCreditNoteServiceInput,
 } from '../../services/credit-note-service';
-import { PrintService } from '../../services/print-service';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 
 export function registerCreditNoteHandlers(): void {
   const creditNoteService = new CreditNoteService();
-  const printService = PrintService.getInstance();
 
   // ============================================
   // CREATE CREDIT NOTE

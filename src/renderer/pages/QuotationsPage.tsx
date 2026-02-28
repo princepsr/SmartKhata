@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useIPC, useIPCMutation } from '../hooks/useIPC';
+import { useEffect } from 'react';
+import { useIPC } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
 import './QuotationsPage.css';

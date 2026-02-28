@@ -119,6 +119,6 @@ async function getProductsFromDatabase() {
   return [];
 }
 
-async function getProductById(id: number) {
+async function getProductById(_id: number) {
   return null;
 }

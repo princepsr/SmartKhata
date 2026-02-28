@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useUpdateStore } from '../../store/useUpdateStore';
 import { useAppSettingsStore } from '../../store/useAppSettingsStore';
 import { UpdateStatus } from '@shared/types/update';

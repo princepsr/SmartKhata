@@ -56,7 +56,7 @@ if (!gotTheLock) {
   app.quit();
 } else {
   // This is the first instance, handle second-instance attempts
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on('second-instance', (_event, commandLine, workingDirectory) => {
     logger.info('Second instance attempted to start', { commandLine, workingDirectory });
 
     // Focus the existing window if it exists
