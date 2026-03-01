@@ -144,6 +144,7 @@ pnpm electron-rebuild
 | **API Style**     | Synchronous                        | Matches SQLite's CPU-bound nature    |
 | **Dev Location**  | `./dev-data/smartkhata.db`         | Easy access, git-ignored             |
 | **Prod Location** | `AppData/Roaming/SmartKhata/data/` | OS-standard, per-user, persistent    |
+| **Testing Stack** | `sql.js` (WASM)                    | Environment-agnostic, no ABI issues  |
 | **File Name**     | `smartkhata.db`                    | Simple, lowercase, no version        |
 | **Backup Format** | `smartkhata-backup-<ISO-DATE>.db`  | Sortable, human-readable             |
 

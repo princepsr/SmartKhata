@@ -10,15 +10,15 @@ A fast, offline-first point-of-sale system originally built for Indian kirana sh
 
 ## Tech Stack
 
-| Layer                 | Technology                |
-| --------------------- | ------------------------- |
-| **Desktop Framework** | Electron 34               |
-| **UI**                | React 18 + TypeScript     |
-| **Build Tool**        | Vite 6                    |
-| **Database**          | SQLite (better-sqlite3)   |
-| **Testing**           | Vitest + In-memory SQLite |
-| **Package Manager**   | pnpm                      |
-| **Linting**           | ESLint + Prettier         |
+| Layer                 | Technology                       |
+| --------------------- | -------------------------------- |
+| **Desktop Framework** | Electron 34                      |
+| **UI**                | React 18 + TypeScript            |
+| **Build Tool**        | Vite 6                           |
+| **Database**          | SQLite (better-sqlite3)          |
+| **Testing**           | Vitest + sql.js (In-memory WASM) |
+| **Package Manager**   | pnpm                             |
+| **Linting**           | ESLint + Prettier                |
 
 **Architecture:** Clean layered architecture (UI → IPC → Service → Repository → Database)
 
@@ -256,72 +256,72 @@ pnpm build:win:portable
 
 ### 🏪 Domain Specializations & Supply Chain
 
-| Document | Purpose |
-| :--- | :--- |
-| [MEDICAL_MODE.md](docs/features/MEDICAL_MODE.md) | Pharmacy features, Batch Expiry, Salts |
-| [KIRANA_MODE.md](docs/features/KIRANA_MODE.md) | Weighing scales, Quick Pick, WhatsApp |
+| Document                                                               | Purpose                                |
+| :--------------------------------------------------------------------- | :------------------------------------- |
+| [MEDICAL_MODE.md](docs/features/MEDICAL_MODE.md)                       | Pharmacy features, Batch Expiry, Salts |
+| [KIRANA_MODE.md](docs/features/KIRANA_MODE.md)                         | Weighing scales, Quick Pick, WhatsApp  |
 | [SUPPLIERS_AND_PURCHASES.md](docs/features/SUPPLIERS_AND_PURCHASES.md) | Ledger, Purchase Invoices, Debit Notes |
-| [PURCHASE_ORDERS.md](docs/features/PURCHASE_ORDERS.md) | Drafts, Fulfillment, Auto-ordering |
+| [PURCHASE_ORDERS.md](docs/features/PURCHASE_ORDERS.md)                 | Drafts, Fulfillment, Auto-ordering     |
 
 ### 🏗️ Architecture & Core Logic
 
-| Document | Purpose |
-| :--- | :--- |
-| [CURRENT_ARCHITECTURE.md](docs/architecture/CURRENT_ARCHITECTURE.md) | **High-level architecture overview** |
+| Document                                                                 | Purpose                               |
+| :----------------------------------------------------------------------- | :------------------------------------ |
+| [CURRENT_ARCHITECTURE.md](docs/architecture/CURRENT_ARCHITECTURE.md)     | **High-level architecture overview**  |
 | [ARCHITECTURE_DECISIONS.md](docs/architecture/ARCHITECTURE_DECISIONS.md) | Technical choices and design patterns |
-| [FOLDER_STRUCTURE.md](docs/architecture/FOLDER_STRUCTURE.md) | Detailed file/folder responsibilities |
-| [BILLING_SERVICE_FLOW.md](docs/features/BILLING_SERVICE_FLOW.md) | State machine for atomic billing |
-| [BILLING_TRANSACTION_FLOW.md](docs/features/BILLING_TRANSACTION_FLOW.md) | Step-by-step transaction logic |
-| [TAXATION_AND_DISCOUNTS.md](docs/features/TAXATION_AND_DISCOUNTS.md) | GST Models and Proportional Discounts |
-| [GST_REPORTING_GUIDE.md](docs/features/GST_REPORTING_GUIDE.md) | **Full End-to-End GST Manual** |
-| [CUSTOMER_MANAGEMENT.md](docs/features/CUSTOMER_MANAGEMENT.md) | Profiles and Ledger Integration |
-| [PRINT_SERVICE.md](docs/features/PRINT_SERVICE.md) | Thermal printing & window pooling |
-| [REPORTS_ARCHITECTURE.md](docs/features/REPORTS_ARCHITECTURE.md) | Analytics & multi-format exports |
-| [SOFTWARE_UPDATE.md](docs/development/SOFTWARE_UPDATE.md) | **Auto-update & Release lifecycle** |
+| [FOLDER_STRUCTURE.md](docs/architecture/FOLDER_STRUCTURE.md)             | Detailed file/folder responsibilities |
+| [BILLING_SERVICE_FLOW.md](docs/features/BILLING_SERVICE_FLOW.md)         | State machine for atomic billing      |
+| [BILLING_TRANSACTION_FLOW.md](docs/features/BILLING_TRANSACTION_FLOW.md) | Step-by-step transaction logic        |
+| [TAXATION_AND_DISCOUNTS.md](docs/features/TAXATION_AND_DISCOUNTS.md)     | GST Models and Proportional Discounts |
+| [GST_REPORTING_GUIDE.md](docs/features/GST_REPORTING_GUIDE.md)           | **Full End-to-End GST Manual**        |
+| [CUSTOMER_MANAGEMENT.md](docs/features/CUSTOMER_MANAGEMENT.md)           | Profiles and Ledger Integration       |
+| [PRINT_SERVICE.md](docs/features/PRINT_SERVICE.md)                       | Thermal printing & window pooling     |
+| [REPORTS_ARCHITECTURE.md](docs/features/REPORTS_ARCHITECTURE.md)         | Analytics & multi-format exports      |
+| [SOFTWARE_UPDATE.md](docs/development/SOFTWARE_UPDATE.md)                | **Auto-update & Release lifecycle**   |
 
 ### 🛠️ System Reliability
 
-| Document | Purpose |
-| :--- | :--- |
-| [SERVICE_ERROR_FLOW.md](docs/architecture/SERVICE_ERROR_FLOW.md) | Standardized error mapping (Ipc/Main) |
-| [GRACEFUL_SHUTDOWN.md](docs/architecture/GRACEFUL_SHUTDOWN.md) | WAL checkpointing & shutdown hooks |
-| [ERROR_HANDLING.md](docs/architecture/ERROR_HANDLING.md) | Global crash recovery & logging |
-| [DATABASE_PERFORMANCE_SAFETY.md](docs/database/DATABASE_PERFORMANCE_SAFETY.md) | WAL mode & query optimization |
+| Document                                                                       | Purpose                               |
+| :----------------------------------------------------------------------------- | :------------------------------------ |
+| [SERVICE_ERROR_FLOW.md](docs/architecture/SERVICE_ERROR_FLOW.md)               | Standardized error mapping (Ipc/Main) |
+| [GRACEFUL_SHUTDOWN.md](docs/architecture/GRACEFUL_SHUTDOWN.md)                 | WAL checkpointing & shutdown hooks    |
+| [ERROR_HANDLING.md](docs/architecture/ERROR_HANDLING.md)                       | Global crash recovery & logging       |
+| [DATABASE_PERFORMANCE_SAFETY.md](docs/database/DATABASE_PERFORMANCE_SAFETY.md) | WAL mode & query optimization         |
 
 ### 💾 Data & Persistence
 
-| Document | Purpose |
-| :--- | :--- |
-| [DATABASE_SCHEMA.md](docs/database/DATABASE_SCHEMA.md) | Product, Bill, and Customer tables |
-| [DATABASE_MIGRATIONS.md](docs/database/DATABASE_MIGRATIONS.md) | Schema versioning & runner logic |
-| [REPOSITORY_RULES.md](docs/database/REPOSITORY_RULES.md) | SQL query & domain mapping rules |
-| [DATABASE_TRANSACTIONS.md](docs/database/DATABASE_TRANSACTIONS.md) | ACID compliance & error recovery |
-| [BACKUP_RESTORE.md](docs/database/BACKUP_RESTORE.md) | Atomic ZIP-based data archival |
+| Document                                                           | Purpose                            |
+| :----------------------------------------------------------------- | :--------------------------------- |
+| [DATABASE_SCHEMA.md](docs/database/DATABASE_SCHEMA.md)             | Product, Bill, and Customer tables |
+| [DATABASE_MIGRATIONS.md](docs/database/DATABASE_MIGRATIONS.md)     | Schema versioning & runner logic   |
+| [REPOSITORY_RULES.md](docs/database/REPOSITORY_RULES.md)           | SQL query & domain mapping rules   |
+| [DATABASE_TRANSACTIONS.md](docs/database/DATABASE_TRANSACTIONS.md) | ACID compliance & error recovery   |
+| [BACKUP_RESTORE.md](docs/database/BACKUP_RESTORE.md)               | Atomic ZIP-based data archival     |
 
 ### 🔐 Security & Operations
 
-| Document | Purpose |
-| :--- | :--- |
-| [SECURITY_AND_VALIDATION.md](docs/security/SECURITY_AND_VALIDATION.md) | Zod, IPC Guards, & Sanitization |
-| [IPC_ARCHITECTURE.md](docs/security/IPC_ARCHITECTURE.md) | Request-Response bridge design |
-| [IPC_DESIGN_RULES.md](docs/security/IPC_DESIGN_RULES.md) | Channel naming & response patterns |
-| [LICENSING_STRATEGY.md](docs/security/LICENSING_STRATEGY.md) | Trials, hardware binding, & anti-tamper |
-| [ADMIN_KEY_GENERATION.md](docs/security/ADMIN_KEY_GENERATION.md) | Internal license key generation guide |
-| [APP_METADATA.md](docs/development/APP_METADATA.md) | Versioning, icons, & branding config |
-| [LOGGING.md](docs/architecture/LOGGING.md) | Structured auditing & sanitized logs |
-| [ENVIRONMENT_CONFIG.md](docs/development/ENVIRONMENT_CONFIG.md) | Dev/Prod path management |
+| Document                                                               | Purpose                                 |
+| :--------------------------------------------------------------------- | :-------------------------------------- |
+| [SECURITY_AND_VALIDATION.md](docs/security/SECURITY_AND_VALIDATION.md) | Zod, IPC Guards, & Sanitization         |
+| [IPC_ARCHITECTURE.md](docs/security/IPC_ARCHITECTURE.md)               | Request-Response bridge design          |
+| [IPC_DESIGN_RULES.md](docs/security/IPC_DESIGN_RULES.md)               | Channel naming & response patterns      |
+| [LICENSING_STRATEGY.md](docs/security/LICENSING_STRATEGY.md)           | Trials, hardware binding, & anti-tamper |
+| [ADMIN_KEY_GENERATION.md](docs/security/ADMIN_KEY_GENERATION.md)       | Internal license key generation guide   |
+| [APP_METADATA.md](docs/development/APP_METADATA.md)                    | Versioning, icons, & branding config    |
+| [LOGGING.md](docs/architecture/LOGGING.md)                             | Structured auditing & sanitized logs    |
+| [ENVIRONMENT_CONFIG.md](docs/development/ENVIRONMENT_CONFIG.md)        | Dev/Prod path management                |
 
 ### 🛠️ Developer Guides
 
-| Document | Purpose |
-| :--- | :--- |
-| [INSTALLATION.md](docs/development/INSTALLATION.md) | **Setup & production build guide** |
-| [UI_PATTERNS.md](docs/development/UI_PATTERNS.md) | Performance, Scroll, & Debouncing |
-| [DEV_SCRIPTS.md](docs/development/DEV_SCRIPTS.md) | Full CLI script documentation |
-| [TESTING_GUIDE.md](docs/development/TESTING_GUIDE.md) | Unit, integration & hardware testing |
-| [TYPESCRIPT_SETUP.md](docs/development/TYPESCRIPT_SETUP.md) | Path aliases & TS configuration |
+| Document                                                                    | Purpose                               |
+| :-------------------------------------------------------------------------- | :------------------------------------ |
+| [INSTALLATION.md](docs/development/INSTALLATION.md)                         | **Setup & production build guide**    |
+| [UI_PATTERNS.md](docs/development/UI_PATTERNS.md)                           | Performance, Scroll, & Debouncing     |
+| [DEV_SCRIPTS.md](docs/development/DEV_SCRIPTS.md)                           | Full CLI script documentation         |
+| [TESTING_GUIDE.md](docs/development/TESTING_GUIDE.md)                       | Unit, integration & hardware testing  |
+| [TYPESCRIPT_SETUP.md](docs/development/TYPESCRIPT_SETUP.md)                 | Path aliases & TS configuration       |
 | [DEVELOPER_DATABASE_GUIDE.md](docs/development/DEVELOPER_DATABASE_GUIDE.md) | **DB dumping & restoration commands** |
-| [GIT_WORKFLOW.md](docs/development/GIT_WORKFLOW.md) | Branching & merge protocols |
+| [GIT_WORKFLOW.md](docs/development/GIT_WORKFLOW.md)                         | Branching & merge protocols           |
 
 ---
 

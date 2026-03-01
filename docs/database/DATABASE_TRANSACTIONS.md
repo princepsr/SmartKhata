@@ -20,6 +20,7 @@ public transaction<T>(fn: () => T): T {
 ```
 
 **What happens:**
+
 1. `db.transaction(fn)` creates a transaction wrapper
 2. Calling `transaction()` executes the function
 3. If function succeeds → **COMMIT**
@@ -43,6 +44,7 @@ protected transaction<T>(fn: () => T): T {
 ```
 
 **Benefits:**
+
 - ✅ Automatic BEGIN/COMMIT/ROLLBACK
 - ✅ Type-safe return values
 - ✅ Automatic logging
@@ -65,42 +67,44 @@ export class SaleRepository extends BaseRepository {
   public createSale(saleData: CreateSaleRequest): Sale {
     return this.transaction(() => {
       // Step 1: Insert sale header
-      const saleResult = this.execute(`
+      const saleResult = this.execute(
+        `
         INSERT INTO sales (customer_id, subtotal, tax, discount, total, payment_method)
         VALUES (?, ?, ?, ?, ?, ?)
-      `, [
-        saleData.customerId || null,
-        saleData.subtotal,
-        saleData.tax,
-        saleData.discount,
-        saleData.total,
-        saleData.paymentMethod
-      ]);
+      `,
+        [
+          saleData.customerId || null,
+          saleData.subtotal,
+          saleData.tax,
+          saleData.discount,
+          saleData.total,
+          saleData.paymentMethod,
+        ]
+      );
 
       const saleId = Number(saleResult.lastInsertRowid);
 
       // Step 2: Insert sale items
       for (const item of saleData.items) {
-        this.execute(`
+        this.execute(
+          `
           INSERT INTO sale_items (sale_id, product_id, product_name, quantity, unit_price, subtotal)
           VALUES (?, ?, ?, ?, ?, ?)
-        `, [
-          saleId,
-          item.productId,
-          item.productName,
-          item.quantity,
-          item.unitPrice,
-          item.subtotal
-        ]);
+        `,
+          [saleId, item.productId, item.productName, item.quantity, item.unitPrice, item.subtotal]
+        );
       }
 
       // Step 3: Update product stock
       for (const item of saleData.items) {
-        this.execute(`
+        this.execute(
+          `
           UPDATE products
           SET stock = stock - ?, updated_at = datetime('now')
           WHERE id = ?
-        `, [item.quantity, item.productId]);
+        `,
+          [item.quantity, item.productId]
+        );
       }
 
       // All operations succeed or all rollback
@@ -111,6 +115,7 @@ export class SaleRepository extends BaseRepository {
 ```
 
 **What happens:**
+
 - ✅ If all operations succeed → Sale created, items inserted, stock updated
 - ❌ If any operation fails → Everything rolls back, database unchanged
 
@@ -127,9 +132,12 @@ export class InventoryRepository extends BaseRepository {
     return this.transaction(() => {
       for (const adj of adjustments) {
         // Validate stock won't go negative
-        const product = this.queryOne<{ stock: number }>(`
+        const product = this.queryOne<{ stock: number }>(
+          `
           SELECT stock FROM products WHERE id = ?
-        `, [adj.productId]);
+        `,
+          [adj.productId]
+        );
 
         if (!product) {
           throw new Error(`Product ${adj.productId} not found`);
@@ -140,17 +148,23 @@ export class InventoryRepository extends BaseRepository {
         }
 
         // Update stock
-        this.execute(`
+        this.execute(
+          `
           UPDATE products
           SET stock = stock + ?, updated_at = datetime('now')
           WHERE id = ?
-        `, [adj.quantity, adj.productId]);
+        `,
+          [adj.quantity, adj.productId]
+        );
 
         // Log adjustment
-        this.execute(`
+        this.execute(
+          `
           INSERT INTO inventory_adjustments (product_id, quantity_change, reason)
           VALUES (?, ?, ?)
-        `, [adj.productId, adj.quantity, adj.reason]);
+        `,
+          [adj.productId, adj.quantity, adj.reason]
+        );
       }
     });
   }
@@ -169,25 +183,34 @@ export class SaleRepository extends BaseRepository {
   public voidSale(saleId: number): void {
     return this.transaction(() => {
       // Get sale items
-      const items = this.queryAll<SaleItem>(`
+      const items = this.queryAll<SaleItem>(
+        `
         SELECT product_id, quantity FROM sale_items WHERE sale_id = ?
-      `, [saleId]);
+      `,
+        [saleId]
+      );
 
       // Restore stock for each item
       for (const item of items) {
-        this.execute(`
+        this.execute(
+          `
           UPDATE products
           SET stock = stock + ?, updated_at = datetime('now')
           WHERE id = ?
-        `, [item.quantity, item.product_id]);
+        `,
+          [item.quantity, item.product_id]
+        );
       }
 
       // Mark sale as void
-      this.execute(`
+      this.execute(
+        `
         UPDATE sales
         SET is_void = 1, updated_at = datetime('now')
         WHERE id = ?
-      `, [saleId]);
+      `,
+        [saleId]
+      );
     });
   }
 }
@@ -205,39 +228,46 @@ export class PaymentRepository extends BaseRepository {
   public recordPayment(paymentData: PaymentRequest): Payment {
     return this.transaction(() => {
       // Insert payment record
-      const paymentResult = this.execute(`
+      const paymentResult = this.execute(
+        `
         INSERT INTO payments (sale_id, customer_id, amount, payment_method)
         VALUES (?, ?, ?, ?)
-      `, [
-        paymentData.saleId,
-        paymentData.customerId,
-        paymentData.amount,
-        paymentData.paymentMethod
-      ]);
+      `,
+        [paymentData.saleId, paymentData.customerId, paymentData.amount, paymentData.paymentMethod]
+      );
 
       // Update customer outstanding balance
-      this.execute(`
+      this.execute(
+        `
         UPDATE customers
         SET outstanding_balance = outstanding_balance - ?,
             updated_at = datetime('now')
         WHERE id = ?
-      `, [paymentData.amount, paymentData.customerId]);
+      `,
+        [paymentData.amount, paymentData.customerId]
+      );
 
       // Update sale payment status
-      const sale = this.queryOne<{ total: number, paid_amount: number }>(`
+      const sale = this.queryOne<{ total: number; paid_amount: number }>(
+        `
         SELECT total,
                COALESCE((SELECT SUM(amount) FROM payments WHERE sale_id = ?), 0) as paid_amount
         FROM sales
         WHERE id = ?
-      `, [paymentData.saleId, paymentData.saleId]);
+      `,
+        [paymentData.saleId, paymentData.saleId]
+      );
 
       const newStatus = sale!.paid_amount >= sale!.total ? 'paid' : 'partial';
 
-      this.execute(`
+      this.execute(
+        `
         UPDATE sales
         SET payment_status = ?, updated_at = datetime('now')
         WHERE id = ?
-      `, [newStatus, paymentData.saleId]);
+      `,
+        [newStatus, paymentData.saleId]
+      );
 
       return this.findPaymentById(Number(paymentResult.lastInsertRowid))!;
     });
@@ -257,7 +287,7 @@ export class PaymentRepository extends BaseRepository {
 // This will NOT create nested transactions
 this.transaction(() => {
   this.execute('INSERT INTO table1 ...');
-  
+
   this.transaction(() => {
     // This is NOT a nested transaction
     // It's just a function call within the outer transaction
@@ -267,6 +297,7 @@ this.transaction(() => {
 ```
 
 **What actually happens:**
+
 - Only the outermost `transaction()` creates a transaction
 - Inner `transaction()` calls are no-ops (just execute the function)
 - All operations are part of the same transaction
@@ -279,10 +310,10 @@ If you need nested transactions, use SQLite savepoints manually:
 public complexOperation(): void {
   return this.transaction(() => {
     this.execute('INSERT INTO table1 ...');
-    
+
     // Create savepoint
     this.db.exec('SAVEPOINT sp1');
-    
+
     try {
       this.execute('INSERT INTO table2 ...');
       this.db.exec('RELEASE sp1');
@@ -290,7 +321,7 @@ public complexOperation(): void {
       this.db.exec('ROLLBACK TO sp1');
       // Continue with outer transaction
     }
-    
+
     this.execute('INSERT INTO table3 ...');
   });
 }
@@ -305,6 +336,7 @@ public complexOperation(): void {
 ### ✅ DO
 
 **1. Use transactions for multi-step operations:**
+
 ```typescript
 // Good - atomic sale creation
 this.transaction(() => {
@@ -315,6 +347,7 @@ this.transaction(() => {
 ```
 
 **2. Keep transactions short:**
+
 ```typescript
 // Good - fast operations only
 this.transaction(() => {
@@ -324,6 +357,7 @@ this.transaction(() => {
 ```
 
 **3. Throw errors to trigger rollback:**
+
 ```typescript
 this.transaction(() => {
   if (stock < 0) {
@@ -334,6 +368,7 @@ this.transaction(() => {
 ```
 
 **4. Use for billing operations:**
+
 ```typescript
 // Mandatory for sales
 createSale() { return this.transaction(() => { ... }); }
@@ -342,6 +377,7 @@ recordPayment() { return this.transaction(() => { ... }); }
 ```
 
 **5. Use for inventory operations:**
+
 ```typescript
 // Mandatory for stock changes
 adjustStock() { return this.transaction(() => { ... }); }
@@ -351,6 +387,7 @@ transferStock() { return this.transaction(() => { ... }); }
 ### ❌ DON'T
 
 **1. Don't use transactions for single operations:**
+
 ```typescript
 // Bad - unnecessary transaction
 this.transaction(() => {
@@ -362,6 +399,7 @@ return this.execute('INSERT INTO products ...');
 ```
 
 **2. Don't perform I/O inside transactions:**
+
 ```typescript
 // Bad - slow I/O in transaction
 this.transaction(() => {
@@ -378,6 +416,7 @@ this.transaction(() => {
 ```
 
 **3. Don't use async/await inside transactions:**
+
 ```typescript
 // Bad - better-sqlite3 is synchronous
 this.transaction(async () => { // ❌ Don't use async
@@ -392,6 +431,7 @@ this.transaction(() => {
 ```
 
 **4. Don't catch errors without re-throwing:**
+
 ```typescript
 // Bad - swallows error, transaction commits
 this.transaction(() => {
@@ -414,11 +454,13 @@ this.transaction(() => {
 ```
 
 **5. Don't nest transactions:**
+
 ```typescript
 // Bad - confusing, no benefit
 this.transaction(() => {
   this.execute('INSERT ...');
-  this.transaction(() => { // ❌ Unnecessary nesting
+  this.transaction(() => {
+    // ❌ Unnecessary nesting
     this.execute('UPDATE ...');
   });
 });
@@ -460,17 +502,19 @@ this.transaction(() => {
 ### Why Mandatory?
 
 **Data Integrity:**
+
 - Prevents partial updates (e.g., sale created but stock not updated)
 - Ensures consistency (e.g., customer balance matches payments)
 
 **Example of what can go wrong without transactions:**
+
 ```typescript
 // ❌ BAD - No transaction
 public createSale(data: CreateSaleRequest): Sale {
   const saleId = this.insertSale(data);      // ✅ Succeeds
   this.insertSaleItems(saleId, data.items);  // ✅ Succeeds
   this.updateStock(data.items);              // ❌ FAILS (power outage)
-  
+
   // Result: Sale exists, but stock not updated! 💥
 }
 
@@ -480,7 +524,7 @@ public createSale(data: CreateSaleRequest): Sale {
     const saleId = this.insertSale(data);      // ✅ Succeeds
     this.insertSaleItems(saleId, data.items);  // ✅ Succeeds
     this.updateStock(data.items);              // ❌ FAILS
-    
+
     // Result: Everything rolled back, database unchanged ✅
   });
 }
@@ -493,6 +537,7 @@ public createSale(data: CreateSaleRequest): Sale {
 ### Transaction Overhead
 
 **Minimal overhead for better-sqlite3:**
+
 - Transactions are very fast (microseconds)
 - WAL mode allows concurrent reads during write transactions
 - No network latency (local database)
@@ -541,15 +586,15 @@ try {
 ```typescript
 this.transaction(() => {
   const product = this.queryOne<Product>('SELECT * FROM products WHERE id = ?', [id]);
-  
+
   if (!product) {
     throw new DatabaseError('Product not found', 'NOT_FOUND');
   }
-  
+
   if (product.stock < quantity) {
     throw new DatabaseError('Insufficient stock', 'INSUFFICIENT_STOCK');
   }
-  
+
   this.execute('UPDATE products SET stock = stock - ? WHERE id = ?', [quantity, id]);
 });
 ```
@@ -558,15 +603,16 @@ this.transaction(() => {
 
 ## Summary
 
-| Feature | Status | Implementation |
-|---------|--------|----------------|
-| Automatic BEGIN/COMMIT | ✅ | `better-sqlite3` |
-| Automatic ROLLBACK | ✅ | On error/exception |
-| Type-safe | ✅ | Generic `<T>` |
-| Logging | ✅ | Auto-logged |
-| Error handling | ✅ | `DatabaseError` |
-| Nested transactions | ❌ | Not supported |
-| Savepoints | ⚠️ | Manual only |
+| Feature                | Status | Implementation           |
+| ---------------------- | ------ | ------------------------ |
+| Automatic BEGIN/COMMIT | ✅     | `better-sqlite3`         |
+| Automatic ROLLBACK     | ✅     | On error/exception       |
+| Type-safe              | ✅     | Generic `<T>`            |
+| Logging                | ✅     | Auto-logged              |
+| Error handling         | ✅     | `DatabaseError`          |
+| **Testing Support**    | ✅     | `SqlJsDatabase` (sql.js) |
+| Nested transactions    | ❌     | Not supported            |
+| Savepoints             | ⚠️     | Manual only              |
 
 ---
 

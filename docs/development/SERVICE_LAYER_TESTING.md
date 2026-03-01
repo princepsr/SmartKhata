@@ -11,7 +11,7 @@ This document outlines the **unit testing strategy** for the service layer, focu
 1. **Isolated Testing** - Test services in isolation from UI and Electron
 2. **In-Memory Database** - Use in-memory SQLite for service integration tests
 3. **Pure Logic Extraction** - Extract complex math to standalone utilities for 100% unit test coverage
-4. **Database Abstraction** - Use `BetterSqliteCompatibleDatabase` (or raw `better-sqlite3`) to mock SQLite in test environments for 100% production parity.
+4. **Database Abstraction** - Use `SqlJsDatabase` compatibility wrapper to mimic `better-sqlite3` in test environments for 100% production parity without Node ABI issues.
 
 ---
 
@@ -19,13 +19,13 @@ This document outlines the **unit testing strategy** for the service layer, focu
 
 ### Test Database Strategy
 
-**Use in-memory SQLite with `BetterSqliteCompatibleDatabase` wrapper:**
+**Use in-memory sql.js (WASM) with `SqlJsDatabase` wrapper:**
 
 ```typescript
 import { createTestDatabase, resetTestDatabase } from './test-utils';
-import { BetterSqliteCompatibleDatabase } from '../utils/test-db';
+import { SqlJsDatabase } from '../utils/test-db';
 
-let db: BetterSqliteCompatibleDatabase;
+let db: SqlJsDatabase;
 
 beforeEach(async () => {
   db = await createTestDatabase();
@@ -602,7 +602,7 @@ npx vitest run --config vitest.unit.config.ts
 
 **Testing Strategy:**
 
-1. ✅ Use **`better-sqlite3`** (instead of `sql.js`) for fast, portable tests with 100% SQLite feature parity (enabling complex CHECK constraints and Triggers).
+1. ✅ Use **`sql.js`** (WASM) instead of `better-sqlite3` for tests. This eliminates Node ABI mismatch issues in Electron development environments while maintaining 100% SQL feature parity via the `SqlJsDatabase` wrapper.
 2. ✅ Test business logic in isolation via specialized Services
 3. ✅ Verify atomic transactions and complex rollbacks
 4. ✅ Validate proportional tax and discount distribution
