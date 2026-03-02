@@ -10,6 +10,7 @@ import {
   StockSummary,
   BillSummary,
   TrendAnalytics,
+  AnalyticsPeriod,
 } from '@shared/types/report.types';
 import { formatCurrency, toLocalDateISO, formatDate } from '@renderer/utils/formatters';
 import { BillDetailModal } from '../components/billing/BillDetailModal';
@@ -20,13 +21,34 @@ import { useAppSettingsStore } from '../store';
 
 type Tab = 'sales' | 'gst' | 'stock' | 'analytics';
 
-const RichTooltip: React.FC<{ title: string; children: React.ReactNode; meta?: string }> = ({
-  title,
-  children,
-  meta,
-}) => {
+interface StockAgingItem {
+  id: number;
+  name: string;
+  sku: string | null;
+  stockQty: number;
+  lastSaleDate: string;
+  idleDays: number;
+  stockValue: number;
+}
+
+interface ITCTransaction {
+  id: number;
+  date: string;
+  billNo: string;
+  vendorName: string;
+  taxableValue: number;
+  gstAmount: number;
+  itcClaimable: number;
+}
+
+const RichTooltip: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  meta?: string;
+  className?: string;
+}> = ({ title, children, meta, className }) => {
   return (
-    <div className="rich-tooltip-trigger">
+    <div className={`rich-tooltip-trigger ${className || ''}`}>
       {children}
       <div className="rich-tooltip">
         <h4>
@@ -107,11 +129,26 @@ const SkeletonLoader: React.FC<{ type: 'sales' | 'gst' | 'stock' }> = ({ type })
 );
 
 const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
+  const { settings } = useAppSettingsStore();
+  const [chartField, setChartField] = useState<keyof AnalyticsPeriod>('netSales');
+
   if (!data) {
     return <SkeletonLoader type="sales" />;
   }
 
-  const maxSales = Math.max(...data.periods.map((p) => p.totalSales), 1);
+  const maxVal = Math.max(...data.periods.map((p) => Math.abs(Number(p[chartField]) || 0)), 1);
+
+  const fieldOptions = [
+    { id: 'totalSales', label: 'Total Sales' },
+    { id: 'netSales', label: 'Revenue' },
+    ...(settings.expensesEnabled
+      ? [
+          { id: 'totalProfit', label: 'Gross Profit' },
+          { id: 'totalExpenses', label: 'Expenses' },
+        ]
+      : []),
+    { id: 'trueNetProfit', label: 'Net Profit' },
+  ];
 
   return (
     <div className="report-view analytics-view animate-fade-in">
@@ -161,25 +198,34 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
           </div>
         </RichTooltip>
 
-        <RichTooltip title="Expenses" meta="Total operating expenses recorded for this period.">
-          <div className="card card-discount">
-            <div className="card-header-row">
-              <h3>Expenses</h3>
-              <div className="icon-box icon-discount">📉</div>
+        {settings.expensesEnabled && (
+          <RichTooltip title="Expenses" meta="Total operating expenses recorded for this period.">
+            <div className="card card-discount">
+              <div className="card-header-row">
+                <h3>Expenses</h3>
+                <div className="icon-box icon-discount">📉</div>
+              </div>
+              <div className="value">
+                ₹
+                {data.periods
+                  .reduce((acc, p) => acc + (p.totalExpenses || 0), 0)
+                  .toLocaleString('en-IN')}
+              </div>
             </div>
-            <div className="value">
-              ₹
-              {data.periods
-                .reduce((acc, p) => acc + (p.totalExpenses || 0), 0)
-                .toLocaleString('en-IN')}
-            </div>
-          </div>
-        </RichTooltip>
+          </RichTooltip>
+        )}
 
-        <RichTooltip title="Net Profit" meta="Estimated Gross Profit minus recorded Expenses.">
+        <RichTooltip
+          title={settings.expensesEnabled ? 'Net Profit' : 'Gross Profit'}
+          meta={
+            settings.expensesEnabled
+              ? 'Estimated Gross Profit minus recorded Expenses.'
+              : 'Estimated profit before operating expenses.'
+          }
+        >
           <div className="card card-profit">
             <div className="card-header-row">
-              <h3>Net Profit</h3>
+              <h3>{settings.expensesEnabled ? 'Net Profit' : 'Gross Profit'}</h3>
               <div className="icon-box icon-profit">💰</div>
             </div>
             <div className="value highlight">
@@ -212,13 +258,38 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
 
       {/* Visual Timeline Chart */}
       <div className="chart-container">
-        <h3>Revenue Trend</h3>
+        <div className="chart-header">
+          <h3>Trend Analysis</h3>
+          <div className="chart-selector">
+            {fieldOptions.map((opt) => (
+              <button
+                key={opt.id}
+                className={`btn-chart-opt ${chartField === opt.id ? 'active' : ''}`}
+                onClick={() => setChartField(opt.id as keyof AnalyticsPeriod)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="bar-chart">
           {data.periods.map((period) => {
-            const heightParam = (period.totalSales / maxSales) * 100;
+            const val = Number(period[chartField]) || 0;
+            const isNegative = val < 0;
+            const heightParam = (Math.abs(val) / maxVal) * 100;
+
             return (
               <div key={period.period} className="bar-group">
-                <div className="bar" style={{ height: `${heightParam}%` }}></div>
+                <div className="bar-tooltip">
+                  <div className="bar-value">
+                    ₹{val.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </div>
+                  <div
+                    className={`bar ${isNegative ? 'negative' : ''}`}
+                    style={{ height: `${heightParam}%` }}
+                  ></div>
+                </div>
                 <span className="bar-label">{period.period}</span>
               </div>
             );
@@ -236,12 +307,11 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
               <th className="text-right">Bills</th>
               <th className="text-right">Gross Sales</th>
               <th className="text-right">Revenue</th>
-              <th className="text-right">Gross Profit</th>
-              <th className="text-right">Expenses</th>
-              <th className="text-right">Net Profit</th>
+              {settings.expensesEnabled && <th className="text-right">Gross Profit</th>}
+              {settings.expensesEnabled && <th className="text-right">Expenses</th>}
               <th className="text-right">Margin</th>
               <th className="text-right">Coverage</th>
-              <th className="text-right">Growth</th>
+              <th className="text-right">{settings.expensesEnabled ? 'Net Profit' : 'Profit'}</th>
             </tr>
           </thead>
           <tbody>
@@ -255,21 +325,17 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
                 <td className="text-right">
                   ₹{row.netSales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </td>
-                <td className="text-right">
-                  ₹{(row.totalProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </td>
-                <td className="text-right">
-                  ₹{(row.totalExpenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </td>
-                <td
-                  className="text-right font-bold"
-                  style={{
-                    color:
-                      (row.trueNetProfit || 0) < 0 ? 'var(--color-danger)' : 'var(--color-success)',
-                  }}
-                >
-                  ₹{(row.trueNetProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </td>
+                {settings.expensesEnabled && (
+                  <td className="text-right">
+                    ₹{(row.totalProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </td>
+                )}
+                {settings.expensesEnabled && (
+                  <td className="text-right">
+                    ₹
+                    {(row.totalExpenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </td>
+                )}
                 <td className="text-right">
                   {row.marginPercent && row.marginPercent > 0 ? (
                     <span className="margin-badge">{row.marginPercent}%</span>
@@ -295,13 +361,14 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
                       </span>
                     )}
                 </td>
-                <td className="text-right">
-                  {row.growth !== 0 && (
-                    <span className={`trend-badge ${row.growth > 0 ? 'up' : 'down'}`}>
-                      {row.growth > 0 ? '▲' : '▼'} {Math.abs(row.growth)}%
-                    </span>
-                  )}
-                  {row.growth === 0 && <span className="text-muted">-</span>}
+                <td
+                  className="text-right font-bold"
+                  style={{
+                    color:
+                      (row.trueNetProfit || 0) < 0 ? 'var(--color-danger)' : 'var(--color-success)',
+                  }}
+                >
+                  ₹{(row.trueNetProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </td>
               </tr>
             ))}
@@ -312,7 +379,10 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
   );
 };
 
-const StockAgingView: React.FC<{ data: any[] | null; loading: boolean }> = ({ data, loading }) => {
+const StockAgingView: React.FC<{ data: StockAgingItem[] | null; loading: boolean }> = ({
+  data,
+  loading,
+}) => {
   if (loading) {
     return <SkeletonLoader type="stock" />;
   }
@@ -391,8 +461,11 @@ const ReportsPage: React.FC = () => {
   const [trendGranularity, setTrendGranularity] = useState<'day' | 'week' | 'month'>('day');
   const [trendLookback, setTrendLookback] = useState<string>('last_7_days');
   const [analyticsData, setAnalyticsData] = useState<TrendAnalytics | null>(null);
-  const [itcSummary, setItcSummary] = useState<{ totalItc: number; breakdown: any[] } | null>(null);
-  const [stockAgingData, setStockAgingData] = useState<any[] | null>(null);
+  const [itcSummary, setItcSummary] = useState<{
+    totalItc: number;
+    breakdown: ITCTransaction[];
+  } | null>(null);
+  const [stockAgingData, setStockAgingData] = useState<StockAgingItem[] | null>(null);
   const [activeStockTab, setActiveStockTab] = useState<'current' | 'aging'>('current');
   const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
   const [searchParams] = useSearchParams();
@@ -458,7 +531,10 @@ const ReportsPage: React.FC = () => {
 
         // Fetch ITC
         try {
-          const itc = await ipcClient.call<any>(IPC_CHANNELS.PURCHASE_ITC_SUMMARY, dateRange);
+          const itc: {
+            success: boolean;
+            data: { totalItc: number; breakdown: ITCTransaction[] };
+          } = await ipcClient.call(IPC_CHANNELS.PURCHASE_ITC_SUMMARY, dateRange);
           if (itc.success && itc.data) {
             setItcSummary(itc.data);
           }
@@ -770,7 +846,7 @@ const ReportsPage: React.FC = () => {
                 onClick={handleWhatsAppShare}
                 disabled={loading || sharingWhatsApp}
               >
-                {sharingWhatsApp ? 'Generating...' : '📱 Share WhatsApp'}
+                {sharingWhatsApp ? 'Generating...' : 'Share WhatsApp'}
               </button>
             )}
           </div>
@@ -1138,31 +1214,39 @@ const ReportsPage: React.FC = () => {
                         </div>
                       </RichTooltip>
 
-                      <RichTooltip title="Expenses" meta="Operating expenses recorded for today.">
-                        <div className="card card-discount">
-                          <div className="card-header-row">
-                            <h3>Expenses</h3>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              {dailySummary.comparison?.totalExpenses && (
-                                <TrendChip
-                                  value={`${dailySummary.comparison.totalExpenses.change}%`}
-                                  trend={dailySummary.comparison.totalExpenses.trend}
-                                />
-                              )}
-                              <div className="icon-box icon-discount">📉</div>
+                      {settings.expensesEnabled && (
+                        <RichTooltip title="Expenses" meta="Operating expenses recorded for today.">
+                          <div className="card card-discount">
+                            <div className="card-header-row">
+                              <h3>Expenses</h3>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                {dailySummary.comparison?.totalExpenses && (
+                                  <TrendChip
+                                    value={`${dailySummary.comparison.totalExpenses.change}%`}
+                                    trend={dailySummary.comparison.totalExpenses.trend}
+                                  />
+                                )}
+                                <div className="icon-box icon-discount">📉</div>
+                              </div>
+                            </div>
+                            <div className="value">
+                              {formatCurrency(dailySummary.totalExpenses)}
                             </div>
                           </div>
-                          <div className="value">{formatCurrency(dailySummary.totalExpenses)}</div>
-                        </div>
-                      </RichTooltip>
+                        </RichTooltip>
+                      )}
 
                       <RichTooltip
-                        title="Net Profit"
-                        meta="Estimated Gross Profit minus recorded Expenses."
+                        title={settings.expensesEnabled ? 'Net Profit' : 'Gross Profit'}
+                        meta={
+                          settings.expensesEnabled
+                            ? 'Estimated Gross Profit minus recorded Expenses.'
+                            : 'Estimated profit before operating expenses.'
+                        }
                       >
                         <div className="card card-profit">
                           <div className="card-header-row">
-                            <h3>Net Profit</h3>
+                            <h3>{settings.expensesEnabled ? 'Net Profit' : 'Gross Profit'}</h3>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               {dailySummary.comparison?.trueNetProfit && (
                                 <TrendChip
@@ -1306,50 +1390,18 @@ const ReportsPage: React.FC = () => {
 
               {activeTab === 'stock' && (
                 <div className="stock-view-container animate-fade-in">
-                  <div
-                    className="sub-tabs mb-4"
-                    style={{
-                      display: 'flex',
-                      gap: '1.5rem',
-                      marginBottom: '1.5rem',
-                      borderBottom: '1px solid #e2e8f0',
-                    }}
-                  >
+                  <div className="sub-tabs mb-4">
                     <button
                       className={`sub-tab ${activeStockTab === 'current' ? 'active' : ''}`}
                       onClick={() => setActiveStockTab('current')}
-                      style={{
-                        padding: '0.75rem 0.5rem',
-                        border: 'none',
-                        background: 'none',
-                        cursor: 'pointer',
-                        color: activeStockTab === 'current' ? 'var(--color-primary)' : '#64748b',
-                        borderBottom:
-                          activeStockTab === 'current' ? '2px solid var(--color-primary)' : 'none',
-                        fontWeight: activeStockTab === 'current' ? '600' : '500',
-                        fontSize: '0.95rem',
-                        transition: 'all 0.2s',
-                      }}
                     >
-                      📦 Current Stock
+                      Current Stock
                     </button>
                     <button
                       className={`sub-tab ${activeStockTab === 'aging' ? 'active' : ''}`}
                       onClick={() => setActiveStockTab('aging')}
-                      style={{
-                        padding: '0.75rem 0.5rem',
-                        border: 'none',
-                        background: 'none',
-                        cursor: 'pointer',
-                        color: activeStockTab === 'aging' ? 'var(--color-primary)' : '#64748b',
-                        borderBottom:
-                          activeStockTab === 'aging' ? '2px solid var(--color-primary)' : 'none',
-                        fontWeight: activeStockTab === 'aging' ? '600' : '500',
-                        fontSize: '0.95rem',
-                        transition: 'all 0.2s',
-                      }}
                     >
-                      🕒 Stock Aging (Slow Moving)
+                      Stock Aging (Slow Moving)
                     </button>
                   </div>
 

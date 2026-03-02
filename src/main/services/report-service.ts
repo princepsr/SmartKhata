@@ -46,19 +46,28 @@ export class ReportService extends BaseService {
     const previous = this.reportRepo.getDailySalesSummary(prevRange.startDate, prevRange.endDate);
 
     // 4. Fetch Expenses
-    const totalExpenses = this.expenseRepo.getTotalExpenses(startDate, endDate);
+    const currentExpenses = this.expenseRepo.getTotalExpenses(startDate, endDate);
+    const previousExpenses = this.expenseRepo.getTotalExpenses(
+      prevRange.startDate,
+      prevRange.endDate
+    );
 
     // 5. Calculate comparisons
+    const currentTrueNetProfit = Math.round((current.totalProfit - currentExpenses) * 100) / 100;
+    const previousTrueNetProfit = Math.round((previous.totalProfit - previousExpenses) * 100) / 100;
+
     current.comparison = {
       totalSales: this.calculateTrend(current.totalSales, previous.totalSales),
       netSales: this.calculateTrend(current.netSales, previous.netSales),
       totalDiscount: this.calculateTrend(current.totalDiscount, previous.totalDiscount),
       totalProfit: this.calculateTrend(current.totalProfit, previous.totalProfit),
+      trueNetProfit: this.calculateTrend(currentTrueNetProfit, previousTrueNetProfit),
+      totalExpenses: this.calculateTrend(currentExpenses, previousExpenses),
     };
 
     // 6. True Net Profit (Gross Profit - Expenses)
-    current.totalExpenses = totalExpenses;
-    current.trueNetProfit = Math.round((current.totalProfit - totalExpenses) * 100) / 100;
+    current.totalExpenses = currentExpenses;
+    current.trueNetProfit = currentTrueNetProfit;
 
     return current;
   }

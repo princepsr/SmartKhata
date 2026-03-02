@@ -102,7 +102,8 @@
 
 .products-page .data-table-header {
   display: grid;
-  grid-template-columns: 2.5fr 1.5fr 1.2fr 1.2fr 0.8fr 1fr 1.2fr;
+  grid-template-columns: 2.5fr 1.5fr minmax(120px, 1.2fr) minmax(120px, 1.2fr) 0.8fr 1fr 1.5fr;
+  column-gap: 1.5rem;
   padding: 1rem;
   background-color: var(--color-bg-secondary);
   border-bottom: 2px solid var(--color-border);
@@ -112,11 +113,19 @@
   position: sticky;
   top: 0;
   z-index: 10;
+  align-items: center;
+}
+
+.products-page .data-table-header > div {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .products-page .data-table-row {
   display: grid;
-  grid-template-columns: 2.5fr 1.5fr 1.2fr 1.2fr 0.8fr 1fr 1.2fr;
+  grid-template-columns: 2.5fr 1.5fr minmax(120px, 1.2fr) minmax(110px, 1.2fr) 0.8fr 1fr 1.5fr;
+  column-gap: 1.5rem;
   padding: 0.8rem 1rem;
   border-bottom: 1px solid var(--color-border);
   align-items: center;
@@ -133,30 +142,51 @@
   border-left: 3px solid var(--color-primary);
 }
 
-.products-page .col-name {
+.products-page .data-table-row .col-name {
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
-.products-page .col-sku {
+.products-page .col-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.products-page .data-table-row .col-sku {
   color: var(--color-text-secondary);
   font-family: monospace;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
-.products-page .col-price {
+.products-page .data-table-row .col-price {
   font-weight: 600;
   color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
-.products-page .col-cost {
+.products-page .data-table-row .col-cost {
   color: var(--color-text-secondary);
   font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
-.products-page .col-stock {
+.products-page .data-table-row .col-stock {
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .products-page .stock-out {

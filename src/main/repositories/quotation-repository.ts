@@ -15,6 +15,8 @@ export interface Quotation {
   status: 'PENDING' | 'CONVERTED' | 'EXPIRED' | 'CANCELLED';
   expiresAt: string | null;
   notes: string | null;
+  billDiscountValue: number;
+  billDiscountType: 'amount' | 'percent';
   createdAt: Date;
 }
 
@@ -25,6 +27,8 @@ export interface QuotationItem {
   productName: string;
   quantity: number;
   unitPrice: number;
+  discountValue: number;
+  discountType: 'amount' | 'percent';
   gstPercent: number;
   lineTotal: number;
 }
@@ -42,8 +46,8 @@ export class QuotationRepository extends BaseRepository {
   ): Quotation {
     return this.transaction(() => {
       const sql = `
-        INSERT INTO quotations (quotation_number, customer_id, customer_name_snapshot, total_taxable, gst_total, grand_total, status, expires_at, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO quotations (quotation_number, customer_id, customer_name_snapshot, total_taxable, gst_total, grand_total, status, expires_at, notes, bill_discount_value, bill_discount_type)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const result = this.execute(sql, [
         data.quotationNumber,
@@ -55,13 +59,15 @@ export class QuotationRepository extends BaseRepository {
         data.status,
         data.expiresAt,
         data.notes,
+        data.billDiscountValue || 0,
+        data.billDiscountType || 'percent',
       ]);
 
       const quotationId = Number(result.lastInsertRowid);
 
       const itemSql = `
-        INSERT INTO quotation_items (quotation_id, product_id, product_name, quantity, unit_price, gst_percent, line_total)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO quotation_items (quotation_id, product_id, product_name, quantity, unit_price, discount_value, discount_type, gst_percent, line_total)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       items.forEach((item) => {
         this.execute(itemSql, [
@@ -70,6 +76,8 @@ export class QuotationRepository extends BaseRepository {
           item.productName,
           item.quantity,
           item.unitPrice,
+          item.discountValue || 0,
+          item.discountType || 'percent',
           item.gstPercent,
           item.lineTotal,
         ]);
@@ -92,6 +100,30 @@ export class QuotationRepository extends BaseRepository {
     return row ? this._mapToQuotation(row) : null;
   }
 
+  public findByIdWithItems(id: number): { quotation: Quotation; items: QuotationItem[] } | null {
+    const quotation = this.findById(id);
+    if (!quotation) {
+      return null;
+    }
+
+    const items = this.queryAll<any>('SELECT * FROM quotation_items WHERE quotation_id = ?', [id]);
+    return {
+      quotation,
+      items: items.map((row) => ({
+        id: row.id,
+        quotationId: row.quotation_id,
+        productId: row.product_id,
+        productName: row.product_name,
+        quantity: row.quantity,
+        unitPrice: row.unit_price,
+        discountValue: row.discount_value,
+        discountType: row.discount_type,
+        gstPercent: row.gst_percent,
+        lineTotal: row.line_total,
+      })),
+    };
+  }
+
   public list(page: number = 1): Quotation[] {
     const limit = 20;
     const offset = (page - 1) * limit;
@@ -102,6 +134,12 @@ export class QuotationRepository extends BaseRepository {
   public updateStatus(id: number, status: Quotation['status']): void {
     const sql = `UPDATE quotations SET status = ?, updated_at = datetime('now') WHERE id = ?`;
     this.execute(sql, [status, id]);
+  }
+
+  public countToday(prefix: string): number {
+    const sql = `SELECT COUNT(*) as count FROM quotations WHERE quotation_number LIKE ?`;
+    const row = this.queryOne<{ count: number }>(sql, [`${prefix}%`]);
+    return row ? row.count : 0;
   }
 
   private _mapToQuotation(row: any): Quotation {
@@ -116,6 +154,8 @@ export class QuotationRepository extends BaseRepository {
       status: row.status,
       expiresAt: row.expires_at,
       notes: row.notes,
+      billDiscountValue: row.bill_discount_value,
+      billDiscountType: row.bill_discount_type,
       createdAt: this.parseDate(row.created_at),
     };
   }

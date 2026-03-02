@@ -43,4 +43,7 @@
 
 .empty-state-action {
   margin-top: 2rem;
+  margin-left: auto;
+  margin-right: auto;
+  display: inline-flex;
 }

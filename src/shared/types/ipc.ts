@@ -172,6 +172,8 @@ export interface CalculatedLineItem {
   productName: string;
   quantity: number;
   unitPrice: number;
+  discountValue?: number;
+  discountType?: 'amount' | 'percent';
   gstPercent: number;
   lineSubtotal: number;
   lineGst: number;
@@ -190,4 +192,37 @@ export interface BillCalculation {
   igstTotal: number;
   discountAmount: number;
   grandTotal: number;
+}
+
+/**
+ * Quotation Entity
+ */
+export interface Quotation {
+  id: number;
+  quotationNumber: string;
+  customerId: number | null;
+  customerNameSnapshot: string;
+  totalTaxable: number;
+  gstTotal: number;
+  grandTotal: number;
+  status: 'PENDING' | 'CONVERTED' | 'EXPIRED' | 'CANCELLED';
+  expiresAt: string | null;
+  notes: string | null;
+  billDiscountValue: number;
+  billDiscountType: 'amount' | 'percent';
+  createdAt: string | Date;
+}
+
+export interface CreateQuotationInput {
+  customerId?: number;
+  items: {
+    productId: number;
+    quantity: number;
+    discountValue?: number;
+    discountType?: 'amount' | 'percent';
+  }[];
+  billDiscountValue?: number;
+  billDiscountType?: 'amount' | 'percent';
+  notes?: string;
+  validUntil?: string;
 }

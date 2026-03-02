@@ -58,31 +58,30 @@ export class GoogleAuthService {
         );
       }
 
-      logger.info('Initializing Google OAuth2 Client', {
-        clientIdStart: clientId.substring(0, 10) + '...',
-      });
-
       this._oauth2Client = new google.auth.OAuth2(
         clientId,
         clientSecret,
         GOOGLE_CONFIG.REDIRECT_URI
       );
 
-      // safeStorage requires the app to be ready before it can decrypt tokens
-      if (app.isReady()) {
-        this.loadTokens();
-      } else {
-        app.once('ready', () => {
-          this.loadTokens();
+      // Initialize tokens only if app is ready, otherwise wait.
+      // This prevents early safeStorage access which can crash on some systems.
+      const initTokens = () => {
+        logger.info('Initializing Google OAuth2 Client', {
+          clientIdStart: clientId.substring(0, 10) + '...',
         });
+        this.loadTokens();
+      };
+
+      if (app.isReady()) {
+        initTokens();
+      } else {
+        app.once('ready', initTokens);
       }
 
       // Setup auto-refresh
       this._oauth2Client.on('tokens', (newTokens) => {
         logger.info('Google OAuth2 tokens refreshed, updating storage');
-        // Update credentials and re-save
-        // We merge with current credentials to ensure we don't lose the refresh_token
-        // if the refresh response only contains the new access_token
         const currentTokens = this._oauth2Client!.credentials;
         this.setCredentials({ ...currentTokens, ...newTokens });
       });

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "concurrently -k \"pnpm dev:renderer\" \"pnpm dev:main\"",
     "dev:renderer": "vite",
-    "dev:main": "rimraf dist/main && concurrently \"pnpm copy:migrations\" \"tsc-watch --project tsconfig.main.json --onSuccess \\\"pnpm start:electron\\\"\"",
+    "dev:main": "rimraf dist/main && pnpm copy:migrations && tsc-watch --project tsconfig.main.json --onSuccess \"pnpm start:electron\"",
+    "dev:app": "pnpm build:main && pnpm start:electron",
     "start:electron": "tsc-alias -p tsconfig.main.json && electron .",
     "build": "pnpm build:renderer && pnpm build:main",
     "build:renderer": "tsc --project tsconfig.renderer.json && vite build",

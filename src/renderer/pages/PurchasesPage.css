@@ -119,11 +119,11 @@
 }
 
 /* Data Table Columns for Purchases */
-.purchases-page .col-date {
+.purchases-page .data-table-row .col-date {
   font-weight: 500;
 }
 
-.purchases-page .col-purchase-no {
+.purchases-page .data-table-row .col-purchase-no {
   font-family: monospace;
   color: var(--color-text-secondary);
 }
@@ -133,15 +133,15 @@
   align-items: center;
 }
 
-.purchases-page .col-inv {
+.purchases-page .data-table-row .col-inv {
   color: var(--color-text-secondary);
 }
 
-.purchases-page .col-total {
+.purchases-page .data-table-row .col-total {
   font-weight: 500;
 }
 
-.purchases-page .col-grand-total {
+.purchases-page .data-table-row .col-grand-total {
   font-weight: 700;
 }
 

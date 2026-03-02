@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import type { Product } from '@shared/types/ipc';
+import type { Product, Quotation, CreateQuotationInput } from '@shared/types/ipc';
 import { BillItemList } from '../components/billing/BillItemList';
 import { PaymentModeSelector, type PaymentMode } from '../components/billing/PaymentModeSelector';
 import { BillHistoryModal } from '../components/billing/BillHistoryModal';
@@ -83,6 +83,11 @@ function BillingPage() {
   const [paymentMode, setPaymentMode] = useLocalStorage<PaymentMode>('billing_paymentMode', 'cash');
   const [amountPaid, setAmountPaid] = useLocalStorage<string>('billing_amountPaid', '');
   const [calculation, setCalculation] = useState<BillCalculation | null>(null);
+  const [activeQuotationId, setActiveQuotationId] = useLocalStorage<number | null>(
+    'billing_activeQuotationId',
+    null
+  );
+  const { execute: updateQuotationStatus } = useIPCMutation(IPC_CHANNELS.QUOTATION_UPDATE_STATUS);
 
   // Customer State
   const [customerQuery, setCustomerQuery] = useState('');
@@ -106,8 +111,38 @@ function BillingPage() {
   const [successMessage, setSuccessMessage] = useState<{
     billNumber: string;
     total: string;
+    received?: string;
     customerName?: string;
   } | null>(null);
+
+  // Discount State
+  const [discountType, setDiscountType] = useState<'amount' | 'percent'>(() => {
+    return (localStorage.getItem('billing:discountType') as 'amount' | 'percent') || 'percent';
+  });
+  const [discountValue, setDiscountValue] = useState<string>(''); // Store as string to handle empty input
+
+  // Cart Base Total (Sum of MRPs) for discount calculations
+  const cartBaseTotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.product.salePrice * item.quantity, 0);
+  }, [cart]);
+
+  // Calculate effective amount for QR and Persistence
+  const effectivePaymentAmount = useMemo(() => {
+    if (selectedCustomer && amountPaid !== '') {
+      const val = parseFloat(amountPaid);
+      return isNaN(val) ? 0 : val;
+    }
+    return calculation?.grandTotal || 0;
+  }, [selectedCustomer, amountPaid, calculation]);
+
+  // Update calculation when discount changes
+  useEffect(() => {
+    const amt = calculateDiscountAmount(discountType, discountValue, cartBaseTotal);
+    setDiscountAmount(amt);
+
+    // Persist preference
+    localStorage.setItem('billing:discountType', discountType);
+  }, [discountValue, discountType, cartBaseTotal, setDiscountAmount]);
 
   // Dashboard State
   const [todaySummary, setTodaySummary] = useState<DailySalesSummary | null>(null);
@@ -150,6 +185,75 @@ function BillingPage() {
     setDiscountAmount,
     setSelectedCustomer,
     setShowHistory,
+  ]);
+
+  // Handle Quotation Conversion
+  const quotationId = searchParams.get('quotationId');
+  const { execute: getQuotationWithItems } = useIPCMutation(IPC_CHANNELS.QUOTATION_GET_WITH_ITEMS);
+  const { execute: getCustomer } = useIPCMutation(IPC_CHANNELS.CUSTOMER_GET);
+
+  useEffect(() => {
+    if (quotationId) {
+      const loadQuotation = async () => {
+        try {
+          const result = (await getQuotationWithItems(Number(quotationId))) as any;
+          if (result && result.quotation) {
+            // Map items to cart
+            const newCart = result.items.map((item: any) => ({
+              product: {
+                id: item.productId,
+                name: item.productName,
+                salePrice: item.unitPrice,
+                gstPercent: item.gstPercent,
+                uom: 'PCS', // Default fallback
+                isWeightBased: false,
+                stripSize: 1,
+                isActive: true,
+                isGstInclusive: false,
+                trackInventory: false,
+              } as Product,
+              quantity: item.quantity,
+              discountValue: item.discountValue || 0,
+              discountType: item.discountType || 'percent',
+            }));
+            setCart(newCart);
+
+            setActiveQuotationId(Number(quotationId));
+            if (result.quotation.billDiscountValue) {
+              setDiscountValue(result.quotation.billDiscountValue.toString());
+              setDiscountType(result.quotation.billDiscountType || 'percent');
+            }
+
+            // Set customer if exists
+            if (result.quotation.customerId) {
+              const customerResult = (await getCustomer(result.quotation.customerId)) as any;
+              if (customerResult) {
+                setSelectedCustomer(customerResult);
+              }
+            }
+
+            // Remove quotationId from URL to prevent re-triggering if user navigates back
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('quotationId');
+            setSearchParams(newParams, { replace: true });
+          }
+        } catch (err) {
+          console.error('Failed to load quotation for conversion', err);
+        }
+      };
+      loadQuotation();
+    }
+  }, [
+    quotationId,
+    getQuotationWithItems,
+    getCustomer,
+    setCart,
+    setSelectedCustomer,
+    searchParams,
+    setSearchParams,
+    setActiveQuotationId,
+    setDiscountValue,
+    setDiscountType,
   ]);
 
   useEffect(() => {
@@ -198,6 +302,12 @@ function BillingPage() {
   } = useIPCMutation<FinalizeBillInput, { bill: { id: number; billNumber: string } }>(
     IPC_CHANNELS.BILL_CREATE
   );
+
+  const {
+    loading: creatingQuotation,
+    error: quotationError,
+    execute: createQuotation,
+  } = useIPCMutation<CreateQuotationInput, Quotation>(IPC_CHANNELS.QUOTATION_CREATE);
 
   // Initial Load (Focus)
   useEffect(() => {
@@ -300,8 +410,8 @@ function BillingPage() {
             item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
           );
         } else {
-          // Add new item
-          return [...prevCart, { product, quantity: 1 }];
+          // Add new item (Default to percent discount)
+          return [...prevCart, { product, quantity: 1, discountType: 'percent' }];
         }
       });
 
@@ -319,30 +429,6 @@ function BillingPage() {
       setSelectedResultIndex,
     ]
   );
-
-  useEffect(() => {
-    fetchTodaySummary();
-  }, [fetchTodaySummary]);
-
-  // Discount State
-  const [discountType, setDiscountType] = useState<'amount' | 'percent'>(() => {
-    return (localStorage.getItem('billing:discountType') as 'amount' | 'percent') || 'amount';
-  });
-  const [discountValue, setDiscountValue] = useState<string>(''); // Store as string to handle empty input
-
-  // Cart Base Total (Sum of MRPs) for discount calculations
-  const cartBaseTotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.product.salePrice * item.quantity, 0);
-  }, [cart]);
-
-  // Update calculation when discount changes
-  useEffect(() => {
-    const amt = calculateDiscountAmount(discountType, discountValue, cartBaseTotal);
-    setDiscountAmount(amt);
-
-    // Persist preference
-    localStorage.setItem('billing:discountType', discountType);
-  }, [discountValue, discountType, cartBaseTotal, setDiscountAmount]);
 
   // Search products with Debounce
   useEffect(() => {
@@ -420,6 +506,7 @@ function BillingPage() {
     setSelectedCustomer(null);
     setPaymentMode('cash');
     setAmountPaid('');
+    setActiveQuotationId(null);
     setSearchQuery('');
     setSelectedResultIndex(-1);
 
@@ -441,6 +528,7 @@ function BillingPage() {
     setAmountPaid,
     setSearchQuery,
     setSelectedResultIndex,
+    setActiveQuotationId,
   ]);
 
   // Complete transaction
@@ -459,25 +547,30 @@ function BillingPage() {
       })),
       discountAmount: discountAmount > 0 ? discountAmount : undefined,
       paymentMode,
-      paymentReceived:
-        selectedCustomer && amountPaid !== '' ? parseFloat(amountPaid) : calculation.grandTotal,
+      paymentReceived: effectivePaymentAmount,
     };
 
     if (isQuotationMode) {
-      const result = (await window.api.invoke(IPC_CHANNELS.QUOTATION_CREATE, {
+      const result = await createQuotation({
         customerId: selectedCustomer?.id,
         items: input.items,
-        totalAmount: calculation.grandTotal,
+        billDiscountValue: parseFloat(discountValue) || 0,
+        billDiscountType: discountType,
         validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days valid
-      })) as any;
+        notes: 'Generated from Billing Page',
+      });
 
-      if (result.success) {
+      if (result) {
         setSuccessMessage({
-          billNumber: result.data.quotationNumber,
+          billNumber: result.quotationNumber,
           total: formatCurrency(calculation.grandTotal),
           customerName: selectedCustomer?.name,
         });
         resetBill();
+
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 5000);
       }
       return;
     }
@@ -485,9 +578,20 @@ function BillingPage() {
     const result = await finalizeBill(input);
 
     if (result) {
+      // If we were converting a quotation, mark it as CONVERTED
+      if (activeQuotationId) {
+        try {
+          await updateQuotationStatus({ id: activeQuotationId, status: 'CONVERTED' });
+          setActiveQuotationId(null);
+        } catch (err) {
+          console.error('Failed to update quotation status to CONVERTED', err);
+        }
+      }
+
       setSuccessMessage({
         billNumber: result.bill.billNumber,
         total: formatCurrency(calculation.grandTotal),
+        received: formatCurrency(effectivePaymentAmount),
         customerName: selectedCustomer?.name,
       });
 
@@ -496,7 +600,7 @@ function BillingPage() {
 
       setTimeout(() => {
         setSuccessMessage(null);
-      }, 5000);
+      }, 6000);
     }
   }, [
     calculation,
@@ -509,8 +613,14 @@ function BillingPage() {
     resetBill,
     fetchTodaySummary,
     isQuotationMode,
-    amountPaid,
+    discountValue,
+    discountType,
+    effectivePaymentAmount,
     setSuccessMessage,
+    createQuotation,
+    activeQuotationId,
+    updateQuotationStatus,
+    setActiveQuotationId,
   ]);
 
   // Keyboard Shortcuts
@@ -627,33 +737,35 @@ function BillingPage() {
   return (
     <div className="page billing-page">
       <div className="page-content-wrapper animate-fade-in">
-        {/* Success Message Banner */}
-        {successMessage && (
-          <div className="success-banner" onClick={() => setSuccessMessage(null)}>
-            <div className="success-content">
-              <span className="success-icon">✅</span>
-              <div className="success-details">
-                <strong>Bill #{successMessage.billNumber} Saved!</strong>
-                <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
-                  {successMessage.customerName && (
-                    <span>Customer: {successMessage.customerName} | </span>
-                  )}
-                  <span>Total: ₹{successMessage.total}</span>
-                </div>
-              </div>
-            </div>
-            <button className="close-success">&times;</button>
+        {/* 1. Header & Actions */}
+        <header className="page-header sticky-header">
+          <div className="page-title">
+            <span>Billing</span>
+            {isQuotationMode && <span className="badge-quotation">QUOTATION MODE</span>}
           </div>
-        )}
 
-        <header className="page-header">
-          <h1 className="page-title">
-            {isQuotationMode ? 'Billing - New Quotation' : 'Billing - New Sale'}
-            {isQuotationMode && <span className="badge-quotation">Quotation Mode</span>}
-          </h1>
-
-          {/* Actions & Customer Section (Right aligned) */}
           <div className="header-actions">
+            {/* Success Message Banner */}
+            {successMessage && (
+              <div className="success-banner" onClick={() => setSuccessMessage(null)}>
+                <div className="success-content">
+                  <div className="success-icon">✓</div>
+                  <div className="success-details">
+                    <strong>
+                      {isQuotationMode ? 'Quotation' : 'Bill'} #{successMessage.billNumber} Saved
+                    </strong>
+                    <span>
+                      {successMessage.received
+                        ? `Received ${successMessage.received} (Total ${successMessage.total})`
+                        : `Total ${successMessage.total}`}{' '}
+                      | {successMessage.customerName || 'Cash'}
+                    </span>
+                  </div>
+                </div>
+                <button className="close-success">×</button>
+              </div>
+            )}
+
             {/* 1. Search Section (Primary focus) */}
             <div className="search-panel" ref={searchContainerRef}>
               <input
@@ -992,13 +1104,14 @@ function BillingPage() {
                   className="upi-qr-container animate-fade-in"
                   style={{
                     display: 'flex',
-                    flexDirection: 'column',
+                    flexDirection: 'row',
                     alignItems: 'center',
-                    padding: '1rem',
+                    gap: '1rem',
+                    padding: '0.5rem 0.75rem',
                     background: 'white',
                     borderRadius: '0.5rem',
                     border: '1px solid #e2e8f0',
-                    marginBottom: '1rem',
+                    marginBottom: '0.5rem',
                   }}
                 >
                   {settings.upiId ? (
@@ -1015,17 +1128,19 @@ function BillingPage() {
                         <QRCodeSVG
                           value={`upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(
                             settings.upiName || settings.shopName || 'Merchant'
-                          )}&am=${calculation.grandTotal}&cu=INR`}
-                          size={140}
+                          )}&am=${effectivePaymentAmount}&cu=INR`}
+                          size={100}
                           level="M"
                         />
                       </div>
-                      <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>
-                        Scan to pay <strong>{formatCurrency(calculation.grandTotal)}</strong>
-                      </span>
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                        {settings.upiId}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                          Scan to pay <strong>{formatCurrency(effectivePaymentAmount)}</strong>
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                          {settings.upiId}
+                        </span>
+                      </div>
                     </>
                   ) : (
                     <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
@@ -1039,7 +1154,7 @@ function BillingPage() {
                 </div>
               )}
 
-              {finalizingError && (
+              {(finalizingError || quotationError) && (
                 <div
                   className="error-message"
                   style={{
@@ -1049,17 +1164,21 @@ function BillingPage() {
                     fontSize: '0.9rem',
                   }}
                 >
-                  Error: {finalizingError}
+                  Error: {finalizingError || quotationError}
                 </div>
               )}
 
               <button
                 ref={checkoutBtnRef}
                 className="btn-pay"
-                disabled={finalizing || cart.length === 0}
+                disabled={finalizing || creatingQuotation || cart.length === 0}
                 onClick={handleCheckout}
               >
-                {finalizing ? 'Processing...' : `PAY (F9)`}
+                {finalizing || creatingQuotation
+                  ? 'Processing...'
+                  : isQuotationMode
+                    ? 'SAVE QUOTATION (F9)'
+                    : `PAY (F9)`}
               </button>
             </div>
 
@@ -1086,27 +1205,28 @@ function BillingPage() {
             <div
               className="shortcuts-legend"
               style={{
-                padding: '0 1.5rem 1.5rem',
+                padding: '0 1.5rem 0.75rem',
                 background: '#f8fafc',
                 borderRadius: '0.5rem',
-                fontSize: '0.75rem',
+                fontSize: '0.7rem',
                 color: '#64748b',
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '0.5rem',
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: '0.5rem 1rem',
               }}
             >
               <div>
-                <strong style={{ color: '#475569' }}>F2</strong> Focus Search
+                <strong style={{ color: '#475569' }}>F2</strong> Search
               </div>
               <div>
-                <strong style={{ color: '#475569' }}>Enter</strong> Add Item
+                <strong style={{ color: '#475569' }}>Enter</strong> Add
               </div>
               <div>
-                <strong style={{ color: '#475569' }}>F9</strong> Pay & Print
+                <strong style={{ color: '#475569' }}>F9</strong> Pay
               </div>
               <div>
-                <strong style={{ color: '#475569' }}>Esc</strong> Clear / Reset
+                <strong style={{ color: '#475569' }}>Esc</strong> Reset
               </div>
             </div>
           </div>

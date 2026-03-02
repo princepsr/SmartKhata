@@ -1,82 +1,247 @@
 .expenses-page {
-  padding: 2rem;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  box-sizing: border-box;
 }
 
-.header-stats {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-}
-
-.stat-card {
-  background: white;
-  padding: 1rem 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+.expenses-page .page-content-wrapper {
   display: flex;
   flex-direction: column;
-  border: 1px solid #e5e7eb;
+  height: 100%;
 }
 
-.stat-label {
-  font-size: 0.75rem;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.expenses-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0 1.5rem;
+}
+
+.expenses-page .page-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.expenses-page .header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.expenses-page .search-input {
+  height: 42px;
+  padding: 0 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  width: 320px;
+  background-color: var(--color-bg-panel);
+  color: var(--color-text);
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.expenses-page .search-input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.expenses-page .btn-primary {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.25rem;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #ef4444;
+.expenses-page .expenses-content {
+  flex: 1;
+  background-color: var(--color-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  min-height: 200px;
+  margin: 0 1.5rem 1.5rem;
 }
 
-.category-badge {
-  padding: 4px 10px;
-  border-radius: 9999px;
+.expenses-page .data-table-container {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.expenses-page .data-table-header {
+  display: grid;
+  grid-template-columns: 1.5fr 1.2fr 3fr 1fr 1.5fr;
+  column-gap: 1.5rem;
+  padding: 1rem;
+  background-color: var(--color-bg-secondary);
+  border-bottom: 2px solid var(--color-border);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  align-items: center;
+}
+
+.expenses-page .data-table-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1.2fr 3fr 1fr 1.5fr;
+  column-gap: 1.5rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+  transition: background-color 0.1s;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.expenses-page .data-table-row:hover {
+  background-color: var(--color-bg-secondary);
+}
+
+.expenses-page .expense-amount {
+  color: var(--color-error);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.expenses-page .category-badge {
+  padding: 4px 12px;
+  border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: capitalize;
+  display: inline-block;
 }
 
-.category-badge.rent {
+.expenses-page .category-badge.rent {
   background: #fee2e2;
-  color: #991b1b;
+  color: #b91c1c;
 }
-.category-badge.salary {
+.expenses-page .category-badge.salary {
   background: #dcfce7;
-  color: #166534;
+  color: #15803d;
 }
-.category-badge.electricity {
+.expenses-page .category-badge.electricity {
   background: #fef9c3;
-  color: #854d0e;
+  color: #a16207;
 }
-.category-badge.marketing {
+.expenses-page .category-badge.water {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.expenses-page .category-badge.maintenance {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+.expenses-page .category-badge.marketing {
   background: #e0e7ff;
-  color: #3730a3;
+  color: #4338ca;
 }
-.category-badge.other {
+.expenses-page .category-badge.supplies {
+  background: #fef3c7;
+  color: #92400e;
+}
+.expenses-page .category-badge.other {
   background: #f3f4f6;
-  color: #374151;
+  color: #4b5563;
 }
 
-.text-danger {
-  color: #ef4444;
-}
-
-.modal-body {
+/* Modal Styling Improvements */
+.expenses-page .modal-body {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  padding: 1.5rem;
 }
 
-.form-row {
+.expenses-page .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
-.text-capitalize {
+.expenses-page .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.expenses-page .form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.expenses-page .form-group input,
+.expenses-page .form-group select,
+.expenses-page .form-group textarea {
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  background-color: var(--color-bg-panel);
+  color: var(--color-text);
+}
+
+.expenses-page .truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expenses-page .text-right {
+  justify-content: flex-end !important;
+  text-align: right;
+}
+
+.expenses-page .text-capitalize {
   text-transform: capitalize;
+}
+
+/* Skeleton Styles */
+.expenses-page .skeleton-row {
+  padding: 1rem !important;
+}
+
+.expenses-page .skeleton-line {
+  height: 20px;
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 25%,
+    var(--color-border) 50%,
+    var(--color-bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

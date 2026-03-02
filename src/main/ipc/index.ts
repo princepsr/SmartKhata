@@ -20,6 +20,9 @@ import { registerCreditNoteHandlers } from './handlers/credit-note-handlers';
 import { registerPurchaseHandlers } from './handlers/purchase-handlers';
 import { registerSupplierHandlers } from './handlers/supplier-handlers';
 import { registerPurchaseOrderHandlers } from './handlers/purchase-order-handlers';
+import { registerQuotationHandlers } from './handlers/quotation-handlers';
+import { registerUtilityHandlers } from './handlers/utility-handlers';
+import { registerExpenseHandlers } from './handlers/expense-handlers';
 
 /**
  * Register all IPC handlers
@@ -44,6 +47,9 @@ export function registerIPCHandlers(): void {
     registerPurchaseHandlers();
     registerSupplierHandlers();
     registerPurchaseOrderHandlers();
+    registerQuotationHandlers();
+    registerUtilityHandlers();
+    registerExpenseHandlers();
     // registerSaleHandlers();      // TODO: Implement if needed (Bill handles most sales)
 
     logger.info('=== IPC Handlers Registered Successfully ===');

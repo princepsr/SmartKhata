@@ -49,7 +49,15 @@
     "build",
     "out",
     "release",
+    "dev-data",
     "**/*.spec.ts",
     "**/*.test.ts"
-  ]
+  ],
+  "watchOptions": {
+    "watchFile": "useFsEvents",
+    "watchDirectory": "useFsEvents",
+    "fallbackPolling": "dynamicPriority",
+    "synchronousWatchDirectory": true,
+    "excludeDirectories": ["**/node_modules", "dist", "build", "out", "release", "dev-data"]
+  }
 }

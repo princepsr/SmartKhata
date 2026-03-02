@@ -10,7 +10,7 @@ export interface Expense {
   amount: number;
   date: string; // YYYY-MM-DD
   paymentMode: string;
-  notes: string | null;
+  description: string | null;
   createdAt: Date;
 }
 
@@ -22,7 +22,7 @@ export interface CreateExpenseInput {
   amount: number;
   date: string;
   paymentMode: string;
-  notes?: string;
+  description?: string;
 }
 
 /**
@@ -39,7 +39,7 @@ export class ExpenseRepository extends BaseRepository {
       data.amount,
       data.date,
       data.paymentMode,
-      data.notes || null,
+      data.description || null,
     ]);
 
     logger.info('Expense recorded', {
@@ -56,12 +56,13 @@ export class ExpenseRepository extends BaseRepository {
   }
 
   public list(startDate: string, endDate: string): Expense[] {
+    const end = endDate.length <= 10 ? `${endDate} 23:59:59` : endDate;
     const sql = `
       SELECT * FROM expenses 
       WHERE date BETWEEN ? AND ? 
       ORDER BY date DESC, id DESC
     `;
-    return this.queryAll<any>(sql, [startDate, endDate]).map((row) => this._mapToExpense(row));
+    return this.queryAll<any>(sql, [startDate, end]).map((row) => this._mapToExpense(row));
   }
 
   public getSummaryByCategory(
@@ -79,8 +80,9 @@ export class ExpenseRepository extends BaseRepository {
   }
 
   public getTotalExpenses(startDate: string, endDate: string): number {
+    const end = endDate.length <= 10 ? `${endDate} 23:59:59` : endDate;
     const sql = `SELECT SUM(amount) as total FROM expenses WHERE date BETWEEN ? AND ?`;
-    const row = this.queryOne<{ total: number }>(sql, [startDate, endDate]);
+    const row = this.queryOne<{ total: number }>(sql, [startDate, end]);
     return row?.total || 0;
   }
 
@@ -89,13 +91,14 @@ export class ExpenseRepository extends BaseRepository {
     endDate: string,
     dateFormat: string
   ): { periodId: string; total: number }[] {
+    const end = endDate.length <= 10 ? `${endDate} 23:59:59` : endDate;
     const sql = `
       SELECT strftime('${dateFormat}', date) as periodId, COALESCE(SUM(amount), 0) as total
       FROM expenses
       WHERE date BETWEEN ? AND ?
       GROUP BY periodId
     `;
-    return this.queryAll<any>(sql, [startDate, endDate]);
+    return this.queryAll<any>(sql, [startDate, end]);
   }
 
   private _mapToExpense(row: any): Expense {
@@ -105,7 +108,7 @@ export class ExpenseRepository extends BaseRepository {
       amount: row.amount,
       date: row.date,
       paymentMode: row.payment_mode,
-      notes: row.notes,
+      description: row.notes,
       createdAt: this.parseDate(row.created_at),
     };
   }

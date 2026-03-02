@@ -550,40 +550,42 @@ const ProductsPage: React.FC = () => {
                           <path d="m15 5 4 4" />
                         </svg>
                       </button>
-                      <button
-                        className="action-icon-btn action-adjust"
-                        onClick={(e) => handleAdjustStock(e, product)}
-                        title="Adjust Stock"
-                      >
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-boxes"
+                      {!settings.billingOnly && (
+                        <button
+                          className="action-icon-btn action-adjust"
+                          onClick={(e) => handleAdjustStock(e, product)}
+                          title="Adjust Stock"
                         >
-                          <path d="M2.97 12.92A2 2 0 0 0 2 14.75v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98v-3.24a2 2 0 0 0-.97-1.83L8.14 11.3a2 2 0 0 0-1.78 0l-1.39.62Z" />
-                          <path d="M7 14.5 2.7 12.5" />
-                          <path d="m7 14.5 4.3-2" />
-                          <path d="M7 14.5v5.3" />
-                          <path d="M12.97 12.92a2 2 0 0 0-.97 1.83v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98v-3.24a2 2 0 0 0-.97-1.83L18.14 11.3a2 2 0 0 0-1.78 0l-1.39.62Z" />
-                          <path d="M17 14.5l-4.3-2" />
-                          <path d="m17 14.5 4.3-2" />
-                          <path d="M17 14.5v5.3" />
-                          <path d="M7.97 4.42A2 2 0 0 0 7 6.25v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98V6.25a2 2 0 0 0-.97-1.83L13.14 2.8a2 2 0 0 0-1.78 0l-1.39.62Z" />
-                          <path d="M12 6.5 7.7 4.5" />
-                          <path d="m12 6.5 4.3-2" />
-                          <path d="M12 6.5v5.3" />
-                        </svg>
-                      </button>
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-boxes"
+                          >
+                            <path d="M2.97 12.92A2 2 0 0 0 2 14.75v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98v-3.24a2 2 0 0 0-.97-1.83L8.14 11.3a2 2 0 0 0-1.78 0l-1.39.62Z" />
+                            <path d="M7 14.5 2.7 12.5" />
+                            <path d="m7 14.5 4.3-2" />
+                            <path d="M7 14.5v5.3" />
+                            <path d="M12.97 12.92a2 2 0 0 0-.97 1.83v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98v-3.24a2 2 0 0 0-.97-1.83L18.14 11.3a2 2 0 0 0-1.78 0l-1.39.62Z" />
+                            <path d="M17 14.5l-4.3-2" />
+                            <path d="m17 14.5 4.3-2" />
+                            <path d="M17 14.5v5.3" />
+                            <path d="M7.97 4.42A2 2 0 0 0 7 6.25v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98V6.25a2 2 0 0 0-.97-1.83L13.14 2.8a2 2 0 0 0-1.78 0l-1.39.62Z" />
+                            <path d="M12 6.5 7.7 4.5" />
+                            <path d="m12 6.5 4.3-2" />
+                            <path d="M12 6.5v5.3" />
+                          </svg>
+                        </button>
+                      )}
                       <button
                         className="action-icon-btn action-history"
                         onClick={(e) => handleViewHistory(e, product)}
-                        title="View History"
+                        title="Stock History"
                       >
                         <svg
                           width="18"

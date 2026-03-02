@@ -293,13 +293,14 @@ export class CustomerService extends BaseService {
    */
   public getAllCustomers(
     includeInactive: boolean = false,
+    showDuesOnly: boolean = false,
     page: number = 1,
     limit: number = 100
   ): { items: any[]; page: number } {
     const offset = (page - 1) * limit;
-    this.logInfo('Fetching customers list', { includeInactive, page, limit });
+    this.logInfo('Fetching customers list', { includeInactive, showDuesOnly, page, limit });
     return {
-      items: this.customerRepo.findAll(includeInactive, limit, offset),
+      items: this.customerRepo.findAll(includeInactive, showDuesOnly, limit, offset),
       page,
     };
   }
@@ -307,8 +308,8 @@ export class CustomerService extends BaseService {
   /**
    * Get total customer count
    */
-  public getCustomerCount(includeInactive: boolean = false): number {
-    return this.customerRepo.countAll(includeInactive);
+  public getCustomerCount(includeInactive: boolean = false, showDuesOnly: boolean = false): number {
+    return this.customerRepo.countAll(includeInactive, showDuesOnly);
   }
 
   /**
@@ -317,6 +318,7 @@ export class CustomerService extends BaseService {
   public searchCustomers(
     query: string,
     includeInactive: boolean = false,
+    showDuesOnly: boolean = false,
     page: number = 1,
     limit: number = 100
   ): { items: any[]; totalCount: number; hasMore: boolean; page: number } {
@@ -324,8 +326,14 @@ export class CustomerService extends BaseService {
       throw new ValidationError('Search query cannot be empty', 'query');
     }
     const offset = (page - 1) * limit;
-    const items = this.customerRepo.searchByName(query, includeInactive, limit, offset);
-    const totalCount = this.customerRepo.countSearch(query, includeInactive);
+    const items = this.customerRepo.searchByName(
+      query,
+      includeInactive,
+      showDuesOnly,
+      limit,
+      offset
+    );
+    const totalCount = this.customerRepo.countSearch(query, includeInactive, showDuesOnly);
     const hasMore = page * limit < totalCount;
 
     this.logInfo('Customers searched', {

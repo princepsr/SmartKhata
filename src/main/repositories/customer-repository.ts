@@ -74,30 +74,44 @@ export class CustomerRepository extends BaseRepository {
    * Create a new customer
    */
   public create(data: CreateCustomerInput): Customer {
-    const sql = `
-      INSERT INTO customers (name, phone, email, address, gstin, billing_address, shipping_address, balance_due)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    return this.transaction(() => {
+      const sql = `
+        INSERT INTO customers (name, phone, email, address, gstin, billing_address, shipping_address, balance_due)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
 
-    const result = this.execute(sql, [
-      data.name,
-      data.phone || null,
-      data.email || null,
-      data.address || null,
-      data.gstin || null,
-      data.billingAddress || null,
-      data.shippingAddress || null,
-      data.balanceDue || 0,
-    ]);
+      const result = this.execute(sql, [
+        data.name,
+        data.phone || null,
+        data.email || null,
+        data.address || null,
+        data.gstin || null,
+        data.billingAddress || null,
+        data.shippingAddress || null,
+        data.balanceDue || 0,
+      ]);
 
-    logger.info('Customer created', { id: result.lastInsertRowid, name: data.name });
+      const customerId = Number(result.lastInsertRowid);
 
-    const customer = this.findById(Number(result.lastInsertRowid));
-    if (!customer) {
-      throw new Error('Failed to retrieve created customer');
-    }
+      // Add opening balance entry to ledger if balanceDue != 0
+      if (data.balanceDue && data.balanceDue !== 0) {
+        this.addLedgerEntry({
+          customerId,
+          amount: Math.abs(data.balanceDue),
+          type: 'OPENING_BALANCE',
+          notes: 'Initial balance at creation',
+        });
+      }
 
-    return customer;
+      logger.info('Customer created', { id: customerId, name: data.name });
+
+      const customer = this.findById(customerId);
+      if (!customer) {
+        throw new Error('Failed to retrieve created customer');
+      }
+
+      return customer;
+    });
   }
 
   /**
@@ -199,11 +213,25 @@ export class CustomerRepository extends BaseRepository {
   /**
    * List all active customers with pagination
    */
-  public findAll(includeInactive: boolean = false, limit?: number, offset?: number): Customer[] {
-    const statusFilter = includeInactive ? '' : 'WHERE is_active = 1';
+  public findAll(
+    includeInactive: boolean = false,
+    showDuesOnly: boolean = false,
+    limit?: number,
+    offset?: number
+  ): Customer[] {
+    const filters: string[] = [];
+    if (!includeInactive) {
+      filters.push('is_active = 1');
+    }
+    if (showDuesOnly) {
+      filters.push('balance_due > 0');
+    }
+
+    const filterStr = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+
     let sql = `
       SELECT * FROM customers
-      ${statusFilter}
+      ${filterStr}
       ORDER BY name ASC
     `;
 
@@ -224,11 +252,20 @@ export class CustomerRepository extends BaseRepository {
   /**
    * Get total count of customers
    */
-  public countAll(includeInactive: boolean = false): number {
-    const statusFilter = includeInactive ? '' : 'WHERE is_active = 1';
+  public countAll(includeInactive: boolean = false, showDuesOnly: boolean = false): number {
+    const filters: string[] = [];
+    if (!includeInactive) {
+      filters.push('is_active = 1');
+    }
+    if (showDuesOnly) {
+      filters.push('balance_due > 0');
+    }
+
+    const filterStr = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+
     const sql = `
       SELECT COUNT(*) as count FROM customers
-      ${statusFilter}
+      ${filterStr}
     `;
     const row = this.queryOne<{ count: number }>(sql);
     return row ? row.count : 0;
@@ -240,13 +277,21 @@ export class CustomerRepository extends BaseRepository {
   public searchByName(
     query: string,
     includeInactive: boolean = false,
+    showDuesOnly: boolean = false,
     limit?: number,
     offset?: number
   ): Customer[] {
+    const filters: string[] = ['(name LIKE ? OR phone LIKE ?)'];
+    if (!includeInactive) {
+      filters.push('is_active = 1');
+    }
+    if (showDuesOnly) {
+      filters.push('balance_due > 0');
+    }
+
     let sql = `
       SELECT * FROM customers
-      WHERE (name LIKE ? OR phone LIKE ?)
-      ${includeInactive ? '' : 'AND is_active = 1'}
+      WHERE ${filters.join(' AND ')}
       ORDER BY name ASC
     `;
 
@@ -269,11 +314,22 @@ export class CustomerRepository extends BaseRepository {
   /**
    * Get total count of customers matching search
    */
-  public countSearch(query: string, includeInactive: boolean = false): number {
+  public countSearch(
+    query: string,
+    includeInactive: boolean = false,
+    showDuesOnly: boolean = false
+  ): number {
+    const filters: string[] = ['(name LIKE ? OR phone LIKE ?)'];
+    if (!includeInactive) {
+      filters.push('is_active = 1');
+    }
+    if (showDuesOnly) {
+      filters.push('balance_due > 0');
+    }
+
     const sql = `
       SELECT COUNT(*) as count FROM customers
-      WHERE (name LIKE ? OR phone LIKE ?)
-      ${includeInactive ? '' : 'AND is_active = 1'}
+      WHERE ${filters.join(' AND ')}
     `;
     const searchPattern = `%${query}%`;
     const row = this.queryOne<{ count: number }>(sql, [searchPattern, searchPattern]);

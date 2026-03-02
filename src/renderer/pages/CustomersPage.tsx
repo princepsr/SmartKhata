@@ -44,6 +44,7 @@ const CustomersPage: React.FC = () => {
   const [hasMore, setHasMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [showInactive, setShowInactive] = useLocalStorage('customers_show_inactive', false);
+  const [showDuesOnly, setShowDuesOnly] = useLocalStorage('customers_show_dues_only', false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<number | null>(null);
@@ -91,11 +92,12 @@ const CustomersPage: React.FC = () => {
     setCustomers([]);
     fetchItems({
       includeInactive: showInactive,
+      showDuesOnly,
       query: debouncedSearchQuery,
       page: 1,
       pageSize: 100,
     });
-  }, [fetchItems, showInactive, debouncedSearchQuery]);
+  }, [fetchItems, showInactive, showDuesOnly, debouncedSearchQuery]);
 
   // Fetch more items
   const fetchNextPage = useCallback(() => {
@@ -107,11 +109,12 @@ const CustomersPage: React.FC = () => {
     setPage(nextPage);
     fetchItems({
       includeInactive: showInactive,
+      showDuesOnly,
       query: debouncedSearchQuery,
       page: nextPage,
       pageSize: 100,
     });
-  }, [fetchItems, showInactive, debouncedSearchQuery, page, loading, hasMore]);
+  }, [fetchItems, showInactive, showDuesOnly, debouncedSearchQuery, page, loading, hasMore]);
 
   // Handle data updates
   useEffect(() => {
@@ -204,12 +207,13 @@ const CustomersPage: React.FC = () => {
     setCustomers([]);
     fetchItems({
       includeInactive: showInactive,
+      showDuesOnly,
       query: debouncedSearchQuery,
       page: 1,
       pageSize: 100,
     });
     setIsFormOpen(false);
-  }, [fetchItems, showInactive, debouncedSearchQuery]);
+  }, [fetchItems, showInactive, showDuesOnly, debouncedSearchQuery]);
 
   const handleToggleStatus = useCallback(
     async (customer: Customer, e: React.MouseEvent) => {
@@ -310,26 +314,23 @@ const CustomersPage: React.FC = () => {
         <header className="page-header">
           <h1 className="page-title">Customers & Udhaar</h1>
           <div className="header-actions">
-            <div
-              className="filter-group"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: 'auto' }}
-            >
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  color: '#666',
-                }}
-              >
+            <div className="filter-group">
+              <label className="filter-checkbox">
                 <input
                   type="checkbox"
                   checked={showInactive}
                   onChange={(e) => setShowInactive(e.target.checked)}
                 />
                 Show Inactive
+              </label>
+
+              <label className="filter-checkbox">
+                <input
+                  type="checkbox"
+                  checked={showDuesOnly}
+                  onChange={(e) => setShowDuesOnly(e.target.checked)}
+                />
+                Show Dues Only
               </label>
             </div>
             <input
@@ -405,10 +406,7 @@ const CustomersPage: React.FC = () => {
                         {customer.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </div>
-                    <div
-                      className="col-actions"
-                      style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end' }}
-                    >
+                    <div className="col-actions" style={{ display: 'flex', gap: '0.25rem' }}>
                       <button
                         className="action-icon-btn action-settle"
                         onClick={(e) => {

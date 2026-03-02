@@ -1,5 +1,5 @@
 -- Migration: Purchase Orders Module
--- Version: 035
+-- Version: 034
 -- Description: Adds schema support for tracking Purchase Orders before they become actual purchases.
 
 CREATE TABLE IF NOT EXISTS purchase_orders (

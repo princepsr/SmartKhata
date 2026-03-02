@@ -21,9 +21,18 @@ import { autoBackupService } from './services/auto-backup-service';
  * Main Electron Process Entry Point
  */
 
-let mainWindow: BrowserWindow | null = null;
+// Single-instance lock (Windows best practice)
+// Prevents multiple instances of the app from running.
+// Moved to the TOP to prevent heavy service initialization in duplicate instances.
+const gotTheLock = app.requestSingleInstanceLock();
 
-// Register global error handlers FIRST (before any other code)
+if (!gotTheLock) {
+  // Another instance is already running, quit this one IMMEDIATELY
+  // Using process.exit to avoid Electron's event loop entirely for duplicates
+  process.exit(0);
+}
+
+// Register global error handlers FIRST (before any other logic in the MAIN instance)
 registerGlobalErrorHandlers();
 
 // Set AppUserModelId for Windows taskbar icons
@@ -46,28 +55,19 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-// Single-instance lock (Windows best practice)
-// Prevents multiple instances of the app from running
-const gotTheLock = app.requestSingleInstanceLock();
+let mainWindow: BrowserWindow | null = null;
 
-if (!gotTheLock) {
-  // Another instance is already running, quit this one
-  logger.info('Another instance is already running, quitting...');
-  app.quit();
-} else {
-  // This is the first instance, handle second-instance attempts
-  app.on('second-instance', (_event, commandLine, workingDirectory) => {
-    logger.info('Second instance attempted to start', { commandLine, workingDirectory });
+app.on('second-instance', (_event, commandLine, workingDirectory) => {
+  logger.info('Second instance attempted to start', { commandLine, workingDirectory });
 
-    // Focus the existing window if it exists
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore();
-      }
-      mainWindow.focus();
+  // Focus the existing window if it exists
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
     }
-  });
-}
+    mainWindow.focus();
+  }
+});
 
 function createWindow(): void {
   const config = configManager.getConfig();
@@ -422,6 +422,32 @@ app.whenReady().then(async () => {
       }
     });
   }
+
+  // Power state monitoring
+  const { powerMonitor } = require('electron');
+
+  powerMonitor.on('suspend', () => {
+    logger.info('System going to sleep (suspend event)');
+    try {
+      StabilityService.getInstance().stopMonitoring();
+    } catch (e) {
+      logger.error('Error during suspend handling', e);
+    }
+  });
+
+  powerMonitor.on('resume', () => {
+    logger.info('System waking up (resume event)');
+    try {
+      StabilityService.getInstance().startMonitoring();
+      // Allow some time for network to settle before re-checking connectivity
+      setTimeout(() => {
+        const { connectivityService } = require('./services/connectivity-service');
+        connectivityService.checkNow();
+      }, 5000);
+    } catch (e) {
+      logger.error('Error during resume handling', e);
+    }
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

@@ -39,18 +39,19 @@ export function registerCustomerHandlers(): void {
   // LIST ALL ACTIVE CUSTOMERS
   // ============================================
   IPCHandler.handle<
-    { includeInactive?: boolean; page?: number; pageSize?: number } | void,
+    { includeInactive?: boolean; showDuesOnly?: boolean; page?: number; pageSize?: number } | void,
     { items: CustomerUI[]; totalCount: number; hasMore: boolean; page: number }
   >(
     IPC_CHANNELS.CUSTOMER_LIST,
     async (payload) => {
       const options = (payload && typeof payload === 'object' ? payload : {}) as any;
       const includeInactive = !!options.includeInactive;
+      const showDuesOnly = !!options.showDuesOnly;
       const page = options.page ?? 1;
       const pageSize = options.pageSize ?? 100;
 
-      const result = customerService.getAllCustomers(includeInactive, page, pageSize);
-      const totalCount = customerService.getCustomerCount(includeInactive);
+      const result = customerService.getAllCustomers(includeInactive, showDuesOnly, page, pageSize);
+      const totalCount = customerService.getCustomerCount(includeInactive, showDuesOnly);
       const hasMore = page * pageSize < totalCount;
 
       return {
@@ -124,12 +125,24 @@ export function registerCustomerHandlers(): void {
   // SEARCH CUSTOMERS
   // ============================================
   IPCHandler.handle<
-    { query: string; includeInactive?: boolean; page?: number; pageSize?: number },
+    {
+      query: string;
+      includeInactive?: boolean;
+      showDuesOnly?: boolean;
+      page?: number;
+      pageSize?: number;
+    },
     { items: CustomerUI[]; totalCount: number; hasMore: boolean; page: number }
   >(
     IPC_CHANNELS.CUSTOMER_SEARCH,
-    async ({ query, includeInactive, page, pageSize }) => {
-      const result = customerService.searchCustomers(query, includeInactive, page, pageSize);
+    async ({ query, includeInactive, showDuesOnly, page, pageSize }) => {
+      const result = customerService.searchCustomers(
+        query,
+        !!includeInactive,
+        !!showDuesOnly,
+        page,
+        pageSize
+      );
       return {
         items: result.items.map((c: Customer) => _mapToUI(c)),
         totalCount: result.totalCount,

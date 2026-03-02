@@ -1,29 +1,287 @@
 .quotations-page {
-  padding: 2rem;
+  /* Inherits .page from index.css */
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  box-sizing: border-box;
 }
 
-.font-mono {
-  font-family: 'Courier New', Courier, monospace;
+.quotations-page .page-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-.text-xs {
+.quotations-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0 1.5rem;
+}
+
+.quotations-page .page-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* Standardized Header Inputs & Buttons */
+.quotations-page .search-input {
+  height: 42px;
+  padding: 0 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  width: 320px;
+  background-color: var(--color-bg-panel);
+  color: var(--color-text);
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.quotations-page .search-input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.quotations-page .header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.quotations-page .header-actions .btn-primary {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.25rem;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  box-sizing: border-box;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quotations-page .header-actions .btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+.quotations-page .filter-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-right: 0.5rem;
+}
+
+.quotations-page .filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+  line-height: 1;
+}
+
+.quotations-page .quotations-content {
+  flex: 1;
+  background-color: var(--color-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  min-height: 200px;
+  margin: 0 1.5rem 1.5rem;
+}
+
+.quotations-page .data-table-container {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.quotations-page .data-table-header {
+  display: grid;
+  grid-template-columns: 1.5fr 1.4fr 1.5fr 1fr 1fr 1fr 1fr;
+  column-gap: 1.5rem;
+  padding: 1rem;
+  background-color: var(--color-bg-secondary);
+  border-bottom: 2px solid var(--color-border);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  align-items: center;
+}
+
+.quotations-page .data-table-header > div {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.quotations-page .data-table-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1.4fr 1.5fr 1fr 1fr 1fr 1fr;
+  column-gap: 1.5rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  align-items: center;
+  transition: background-color 0.1s;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.quotations-page .data-table-row:hover {
+  background-color: var(--color-bg-secondary);
+}
+
+.quotations-page .data-table-row .col-qtn {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.quotations-page .customer-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.quotations-page .customer-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 2px;
+}
+
+.quotations-page .quote-amount {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.quotations-page .status-badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
   font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
-.text-gray-500 {
-  color: #6b7280;
+.quotations-page .status-badge.status-pending {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #d97706;
 }
 
-.btn-icon-alt {
+.quotations-page .status-badge.status-converted {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.quotations-page .status-badge.status-expired {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.quotations-page .status-badge.status-cancelled {
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.quotations-page .col-actions {
+  display: flex;
+  gap: 0.4rem;
+  transition: opacity 0.2s;
+  justify-content: flex-start;
+}
+
+.quotations-page .btn-icon-premium {
   background: none;
   border: none;
-  font-size: 1.25rem;
+  color: var(--color-text-secondary);
+  padding: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.7;
 }
 
-.btn-icon-alt:hover {
-  background: #f3f4f6;
+.quotations-page .btn-icon-premium:hover:not(:disabled) {
+  background-color: rgba(37, 99, 235, 0.08);
+  color: var(--color-primary);
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
+
+.quotations-page .btn-icon-premium.danger:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.08);
+  color: var(--color-danger);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+}
+
+.quotations-page .btn-icon-premium:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.quotations-page .text-right {
+  justify-content: flex-end !important;
+  text-align: right;
+}
+
+.quotations-page .text-center {
+  justify-content: center !important;
+  text-align: center;
+}
+
+/* Skeleton Styles */
+.quotations-page .skeleton-row {
+  padding: 1rem !important;
+}
+
+.quotations-page .skeleton-line {
+  height: 20px;
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 25%,
+    var(--color-border) 50%,
+    var(--color-bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

@@ -53,25 +53,13 @@ export const BillItemList: React.FC<BillItemListProps> = ({
       style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
     >
       {/* Header Row */}
-      <div
-        className="cart-header"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(200px, 3fr) 100px 100px 120px 120px 40px',
-          gap: '0.5rem',
-          padding: '0.75rem',
-          background: '#f3f4f6',
-          borderBottom: '1px solid #e5e7eb',
-          fontWeight: 'bold',
-          fontSize: '1rem',
-        }}
-      >
-        <span>Item</span>
-        <span style={{ textAlign: 'center' }}>Qty</span>
-        <span style={{ textAlign: 'right' }}>Price</span>
-        <span style={{ textAlign: 'center' }}>Disc</span>
-        <span style={{ textAlign: 'right' }}>Total</span>
-        <span></span>
+      <div className="cart-header">
+        <span className="col-item">ITEM</span>
+        <span className="col-qty">QTY</span>
+        <span className="col-price">PRICE</span>
+        <span className="col-disc">DISC</span>
+        <span className="col-total">TOTAL</span>
+        <span className="col-actions"></span>
       </div>
 
       {/* Scrollable List */}

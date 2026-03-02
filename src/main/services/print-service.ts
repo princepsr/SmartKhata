@@ -9,6 +9,8 @@ import { StabilityService } from './stability-service';
 import { BaseService } from './base-service';
 import { BillWithItems } from '../repositories/bill-repository';
 import { BillingService } from './billing-service';
+import { Quotation, QuotationItem } from '../repositories/quotation-repository';
+import { QuotationService } from './quotation-service';
 import { CustomerRepository, Customer } from '../repositories/customer-repository';
 import {
   DailySalesSummary,
@@ -16,6 +18,7 @@ import {
   GstReport,
   StockSummary,
 } from '@shared/types/report.types';
+import { Product } from '@shared/types/ipc';
 
 type ReportData =
   | { summary: DailySalesSummary; modes: PaymentModeSummary[] }
@@ -243,6 +246,147 @@ export class PrintService extends BaseService {
   }
 
   /**
+   * Print a quotation by ID or data
+   */
+  async printQuotation(
+    quotationInput: number | { quotation: Quotation; items: QuotationItem[] },
+    printerName?: string
+  ): Promise<boolean> {
+    let quotationData: { quotation: Quotation; items: QuotationItem[] };
+    if (typeof quotationInput === 'number') {
+      const quotationService = new QuotationService();
+      const result = await quotationService.getQuotationWithItems(quotationInput);
+      if (!result) {
+        throw new Error('Quotation not found');
+      }
+      quotationData = result;
+    } else {
+      quotationData = quotationInput;
+    }
+
+    const config = SettingsService.getInstance().getConfig();
+    let customer: Customer | null = null;
+    if (quotationData.quotation.customerId && config.showCustomerDetails) {
+      const customerRepo = new CustomerRepository();
+      customer = customerRepo.findById(quotationData.quotation.customerId);
+    }
+
+    let targetPrinter = printerName || config.printerName || '';
+    const paperSize = config.paperSize || '58mm';
+
+    if (targetPrinter && targetPrinter.toLowerCase().trim() === 'default') {
+      targetPrinter = '';
+    }
+
+    if (PrintService.isPrinting) {
+      throw new PrinterError('Printer is busy with another job');
+    }
+
+    PrintService.isPrinting = true;
+    let printWindow: BrowserWindow;
+
+    try {
+      printWindow = this._getPrintWindow();
+      const htmlContent = this.generateQuotationHtml(quotationData, paperSize, customer);
+
+      printLogger.info(`Awaiting quotation print promise (30s timeout)...`);
+      // Add a safety timeout for the entire print operation (30s)
+      await new Promise<void>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Quotation print operation timed out after 30 seconds'));
+        }, 30000);
+
+        const runPrint = async (): Promise<void> => {
+          if (printWindow.isDestroyed()) {
+            throw new Error('Window lost or destroyed');
+          }
+
+          printLogger.info(`Loading quotation HTML (length: ${htmlContent.length})...`);
+          await printWindow.loadURL(
+            `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`
+          );
+          printLogger.info('Quotation HTML loaded successfully');
+
+          // Wait for DOM to be fully ready and layout to stabilize
+          await new Promise((r) => setTimeout(r, 500));
+
+          // Ensure window is still alive
+          if (printWindow.isDestroyed()) {
+            throw new Error('Window destroyed during layout wait');
+          }
+
+          const copies = config.printCopies || 1;
+          printLogger.info(`Printing ${copies} copies of quotation...`);
+
+          for (let i = 0; i < copies; i++) {
+            if (printWindow.isDestroyed()) {
+              throw new Error(`Window destroyed during copy ${i + 1}`);
+            }
+
+            await new Promise<void>((resolveCopy, rejectCopy) => {
+              const printOptions: any = {
+                silent: true,
+                printBackground: true,
+                deviceName: targetPrinter,
+                color: false,
+                margins: { marginType: targetPrinter ? 'printableArea' : 'default' },
+              };
+
+              // Virtual/Default printers often fail with "empty content" if pageSize is omitted
+              if (!targetPrinter || targetPrinter.toLowerCase().includes('pdf')) {
+                printOptions.pageSize = 'A4';
+              }
+
+              printWindow.webContents.print(printOptions, (success, failureReason) => {
+                if (success) {
+                  printLogger.info(`Quotation Copy ${i + 1}/${copies} sent to spooler`);
+                  resolveCopy();
+                } else {
+                  rejectCopy(new PrinterError(failureReason || 'Print failed'));
+                }
+              });
+            });
+
+            // Small gap between copies
+            if (i < copies - 1) {
+              await new Promise((r) => setTimeout(r, 500));
+            }
+          }
+        };
+
+        runPrint()
+          .then(() => {
+            clearTimeout(timeoutId);
+            printLogger.info('Quotation print operation completed successfully');
+            resolve();
+          })
+          .catch((err) => {
+            clearTimeout(timeoutId);
+            printLogger.error('Quotation print operation failed or timed out', err);
+            // If it's a timeout, destroy the window to be safe
+            if (err.message && err.message.includes('timeout')) {
+              printLogger.warn(
+                'Destroying pooled window due to timeout/hang during quotation print'
+              );
+              if (PrintService.poolWindow && !PrintService.poolWindow.isDestroyed()) {
+                PrintService.poolWindow.destroy();
+                PrintService.poolWindow = null;
+              }
+            }
+            reject(err);
+          });
+      });
+
+      return true;
+    } finally {
+      PrintService.isPrinting = false;
+      if (PrintService.poolWindow && !PrintService.poolWindow.isDestroyed()) {
+        PrintService.poolWindow.loadURL('about:blank').catch(() => {});
+      }
+    }
+  }
+
+  /**
    * Print a report (Sales, GST, Stock)
    */
   async printReport(
@@ -321,6 +465,91 @@ export class PrintService extends BaseService {
       return true;
     } catch (error) {
       printLogger.error(`Error in print service for report: ${type}`, error);
+      throw error;
+    } finally {
+      PrintService.isPrinting = false;
+      if (PrintService.poolWindow && !PrintService.poolWindow.isDestroyed()) {
+        PrintService.poolWindow.loadURL('about:blank').catch(() => {});
+      }
+    }
+  }
+
+  /**
+   * Print Barcode Labels
+   */
+  async printBarcodes(
+    product: Product,
+    count: number,
+    options: { showBrand?: boolean; showPrice?: boolean } = {}
+  ): Promise<boolean> {
+    const config = SettingsService.getInstance().getConfig();
+    const targetPrinter = config.printerName || '';
+
+    printLogger.info(
+      `Starting barcode print job for product: ${product.name} (Count: ${count}) on printer: ${targetPrinter || 'Default'}`
+    );
+
+    if (PrintService.isPrinting) {
+      throw new PrinterError('Printer is busy with another job');
+    }
+
+    PrintService.isPrinting = true;
+    const printWindow: BrowserWindow = this._getPrintWindow();
+
+    try {
+      const htmlContent = this.generateBarcodeHtml(product, count, options);
+
+      await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+
+      await new Promise<void>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Barcode print timed out after 30 seconds'));
+        }, 30000);
+
+        const runPrint = async (): Promise<void> => {
+          try {
+            // Wait for layout
+            await new Promise((r) => setTimeout(r, 500));
+
+            if (printWindow.isDestroyed()) {
+              clearTimeout(timeoutId);
+              return reject(new Error('Window destroyed before barcode print'));
+            }
+
+            printWindow.webContents.print(
+              {
+                silent: true,
+                printBackground: true,
+                deviceName: targetPrinter,
+                pageSize: 'A4',
+                margins: { marginType: 'none' }, // Use none for labels to ensure exact 38x25mm sizing
+              },
+              (success, failureReason) => {
+                clearTimeout(timeoutId);
+                if (success) {
+                  printLogger.info(`Barcode print job sent successfully`);
+                  resolve();
+                } else {
+                  printLogger.error(`Barcode print failed: ${failureReason}`);
+                  reject(new PrinterError(failureReason || 'Barcode print failed'));
+                }
+              }
+            );
+          } catch (err) {
+            clearTimeout(timeoutId);
+            reject(err as Error);
+          }
+        };
+
+        runPrint().catch((err) => {
+          clearTimeout(timeoutId);
+          reject(err);
+        });
+      });
+
+      return true;
+    } catch (error) {
+      printLogger.error(`Error in print service for barcodes: ${product.name}`, error);
       throw error;
     } finally {
       PrintService.isPrinting = false;
@@ -847,10 +1076,10 @@ export class PrintService extends BaseService {
 
         <div class="divider"></div>
         <div class="meta-row bold">
-          <span style="width:45%">Item</span>
-          <span style="width:15%; text-align:center">Qty</span>
-          <span style="width:20%; text-align:right">Rate</span>
-          <span style="width:20%; text-align:right">Amt</span>
+          <span style="width:38%">Item</span>
+          <span style="width:12%; text-align:center">Qty</span>
+          <span style="width:25%; text-align:right; padding-right: 4px;">Rate</span>
+          <span style="width:25%; text-align:right">Amt</span>
         </div>
         <div class="divider"></div>
 
@@ -865,10 +1094,10 @@ export class PrintService extends BaseService {
               return `
             <div class="item-container">
               <div class="item-row">
-                <span style="width:45%">${item.productNameSnapshot}</span>
-                <span style="width:15%; text-align:center">${item.quantity}</span>
-                <span style="width:20%; text-align:right">${item.unitPrice.toFixed(2)}</span>
-                <span style="width:20%; text-align:right">${lineGross.toFixed(2)}</span>
+                <span style="width:38%">${item.productNameSnapshot}</span>
+                <span style="width:12%; text-align:center">${item.quantity}</span>
+                <span style="width:25%; text-align:right; padding-right: 4px;">${item.unitPrice.toFixed(2)}</span>
+                <span style="width:25%; text-align:right">${lineGross.toFixed(2)}</span>
               </div>
               ${
                 discountAmount > 0.01
@@ -967,10 +1196,9 @@ export class PrintService extends BaseService {
           <span>Payment Mode: <b>${bill.paymentMode.toUpperCase()}</b></span>
         </div>
 
-        <div style="text-align: right; margin-top: 20px; margin-bottom: 10px; font-size: 11px;">
-          <p style="margin: 0;">For <b>${settings.shopName}</b></p>
-          <br/><br/>
-          <p style="margin: 0;">Authorized Signatory</p>
+        <div style="text-align: center; margin-top: 20px; margin-bottom: 10px; font-size: 10px;">
+          <p style="margin: 0;">This is a Computer Generated Invoice.</p>
+          <p style="margin: 0;">No Signature Required.</p>
         </div>
 
         <div class="footer center">
@@ -1143,6 +1371,299 @@ export class PrintService extends BaseService {
       `
           : ''
       }
+    `;
+  }
+
+  /**
+   * Generates HTML for a quotation
+   */
+  private generateQuotationHtml(
+    data: { quotation: Quotation; items: QuotationItem[] },
+    paperSize: '58mm' | '80mm',
+    customer: Customer | null = null
+  ): string {
+    const { quotation, items } = data;
+    const settings = SettingsService.getInstance().getConfig();
+    const width = this._getPaperWidth(paperSize);
+
+    const date = new Date(quotation.createdAt).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: 'Courier New', monospace; font-size: 12px; margin: 0; padding: 2px; width: ${width}; line-height: 1.3; }
+          .center { text-align: center; }
+          .right { text-align: right; }
+          .bold { font-weight: bold; }
+          .header h1 { margin: 0; font-size: 16px; text-transform: uppercase; }
+          .header p { margin: 1px 0; font-size: 11px; }
+          .divider { border-top: 1px dashed #000; margin: 5px 0; }
+          .meta-section { margin: 5px 0; font-size: 11px; }
+          .meta-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+          .title { font-size: 14px; font-weight: bold; text-align: center; margin: 8px 0; text-decoration: underline; }
+          table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+          th { text-align: left; border-bottom: 1px dashed #000; padding: 2px 0; font-size: 11px; }
+          .grand-total { font-size: 15px; font-weight: bold; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 4px 0; margin-top: 5px; }
+          .footer { margin-top: 20px; font-size: 10px; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="header center">
+          <h1>${settings.shopName}</h1>
+          ${settings.address ? `<p>${settings.address}</p>` : ''}
+          ${settings.phone ? `<p>Ph: ${settings.phone}</p>` : ''}
+        </div>
+
+        <div class="title">QUOTATION / ESTIMATE</div>
+
+        <div class="meta-section">
+          <div class="meta-row"><span>Quote No : <b>${quotation.quotationNumber}</b></span></div>
+          <div class="meta-row"><span>Date     : ${date}</span></div>
+          ${quotation.expiresAt ? `<div class="meta-row"><span>Valid Until: ${new Date(quotation.expiresAt).toLocaleDateString()}</span></div>` : ''}
+        </div>
+
+        ${
+          customer
+            ? `
+          <div class="divider"></div>
+          <div class="meta-section">
+            <p style="margin:0"><b>To:</b> ${customer.name}</p>
+            ${customer.phone ? `<p style="margin:0">PH: ${customer.phone}</p>` : ''}
+          </div>
+        `
+            : ''
+        }
+
+        <div class="divider"></div>
+        <div class="meta-row bold">
+          <span style="width:50%">Item</span>
+          <span style="width:15%; text-align:center">Qty</span>
+          <span style="width:35%; text-align:right">Total</span>
+        </div>
+        <div class="divider"></div>
+
+        ${(() => {
+          let totalItemNetBeforeBillDiscount = 0;
+          const itemsHtml = items
+            .map((item) => {
+              const itemGross = item.quantity * item.unitPrice;
+              const itemDisc =
+                item.discountType === 'percent'
+                  ? (itemGross * (item.discountValue || 0)) / 100
+                  : item.discountValue || 0;
+              const itemNet = itemGross - itemDisc;
+              totalItemNetBeforeBillDiscount += itemNet;
+
+              return `
+          <div style="margin-bottom: 4px;">
+            <div class="meta-row">
+              <span style="width:50%">${item.productName}</span>
+              <span style="width:15%; text-align:center">${item.quantity}</span>
+              <span style="width:35%; text-align:right">${itemNet.toFixed(2)}</span>
+            </div>
+            <div style="font-size: 10px; color: #666;">
+              Rate: ${item.unitPrice.toFixed(2)}
+              ${(item.discountValue || 0) > 0 ? ` | Disc: ${item.discountType === 'percent' ? `${item.discountValue}%` : `₹${item.discountValue.toFixed(2)}`}` : ''}
+            </div>
+          </div>
+        `;
+            })
+            .join('');
+
+          const billDiscountAmount =
+            quotation.billDiscountType === 'percent'
+              ? (totalItemNetBeforeBillDiscount * (quotation.billDiscountValue || 0)) / 100
+              : quotation.billDiscountValue || 0;
+
+          return `
+        ${itemsHtml}
+        <div class="divider"></div>
+        <div class="meta-row">
+          <span>Subtotal</span>
+          <span>${totalItemNetBeforeBillDiscount.toFixed(2)}</span>
+        </div>
+        <div class="meta-row">
+          <span>Tax (GST)</span>
+          <span>${quotation.gstTotal.toFixed(2)}</span>
+        </div>
+        ${
+          (quotation.billDiscountValue || 0) > 0
+            ? `
+        <div class="meta-row">
+          <span>Discount (${quotation.billDiscountType === 'percent' ? `${quotation.billDiscountValue}%` : `₹${quotation.billDiscountValue.toFixed(2)}`})</span>
+          <span>-${billDiscountAmount.toFixed(2)}</span>
+        </div>
+        `
+            : ''
+        }
+        <div class="meta-row grand-total">
+          <span>ESTIMATED TOTAL</span>
+          <span>&#8377;${quotation.grandTotal.toFixed(2)}</span>
+        </div>
+        `;
+        })()}
+
+        <div class="footer">
+          <p>This is an estimated price and not an invoice.</p>
+          <p>Prices are subject to change.</p>
+          <div class="divider"></div>
+          <p style="font-size: 10px;">This is a Computer Generated Quotation. No Signature Required.</p>
+          <div class="divider"></div>
+          <p>Generated by SmartKhata</p>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  /**
+   * Generates HTML for Barcode Labels (3x8 grid on A4)
+   */
+  private generateBarcodeHtml(
+    product: Product,
+    count: number,
+    options: { showBrand?: boolean; showPrice?: boolean }
+  ): string {
+    const { showBrand = true, showPrice = true } = options;
+    const settings = SettingsService.getInstance().getConfig();
+
+    // Standard A4: 210 x 297 mm
+    // 3 columns of 38mm = 114mm
+    // 8 rows of 25mm = 200mm
+    // Margins: Left/Right ~48mm each, Top/Bottom ~48mm each
+    // We use a grid layout to position them exactly.
+
+    const labelsHtml = Array.from({ length: count })
+      .map(
+        () => `
+      <div class="label">
+        ${showBrand ? `<div class="brand">${settings.shopName}</div>` : ''}
+        <div class="pname">${product.name}</div>
+        <div class="barcode-zone">
+          <div class="stripes">
+            ${Array.from({ length: 40 })
+              .map(
+                (_, i) => `
+              <div class="stripe" style="width: ${i % 3 === 0 ? '1.5pt' : '0.8pt'}; opacity: ${i % 4 === 0 ? 0.5 : 1};"></div>
+            `
+              )
+              .join('')}
+          </div>
+          ${product.sku || product.barcode ? `<div class="barcode-val">${product.barcode || product.sku}</div>` : ''}
+        </div>
+        ${showPrice ? `<div class="price">MRP: ₹${product.salePrice.toFixed(2)}</div>` : ''}
+      </div>
+    `
+      )
+      .join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          @page {
+            size: A4;
+            margin: 0;
+          }
+          body {
+            margin: 0;
+            padding: 15mm 10mm; /* Conservative A4 padding */
+            background: #fff;
+            -webkit-print-color-adjust: exact;
+          }
+          .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 38mm);
+            grid-template-rows: repeat(8, 25mm);
+            gap: 2mm 5mm; /* Small gap between labels */
+            justify-content: center;
+          }
+          .label {
+            width: 38mm;
+            height: 25mm;
+            border: 1px solid #eee; /* Light guia for cutting if needed, usually omitted for pre-cut */
+            box-sizing: border-box;
+            padding: 2mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            overflow: hidden;
+            background: white;
+          }
+          .brand {
+            font-family: 'Inter', sans-serif;
+            font-size: 6pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #64748b;
+            margin-bottom: 1mm;
+            border-bottom: 0.5pt solid #e2e8f0;
+            width: 100%;
+          }
+          .pname {
+            font-family: 'Inter', sans-serif;
+            font-size: 8.5pt;
+            font-weight: 700;
+            margin: 1mm 0;
+            line-height: 1.1;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+          .barcode-zone {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+          }
+          .stripes {
+            display: flex;
+            height: 8mm;
+            gap: 0.5pt;
+            align-items: stretch;
+          }
+          .stripe {
+            background: #000;
+          }
+          .barcode-val {
+            font-family: 'Courier New', monospace;
+            font-size: 7pt;
+            font-weight: 600;
+            margin-top: 1pt;
+            letter-spacing: 0.1em;
+          }
+          .price {
+            font-family: 'Inter', sans-serif;
+            font-size: 9pt;
+            font-weight: 800;
+            margin-top: 1mm;
+            border-top: 0.5pt solid #e2e8f0;
+            width: 100%;
+            padding-top: 1pt;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="grid">
+          ${labelsHtml}
+        </div>
+      </body>
+      </html>
     `;
   }
 }

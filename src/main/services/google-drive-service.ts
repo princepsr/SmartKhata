@@ -13,10 +13,15 @@ import { logger } from '../utils/logger';
 
 export class GoogleDriveService {
   private static instance: GoogleDriveService;
-  private drive: drive_v3.Drive;
+  private _drive: drive_v3.Drive | null = null;
 
-  private constructor() {
-    this.drive = google.drive({ version: 'v3', auth: googleAuthService.getClient() });
+  private constructor() {}
+
+  private get drive(): drive_v3.Drive {
+    if (!this._drive) {
+      this._drive = google.drive({ version: 'v3', auth: googleAuthService.getClient() });
+    }
+    return this._drive;
   }
 
   public static getInstance(): GoogleDriveService {

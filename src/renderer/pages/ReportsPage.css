@@ -165,34 +165,114 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
+  margin-top: 1rem;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.chart-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.chart-selector {
+  display: flex;
+  background-color: var(--bg-app);
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  gap: 0.25rem;
+}
+
+.btn-chart-opt {
+  height: 30px;
+  padding: 0 0.75rem;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-chart-opt:hover {
+  color: var(--text-primary);
+}
+
+.btn-chart-opt.active {
+  background-color: white;
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .bar-chart {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: center;
   height: 250px;
-  padding-top: 2rem;
-  gap: 8px;
+  padding-top: 1rem;
+  gap: 20px;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.bar-chart::-webkit-scrollbar {
+  display: none;
 }
 
 .bar-group {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
+  min-width: 50px;
   height: 100%;
   justify-content: flex-end;
   gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.bar-tooltip {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+}
+
+.bar-value {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .bar {
   width: 100%;
-  max-width: 40px;
+  max-width: 44px;
   background: linear-gradient(to top, var(--color-primary), var(--color-primary-light));
   border-radius: 4px 4px 0 0;
-  transition: height 0.5s ease-out;
-  min-height: 4px;
+  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 2px;
+}
+
+.bar.negative {
+  background: linear-gradient(to bottom, var(--color-danger), #f87171);
+  border-radius: 0 0 4px 4px;
 }
 
 .bar:hover {
@@ -324,6 +404,39 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+/* Sub-tabs styling (Matches main navigation tabs) */
+.sub-tabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  background-color: var(--bg-app);
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+.sub-tab {
+  padding: 0.4rem 1rem;
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--radius-md) - 2px);
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.sub-tab:hover {
+  color: var(--text-primary);
+}
+
+.sub-tab.active {
+  background-color: white !important;
+  color: var(--color-primary) !important;
+  box-shadow: var(--shadow-sm);
+}
+
 /* Content Area */
 .reports-content {
   flex: 1;
@@ -335,14 +448,14 @@
 /* Summary Cards Grid */
 .summary-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* Slightly wider min-width */
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); /* Slightly wider min-width */
   gap: 1.5rem;
   margin-bottom: 1rem;
 }
 
 .card {
   background: var(--bg-panel);
-  padding: 1.5rem;
+  padding: 1.5rem 1rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
@@ -435,7 +548,7 @@
 }
 
 .card .value {
-  font-size: 1.85rem; /* Slightly balanced */
+  font-size: 1.5rem; /* Slightly balanced */
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.2;
@@ -749,6 +862,45 @@
   transform: translateY(-1px);
 }
 
+.btn-whatsapp {
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  color: white;
+  border: none;
+  padding: 0 1.25rem;
+  height: 42px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow:
+    0 4px 6px -1px rgba(37, 211, 102, 0.2),
+    0 2px 4px -1px rgba(37, 211, 102, 0.1);
+}
+
+.btn-whatsapp:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 10px 15px -3px rgba(37, 211, 102, 0.3),
+    0 4px 6px -2px rgba(37, 211, 102, 0.2);
+  filter: brightness(1.05);
+}
+
+.btn-whatsapp:active {
+  transform: translateY(0);
+}
+
+.btn-whatsapp:disabled {
+  background: var(--text-mutated);
+  cursor: not-allowed;
+  opacity: 0.7;
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-sm {
   height: 32px !important;
   padding: 0 0.75rem !important;
@@ -909,6 +1061,13 @@
 .rich-tooltip-trigger {
   position: relative;
   display: block;
+}
+
+.rich-tooltip-trigger.bar-tooltip {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
 }
 
 .rich-tooltip {

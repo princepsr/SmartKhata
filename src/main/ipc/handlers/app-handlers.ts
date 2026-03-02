@@ -1,7 +1,8 @@
 import { app, shell } from 'electron';
-import { logger } from '../../utils/logger';
-import { IPCHandler } from '../ipc-handler';
+import { logger } from '../../utils/logger.js';
+import { IPCHandler } from '../ipc-handler.js';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
+import { shutdownManager } from '../../utils/shutdown-manager.js';
 
 /**
  * Register App Handlers
@@ -22,9 +23,17 @@ export function registerAppHandlers(): void {
   });
 
   // Restart Application
-  IPCHandler.handle<void, void>(IPC_CHANNELS.APP_RESTART, () => {
-    app.relaunch();
-    app.exit(0);
+  IPCHandler.handle<void, void>(IPC_CHANNELS.APP_RESTART, async () => {
+    logger.info('App restart requested via IPC');
+    try {
+      await shutdownManager.shutdown();
+      logger.info('Graceful shutdown complete, relaunching...');
+    } catch (error) {
+      logger.error('Shutdown before restart failed', error);
+    } finally {
+      app.relaunch();
+      app.exit(0);
+    }
   });
 
   // Report Renderer Error

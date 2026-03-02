@@ -54,7 +54,7 @@ The service supports dynamic HTML generation for different paper sizes.
 ### Common Features
 
 - **Header**: Shop Name, Address, Phone, GSTIN.
-- **Footer**: Thank you message, "Powered by SmartKhata".
+- **Footer**: Thank you message, "Powered by SmartKhata", and **"This is a Computer Generated Invoice. No Signature Required."** legal notice.
 - **Typography**: Monospaced fonts for numerical alignment.
 
 ---

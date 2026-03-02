@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
+import EmptyState from '../components/common/EmptyState';
 import './ExpensesPage.css';
 
 interface Expense {
@@ -27,6 +28,7 @@ const CATEGORIES = [
 
 function ExpensesPage() {
   const [showModal, setShowModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     category: 'Other',
     amount: '',
@@ -44,11 +46,19 @@ function ExpensesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = (await createExpense({
+
+    // Combine date with current time
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    const fullDate = `${formData.date} ${timeStr}`;
+
+    const result = await createExpense({
       ...formData,
       amount: parseFloat(formData.amount),
-    })) as any;
-    if (result.success) {
+      date: fullDate,
+    });
+
+    if (result) {
       setShowModal(false);
       setFormData({
         category: 'Other',
@@ -61,70 +71,96 @@ function ExpensesPage() {
     }
   };
 
-  const totalExpenses = data?.reduce((sum, e) => sum + e.amount, 0) || 0;
+  const filteredExpenses = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+    const search = searchTerm.trim().toLowerCase();
+    if (!search) {
+      return data;
+    }
+    return data.filter((e) => {
+      const category = e.category?.toLowerCase() || '';
+      const description = e.description?.toLowerCase() || '';
+      return category.includes(search) || description.includes(search);
+    });
+  }, [data, searchTerm]);
 
   return (
-    <div className="page expenses-page animate-fade-in">
-      <header className="page-header">
-        <div className="header-info">
+    <div className="page expenses-page">
+      <div className="page-content-wrapper animate-fade-in">
+        <header className="page-header">
           <h1 className="page-title">Expense Management</h1>
-          <p className="page-subtitle">Track your shop's daily expenditures</p>
-        </div>
-        <div className="header-stats">
-          <div className="stat-card">
-            <span className="stat-label">Total Expenses</span>
-            <span className="stat-value">{formatCurrency(totalExpenses)}</span>
-          </div>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            + Record Expense
-          </button>
-        </div>
-      </header>
 
-      <div className="page-content">
-        <div className="data-table-container card">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Method</th>
-                <th className="text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="text-center">
-                    Loading expenses...
-                  </td>
-                </tr>
-              ) : data?.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center">
-                    No expenses recorded yet.
-                  </td>
-                </tr>
-              ) : (
-                data?.map((expense) => (
-                  <tr key={expense.id}>
-                    <td>{formatDateTime(expense.date)}</td>
-                    <td>
-                      <span className={`category-badge ${expense.category.toLowerCase()}`}>
-                        {expense.category}
-                      </span>
-                    </td>
-                    <td>{expense.description}</td>
-                    <td className="text-capitalize">{expense.paymentMode}</td>
-                    <td className="text-right font-bold text-danger">
-                      -{formatCurrency(expense.amount)}
-                    </td>
-                  </tr>
+          <div className="header-actions">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search expenses..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              autoFocus
+            />
+            <button className="btn-primary" onClick={() => setShowModal(true)}>
+              + Record Expense
+            </button>
+          </div>
+        </header>
+
+        <div className="expenses-content">
+          <div className="data-table-container">
+            <div className="data-table-header">
+              <div className="col-date">Date</div>
+              <div className="col-category">Category</div>
+              <div className="col-desc">Description</div>
+              <div className="col-method">Method</div>
+              <div className="col-amount text-right">Amount</div>
+            </div>
+
+            {loading ? (
+              Array(5)
+                .fill(0)
+                .map((_, i) => (
+                  <div key={i} className="data-table-row skeleton-row">
+                    <div className="skeleton-line"></div>
+                  </div>
                 ))
-              )}
-            </tbody>
-          </table>
+            ) : filteredExpenses.length === 0 ? (
+              <EmptyState
+                title="No Expenses Found"
+                message={
+                  searchTerm
+                    ? `We couldn't find any expenses matching "${searchTerm}".`
+                    : 'Track your shop expenditures by recording a new expense.'
+                }
+                icon="💸"
+                action={
+                  !searchTerm
+                    ? {
+                        label: 'Record First Expense',
+                        onClick: () => setShowModal(true),
+                      }
+                    : undefined
+                }
+              />
+            ) : (
+              filteredExpenses.map((expense) => (
+                <div key={expense.id} className="data-table-row hover-row">
+                  <div className="col-date">{formatDateTime(expense.date)}</div>
+                  <div className="col-category">
+                    <span className={`category-badge ${expense.category.toLowerCase()}`}>
+                      {expense.category}
+                    </span>
+                  </div>
+                  <div className="col-desc truncate">{expense.description || '-'}</div>
+                  <div className="col-method text-capitalize">{expense.paymentMode}</div>
+                  <div className="col-amount text-right expense-amount">
+                    -{formatCurrency(expense.amount)}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 

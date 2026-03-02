@@ -256,6 +256,44 @@ function SettingsPage() {
             </>
           )}
         </div>
+      </div>
+
+      <div className="settings-section-card">
+        {/* Payment Integrations */}
+        <div className="section-header">
+          <h3>Payment Integrations</h3>
+        </div>
+        <p className="settings-description">Configure dynamic payment methods for checkout</p>
+
+        <div className="settings-grid">
+          <div className="form-group">
+            <label htmlFor="upiId">Store UPI ID (VPA)</label>
+            <input
+              type="text"
+              id="upiId"
+              value={settings.upiId || ''}
+              onChange={(e) => updateSettings({ upiId: e.target.value })}
+              className="form-input"
+              placeholder="9876543210@paytm"
+            />
+            <p className="help-text">
+              Used to dynamically generate a payment QR code during billing.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="upiName">Payee Name</label>
+            <input
+              type="text"
+              id="upiName"
+              value={settings.upiName || ''}
+              onChange={(e) => updateSettings({ upiName: e.target.value })}
+              className="form-input"
+              placeholder="SmartKhata Store"
+            />
+            <p className="help-text">The display name shown when the customer scans the QR code.</p>
+          </div>
+        </div>
 
         <div className="settings-footer">
           <button
@@ -433,42 +471,6 @@ function SettingsPage() {
               Enable Barcode Generator
             </label>
             <p className="help-text">Generate and print custom barcode labels for your products.</p>
-          </div>
-        </div>
-
-        {/* Payment Integrations */}
-        <div className="section-header" style={{ marginTop: '2rem' }}>
-          <h3>💸 Payment Integrations</h3>
-          <p>Configure dynamic payment methods for checkout</p>
-        </div>
-
-        <div className="settings-grid">
-          <div className="form-group">
-            <label htmlFor="upiId">Store UPI ID (VPA)</label>
-            <input
-              type="text"
-              id="upiId"
-              value={settings.upiId || ''}
-              onChange={(e) => updateSettings({ upiId: e.target.value })}
-              className="form-input"
-              placeholder="e.g. 9876543210@paytm"
-            />
-            <p className="help-text">
-              Used to dynamically generate a payment QR code during billing.
-            </p>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="upiName">Payee Name</label>
-            <input
-              type="text"
-              id="upiName"
-              value={settings.upiName || ''}
-              onChange={(e) => updateSettings({ upiName: e.target.value })}
-              className="form-input"
-              placeholder="e.g. SmartKhata Store"
-            />
-            <p className="help-text">The display name shown when the customer scans the QR code.</p>
           </div>
         </div>
 

@@ -46,7 +46,6 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
 
   // High contrast for readability
   const isEven = index % 2 === 0;
-  const rowStyle = isEven ? { backgroundColor: '#f9fafb' } : { backgroundColor: '#ffffff' };
 
   useEffect(() => {
     if (autoFocus && inputRef.current) {
@@ -90,15 +89,7 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
 
   const handleDiscBlur = () => {
     const val = parseFloat(discValueStr) || 0;
-    onUpdateDiscount(item.product.id, val, item.discountType || 'amount');
-  };
-
-  const toggleDiscType = () => {
-    onUpdateDiscount(
-      item.product.id,
-      parseFloat(discValueStr) || 0,
-      item.discountType === 'percent' ? 'amount' : 'percent'
-    );
+    onUpdateDiscount(item.product.id, val, item.discountType || 'percent');
   };
 
   // Medical Mode: Strip -> Tablet logic
@@ -111,110 +102,74 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
   };
 
   return (
-    <div className="cart-item" style={rowStyle}>
-      {/* Product Name (Immutable Snapshot) */}
-      <div className="item-name">
-        <div
-          style={{
-            fontWeight: 600,
-            fontSize: '1.1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          {item.product.name}
+    <div className={`cart-item ${isEven ? 'even' : 'odd'}`}>
+      <div className="item-name-cell">
+        <div className="product-info">
+          <span className="product-title">{item.product.name}</span>
           {item.product.batchNumber && (
-            <span
-              style={{
-                fontSize: '0.7rem',
-                background: '#eef2ff',
-                color: '#4338ca',
-                padding: '2px 6px',
-                borderRadius: '4px',
-              }}
-            >
-              Batch: {item.product.batchNumber}
-            </span>
+            <span className="batch-badge">Batch: {item.product.batchNumber}</span>
           )}
         </div>
-        <div style={{ fontSize: '0.85rem', color: '#666', display: 'flex', gap: '8px' }}>
+        <div className="product-meta-sub">
           <span>SKU: {item.product.sku || 'N/A'}</span>
           {item.product.expiryDate && (
-            <span
-              style={{ color: new Date(item.product.expiryDate) < new Date() ? 'red' : '#666' }}
-            >
+            <span className={new Date(item.product.expiryDate) < new Date() ? 'expired' : ''}>
               Exp: {new Date(item.product.expiryDate).toLocaleDateString()}
             </span>
           )}
         </div>
         {settings.appMode === 'MEDICAL' && item.product.saltName && (
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontStyle: 'italic' }}>
-            {item.product.saltName}
-          </div>
+          <div className="salt-name">{item.product.saltName}</div>
         )}
       </div>
 
-      {/* Quantity Control (Editable) */}
-      <div
-        className="quantity-control-cell"
-        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.25rem',
-          }}
-        >
+      <div className="quantity-control-cell">
+        <div className="qty-input-group">
+          <button
+            className="qty-btn minus"
+            onClick={() =>
+              onUpdateQuantity(
+                item.product.id,
+                Math.max(0, item.quantity - (item.product.isWeightBased ? 0.1 : 1))
+              )
+            }
+            disabled={item.quantity <= 0}
+          >
+            −
+          </button>
           <input
             ref={inputRef}
-            className="quantity-input"
+            className="quantity-input-field"
             value={inputValue}
             onChange={handleChange}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            style={{
-              width: '4rem',
-              textAlign: 'center',
-              fontWeight: 'bold',
-              padding: '0.4rem',
-              border: '2px solid #e5e7eb',
-              borderRadius: '6px',
-              fontSize: '1rem',
-            }}
           />
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6b7280', width: '30px' }}>
-            {item.product.uom || 'Pcs'}
-          </span>
+          <button
+            className="qty-btn plus"
+            onClick={() =>
+              onUpdateQuantity(
+                item.product.id,
+                item.quantity + (item.product.isWeightBased ? 0.1 : 1)
+              )
+            }
+          >
+            +
+          </button>
         </div>
+        <span className="uom-label">{item.product.uom || 'Pcs'}</span>
 
         {isMedicalStrip && (
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div className="tab-controls">
             <button
-              className="btn-tiny"
+              className="btn-tab-adjust"
               onClick={() => handleTabletInput(Math.round(item.quantity * stripSize) + 1)}
-              style={{
-                fontSize: '0.7rem',
-                padding: '2px 4px',
-                border: '1px solid #ddd',
-                borderRadius: '3px',
-                background: 'white',
-              }}
             >
               +1 Tab
             </button>
             <button
-              className="btn-tiny"
+              className="btn-tab-adjust"
               onClick={() => handleTabletInput(Math.round(item.quantity * stripSize) - 1)}
-              style={{
-                fontSize: '0.7rem',
-                padding: '2px 4px',
-                border: '1px solid #ddd',
-                borderRadius: '3px',
-                background: 'white',
-              }}
             >
               -1 Tab
             </button>
@@ -222,81 +177,57 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
         )}
       </div>
 
-      {/* Unit Price */}
-      <div style={{ textAlign: 'right' }}>
-        <div>{formatCurrency(item.product.salePrice)}</div>
+      <div className="price-cell">
+        <div className="main-price">{formatCurrency(item.product.salePrice)}</div>
         {isMedicalStrip && (
-          <div style={{ fontSize: '0.7rem', color: '#666' }}>
+          <div className="sub-price">
             {formatCurrency(item.product.salePrice / stripSize)} / tab
           </div>
         )}
       </div>
 
-      {/* Item Discount */}
-      <div
-        className="item-discount-cell"
-        style={{ display: 'flex', gap: '2px', alignItems: 'center' }}
-      >
-        <input
-          type="number"
-          value={discValueStr}
-          onChange={(e) => setDiscValueStr(e.target.value)}
-          onBlur={handleDiscBlur}
-          placeholder="0"
-          style={{
-            width: '3.5rem',
-            padding: '4px',
-            border: '2px solid #e5e7eb',
-            borderRadius: '6px',
-            fontSize: '0.9rem',
-            textAlign: 'right',
-          }}
-        />
-        <button
-          onClick={toggleDiscType}
-          style={{
-            padding: '4px 6px',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            fontSize: '0.8rem',
-            background: item.discountType === 'percent' ? 'var(--color-primary)' : '#f3f4f6',
-            color: item.discountType === 'percent' ? 'white' : '#374151',
-            cursor: 'pointer',
-            fontWeight: 600,
-          }}
-          title="Toggle between ₹ and %"
-        >
-          {item.discountType === 'percent' ? '%' : '₹'}
-        </button>
+      <div className="item-discount-cell">
+        <div className="disc-input-group">
+          <input
+            type="number"
+            className="disc-input-field"
+            value={discValueStr}
+            onChange={(e) => setDiscValueStr(e.target.value)}
+            onBlur={handleDiscBlur}
+            placeholder="0"
+          />
+          <div className="disc-toggle-group-mini">
+            <button
+              className={`disc-toggle-btn-mini ${item.discountType !== 'percent' ? 'active' : ''}`}
+              onClick={() =>
+                onUpdateDiscount(item.product.id, parseFloat(discValueStr) || 0, 'amount')
+              }
+            >
+              ₹
+            </button>
+            <button
+              className={`disc-toggle-btn-mini ${item.discountType === 'percent' ? 'active' : ''}`}
+              onClick={() =>
+                onUpdateDiscount(item.product.id, parseFloat(discValueStr) || 0, 'percent')
+              }
+            >
+              %
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Line Total (Precise Blueprint Calc) */}
-      <div
-        style={{
-          textAlign: 'right',
-          fontWeight: 'bold',
-          color: 'var(--color-primary)',
-          fontSize: '1.1rem',
-        }}
-      >
+      <div className="line-total-cell">
         {formatCurrency(
           calculatedLine ? calculatedLine.lineTotal : item.product.salePrice * item.quantity
         )}
       </div>
 
-      {/* Remove Action */}
       <button
-        className="btn-icon btn-remove"
+        className="btn-item-remove"
         onClick={() => onRemove(item.product.id)}
         aria-label="Remove item"
         tabIndex={0}
-        style={{
-          color: '#ef4444',
-          fontSize: '1.5rem',
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-        }}
       >
         ×
       </button>

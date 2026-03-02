@@ -434,7 +434,7 @@ function Layout() {
                         <span className="nav-icon">
                           <QuotationsIcon />
                         </span>
-                        <span className="nav-label">Quotations</span>
+                        <span className="nav-label">Quotation</span>
                         <kbd className="nav-shortcut">F9</kbd>
                       </NavLink>
                     )}
