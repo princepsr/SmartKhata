@@ -44,6 +44,9 @@ export interface AddProductInput {
   uom?: string;
   isWeightBased?: boolean;
   stripSize?: number;
+  drugCategory?: string;
+  variantGroupId?: string;
+  lastSaleDate?: string;
 }
 
 /**
@@ -67,6 +70,9 @@ export interface UpdateProductData {
   uom?: string;
   isWeightBased?: boolean;
   stripSize?: number;
+  drugCategory?: string;
+  variantGroupId?: string;
+  lastSaleDate?: string;
 }
 
 /**
@@ -133,6 +139,9 @@ export class ProductService extends BaseService {
       uom: input.uom,
       isWeightBased: input.isWeightBased,
       stripSize: input.stripSize,
+      drugCategory: input.drugCategory,
+      variantGroupId: input.variantGroupId,
+      lastSaleDate: input.lastSaleDate,
     };
 
     try {
@@ -251,6 +260,15 @@ export class ProductService extends BaseService {
       isGstInclusive: updates.isGstInclusive,
       trackInventory: updates.trackInventory,
       hsnCode: updates.hsnCode,
+      batchNumber: updates.batchNumber,
+      expiryDate: updates.expiryDate,
+      saltName: updates.saltName,
+      uom: updates.uom,
+      isWeightBased: updates.isWeightBased,
+      stripSize: updates.stripSize,
+      drugCategory: updates.drugCategory,
+      variantGroupId: updates.variantGroupId,
+      lastSaleDate: updates.lastSaleDate,
     };
 
     try {

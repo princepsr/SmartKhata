@@ -399,7 +399,7 @@
 }
 
 .quantity-input-field {
-  width: 45px;
+  width: 60px;
   border: none;
   background: transparent;
   text-align: center;
@@ -407,6 +407,7 @@
   font-size: 0.9rem;
   color: var(--text-primary);
   outline: none;
+  padding: 0;
 }
 
 .uom-label {
@@ -414,6 +415,31 @@
   font-weight: 700;
   color: var(--text-mutated);
   text-transform: uppercase;
+}
+
+.weight-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.weight-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0 4px 0 8px;
+  height: 32px;
+}
+
+.weight-label-tag {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  border-left: 1px solid var(--border-color);
+  padding-left: 6px;
+  margin-left: 4px;
 }
 
 .tab-controls {

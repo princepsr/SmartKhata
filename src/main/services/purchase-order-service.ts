@@ -8,9 +8,12 @@ export class PurchaseOrderService {
     this.repository = new PurchaseOrderRepository();
   }
 
-  async list(options?: any): Promise<{ data: PurchaseOrder[]; total: number }> {
+  async list(options?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<{ data: PurchaseOrder[]; total: number }> {
     try {
-      const data = await this.repository.listPurchaseOrders();
+      const data = await this.repository.listPurchaseOrders(options);
       return { data, total: data.length };
     } catch (error) {
       console.error('Error in PurchaseOrderService.list:', error);
@@ -21,7 +24,9 @@ export class PurchaseOrderService {
   async getById(id: number): Promise<PurchaseOrder> {
     try {
       const po = await this.repository.getPurchaseOrderById(id);
-      if (!po) throw new Error(`Purchase order ${id} not found`);
+      if (!po) {
+        throw new Error(`Purchase order ${id} not found`);
+      }
       return po;
     } catch (error) {
       console.error('Error in PurchaseOrderService.getById:', error);
@@ -34,6 +39,15 @@ export class PurchaseOrderService {
       return await this.repository.createPurchaseOrder(data);
     } catch (error) {
       console.error('Error in PurchaseOrderService.create:', error);
+      throw error;
+    }
+  }
+
+  async update(id: number, data: Partial<PurchaseOrder>): Promise<PurchaseOrder> {
+    try {
+      return await this.repository.updatePurchaseOrder(id, data);
+    } catch (error) {
+      console.error('Error in PurchaseOrderService.update:', error);
       throw error;
     }
   }

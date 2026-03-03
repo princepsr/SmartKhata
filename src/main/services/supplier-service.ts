@@ -15,7 +15,7 @@ export class SupplierService extends BaseService {
   }
 
   public createSupplier(input: CreateSupplierInput): any {
-    this._validateSupplierInput(input as any);
+    this._validateSupplierInput(input);
 
     if (input.phone) {
       const existing = this.supplierRepo.findByPhone(input.phone);
@@ -51,7 +51,9 @@ export class SupplierService extends BaseService {
 
   public getSupplier(id: number): any {
     const supplier = this.supplierRepo.findById(id);
-    if (!supplier) throw new NotFoundError('Supplier', id);
+    if (!supplier) {
+      throw new NotFoundError('Supplier', id);
+    }
     return supplier;
   }
 
@@ -60,16 +62,55 @@ export class SupplierService extends BaseService {
   }
 
   public searchSuppliers(query: string): any[] {
-    if (!query.trim()) return [];
+    if (!query.trim()) {
+      return [];
+    }
     return this.supplierRepo.search(query);
+  }
+
+  public getSupplierHistory(id: number): any {
+    const supplier = this.supplierRepo.findById(id);
+    if (!supplier) {
+      throw new NotFoundError('Supplier', id);
+    }
+
+    const ledger = this.supplierRepo.getLedgerBySupplierId(id);
+    return {
+      supplier: {
+        id: supplier.id,
+        name: supplier.name,
+        balanceDue: supplier.balanceDue,
+      },
+      ledger,
+    };
   }
 
   public updateBalance(id: number, deltaAmount: number): void {
     const supplier = this.supplierRepo.findById(id);
-    if (!supplier) throw new NotFoundError('Supplier', id);
-    if (!supplier.isActive) throw new Error('Supplier is inactive');
+    if (!supplier) {
+      throw new NotFoundError('Supplier', id);
+    }
+    if (!supplier.isActive) {
+      throw new Error('Supplier is inactive');
+    }
 
     this.supplierRepo.updateBalance(id, deltaAmount);
+  }
+
+  public addManualPayment(supplierId: number, amount: number, notes?: string): void {
+    const supplier = this.supplierRepo.findById(supplierId);
+    if (!supplier) {
+      throw new NotFoundError('Supplier', supplierId);
+    }
+
+    const type = amount > 0 ? 'PAYMENT_IN' : 'PAYMENT_OUT';
+
+    this.supplierRepo.addManualPayment({
+      supplierId,
+      amount,
+      type,
+      notes: notes || (amount > 0 ? 'Payment Received (Refund)' : 'Payment Given'),
+    });
   }
 
   private _validateSupplierInput(input: CreateSupplierInput): void {

@@ -192,6 +192,9 @@ export const IPC_CHANNELS = {
   SUPPLIER_GET: 'supplier:get',
   SUPPLIER_UPDATE: 'supplier:update',
   SUPPLIER_SEARCH: 'supplier:search',
+  SUPPLIER_HISTORY: 'supplier:history',
+  SUPPLIER_ADD_PAYMENT: 'supplier:addPayment',
+  SUPPLIER_TOGGLE_STATUS: 'supplier:toggleStatus',
 
   PO_LIST: 'po:list',
   PO_GET: 'po:get',
@@ -343,6 +346,7 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.SUPPLIER_GET,
     IPC_CHANNELS.SUPPLIER_UPDATE,
     IPC_CHANNELS.SUPPLIER_SEARCH,
+    IPC_CHANNELS.SUPPLIER_HISTORY,
   ],
   QUOTATION: [
     IPC_CHANNELS.QUOTATION_CREATE,

@@ -20,11 +20,9 @@ export function registerPurchaseHandlers(): void {
     async (input) => {
       const result = purchaseService.recordPurchase(input);
       return {
-        purchase: {
-          ...result.purchase,
-          createdAt: result.purchase.createdAt.getTime(),
-          updatedAt: result.purchase.updatedAt.getTime(),
-        },
+        ...result.purchase,
+        createdAt: result.purchase.createdAt.getTime(),
+        updatedAt: result.purchase.updatedAt.getTime(),
         items: result.items,
       };
     },
@@ -61,11 +59,9 @@ export function registerPurchaseHandlers(): void {
         throw new Error('Purchase not found');
       }
       return {
-        purchase: {
-          ...result.purchase,
-          createdAt: result.purchase.createdAt.getTime(),
-          updatedAt: result.purchase.updatedAt.getTime(),
-        },
+        ...result.purchase,
+        createdAt: result.purchase.createdAt.getTime(),
+        updatedAt: result.purchase.updatedAt.getTime(),
         items: result.items,
       };
     },

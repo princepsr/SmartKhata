@@ -19,6 +19,12 @@
   margin: 0;
 }
 
+.page-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
 .header-actions {
   display: flex;
   gap: 1rem;
@@ -86,36 +92,112 @@
   font-family: var(--font-mono);
 }
 
-/* Data Table Layout for Purchases */
+/* Shared Data Table Layout (Scoped to Procurement) */
 .purchases-page .data-table-header {
   display: grid;
-  /* 7 columns: Date, Purchase #, Supplier, Inv, GST, Grand, Actions */
-  grid-template-columns: 1.2fr 1.8fr 2.5fr 1.2fr 1.2fr 1.5fr 0.8fr;
   padding: 1rem;
   background-color: var(--color-bg-secondary);
   border-bottom: 2px solid var(--color-border);
   font-weight: 600;
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   align-items: center;
   position: sticky;
   top: 0;
   z-index: 10;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .purchases-page .data-table-row {
   display: grid;
-  grid-template-columns: 1.2fr 1.8fr 2.5fr 1.2fr 1.2fr 1.5fr 0.8fr;
-  padding: 0.8rem 1rem;
+  padding: 1rem; /* Standardized padding */
   border-bottom: 1px solid var(--color-border);
   align-items: center;
-  transition: background-color 0.1s;
+  transition: background-color 0.15s ease;
   cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  min-width: 0; /* Prevent cells from forcing container width */
 }
 
 .purchases-page .data-table-row:hover {
   background-color: var(--color-bg-secondary);
+}
+
+/* Grid Column Templates */
+.purchases-page .grid-purchases {
+  grid-template-columns: 1fr 1.5fr 2fr 1fr 1fr 1.2fr 80px;
+}
+
+.purchases-page .grid-orders {
+  grid-template-columns: 1fr 1.5fr 2fr 1.2fr 140px 140px;
+}
+
+.purchases-page .grid-suppliers {
+  grid-template-columns: 2fr 1.5fr 1.5fr 1.2fr 100px 150px;
+  gap: 0.5rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-right: 0.5rem;
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+  height: auto;
+  line-height: 1;
+}
+
+.purchases-page .data-table-container {
+  overflow: hidden; /* Prevent ANY scrollbars inside the card unless content is explicitly too wide */
+  width: 100%;
+}
+
+/* Status Badges */
+.status-badge {
+  padding: 0.25rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
+  text-align: center;
+}
+
+.status-badge.active,
+.status-badge.received,
+.status-badge.completed {
+  background-color: rgba(22, 163, 74, 0.1);
+  color: var(--color-success);
+}
+
+.status-badge.inactive {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.status-badge.pending {
+  background-color: rgba(234, 179, 8, 0.1);
+  color: #ca8a04;
+}
+
+.status-badge.cancelled,
+.status-badge.rejected {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--color-error);
 }
 
 /* Data Table Columns for Purchases */
@@ -167,38 +249,159 @@
 
 .purchases-page .action-icon-btn:hover {
   background-color: rgba(37, 99, 235, 0.08);
-  color: var(--primary-color);
+  color: var(--color-primary);
   opacity: 1;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
 }
 
+/* Edit - Blue Theme */
+.purchases-page .action-icon-btn.action-edit:hover {
+  background-color: rgba(37, 99, 235, 0.08);
+  color: var(--color-primary);
+}
+
+/* Settle/Receive - Green Theme */
+.purchases-page .action-icon-btn.action-settle:hover {
+  background-color: rgba(16, 185, 129, 0.08);
+  color: #10b981;
+}
+
+/* Ledger - Lighter Blue Theme */
+.purchases-page .action-icon-btn.action-ledger:hover {
+  background-color: rgba(59, 130, 246, 0.08);
+  color: #3b82f6;
+}
+
+/* Toggle - Power Button States */
+.purchases-page .action-icon-btn.action-toggle.active {
+  color: var(--color-text-secondary);
+}
+
+.purchases-page .action-icon-btn.action-toggle.active:hover {
+  background-color: rgba(220, 38, 38, 0.08);
+  color: var(--color-error);
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
+}
+
+.purchases-page .action-icon-btn.action-toggle.inactive {
+  color: var(--color-success);
+  opacity: 1;
+}
+
+.purchases-page .action-icon-btn.action-toggle.inactive:hover {
+  background-color: rgba(22, 163, 74, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.1);
+}
+
 /* Modal Styling */
 .purchase-form-modal {
   width: 900px !important;
-  max-width: 95vw;
+  max-width: 98vw;
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: 1.5fr 1fr 0.8fr 1fr 1fr; /* 5 columns for all header fields */
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+  align-items: flex-end;
 }
 
+.header-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem; /* Reduced gap */
+  min-height: 60px; /* Reduced height */
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.form-group label small {
+  font-weight: 400;
+  opacity: 0.7;
+  font-size: 0.75rem;
+}
+
+.form-group input,
+.form-group select {
+  height: 42px; /* Standardize height */
+  padding: 0 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.radio-group {
+  display: flex;
+  gap: 1rem;
+  height: 42px;
+  align-items: center;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.radio-label input[type='radio'] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
 .items-section {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 12px;
-  margin-bottom: 2rem;
+  /* Removed background and padding to align with header */
+  margin-bottom: 1.5rem;
 }
 
 .items-section h3 {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   font-size: 1.1rem;
   color: var(--text-primary);
+  font-weight: 700;
 }
 
+/* Grid-based items table - more responsive and aligned */
+.grid-items {
+  display: grid;
+  grid-template-columns: 2.2fr 0.8fr 70px 110px 95px 120px 40px; /* Adjusted ratios and widths */
+  gap: 0.75rem; /* Increased gap */
+  align-items: center;
+}
+
+.items-table-header {
+  padding: 0.5rem 0.25rem;
+  border-bottom: 2px solid var(--color-border);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+/* Classic table styling for record purchase form */
 .items-entry-table {
   width: 100%;
   border-collapse: collapse;
@@ -207,35 +410,93 @@
 
 .items-entry-table th {
   text-align: left;
-  padding: 8px;
-  font-size: 0.85rem;
-  text-transform: uppercase;
+  padding: 0.75rem 0.5rem;
+  border-bottom: 2px solid var(--color-border);
   color: var(--color-text-secondary);
-  border-bottom: 2px solid #dee2e6;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .items-entry-table td {
-  padding: 8px;
+  padding: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
 }
 
 .items-entry-table input,
 .items-entry-table select {
-  width: 100%;
-  padding: 0.6rem;
+  height: 38px;
+  padding: 0 0.6rem;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   background: white;
+  width: 100%;
+  font-size: 0.95rem;
+}
+
+.items-table-row {
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.items-table-row:last-child {
+  border-bottom: none;
+}
+
+.items-table-row input,
+.items-table-row select {
+  height: 38px;
+  padding: 0 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: white;
+  width: 100%;
+}
+
+.items-table-row input:focus,
+.items-table-row select:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.items-table-row .col-total {
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .btn-remove {
   background: none;
   border: none;
-  color: #dc3545;
-  font-size: 1.5rem;
+  color: #94a3b8; /* Subtle color */
+  font-size: 1.25rem;
   cursor: pointer;
-  padding: 0 5px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.btn-remove:hover {
+  color: #ef4444; /* Bright red on hover */
+}
+
+/* Hide number input spinners more aggressively */
+.items-section input[type='number']::-webkit-inner-spin-button,
+.items-section input[type='number']::-webkit-outer-spin-button,
+.purchase-form-modal input[type='number']::-webkit-inner-spin-button,
+.purchase-form-modal input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  margin: 0 !important;
+}
+
+.items-section input[type='number'],
+.purchase-form-modal input[type='number'] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  -moz-appearance: textfield !important;
 }
 
 .btn-remove:hover {
@@ -244,7 +505,9 @@
 
 .purchase-footer {
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem; /* Reduced gap */
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
 }
 
 .notes-area {
@@ -282,47 +545,59 @@
 
 .btn-outline {
   background: white;
-  border: 1px dashed var(--primary-color);
-  color: var(--primary-color);
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
+  border: 1px solid var(--color-primary); /* Changed to solid to fix animation */
+  color: var(--color-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 0.85rem;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 
 .btn-outline:hover {
-  background: var(--bg-secondary);
-  border-style: solid;
+  background: rgba(30, 58, 138, 0.05); /* Subtle primary tint */
+  transform: translateY(-1px);
 }
 
-/* Tabs */
-.purchases-tabs {
+.btn-outline:active {
+  transform: translateY(0);
+}
+
+/* Tabs Styling (Matches Reports Page) */
+.purchases-page .tabs {
   display: flex;
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border);
-  padding: 0 1.5rem;
+  gap: 0.25rem;
+  background-color: var(--color-bg-secondary);
+  padding: 0.25rem;
+  border-radius: var(--radius-lg);
+  width: fit-content;
+  margin-bottom: 1.5rem;
 }
 
-.tab-btn {
-  background: none;
+.purchases-page .tabs button {
+  padding: 0.5rem 1.25rem;
   border: none;
-  padding: var(--spacing-sm) 0;
-  font-size: 1rem;
-  font-weight: 500;
+  background: transparent;
+  border-radius: var(--radius-md);
+  font-weight: 600;
   color: var(--color-text-secondary);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s ease;
-  margin-bottom: -1px;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  white-space: nowrap;
 }
 
-.tab-btn:hover {
-  color: var(--text-primary);
+.purchases-page .tabs button:hover {
+  color: var(--color-text);
 }
 
-.tab-btn.active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
+.purchases-page .tabs button.active {
+  background-color: white;
+  color: var(--color-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }

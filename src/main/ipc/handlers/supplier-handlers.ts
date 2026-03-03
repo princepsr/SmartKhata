@@ -42,4 +42,26 @@ export function registerSupplierHandlers(): void {
     async (id) => supplierService.getSupplier(id),
     { transformError: getUserFriendlyMessage }
   );
+
+  IPCHandler.handle<number, any>(
+    IPC_CHANNELS.SUPPLIER_HISTORY,
+    async (id) => supplierService.getSupplierHistory(id),
+    { transformError: getUserFriendlyMessage }
+  );
+
+  IPCHandler.handle<{ id: number; amount: number; notes?: string }, void>(
+    IPC_CHANNELS.SUPPLIER_ADD_PAYMENT,
+    async ({ id, amount, notes }) => {
+      supplierService.addManualPayment(id, amount, notes);
+    },
+    { transformError: getUserFriendlyMessage }
+  );
+
+  IPCHandler.handle<{ id: number; isActive: boolean }, void>(
+    IPC_CHANNELS.SUPPLIER_TOGGLE_STATUS,
+    async ({ id, isActive }) => {
+      supplierService.updateSupplier(id, { isActive });
+    },
+    { transformError: getUserFriendlyMessage }
+  );
 }

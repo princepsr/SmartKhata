@@ -36,6 +36,8 @@ export interface RecordPurchaseInput {
   notes?: string;
   updateInventory?: boolean; // Default true in Pro
   supplierId?: number; // Optional: link to supplier table
+  paymentStatus?: 'PENDING' | 'PAID' | 'PARTIAL';
+  amountPaid?: number;
 }
 
 export interface PurchaseNetGstLiability {
@@ -69,7 +71,24 @@ export class PurchaseService extends BaseService {
     }
 
     const config = SettingsService.getInstance().getConfig();
-    const isIntrastate = config.supplyType !== 'interstate';
+    const shopGstin = config.gstNumber || '';
+    const shopStateCode = shopGstin.substring(0, 2);
+    const supplierGstin = input.supplierGstin || '';
+    const supplierStateCode = supplierGstin.substring(0, 2);
+
+    let isIntrastate = true;
+    if (
+      shopStateCode &&
+      supplierStateCode &&
+      /^\d+$/.test(shopStateCode) &&
+      /^\d+$/.test(supplierStateCode)
+    ) {
+      // If both state codes exist and are numeric, compare them
+      isIntrastate = shopStateCode === supplierStateCode;
+    } else {
+      // Fallback to manual supply type setting if GSTINs are missing or invalid
+      isIntrastate = config.supplyType === 'intrastate';
+    }
 
     let totalTaxable = 0;
     let totalCgst = 0;
@@ -77,10 +96,51 @@ export class PurchaseService extends BaseService {
     let totalIgst = 0;
     let grandTotal = 0;
 
-    const repoItems: CreatePurchaseItemInput[] = input.items.map((item) => {
-      if (item.quantity <= 0) throw new ValidationError('Quantity must be positive', 'quantity');
-      if (item.unitPrice < 0)
+    const productRepo = new ProductRepository();
+
+    // Pre-process items to auto-create missing products
+    const processedItems = input.items.map((item) => {
+      let productId = item.productId;
+      if (!productId) {
+        // Try to find by exact name first
+        const existing = productRepo
+          .findAll()
+          .find((p) => p.name.toLowerCase() === item.productName.toLowerCase());
+        if (existing) {
+          productId = existing.id;
+        } else {
+          try {
+            const newProduct = productRepo.create({
+              name: item.productName,
+              salePrice: item.unitPrice, // Default sale price to purchase price
+              purchasePrice: item.unitPrice,
+              gstPercent: item.gstPercent,
+              hsnCode: item.hsnCode,
+              stockQty: 0, // Will be incremented later
+              trackInventory: true,
+            });
+            productId = newProduct.id;
+            logger.info('Auto-created missing product during purchase', {
+              productId,
+              name: item.productName,
+            });
+          } catch (err) {
+            logger.error('Failed to auto-create product', {
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+      }
+      return { ...item, productId };
+    });
+
+    const repoItems: CreatePurchaseItemInput[] = processedItems.map((item) => {
+      if (item.quantity <= 0) {
+        throw new ValidationError('Quantity must be positive', 'quantity');
+      }
+      if (item.unitPrice < 0) {
         throw new ValidationError('Unit price cannot be negative', 'unitPrice');
+      }
 
       const lineTaxable = Math.round(item.unitPrice * item.quantity * 100) / 100;
       const lineGst = Math.round(((lineTaxable * item.gstPercent) / 100) * 100) / 100;
@@ -142,14 +202,59 @@ export class PurchaseService extends BaseService {
         gstTotal,
         grandTotal,
         notes: input.notes,
+        paymentStatus: input.paymentStatus,
+        amountPaid: input.amountPaid,
+        supplierId: input.supplierId,
       },
       repoItems
     );
 
+    // Automation: Ledger and Balance
+    if (input.supplierId) {
+      const supplierRepo = new SupplierRepository();
+      try {
+        // 1. Record the Purchase in Ledger
+        this.purchaseRepo.recordLedgerEntry({
+          supplierId: input.supplierId,
+          amount: grandTotal,
+          type: 'PURCHASE',
+          referenceId: purchase.purchase.id,
+          notes: input.notes,
+        });
+
+        // 2. Record the Payment in Ledger if any
+        const paidAmount = input.amountPaid || 0;
+        if (paidAmount > 0) {
+          this.purchaseRepo.recordLedgerEntry({
+            supplierId: input.supplierId,
+            amount: paidAmount,
+            type: 'PAYMENT_OUT',
+            referenceId: purchase.purchase.id,
+            notes: `Payment for ${purchaseNumber}`,
+          });
+        }
+
+        // 3. Update Balance (Net increase = Grand Total - Paid)
+        const balanceDelta = grandTotal - paidAmount;
+        supplierRepo.updateBalance(input.supplierId, balanceDelta);
+
+        logger.info('Updated supplier ledger and balance', {
+          supplierId: input.supplierId,
+          total: grandTotal,
+          paid: paidAmount,
+          delta: balanceDelta,
+        });
+      } catch (err) {
+        logger.error('Failed to update supplier ledger/balance', {
+          supplierId: input.supplierId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
     // Automation: Update Inventory stock
     if (input.updateInventory !== false) {
-      const productRepo = new ProductRepository();
-      input.items.forEach((item) => {
+      processedItems.forEach((item) => {
         if (item.productId) {
           try {
             productRepo.updateStock(item.productId, item.quantity);
@@ -165,23 +270,6 @@ export class PurchaseService extends BaseService {
           }
         }
       });
-    }
-
-    // Automation: Update Supplier Balance
-    if (input.supplierId) {
-      const supplierRepo = new SupplierRepository();
-      try {
-        supplierRepo.updateBalance(input.supplierId, grandTotal);
-        logger.info('Updated supplier balance from purchase', {
-          supplierId: input.supplierId,
-          amountAdded: grandTotal,
-        });
-      } catch (err) {
-        logger.error('Failed to update supplier balance', {
-          supplierId: input.supplierId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
     }
 
     return purchase;
@@ -238,7 +326,9 @@ export class PurchaseService extends BaseService {
     if (last) {
       const parts = last.split('-');
       const lastSeq = parseInt(parts[parts.length - 1], 10);
-      if (!isNaN(lastSeq)) seq = lastSeq + 1;
+      if (!isNaN(lastSeq)) {
+        seq = lastSeq + 1;
+      }
     }
     return `${prefix}${String(seq).padStart(4, '0')}`;
   }

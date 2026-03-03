@@ -105,6 +105,7 @@ export interface PurchaseOrder {
   poNumber: string;
   supplierId: number;
   supplierName: string;
+  supplierGstin?: string;
   poDate: string;
   totalTaxable: number;
   gstTotal: number;
@@ -114,6 +115,36 @@ export interface PurchaseOrder {
   items?: PurchaseOrderItem[];
   createdAt: string | Date;
   updatedAt: string | Date;
+}
+
+/**
+ * Supplier Entity
+ */
+export interface Supplier {
+  id: number;
+  name: string;
+  phone: string | null;
+  gstin: string | null;
+  address: string | null;
+  email: string | null;
+  balanceDue: number;
+  isActive: boolean;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+/**
+ * Supplier Ledger Entry
+ */
+export interface SupplierLedgerEntry {
+  id: number;
+  supplierId: number;
+  amount: number;
+  type: 'PURCHASE' | 'PAYMENT_OUT' | 'PAYMENT_IN' | 'OPENING_BALANCE';
+  referenceId?: number;
+  referenceNumber?: string;
+  notes?: string;
+  createdAt: string | Date;
 }
 
 /**

@@ -65,11 +65,25 @@ function SettingsPage() {
     if (!settings.shopName.trim()) {
       errors.shopName = 'Shop Name is required';
     }
+    if (settings.gstEnabled) {
+      if (!settings.address?.trim()) {
+        errors.address = 'Postal Address is required for GST compliance';
+      }
+      if (!settings.gstNumber?.trim()) {
+        errors.gstNumber = 'GST Number is required';
+      } else if (!/^[0-9A-Z]{15}$/.test(settings.gstNumber)) {
+        errors.gstNumber = 'GST Number must be 15 alphanumeric characters';
+      }
+      if (!settings.stateCode?.trim()) {
+        errors.stateCode = 'State Code is required';
+      }
+      if (!settings.placeOfSupply?.trim()) {
+        errors.placeOfSupply = 'Place of Supply is required';
+      }
+    }
+
     if (settings.phone && !/^\d{10}$/.test(settings.phone.replace(/[\s-()]/g, ''))) {
       errors.phone = 'Phone must be a 10-digit number';
-    }
-    if (settings.gstEnabled && settings.gstNumber && !/^[0-9A-Z]{15}$/.test(settings.gstNumber)) {
-      errors.gstNumber = 'GST Number must be 15 alphanumeric characters';
     }
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -156,15 +170,18 @@ function SettingsPage() {
           </div>
 
           <div className="form-group full-width">
-            <label htmlFor="shopAddress">Postal Address</label>
+            <label htmlFor="shopAddress">Postal Address {settings.gstEnabled && '*'}</label>
             <textarea
               id="shopAddress"
               value={settings.address || ''}
               onChange={(e) => updateSettings({ address: e.target.value })}
-              className="form-input"
+              className={`form-input ${validationErrors.address ? 'error' : ''}`}
               rows={3}
               placeholder="Full address for receipt printing..."
             />
+            {validationErrors.address && (
+              <span className="error-text">{validationErrors.address}</span>
+            )}
           </div>
 
           <div className="form-group">
@@ -183,76 +200,74 @@ function SettingsPage() {
           {settings.gstEnabled && (
             <>
               <div className="form-group">
-                <label htmlFor="gstNumber">GST Number (GSTIN)</label>
+                <label htmlFor="gstNumber">GST Number (GSTIN) *</label>
                 <input
                   id="gstNumber"
                   type="text"
                   value={settings.gstNumber || ''}
                   onChange={(e) => updateSettings({ gstNumber: e.target.value.toUpperCase() })}
                   className={`form-input ${validationErrors.gstNumber ? 'error' : ''}`}
-                  placeholder="15-character GSTIN (Optional)"
+                  placeholder="15-character GSTIN"
                 />
                 {validationErrors.gstNumber && (
                   <span className="error-text">{validationErrors.gstNumber}</span>
                 )}
               </div>
 
-              {settings.gstNumber && (
-                <>
-                  <div className="form-group">
-                    <label htmlFor="supplyType">Supply Type (GST)</label>
-                    <select
-                      id="supplyType"
-                      value={settings.supplyType || 'intrastate'}
-                      onChange={(e) =>
-                        updateSettings({
-                          supplyType: e.target.value as 'intrastate' | 'interstate',
-                        })
-                      }
-                      className="form-input"
-                    >
-                      <option value="intrastate">Intra-State (CGST + SGST)</option>
-                      <option value="interstate">Inter-State (IGST)</option>
-                    </select>
-                    <p className="help-text">
-                      Intra-State: buyer &amp; seller in the same state. Inter-State: different
-                      states.
-                    </p>
-                  </div>
+              <div className="form-group">
+                <label htmlFor="supplyType">Supply Type (GST)</label>
+                <select
+                  id="supplyType"
+                  value={settings.supplyType || 'intrastate'}
+                  onChange={(e) =>
+                    updateSettings({
+                      supplyType: e.target.value as 'intrastate' | 'interstate',
+                    })
+                  }
+                  className="form-input"
+                >
+                  <option value="intrastate">Intra-State (CGST + SGST)</option>
+                  <option value="interstate">Inter-State (IGST)</option>
+                </select>
+                <p className="help-text">
+                  Intra-State: buyer &amp; seller in the same state. Inter-State: different states.
+                </p>
+              </div>
 
-                  <div className="form-group">
-                    <label htmlFor="stateCode">State Code (2-digit)</label>
-                    <input
-                      id="stateCode"
-                      type="text"
-                      maxLength={2}
-                      value={settings.stateCode || ''}
-                      onChange={(e) => updateSettings({ stateCode: e.target.value })}
-                      className={`form-input ${validationErrors.stateCode ? 'error' : ''}`}
-                      placeholder="e.g. 07 (Delhi), 27 (Maharashtra)"
-                    />
-                    {validationErrors.stateCode && (
-                      <span className="error-text">{validationErrors.stateCode}</span>
-                    )}
-                    <p className="help-text">
-                      Two-digit GST state code (first 2 digits of your GSTIN).
-                    </p>
-                  </div>
+              <div className="form-group">
+                <label htmlFor="stateCode">State Code (2-digit) *</label>
+                <input
+                  id="stateCode"
+                  type="text"
+                  maxLength={2}
+                  value={settings.stateCode || ''}
+                  onChange={(e) => updateSettings({ stateCode: e.target.value })}
+                  className={`form-input ${validationErrors.stateCode ? 'error' : ''}`}
+                  placeholder="e.g. 07 (Delhi), 27 (Maharashtra)"
+                />
+                {validationErrors.stateCode && (
+                  <span className="error-text">{validationErrors.stateCode}</span>
+                )}
+                <p className="help-text">
+                  Two-digit GST state code (first 2 digits of your GSTIN).
+                </p>
+              </div>
 
-                  <div className="form-group">
-                    <label htmlFor="placeOfSupply">Place of Supply</label>
-                    <input
-                      id="placeOfSupply"
-                      type="text"
-                      value={settings.placeOfSupply || ''}
-                      onChange={(e) => updateSettings({ placeOfSupply: e.target.value })}
-                      className="form-input"
-                      placeholder="e.g. Maharashtra, Delhi"
-                    />
-                    <p className="help-text">Printed on Tax Invoice as required by GST law.</p>
-                  </div>
-                </>
-              )}
+              <div className="form-group">
+                <label htmlFor="placeOfSupply">Place of Supply *</label>
+                <input
+                  id="placeOfSupply"
+                  type="text"
+                  value={settings.placeOfSupply || ''}
+                  onChange={(e) => updateSettings({ placeOfSupply: e.target.value })}
+                  className={`form-input ${validationErrors.placeOfSupply ? 'error' : ''}`}
+                  placeholder="e.g. Maharashtra, Delhi"
+                />
+                {validationErrors.placeOfSupply && (
+                  <span className="error-text">{validationErrors.placeOfSupply}</span>
+                )}
+                <p className="help-text">Printed on Tax Invoice as required by GST law.</p>
+              </div>
             </>
           )}
         </div>

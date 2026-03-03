@@ -15,6 +15,8 @@ export interface Purchase {
   gstTotal: number;
   grandTotal: number;
   notes: string | null;
+  paymentStatus: 'PENDING' | 'PAID' | 'PARTIAL';
+  amountPaid: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +55,9 @@ export interface CreatePurchaseInput {
   gstTotal: number;
   grandTotal: number;
   notes?: string;
+  paymentStatus?: 'PENDING' | 'PAID' | 'PARTIAL';
+  amountPaid?: number;
+  supplierId?: number;
 }
 
 export interface CreatePurchaseItemInput {
@@ -92,8 +97,8 @@ export class PurchaseRepository extends BaseRepository {
         INSERT INTO purchases (
           purchase_number, supplier_name, supplier_gstin, invoice_number, invoice_date,
           total_taxable, cgst_amount, sgst_amount, igst_amount, gst_total,
-          grand_total, notes, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          grand_total, notes, payment_status, amount_paid, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const result = this.execute(sql, [
         data.purchaseNumber,
@@ -108,6 +113,8 @@ export class PurchaseRepository extends BaseRepository {
         data.gstTotal,
         data.grandTotal,
         data.notes ?? null,
+        data.paymentStatus || 'PENDING',
+        data.amountPaid || 0,
         this.formatDateForSql(now),
         this.formatDateForSql(now),
       ]);
@@ -176,12 +183,37 @@ export class PurchaseRepository extends BaseRepository {
           gstTotal: data.gstTotal,
           grandTotal: data.grandTotal,
           notes: data.notes ?? null,
+          paymentStatus: (data.paymentStatus as any) || 'PENDING',
+          amountPaid: data.amountPaid || 0,
           createdAt: now,
           updatedAt: now,
         },
         items: createdItems,
       };
     });
+  }
+
+  /**
+   * Record a transaction in the supplier ledger
+   */
+  public recordLedgerEntry(entry: {
+    supplierId: number;
+    amount: number;
+    type: 'PURCHASE' | 'PAYMENT_OUT' | 'OPENING_BALANCE';
+    referenceId?: number;
+    notes?: string;
+  }): void {
+    const sql = `
+      INSERT INTO supplier_ledger (supplier_id, amount, type, reference_id, notes)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+    this.execute(sql, [
+      entry.supplierId,
+      entry.amount,
+      entry.type,
+      entry.referenceId ?? null,
+      entry.notes ?? null,
+    ]);
   }
 
   /**
@@ -286,6 +318,8 @@ export class PurchaseRepository extends BaseRepository {
       gstTotal: row.gst_total,
       grandTotal: row.grand_total,
       notes: row.notes,
+      paymentStatus: row.payment_status || 'PENDING',
+      amountPaid: row.amount_paid || 0,
       createdAt: this.parseDate(row.created_at),
       updatedAt: this.parseDate(row.updated_at),
     };

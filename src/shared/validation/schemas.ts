@@ -59,6 +59,15 @@ export const CreateProductSchema = z.object({
   isGstInclusive: z.boolean().optional(),
   isActive: z.boolean().optional(),
   hsnCode: z.string().max(20, 'HSN Code must be less than 20 characters').optional().nullable(),
+  batchNumber: z.string().max(100).optional().nullable(),
+  expiryDate: z.string().max(20).optional().nullable(),
+  saltName: z.string().max(200).optional().nullable(),
+  uom: z.string().max(20).optional().nullable(),
+  isWeightBased: z.boolean().optional(),
+  stripSize: z.number().int().positive().optional(),
+  drugCategory: z.string().max(100).optional().nullable(),
+  variantGroupId: z.string().max(100).optional().nullable(),
+  lastSaleDate: z.string().max(20).optional().nullable(),
 });
 
 // Infer TypeScript type from schema
@@ -119,6 +128,15 @@ export const UpdateProductSchema = z.object({
       isActive: z.boolean().optional(),
 
       hsnCode: z.string().max(20, 'HSN Code must be less than 20 characters').optional().nullable(),
+      batchNumber: z.string().max(100).optional().nullable(),
+      expiryDate: z.string().max(20).optional().nullable(),
+      saltName: z.string().max(200).optional().nullable(),
+      uom: z.string().max(20).optional().nullable(),
+      isWeightBased: z.boolean().optional(),
+      stripSize: z.number().int().positive().optional(),
+      drugCategory: z.string().max(100).optional().nullable(),
+      variantGroupId: z.string().max(100).optional().nullable(),
+      lastSaleDate: z.string().max(20).optional().nullable(),
     })
     .refine((data) => Object.keys(data).length > 0, {
       message: 'At least one field must be provided for update',

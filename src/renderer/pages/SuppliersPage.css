@@ -1,10 +1,10 @@
 .suppliers-page {
-  padding: var(--spacing-md);
+  padding: 0;
 }
 
 .supplier-name {
-  font-weight: 500;
-  color: var(--text-primary);
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .supplier-contact {
@@ -14,10 +14,10 @@
 }
 
 .balance-due {
-  color: var(--danger-color);
+  color: var(--color-danger);
   font-weight: 600;
 }
 
 .balance-settled {
-  color: var(--success-color);
+  color: var(--color-success);
 }

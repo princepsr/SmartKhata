@@ -1,4 +1,4 @@
-import { BaseRepository, DatabaseError } from './base-repository';
+import { BaseRepository } from './base-repository';
 import { logger } from '../utils/logger';
 
 /**
@@ -15,6 +15,20 @@ export interface Supplier {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/**
+ * Supplier Ledger Entry
+ */
+export interface SupplierLedgerEntry {
+  id: number;
+  supplierId: number;
+  amount: number;
+  type: 'PURCHASE' | 'PAYMENT_OUT' | 'PAYMENT_IN' | 'OPENING_BALANCE';
+  referenceId?: number;
+  referenceNumber?: string; // invoice_number from purchases
+  notes?: string;
+  createdAt: Date;
 }
 
 /**
@@ -44,21 +58,35 @@ export interface UpdateSupplierInput {
  */
 export class SupplierRepository extends BaseRepository {
   public create(data: CreateSupplierInput): Supplier {
-    const sql = `
-      INSERT INTO suppliers (name, phone, gstin, address, email, balance_due)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-    const result = this.execute(sql, [
-      data.name,
-      data.phone || null,
-      data.gstin || null,
-      data.address || null,
-      data.email || null,
-      data.balanceDue || 0,
-    ]);
+    return this.transaction(() => {
+      const sql = `
+        INSERT INTO suppliers (name, phone, gstin, address, email, balance_due)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `;
+      const result = this.execute(sql, [
+        data.name,
+        data.phone || null,
+        data.gstin || null,
+        data.address || null,
+        data.email || null,
+        data.balanceDue || 0,
+      ]);
 
-    logger.info('Supplier created', { id: result.lastInsertRowid, name: data.name });
-    return this.findById(Number(result.lastInsertRowid))!;
+      const supplierId = Number(result.lastInsertRowid);
+
+      // Add opening balance entry to ledger if balanceDue != 0
+      if (data.balanceDue && data.balanceDue !== 0) {
+        this.addLedgerEntry({
+          supplierId,
+          amount: Math.abs(data.balanceDue),
+          type: 'OPENING_BALANCE',
+          notes: 'Initial balance at creation',
+        });
+      }
+
+      logger.info('Supplier created', { id: supplierId, name: data.name });
+      return this.findById(supplierId)!;
+    });
   }
 
   public update(id: number, data: UpdateSupplierInput): Supplier {
@@ -78,7 +106,9 @@ export class SupplierRepository extends BaseRepository {
       }
     });
 
-    if (fields.length === 0) throw new Error('No fields to update');
+    if (fields.length === 0) {
+      throw new Error('No fields to update');
+    }
     fields.push("updated_at = datetime('now')");
 
     const sql = `UPDATE suppliers SET ${fields.join(', ')} WHERE id = ?`;
@@ -121,6 +151,75 @@ export class SupplierRepository extends BaseRepository {
   public updateBalance(id: number, delta: number): void {
     const sql = `UPDATE suppliers SET balance_due = balance_due + ?, updated_at = datetime('now') WHERE id = ?`;
     this.execute(sql, [delta, id]);
+  }
+
+  /**
+   * Add a ledger entry
+   */
+  public addLedgerEntry(data: {
+    supplierId: number;
+    amount: number;
+    type: 'PURCHASE' | 'PAYMENT_OUT' | 'PAYMENT_IN' | 'OPENING_BALANCE';
+    referenceId?: number;
+    notes?: string;
+  }): void {
+    const sql = `
+      INSERT INTO supplier_ledger (supplier_id, amount, type, reference_id, notes)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+    this.execute(sql, [
+      data.supplierId,
+      data.amount,
+      data.type,
+      data.referenceId || null,
+      data.notes || null,
+    ]);
+  }
+
+  /**
+   * Add a manual payment transaction (updates balance + ledger)
+   */
+  public addManualPayment(data: {
+    supplierId: number;
+    amount: number;
+    type: 'PAYMENT_IN' | 'PAYMENT_OUT';
+    notes?: string;
+  }): void {
+    this.transaction(() => {
+      this.updateBalance(data.supplierId, data.amount);
+      this.addLedgerEntry({
+        supplierId: data.supplierId,
+        amount: Math.abs(data.amount),
+        type: data.type,
+        notes: data.notes,
+      });
+    });
+  }
+
+  /**
+   * Get ledger entries for a supplier
+   */
+  public getLedgerBySupplierId(supplierId: number): SupplierLedgerEntry[] {
+    const sql = `
+      SELECT 
+        sl.*,
+        p.invoice_number as reference_number
+      FROM supplier_ledger sl
+      LEFT JOIN purchases p ON sl.reference_id = p.id
+      WHERE sl.supplier_id = ?
+      ORDER BY sl.created_at DESC, sl.id DESC
+    `;
+    const rows = this.queryAll<any>(sql, [supplierId]);
+    return rows.map((row) => ({
+      id: row.id,
+      supplierId: row.supplier_id,
+      amount: row.amount,
+      type: row.type,
+      referenceId: row.reference_id,
+      referenceNumber: row.reference_number,
+      notes: row.notes,
+      createdAt: this.parseDate(row.created_at),
+    }));
   }
 
   private _mapToSupplier(row: any): Supplier {

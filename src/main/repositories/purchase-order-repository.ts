@@ -5,16 +5,28 @@ export class PurchaseOrderRepository extends BaseRepository {
   /**
    * List all purchase orders
    */
-  async listPurchaseOrders(): Promise<PurchaseOrder[]> {
-    const query = `
+  async listPurchaseOrders(options?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<PurchaseOrder[]> {
+    let query = `
       SELECT 
         po.*,
-        s.name as supplier_name
+        s.name as supplier_name,
+        s.gstin as supplier_gstin
       FROM purchase_orders po
       LEFT JOIN suppliers s ON po.supplier_id = s.id
-      ORDER BY po.created_at DESC
     `;
-    const rows = this.db.prepare(query).all() as any[];
+
+    const params: any[] = [];
+    if (options?.startDate && options?.endDate) {
+      query += ` WHERE po.po_date BETWEEN ? AND ? `;
+      params.push(options.startDate, options.endDate);
+    }
+
+    query += ` ORDER BY po.po_date DESC, po.created_at DESC `;
+
+    const rows = this.db.prepare(query).all(...params) as any[];
     return rows.map((row) => this.mapDbToPurchaseOrder(row));
   }
 
@@ -25,7 +37,8 @@ export class PurchaseOrderRepository extends BaseRepository {
     const query = `
       SELECT 
         po.*,
-        s.name as supplier_name
+        s.name as supplier_name,
+        s.gstin as supplier_gstin
       FROM purchase_orders po
       LEFT JOIN suppliers s ON po.supplier_id = s.id
       WHERE po.id = ?
@@ -61,10 +74,10 @@ export class PurchaseOrderRepository extends BaseRepository {
   async createPurchaseOrder(data: Partial<PurchaseOrder>): Promise<PurchaseOrder> {
     const insertPO = this.db.prepare(`
       INSERT INTO purchase_orders (
-        po_number, supplier_id, supplier_name_snapshot, po_date, 
+        po_number, supplier_id, supplier_name_snapshot, supplier_gstin_snapshot, po_date, 
         total_taxable, gst_total, grand_total, status, notes
       ) VALUES (
-        @poNumber, @supplierId, @supplierNameSnapshot, @poDate, 
+        @poNumber, @supplierId, @supplierNameSnapshot, @supplierGstinSnapshot, @poDate, 
         @totalTaxable, @gstTotal, @grandTotal, @status, @notes
       )
     `);
@@ -110,6 +123,7 @@ export class PurchaseOrderRepository extends BaseRepository {
         poNumber: newPoNumber,
         supplierId: poData.supplierId,
         supplierNameSnapshot: poData.supplierNameSnapshot || 'Unknown',
+        supplierGstinSnapshot: poData.supplierGstin || null,
         poDate: poData.poDate || new Date().toISOString().split('T')[0],
         totalTaxable: poData.totalTaxable || 0,
         gstTotal: poData.gstTotal || 0,
@@ -165,6 +179,84 @@ export class PurchaseOrderRepository extends BaseRepository {
   }
 
   /**
+   * Update an existing purchase order
+   */
+  async updatePurchaseOrder(id: number, data: Partial<PurchaseOrder>): Promise<PurchaseOrder> {
+    const updatePO = this.db.prepare(`
+      UPDATE purchase_orders SET
+        po_number = @poNumber,
+        supplier_id = @supplierId,
+        supplier_name_snapshot = @supplierNameSnapshot,
+        supplier_gstin_snapshot = @supplierGstinSnapshot,
+        po_date = @poDate,
+        total_taxable = @totalTaxable,
+        gst_total = @gstTotal,
+        grand_total = @grandTotal,
+        notes = @notes,
+        updated_at = datetime('now')
+      WHERE id = @id
+    `);
+
+    const deleteItems = this.db.prepare(
+      'DELETE FROM purchase_order_items WHERE purchase_order_id = ?'
+    );
+
+    const insertItem = this.db.prepare(`
+      INSERT INTO purchase_order_items (
+        purchase_order_id, product_id, product_name, hsn_code,
+        quantity, unit_price, gst_percent, line_total
+      ) VALUES (
+        @poId, @productId, @productName, @hsnCode,
+        @quantity, @unitPrice, @gstPercent, @lineTotal
+      )
+    `);
+
+    const transaction = this.db.transaction((poData: any) => {
+      // 1. Update PO Header
+      updatePO.run({
+        id,
+        poNumber: poData.poNumber,
+        supplierId: poData.supplierId,
+        supplierNameSnapshot: poData.supplierNameSnapshot || 'Unknown',
+        supplierGstinSnapshot: poData.supplierGstin || null,
+        poDate: poData.poDate,
+        totalTaxable: poData.totalTaxable || 0,
+        gstTotal: poData.gstTotal || 0,
+        grandTotal: poData.grandTotal || 0,
+        notes: poData.notes || null,
+      });
+
+      // 2. Refresh Items (Delete and Re-insert)
+      deleteItems.run(id);
+
+      if (poData.items && poData.items.length > 0) {
+        for (const item of poData.items) {
+          insertItem.run({
+            poId: id,
+            productId: item.productId || null,
+            productName: item.productName,
+            hsnCode: item.hsnCode || null,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            gstPercent: item.gstPercent,
+            lineTotal: item.lineTotal,
+          });
+        }
+      }
+
+      return id;
+    });
+
+    try {
+      transaction(data);
+      return this.getPurchaseOrderById(id) as Promise<PurchaseOrder>;
+    } catch (error) {
+      console.error('Error updating purchase order:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Map DB row to PurchaseOrder entity
    */
   private mapDbToPurchaseOrder(row: any): PurchaseOrder {
@@ -173,6 +265,7 @@ export class PurchaseOrderRepository extends BaseRepository {
       poNumber: row.po_number,
       supplierId: row.supplier_id,
       supplierName: row.supplier_name || row.supplier_name_snapshot,
+      supplierGstin: row.supplier_gstin_snapshot || row.supplier_gstin,
       poDate: row.po_date,
       totalTaxable: row.total_taxable,
       gstTotal: row.gst_total,

@@ -197,10 +197,22 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       finalValue = (e.target as HTMLInputElement).checked;
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: finalValue,
-    }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: finalValue };
+
+      // Auto-update UOM logic
+      if (name === 'isWeightBased' && finalValue === true) {
+        if (updated.uom === 'Pcs' || !updated.uom) {
+          updated.uom = 'Kg';
+        }
+      } else if (name === 'isWeightBased' && finalValue === false) {
+        if (updated.uom === 'Kg') {
+          updated.uom = 'Pcs';
+        }
+      }
+
+      return updated;
+    });
 
     // Clear error for this field
     if (name in errors) {
@@ -388,6 +400,20 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   disabled={isLoading}
                 />
               </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Unit of Measure (UOM)</label>
+                <input
+                  type="text"
+                  name="uom"
+                  value={formData.uom}
+                  onChange={handleChange}
+                  placeholder="e.g. Pcs, Kg, Strip, Ltr"
+                  disabled={isLoading}
+                />
+              </div>
               {settings.gstEnabled && (
                 <div className="form-group">
                   <label>HSN / SAC (Optional)</label>
@@ -398,7 +424,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     onChange={handleChange}
                     placeholder="8-digit code"
                     disabled={isLoading}
-                    maxLength={8}
+                    maxLength={12}
                   />
                 </div>
               )}

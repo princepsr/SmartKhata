@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import { Purchase } from '@shared/types/ipc';
+import { Purchase, Supplier, PurchaseOrder, Product } from '@shared/types/ipc';
 import { formatCurrency } from '../utils/formatters';
 import { useAppSettingsStore } from '../store';
 import EmptyState from '../components/common/EmptyState';
-import SuppliersPage from './SuppliersPage';
+import SuppliersPage, { SuppliersPageHandle } from './SuppliersPage';
 import PurchaseOrdersTab from '../components/purchases/PurchaseOrdersTab';
+import PurchaseOrderFormModal from '../components/purchases/PurchaseOrderFormModal';
+import SearchableSelect from '../components/ui/SearchableSelect';
 import './PurchasesPage.css';
 
 // Local item type for the form
@@ -22,12 +25,25 @@ interface PurchaseItem {
 
 const PurchasesPage: React.FC = () => {
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [poDataForPurchase, setPoDataForPurchase] = useState<PurchaseOrder | null>(null);
   const [viewingPurchaseId, setViewingPurchaseId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'purchases' | 'suppliers' | 'orders'>('purchases');
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
   });
+  const [refreshOrderKey, setRefreshOrderKey] = useState(0);
+  const suppliersPageRef = React.useRef<SuppliersPageHandle>(null);
+
+  const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
+  const [showInactiveSuppliers, setShowInactiveSuppliers] = useLocalStorage(
+    'suppliers_show_inactive',
+    false
+  );
+  const [showDuesOnlySuppliers, setShowDuesOnlySuppliers] = useLocalStorage(
+    'suppliers_show_dues_only',
+    false
+  );
 
   const {
     data: purchases,
@@ -36,6 +52,7 @@ const PurchasesPage: React.FC = () => {
   } = useIPC<{ data: Purchase[]; total: number }>(IPC_CHANNELS.PURCHASE_LIST);
 
   const { settings } = useAppSettingsStore();
+  const { execute: fetchPoDetails } = useIPCMutation<number, PurchaseOrder>(IPC_CHANNELS.PO_GET);
 
   useEffect(() => {
     if (settings.gstEnabled) {
@@ -58,138 +75,222 @@ const PurchasesPage: React.FC = () => {
   return (
     <div className="page purchases-page">
       <div className="page-content-wrapper animate-fade-in">
-        <header className="page-header" style={{ marginBottom: '0.5rem' }}>
-          <h1 className="page-title">Procurement</h1>
-          {activeTab === 'purchases' && (
-            <div className="header-actions">
-              <div className="filters">
-                <input
-                  type="date"
-                  value={dateRange.startDate}
-                  onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                />
-                <span>to</span>
-                <input
-                  type="date"
-                  value={dateRange.endDate}
-                  onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                />
-              </div>
-              <button className="btn-primary" onClick={() => setIsAddingNew(true)}>
-                + Record Purchase
-              </button>
-            </div>
-          )}
+        <header className="page-header">
+          <div>
+            <h1 className="page-title">Procurement</h1>
+          </div>
+          <div className="header-actions">
+            {(activeTab === 'purchases' || activeTab === 'orders') && (
+              <>
+                <div className="filters">
+                  <input
+                    type="date"
+                    value={dateRange.startDate}
+                    onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                  />
+                  <span>to</span>
+                  <input
+                    type="date"
+                    value={dateRange.endDate}
+                    onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                  />
+                </div>
+                {activeTab === 'purchases' ? (
+                  <button className="btn-primary" onClick={() => setIsAddingNew(true)}>
+                    + Record Purchase
+                  </button>
+                ) : (
+                  <button className="btn-primary" onClick={() => setIsAddingNew(true)}>
+                    + Create Purchase Order
+                  </button>
+                )}
+              </>
+            )}
+            {activeTab === 'suppliers' && (
+              <>
+                <div className="filter-group">
+                  <label className="filter-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={showInactiveSuppliers}
+                      onChange={(e) => setShowInactiveSuppliers(e.target.checked)}
+                    />
+                    Show Inactive
+                  </label>
+                  <label className="filter-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={showDuesOnlySuppliers}
+                      onChange={(e) => setShowDuesOnlySuppliers(e.target.checked)}
+                    />
+                    Show Dues Only
+                  </label>
+                </div>
+                <div className="search-bar">
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Search Name / Phone / GSTIN"
+                    value={supplierSearchQuery}
+                    onChange={(e) => setSupplierSearchQuery(e.target.value)}
+                  />
+                </div>
+                <button
+                  className="btn-primary"
+                  onClick={() => suppliersPageRef.current?.handleCreateNew()}
+                >
+                  + Add Supplier
+                </button>
+              </>
+            )}
+          </div>
         </header>
 
-        <div className="purchases-tabs">
+        <div className="tabs" style={{ margin: '0 1.5rem 1.5rem' }}>
           <button
-            className={`tab-btn ${activeTab === 'purchases' ? 'active' : ''}`}
+            className={activeTab === 'purchases' ? 'active' : ''}
             onClick={() => setActiveTab('purchases')}
           >
             Purchases & Invoices
           </button>
           <button
-            className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
+            className={activeTab === 'orders' ? 'active' : ''}
             onClick={() => setActiveTab('orders')}
           >
             Purchase Orders
           </button>
           <button
-            className={`tab-btn ${activeTab === 'suppliers' ? 'active' : ''}`}
+            className={activeTab === 'suppliers' ? 'active' : ''}
             onClick={() => setActiveTab('suppliers')}
           >
             Suppliers & Ledgers
           </button>
         </div>
 
-        {activeTab === 'purchases' ? (
-          <div className="purchases-content">
-            {loading ? (
-              <div className="loading-state">Loading purchases...</div>
-            ) : !purchases || purchases.data.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">📦</div>
-                <h3>No purchases found</h3>
-                <p>Start recording your supplier invoices to track Input Tax Credit (ITC).</p>
-                <button className="btn-secondary" onClick={() => setIsAddingNew(true)}>
-                  Record Your First Purchase
-                </button>
-              </div>
-            ) : (
-              <div className="data-table-container">
-                <div className="data-table-header">
-                  <div className="col-date">Date</div>
-                  <div className="col-purchase-no">Purchase #</div>
-                  <div className="col-supplier">Supplier</div>
-                  <div className="col-inv">Inv #</div>
-                  <div className="col-total text-right">GST Total</div>
-                  <div className="col-grand-total text-right">Grand Total</div>
-                  <div className="col-actions text-center">Actions</div>
-                </div>
-
-                {purchases.data.map((p) => (
-                  <div className="data-table-row" key={p.id}>
-                    <div className="col-date">
-                      {new Date(p.invoiceDate).toLocaleDateString('en-IN')}
-                    </div>
-                    <div className="col-purchase-no font-mono">{p.purchaseNumber}</div>
-                    <div className="col-supplier">
-                      <div className="supplier-info">
-                        <span className="name">{p.supplierName}</span>
-                        {p.supplierGstin && <span className="gstin">{p.supplierGstin}</span>}
-                      </div>
-                    </div>
-                    <div className="col-inv">{p.invoiceNumber || '-'}</div>
-                    <div className="col-total text-right text-muted">
-                      {formatCurrency(p.gstTotal)}
-                    </div>
-                    <div className="col-grand-total text-right font-bold">
-                      {formatCurrency(p.grandTotal)}
-                    </div>
-                    <div className="col-actions" style={{ justifyContent: 'center' }}>
-                      <button
-                        className="action-icon-btn"
-                        title="View Details"
+        <div className="purchases-content">
+          {activeTab === 'purchases' ? (
+            <>
+              {loading ? (
+                <div className="loading-state">Loading purchases...</div>
+              ) : !purchases || purchases.data.length === 0 ? (
+                <EmptyState
+                  title="No purchases found"
+                  message="Start recording your supplier invoices to track Input Tax Credit (ITC)."
+                  icon="📦"
+                  action={{
+                    label: 'Record Your First Purchase',
+                    onClick: () => setIsAddingNew(true),
+                  }}
+                />
+              ) : (
+                <div className="data-table-container">
+                  <div className="data-table-header grid-purchases">
+                    <div className="col-date">Date</div>
+                    <div className="col-purchase-no">Purchase #</div>
+                    <div className="col-supplier">Supplier</div>
+                    <div className="col-inv">Inv #</div>
+                    <div className="col-gst">GST</div>
+                    <div>Total</div>
+                    <div className="col-actions">Actions</div>
+                  </div>
+                  <div className="data-table-body">
+                    {purchases.data.map((p) => (
+                      <div
+                        className="data-table-row grid-purchases"
+                        key={p.id}
                         onClick={() => setViewingPurchaseId(p.id)}
                       >
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      </button>
-                    </div>
+                        <div className="col-date">
+                          {new Date(p.invoiceDate).toLocaleDateString('en-IN')}
+                        </div>
+                        <div className="col-purchase-no font-mono">{p.purchaseNumber}</div>
+                        <div className="col-supplier">
+                          <div className="supplier-info">
+                            <span className="name">{p.supplierName}</span>
+                            {p.supplierGstin && <span className="gstin">{p.supplierGstin}</span>}
+                          </div>
+                        </div>
+                        <div className="col-inv">{p.invoiceNumber || '-'}</div>
+                        <div className="col-gst">{formatCurrency(p.gstTotal)}</div>
+                        <div>{formatCurrency(p.grandTotal)}</div>
+                        <div className="col-actions">
+                          <button
+                            className="action-icon-btn"
+                            title="View Details"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingPurchaseId(p.id);
+                            }}
+                          >
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : activeTab === 'orders' ? (
-          <PurchaseOrdersTab />
-        ) : (
-          <div
-            className="animate-fade-in"
-            style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
-          >
-            <SuppliersPage />
-          </div>
-        )}
+                </div>
+              )}
+            </>
+          ) : activeTab === 'orders' ? (
+            <PurchaseOrdersTab
+              dateRange={dateRange}
+              refreshKey={refreshOrderKey}
+              onCreateClick={() => {
+                setPoDataForPurchase(null);
+                setIsAddingNew(true);
+              }}
+              onReceive={async (po) => {
+                const fullPo = await fetchPoDetails(po.id);
+                setPoDataForPurchase(fullPo);
+                setIsAddingNew(true);
+                setActiveTab('purchases');
+              }}
+            />
+          ) : (
+            <SuppliersPage
+              ref={suppliersPageRef}
+              showHeader={false}
+              searchQuery={supplierSearchQuery}
+              showInactive={showInactiveSuppliers}
+              showDuesOnly={showDuesOnlySuppliers}
+            />
+          )}
+        </div>
       </div>
-      {isAddingNew && (
+      {isAddingNew && activeTab === 'purchases' && (
         <PurchaseFormModal
+          initialPoData={poDataForPurchase || undefined}
+          onClose={() => {
+            setIsAddingNew(false);
+            setPoDataForPurchase(null);
+          }}
+          onSuccess={() => {
+            setIsAddingNew(false);
+            setPoDataForPurchase(null);
+            fetchPurchases(dateRange);
+            setRefreshOrderKey((prev) => prev + 1);
+          }}
+        />
+      )}
+
+      {isAddingNew && activeTab === 'orders' && (
+        <PurchaseOrderFormModal
           onClose={() => setIsAddingNew(false)}
           onSuccess={() => {
             setIsAddingNew(false);
-            fetchPurchases(dateRange);
+            setRefreshOrderKey((prev) => prev + 1);
           }}
         />
       )}
@@ -207,25 +308,56 @@ const PurchasesPage: React.FC = () => {
 interface PurchaseFormModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  initialPoData?: PurchaseOrder;
 }
 
-const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSuccess }) => {
+const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
+  onClose,
+  onSuccess,
+  initialPoData,
+}) => {
   const [formData, setFormData] = useState({
-    supplierName: '',
-    supplierGstin: '',
+    supplierId: initialPoData?.supplierId || (undefined as number | undefined),
+    supplierName: initialPoData?.supplierName || '',
+    supplierGstin: initialPoData?.supplierGstin || '', // Pre-fill from PO data
     invoiceNumber: '',
     invoiceDate: new Date().toISOString().split('T')[0],
-    notes: '',
+    notes: initialPoData ? `Converted from PO: ${initialPoData.poNumber}` : '',
+    paymentStatus: 'PAID' as 'PAID' | 'PENDING',
+    amountPaid: 0,
   });
 
-  const [items, setItems] = useState<PurchaseItem[]>([
-    { productName: '', quantity: 1, unitPrice: 0, gstPercent: 0, lineTotal: 0 },
-  ]);
+  const [items, setItems] = useState<PurchaseItem[]>(
+    initialPoData?.items?.map((item) => ({
+      productId: item.productId || undefined,
+      productName: item.productName,
+      hsnCode: item.hsnCode || undefined,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      gstPercent: item.gstPercent,
+      lineTotal: item.lineTotal,
+    })) || [{ productName: '', quantity: 1, unitPrice: 0, gstPercent: 0, lineTotal: 0 }]
+  );
+
+  const { data: suppliersData, execute: fetchSuppliers } = useIPC<{ items: Supplier[] }>(
+    IPC_CHANNELS.SUPPLIER_LIST
+  );
+
+  const { data: productsData, execute: fetchProducts } = useIPC<{ items: Product[] }>(
+    IPC_CHANNELS.PRODUCT_LIST
+  );
+
+  useEffect(() => {
+    fetchSuppliers({ includeInactive: false });
+    fetchProducts({ includeInactive: false, pageSize: 10000 });
+  }, [fetchSuppliers, fetchProducts]);
+
+  const { execute: convertPo } = useIPCMutation<number, boolean>(IPC_CHANNELS.PO_CONVERT);
 
   const {
     execute: recordPurchase,
-    loading,
-    error,
+    loading: modalLoading,
+    error: modalError,
   } = useIPCMutation<any, Purchase>(IPC_CHANNELS.PURCHASE_RECORD);
 
   const addItem = () => {
@@ -243,16 +375,61 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
 
   const updateItem = (index: number, field: keyof PurchaseItem, value: string | number) => {
     const newItems = [...items];
-    const item = { ...newItems[index], [field]: value };
+    const item = { ...newItems[index] };
 
-    // Recalculate line total
+    // Set the basic value
+    if (field === 'productName') {
+      item.productName = String(value);
+    }
+    if (field === 'hsnCode') {
+      item.hsnCode = String(value);
+    }
+
+    // Ensure numbers for numeric fields
     if (field === 'quantity' || field === 'unitPrice' || field === 'gstPercent') {
-      const q = Number(item.quantity) || 0;
-      const p = Number(item.unitPrice) || 0;
-      const g = Number(item.gstPercent) || 0;
-      const taxable = q * p;
+      const valNum = Number(value) || 0;
+      if (field === 'quantity') {
+        item.quantity = valNum;
+      }
+      if (field === 'unitPrice') {
+        item.unitPrice = valNum;
+      }
+      if (field === 'gstPercent') {
+        item.gstPercent = valNum;
+      }
+
+      const qt = item.quantity;
+      const p = item.unitPrice;
+      const g = item.gstPercent;
+
+      const taxable = qt * p;
       const gstAmount = (taxable * g) / 100;
       item.lineTotal = Math.round((taxable + gstAmount) * 100) / 100;
+    }
+
+    if (field === 'productName') {
+      const valStr = String(value).trim().toLowerCase();
+      const match = productsData?.items?.find((p) => p.name.trim().toLowerCase() === valStr);
+      if (match) {
+        item.productId = match.id;
+        item.hsnCode = match.hsnCode || item.hsnCode;
+        if (match.gstPercent) {
+          item.gstPercent = match.gstPercent;
+        }
+        if (match.purchasePrice) {
+          item.unitPrice = match.purchasePrice;
+        }
+
+        // Recalculate totals
+        const qt = Number(item.quantity) || 0;
+        const p = item.unitPrice;
+        const g = item.gstPercent;
+        const taxable = qt * p;
+        const gstAmount = (taxable * g) / 100;
+        item.lineTotal = Math.round((taxable + gstAmount) * 100) / 100;
+      } else {
+        item.productId = undefined;
+      }
     }
 
     newItems[index] = item;
@@ -261,14 +438,27 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
 
   const calculateTotals = () => {
     return items.reduce(
-      (acc, item) => ({
-        taxable: acc.taxable + item.quantity * item.unitPrice,
-        gst: acc.gst + (item.lineTotal - item.quantity * item.unitPrice),
-        total: acc.total + item.lineTotal,
-      }),
+      (acc, item) => {
+        const lineTaxable = item.quantity * item.unitPrice;
+        const lineGst = (lineTaxable * item.gstPercent) / 100;
+        return {
+          taxable: acc.taxable + lineTaxable,
+          gst: acc.gst + lineGst,
+          total: acc.total + item.lineTotal,
+        };
+      },
       { taxable: 0, gst: 0, total: 0 }
     );
   };
+
+  const totals = calculateTotals();
+
+  // Sync amountPaid if status is PAID
+  useEffect(() => {
+    if (formData.paymentStatus === 'PAID') {
+      setFormData((prev) => ({ ...prev, amountPaid: totals.total }));
+    }
+  }, [formData.paymentStatus, totals.total]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,17 +473,29 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
 
     try {
       const response = await recordPurchase({
-        ...formData,
+        supplierName: formData.supplierName,
+        supplierGstin: formData.supplierGstin,
+        invoiceNumber: formData.invoiceNumber,
+        invoiceDate: formData.invoiceDate,
+        notes: formData.notes,
+        supplierId: formData.supplierId,
+        paymentStatus: formData.paymentStatus,
+        amountPaid: formData.amountPaid,
         items: items.map((i) => ({
           productName: i.productName,
           quantity: Number(i.quantity),
           unitPrice: Number(i.unitPrice),
           gstPercent: Number(i.gstPercent),
           hsnCode: i.hsnCode,
+          productId: i.productId,
         })),
       });
 
       if (response) {
+        // If this was from a PO, mark PO as received
+        if (initialPoData?.id) {
+          await convertPo(initialPoData.id);
+        }
         onSuccess();
       }
     } catch (err) {
@@ -301,8 +503,6 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
       alert('An unexpected error occurred');
     }
   };
-
-  const totals = calculateTotals();
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -317,22 +517,60 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
           <div className="modal-body">
             <div className="form-grid">
               <div className="form-group">
-                <label>Supplier Name *</label>
-                <input
-                  type="text"
-                  value={formData.supplierName}
-                  onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
-                  placeholder="e.g. ABC Distributors"
-                  required
+                <label>Supplier *</label>
+                <SearchableSelect
+                  value={formData.supplierId || ''}
+                  options={
+                    suppliersData?.items?.map((s) => ({
+                      value: s.id || 0,
+                      label: s.name,
+                    })) || []
+                  }
+                  onChange={(val) => {
+                    const supplier = suppliersData?.items?.find((s) => s.id === Number(val));
+                    if (supplier) {
+                      setFormData({
+                        ...formData,
+                        supplierId: supplier.id,
+                        supplierName: supplier.name,
+                        supplierGstin: supplier.gstin || '',
+                      });
+                    }
+                  }}
+                  placeholder="Select Supplier"
                 />
               </div>
               <div className="form-group">
-                <label>Supplier GSTIN</label>
+                <label>Payment Status</label>
+                <div className="radio-group">
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="paymentStatus"
+                      checked={formData.paymentStatus === 'PAID'}
+                      onChange={() => setFormData({ ...formData, paymentStatus: 'PAID' })}
+                    />
+                    Paid
+                  </label>
+                  <label className="radio-label">
+                    <input
+                      type="radio"
+                      name="paymentStatus"
+                      checked={formData.paymentStatus === 'PENDING'}
+                      onChange={() => setFormData({ ...formData, paymentStatus: 'PENDING' })}
+                    />
+                    Credit
+                  </label>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Amount Paid</label>
                 <input
-                  type="text"
-                  value={formData.supplierGstin}
-                  onChange={(e) => setFormData({ ...formData, supplierGstin: e.target.value })}
-                  placeholder="e.g. 27ABCDE1234F1Z5"
+                  type="number"
+                  value={formData.amountPaid}
+                  onChange={(e) => setFormData({ ...formData, amountPaid: Number(e.target.value) })}
+                  disabled={formData.paymentStatus === 'PAID'}
+                  placeholder="0.00"
                 />
               </div>
               <div className="form-group">
@@ -361,14 +599,20 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
                 <thead>
                   <tr>
                     <th>Product Name *</th>
-                    <th>HSN</th>
-                    <th style={{ width: '80px' }}>Qty</th>
-                    <th style={{ width: '120px' }}>Unit Price</th>
-                    <th style={{ width: '100px' }}>GST %</th>
-                    <th style={{ width: '120px' }} className="text-right">
+                    <th style={{ width: '100px' }}>HSN</th>
+                    <th style={{ width: '90px' }} className="text-center">
+                      Qty
+                    </th>
+                    <th style={{ width: '140px' }} className="text-center">
+                      Unit Price
+                    </th>
+                    <th style={{ width: '110px' }} className="text-center">
+                      GST %
+                    </th>
+                    <th style={{ width: '150px' }} className="text-right">
                       Total
                     </th>
-                    <th style={{ width: '40px' }}></th>
+                    <th style={{ width: '50px' }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -377,6 +621,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
                       <td>
                         <input
                           type="text"
+                          list="purchase-products-datalist"
                           value={item.productName}
                           onChange={(e) => updateItem(index, 'productName', e.target.value)}
                           placeholder="Item name"
@@ -394,6 +639,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
                       <td>
                         <input
                           type="number"
+                          className="text-center"
                           value={item.quantity}
                           onChange={(e) => updateItem(index, 'quantity', e.target.value)}
                           min="0.01"
@@ -404,6 +650,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
                       <td>
                         <input
                           type="number"
+                          className="text-right"
                           value={item.unitPrice}
                           onChange={(e) => updateItem(index, 'unitPrice', e.target.value)}
                           min="0"
@@ -413,6 +660,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
                       </td>
                       <td>
                         <select
+                          className="text-center"
                           value={item.gstPercent}
                           onChange={(e) => updateItem(index, 'gstPercent', Number(e.target.value))}
                         >
@@ -423,7 +671,9 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
                           <option value="28">28%</option>
                         </select>
                       </td>
-                      <td className="text-right">{formatCurrency(item.lineTotal)}</td>
+                      <td className="text-right font-mono" style={{ fontWeight: 600 }}>
+                        {formatCurrency(item.lineTotal)}
+                      </td>
                       <td>
                         <button
                           type="button"
@@ -437,6 +687,11 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
                   ))}
                 </tbody>
               </table>
+              <datalist id="purchase-products-datalist">
+                {productsData?.items?.map((p) => (
+                  <option key={p.id} value={p.name} />
+                ))}
+              </datalist>
               <button type="button" className="btn-outline" onClick={addItem}>
                 + Add Item
               </button>
@@ -468,16 +723,16 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({ onClose, onSucces
             </div>
           </div>
           <div className="modal-footer">
-            {error && (
+            {modalError && (
               <div className="error-message" style={{ color: 'red', marginRight: 'auto' }}>
-                {error}
+                {modalError}
               </div>
             )}
             <button type="button" className="btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Recording...' : 'Save Purchase'}
+            <button type="submit" className="btn-primary" disabled={modalLoading}>
+              {modalLoading ? 'Recording...' : 'Save Purchase'}
             </button>
           </div>
         </form>
@@ -493,12 +748,27 @@ interface PurchaseDetailsModalProps {
   onClose: () => void;
 }
 
+interface DetailedPurchase extends Purchase {
+  items?: {
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    gstPercent: number;
+    lineTotal: number;
+    hsnCode?: string;
+  }[];
+  totalTaxable: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+}
+
 const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId, onClose }) => {
   const {
     data: purchase,
     loading,
     execute: fetchPurchase,
-  } = useIPC<any>(IPC_CHANNELS.PURCHASE_GET_BY_ID);
+  } = useIPC<DetailedPurchase>(IPC_CHANNELS.PURCHASE_GET_BY_ID);
 
   useEffect(() => {
     fetchPurchase(purchaseId);
@@ -541,7 +811,7 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
 
         <div className="modal-body">
           <div
-            className="form-grid"
+            className="form-grid header-grid"
             style={{
               marginBottom: '1.5rem',
               background: '#f8f9fa',
@@ -597,16 +867,28 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
               </tr>
             </thead>
             <tbody>
-              {purchase.items?.map((item: any, idx: number) => (
-                <tr key={idx}>
-                  <td>{item.productName}</td>
-                  <td>{item.hsnCode || '-'}</td>
-                  <td className="text-right">{item.quantity}</td>
-                  <td className="text-right">{formatCurrency(item.unitPrice)}</td>
-                  <td className="text-right">{item.gstPercent}%</td>
-                  <td className="text-right">{formatCurrency(item.lineTotal)}</td>
-                </tr>
-              ))}
+              {purchase.items?.map(
+                (
+                  item: {
+                    productName: string;
+                    quantity: number;
+                    unitPrice: number;
+                    gstPercent: number;
+                    lineTotal: number;
+                    hsnCode?: string;
+                  },
+                  idx: number
+                ) => (
+                  <tr key={idx}>
+                    <td>{item.productName}</td>
+                    <td>{item.hsnCode || '-'}</td>
+                    <td className="text-right">{item.quantity}</td>
+                    <td className="text-right">{formatCurrency(item.unitPrice)}</td>
+                    <td className="text-right">{item.gstPercent}%</td>
+                    <td className="text-right">{formatCurrency(item.lineTotal)}</td>
+                  </tr>
+                )
+              )}
             </tbody>
           </table>
 
