@@ -45,6 +45,26 @@ describe('ProductService - Add Product', () => {
     expect(product.stockQty).toBe(50);
   });
 
+  it('should create product with specialized fields (weight-based, medical)', () => {
+    const product = productService.addProduct({
+      name: 'Weight Product',
+      isWeightBased: true,
+      uom: 'Kg',
+      salePrice: 100,
+    });
+
+    expect(product.isWeightBased).toBe(true);
+    expect(product.uom).toBe('Kg');
+
+    const medProduct = productService.addProduct({
+      name: 'Med Product',
+      drugCategory: 'SCHEDULE-H1',
+      salePrice: 200,
+    });
+
+    expect(medProduct.drugCategory).toBe('SCHEDULE-H1');
+  });
+
   it('should throw error for empty name', () => {
     expect(() => {
       productService.addProduct({
@@ -246,6 +266,19 @@ describe('ProductService - Stock Adjustment', () => {
     const product = productRepo.findById(1);
     expect(product?.name).toBe('Updated Coke');
     expect(product?.salePrice).toBe(45);
+  });
+
+  it('should update specialized fields correctly', () => {
+    productService.updateProduct(1, {
+      isWeightBased: true,
+      uom: 'Gm',
+      drugCategory: 'GENERAL',
+    });
+
+    const product = productRepo.findById(1);
+    expect(product?.isWeightBased).toBe(true);
+    expect(product?.uom).toBe('Gm');
+    expect(product?.drugCategory).toBe('GENERAL');
   });
 
   it('should verify stock history consistency', () => {

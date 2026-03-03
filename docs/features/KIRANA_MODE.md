@@ -9,13 +9,16 @@ SmartKhata's **Kirana Mode** is optimized for high-volume retail environments wh
 SmartKhata supports direct hardware integration with electronic weighing scales (e.g., Eagle, Phoenix, Essae) via the RS-232 serial interface.
 
 ### Connection Parameters
+
 - **Baud Rate**: 9600 (Standard for most Indian industrial scales).
 - **Data Bits**: 8.
 - **Stop Bits**: 1.
 - **Parity**: None.
 
 ### Stream Parsing Engine
+
 The `KiranaService.parseWeighingScaleData` uses a specialized Regex-based parser to normalize heterogeneous scale payloads:
+
 - **Identifier**: `([\d.]+)\s*(kg|g)/i`
 - **Logic**: It extracts numerical values and unit suffixes. To ensure consistency, all "Gram" inputs are converted to "Kilogram" using the `convertToKg` helper before being passed to the Billing Service.
 - **Stability Guard**: The UI only updates the quantity field when the scale reports a "Stable" (ST) status prefix, preventing flickering while the item is being placed on the pan.
@@ -27,11 +30,10 @@ The `KiranaService.parseWeighingScaleData` uses a specialized Regex-based parser
 Accounting for loose items (e.g., "0.255 kg") requires extreme precision to prevent financial leakage.
 
 - **The Problem**: Standard JavaScript floating-point arithmetic (e.g., `0.1 + 0.2`) often results in precision drift (e.g., `0.30000000000000004`).
-- **The Solution**: SmartKhata uses **Integer Normalization** for internal math.
-  - **Storage**: Weights are stored as floats in SQLite, but arithmetic is wrapped in the `Math.round((vals) * 1000) / 1000` pattern.
-  - **Conversion**:
-    - `convertToGm(kg)`: `Math.round(kg * 1000)`
-    - `convertToKg(gm)`: `Math.round((gm / 1000) * 1000) / 1000`
+- **The Solution**: SmartKhata uses **3-decimal normalization** for all weight-based arithmetic.
+  - **Storage**: Weights are stored as floats in SQLite, but arithmetic is wrapped in the `Math.round(val * 1000) / 1000` pattern.
+  - **UI/Price Sync**: The price is calculated using the rounded visible weight (e.g., `1.796 kg`) rather than the raw scale payload (e.g., `1.7962 kg`), ensuring total transparency on receipts.
+  - **Scale-Compatible UI**: Weight inputs automatically trigger rounding on blur, and manual `+/-` buttons are disabled for weight-based items to prevent accidental tampering with scale-derived values.
 
 ---
 
@@ -59,6 +61,7 @@ SmartKhata provides an automated daily summary for shop owners using the `whatsa
 ---
 
 ## Technical Reference
+
 - **Core Service**: `src/main/services/kirana-service.ts`
 - **Hardware Lib**: `electron-serialport` (Production transport).
 - **Schema Mapping**: `products` table columns (`is_weight_based`).

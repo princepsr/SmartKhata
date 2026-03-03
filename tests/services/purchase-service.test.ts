@@ -70,6 +70,57 @@ describe('PurchaseService Integration Tests', () => {
       expect(result.purchase.grandTotal).toBe(1180);
     });
 
+    it('should intelligently detect IGST if supplier GSTIN state code differs from shop GSTIN', () => {
+      // Shop in Delhi (07)
+      db.exec(`UPDATE app_config SET gst_number = '07AAAAA0000A1Z5' WHERE id = 1`);
+      SettingsService.getInstance().reloadCache();
+
+      // Supplier in Maharashtra (27)
+      const result = purchaseService.recordPurchase({
+        supplierName: 'MAH Supplier',
+        supplierGstin: '27BBBBB0000B1Z5',
+        invoiceDate: '2026-02-27',
+        items: [{ productName: 'Interstate Good', quantity: 1, unitPrice: 1000, gstPercent: 18 }],
+      });
+
+      expect(result.purchase.igstAmount).toBe(180);
+      expect(result.purchase.cgstAmount).toBe(0);
+      expect(result.purchase.sgstAmount).toBe(0);
+    });
+
+    it('should intelligently detect CGST/SGST if supplier GSTIN state code matches shop GSTIN', () => {
+      // Shop in Delhi (07)
+      db.exec(`UPDATE app_config SET gst_number = '07AAAAA0000A1Z5' WHERE id = 1`);
+      SettingsService.getInstance().reloadCache();
+
+      // Supplier in Delhi (07)
+      const result = purchaseService.recordPurchase({
+        supplierName: 'Delhi Supplier',
+        supplierGstin: '07BBBBB0000B1Z5',
+        invoiceDate: '2026-02-27',
+        items: [{ productName: 'Intrastate Good', quantity: 1, unitPrice: 1000, gstPercent: 18 }],
+      });
+
+      expect(result.purchase.igstAmount).toBe(0);
+      expect(result.purchase.cgstAmount).toBe(90);
+      expect(result.purchase.sgstAmount).toBe(90);
+    });
+
+    it('should fallback to supplyType setting if GSTINs are missing', () => {
+      // Set setting to interstate
+      db.exec(`UPDATE app_config SET supply_type = 'interstate', gst_number = NULL WHERE id = 1`);
+      SettingsService.getInstance().reloadCache();
+
+      const result = purchaseService.recordPurchase({
+        supplierName: 'Unknown Supplier',
+        invoiceDate: '2026-02-27',
+        items: [{ productName: 'Fallback Good', quantity: 1, unitPrice: 1000, gstPercent: 10 }],
+      });
+
+      expect(result.purchase.igstAmount).toBe(100);
+      expect(result.purchase.cgstAmount).toBe(0);
+    });
+
     it('should throw validation errors for invalid input', () => {
       expect(() =>
         purchaseService.recordPurchase({

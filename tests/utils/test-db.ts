@@ -351,8 +351,24 @@ export async function createTestDatabase(): Promise<any> {
       gst_total REAL NOT NULL DEFAULT 0,
       grand_total REAL NOT NULL CHECK(grand_total >= 0),
       notes TEXT,
+      payment_status TEXT CHECK(payment_status IN ('PENDING', 'PAID', 'PARTIAL')),
+      amount_paid REAL DEFAULT 0,
+      supplier_id INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
+    );
+
+    -- Supplier Ledger table
+    CREATE TABLE IF NOT EXISTS supplier_ledger (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supplier_id INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('PURCHASE', 'PAYMENT_OUT', 'OPENING_BALANCE', 'PAYMENT_IN')),
+      reference_id INTEGER,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE
     );
 
     -- Purchase Items table

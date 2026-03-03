@@ -135,14 +135,17 @@ export class PurchaseService extends BaseService {
     });
 
     const repoItems: CreatePurchaseItemInput[] = processedItems.map((item) => {
-      if (item.quantity <= 0) {
+      // Ensure quantity is rounded to 3 decimal places (for weight compatibility)
+      const qty = Math.round(Number(item.quantity) * 1000) / 1000;
+
+      if (qty <= 0) {
         throw new ValidationError('Quantity must be positive', 'quantity');
       }
       if (item.unitPrice < 0) {
         throw new ValidationError('Unit price cannot be negative', 'unitPrice');
       }
 
-      const lineTaxable = Math.round(item.unitPrice * item.quantity * 100) / 100;
+      const lineTaxable = Math.round(item.unitPrice * qty * 100) / 100;
       const lineGst = Math.round(((lineTaxable * item.gstPercent) / 100) * 100) / 100;
       const lineTotal = Math.round((lineTaxable + lineGst) * 100) / 100;
 
@@ -167,7 +170,7 @@ export class PurchaseService extends BaseService {
         productId: item.productId,
         productName: item.productName,
         hsnCode: item.hsnCode,
-        quantity: item.quantity,
+        quantity: qty,
         unitPrice: item.unitPrice,
         gstPercent: item.gstPercent,
         lineTaxable,
