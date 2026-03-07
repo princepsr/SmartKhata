@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPC } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../../utils/formatters';
@@ -42,6 +43,7 @@ export const SupplierLedgerModal: React.FC<SupplierLedgerModalProps> = ({
   onClose,
   supplier,
 }) => {
+  const { t } = useTranslation();
   const {
     execute: fetchHistory,
     data: history,
@@ -82,7 +84,7 @@ export const SupplierLedgerModal: React.FC<SupplierLedgerModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content ledger-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Ledger: {supplier.name}</h2>
+          <h2>{t('procurement.ledger.title', { name: supplier.name })}</h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -93,7 +95,7 @@ export const SupplierLedgerModal: React.FC<SupplierLedgerModalProps> = ({
           {history && (
             <div className="ledger-header-summary">
               <div>
-                <div className="net-balance-label">Net Balance</div>
+                <div className="net-balance-label">{t('procurement.ledger.net_balance')}</div>
                 <div
                   className={`net-balance-value ${
                     history.supplier.balanceDue > 0
@@ -106,10 +108,10 @@ export const SupplierLedgerModal: React.FC<SupplierLedgerModalProps> = ({
                   {formatCurrency(Math.abs(history.supplier.balanceDue))}
                   <span className="net-balance-text">
                     {history.supplier.balanceDue > 0
-                      ? 'You Owe Them'
+                      ? t('procurement.ledger.you_owe')
                       : history.supplier.balanceDue < 0
-                        ? 'Advance Paid'
-                        : 'Settled'}
+                        ? t('procurement.ledger.advance_paid')
+                        : t('procurement.ledger.settled')}
                   </span>
                 </div>
               </div>
@@ -151,14 +153,14 @@ export const SupplierLedgerModal: React.FC<SupplierLedgerModalProps> = ({
                     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                     <path d="M3 3v5h5" />
                   </svg>
-                  Refresh
+                  {t('procurement.ledger.refresh')}
                 </button>
               </div>
             </div>
           )}
 
           {loading && !history ? (
-            <div className="loading">Loading ledger...</div>
+            <div className="loading">{t('procurement.ledger.loading')}</div>
           ) : error ? (
             <div className="error">{error}</div>
           ) : history && history.ledger.length > 0 ? (
@@ -167,11 +169,11 @@ export const SupplierLedgerModal: React.FC<SupplierLedgerModalProps> = ({
                 <table className="ledger-table">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Description</th>
-                      <th>Reference</th>
-                      <th style={{ textAlign: 'right' }}>You Gave</th>
-                      <th style={{ textAlign: 'right' }}>You Got</th>
+                      <th>{t('procurement.ledger.table.date')}</th>
+                      <th>{t('procurement.ledger.table.desc')}</th>
+                      <th>{t('procurement.ledger.table.ref')}</th>
+                      <th style={{ textAlign: 'right' }}>{t('procurement.ledger.table.gave')}</th>
+                      <th style={{ textAlign: 'right' }}>{t('procurement.ledger.table.got')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -192,10 +194,12 @@ export const SupplierLedgerModal: React.FC<SupplierLedgerModalProps> = ({
                           </td>
                           <td className="col-desc">
                             <div>
-                              {entry.type === 'PURCHASE' && 'Purchase Bill'}
-                              {entry.type === 'PAYMENT_OUT' && 'Payment (Paid)'}
-                              {entry.type === 'PAYMENT_IN' && 'Payment (Refund)'}
-                              {entry.type === 'OPENING_BALANCE' && 'Opening Balance'}
+                              {entry.type === 'PURCHASE' && t('procurement.ledger.types.purchase')}
+                              {entry.type === 'PAYMENT_OUT' &&
+                                t('procurement.ledger.types.pay_out')}
+                              {entry.type === 'PAYMENT_IN' && t('procurement.ledger.types.pay_in')}
+                              {entry.type === 'OPENING_BALANCE' &&
+                                t('procurement.ledger.types.opening')}
                               {![
                                 'PURCHASE',
                                 'PAYMENT_OUT',
@@ -233,14 +237,14 @@ export const SupplierLedgerModal: React.FC<SupplierLedgerModalProps> = ({
             </div>
           ) : (
             <div className="no-data">
-              <p>No transaction history found for this supplier.</p>
+              <p>{t('procurement.ledger.no_history')}</p>
             </div>
           )}
         </div>
 
         <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose}>
-            Close
+            {t('common.close')}
           </button>
         </div>
       </div>

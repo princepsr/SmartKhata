@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import './PaymentModeSelector.css';
 
 export type PaymentMode = 'cash' | 'upi' | 'mixed';
@@ -56,6 +57,7 @@ export const PaymentModeSelector: React.FC<PaymentModeSelectorProps> = ({
   onModeChange,
   disabled,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="payment-mode-selector">
       <button
@@ -66,7 +68,7 @@ export const PaymentModeSelector: React.FC<PaymentModeSelectorProps> = ({
         <span className="mode-icon">
           <CashIcon />
         </span>
-        <span className="mode-label">Cash</span>
+        <span className="mode-label">{t('billing.payment_modes.cash')}</span>
       </button>
 
       <button
@@ -77,7 +79,7 @@ export const PaymentModeSelector: React.FC<PaymentModeSelectorProps> = ({
         <span className="mode-icon">
           <UPIIcon />
         </span>
-        <span className="mode-label">UPI</span>
+        <span className="mode-label">{t('billing.payment_modes.upi')}</span>
       </button>
 
       <button
@@ -89,7 +91,7 @@ export const PaymentModeSelector: React.FC<PaymentModeSelectorProps> = ({
         <span className="mode-icon">
           <MixedIcon />
         </span>
-        <span className="mode-label">Mixed</span>
+        <span className="mode-label">{t('billing.payment_modes.mixed')}</span>
       </button>
     </div>
   );

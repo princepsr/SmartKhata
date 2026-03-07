@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import './ConfirmModal.css';
 
 interface ConfirmModalProps {
@@ -20,12 +21,15 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   title,
   message,
   confirmLabel,
-  cancelLabel = 'Cancel',
+  cancelLabel,
   type = 'warning',
   isAlert = false,
 }) => {
+  const { t } = useTranslation();
+
   // Default confirm label based on type/mode
-  const finalConfirmLabel = confirmLabel || (isAlert ? 'OK' : 'Confirm');
+  const finalConfirmLabel = confirmLabel || (isAlert ? t('common.ok') : t('common.confirm'));
+  const finalCancelLabel = cancelLabel || t('common.cancel');
 
   // Handle Escape key
   useEffect(() => {
@@ -67,7 +71,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         <div className="confirm-footer">
           {!isAlert && (
             <button className="btn-secondary" onClick={onClose}>
-              {cancelLabel}
+              {finalCancelLabel}
             </button>
           )}
           <button

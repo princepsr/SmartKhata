@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import i18n from '../i18n/config';
 
 /**
  * App Settings Store
@@ -49,6 +50,7 @@ export interface AppSettings {
   supplyType: 'intrastate' | 'interstate';
   stateCode: string | null;
   placeOfSupply: string | null;
+  language: 'en' | 'hi';
   appMode: 'GENERAL' | 'KIRANA' | 'MEDICAL';
   updatedAt?: string;
 }
@@ -104,6 +106,7 @@ const defaultSettings: AppSettings = {
   supplyType: 'intrastate',
   stateCode: null,
   placeOfSupply: null,
+  language: 'en',
   appMode: 'GENERAL',
 };
 
@@ -121,7 +124,12 @@ export const useAppSettingsStore = create<AppSettingsState>()(
         try {
           const response = await window.api.invoke('settings:get');
           if (response.success) {
-            set({ settings: response.data as AppSettings, isLoading: false });
+            const settings = response.data as AppSettings;
+            set({ settings, isLoading: false });
+            // Sync i18n language
+            if (settings.language) {
+              i18n.changeLanguage(settings.language);
+            }
           } else {
             set({ error: response.error, isLoading: false });
           }
@@ -142,11 +150,18 @@ export const useAppSettingsStore = create<AppSettingsState>()(
         try {
           const result = await window.api.invoke('settings:update', newSettings);
           if (result.success) {
-            set((state) => ({
-              settings: { ...state.settings, ...newSettings },
-              isLoading: false,
-              error: null,
-            }));
+            set((state) => {
+              const updatedSettings = { ...state.settings, ...newSettings };
+              // Sync i18n if language changed
+              if (newSettings.language) {
+                i18n.changeLanguage(newSettings.language);
+              }
+              return {
+                settings: updatedSettings,
+                isLoading: false,
+                error: null,
+              };
+            });
           } else {
             set({ error: result.error, isLoading: false });
           }

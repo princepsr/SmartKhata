@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAppSettingsStore } from '../../store/useAppSettingsStore';
 import './CommandCenter.css';
 
@@ -13,6 +14,7 @@ interface CommandItem {
 }
 
 const CommandCenter: React.FC = () => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -68,16 +70,16 @@ const CommandCenter: React.FC = () => {
       // --- QUICK ACTIONS ---
       {
         id: 'action-billing',
-        title: 'New Sale / Billing',
-        subtitle: 'Open the POS interface',
+        title: t('command_center.commands.billing'),
+        subtitle: t('command_center.commands.billing_sub'),
         icon: '💳',
         category: 'Actions',
         action: () => navigate('/billing'),
       },
       {
         id: 'action-new-product',
-        title: 'Add New Product',
-        subtitle: 'Create a new inventory item',
+        title: t('command_center.commands.new_product'),
+        subtitle: t('command_center.commands.new_product_sub'),
         icon: '📦',
         category: 'Actions',
         action: () => navigate('/products?action=add'),
@@ -88,16 +90,16 @@ const CommandCenter: React.FC = () => {
       list.push(
         {
           id: 'action-new-purchase',
-          title: 'Record New Purchase',
-          subtitle: 'Log a supplier invoice',
+          title: t('command_center.commands.new_purchase'),
+          subtitle: t('command_center.commands.new_purchase_sub'),
           icon: '📥',
           category: 'Actions',
           action: () => navigate('/purchases?action=purchase'),
         },
         {
           id: 'action-new-po',
-          title: 'Create Purchase Order',
-          subtitle: 'Draft a new order',
+          title: t('command_center.commands.new_po'),
+          subtitle: t('command_center.commands.new_po_sub'),
           icon: '📝',
           category: 'Actions',
           action: () => navigate('/purchases?action=order'),
@@ -108,8 +110,8 @@ const CommandCenter: React.FC = () => {
     if (settings.expensesEnabled) {
       list.push({
         id: 'action-new-expense',
-        title: 'Record New Expense',
-        subtitle: 'Log a shop expenditure',
+        title: t('command_center.commands.new_expense'),
+        subtitle: t('command_center.commands.new_expense_sub'),
         icon: '💸',
         category: 'Actions',
         action: () => navigate('/expenses?action=add'),
@@ -119,8 +121,8 @@ const CommandCenter: React.FC = () => {
     if (settings.quotationsEnabled) {
       list.push({
         id: 'action-new-quotation',
-        title: 'Create New Quotation',
-        subtitle: 'Draft a new estimate',
+        title: t('command_center.commands.new_quotation'),
+        subtitle: t('command_center.commands.new_quotation_sub'),
         icon: '📄',
         category: 'Actions',
         action: () => navigate('/billing?type=quotation'),
@@ -130,8 +132,8 @@ const CommandCenter: React.FC = () => {
     if (settings.customersEnabled) {
       list.push({
         id: 'action-new-customer',
-        title: 'Add New Customer',
-        subtitle: 'Register a new buyer',
+        title: t('command_center.commands.new_customer'),
+        subtitle: t('command_center.commands.new_customer_sub'),
         icon: '👥',
         category: 'Actions',
         action: () => navigate('/customers?action=add'),
@@ -140,8 +142,8 @@ const CommandCenter: React.FC = () => {
 
     list.push({
       id: 'billing-clear',
-      title: 'Clear Current Cart',
-      subtitle: 'Reset the billing screen',
+      title: t('command_center.commands.clear_cart'),
+      subtitle: t('command_center.commands.clear_cart_sub'),
       icon: '🧹',
       category: 'Actions',
       action: () => navigate('/billing?action=clear-cart'),
@@ -150,8 +152,8 @@ const CommandCenter: React.FC = () => {
     // --- NAVIGATION ---
     list.push({
       id: 'nav-products',
-      title: 'View Inventory',
-      subtitle: 'Manage stock and pricing',
+      title: t('command_center.commands.view_inventory'),
+      subtitle: t('command_center.commands.view_inventory_sub'),
       icon: '📦',
       category: 'Navigation',
       action: () => navigate('/products'),
@@ -160,8 +162,8 @@ const CommandCenter: React.FC = () => {
     if (settings.gstEnabled) {
       list.push({
         id: 'nav-purchases',
-        title: 'View Procurement',
-        subtitle: 'Purchases, Invoices & Orders',
+        title: t('command_center.commands.view_procurement'),
+        subtitle: t('command_center.commands.view_procurement_sub'),
         icon: '🛒',
         category: 'Navigation',
         action: () => navigate('/purchases'),
@@ -172,16 +174,16 @@ const CommandCenter: React.FC = () => {
       list.push(
         {
           id: 'nav-customers',
-          title: 'View Customers',
-          subtitle: 'Customer database & ledger',
+          title: t('command_center.commands.view_customers'),
+          subtitle: t('command_center.commands.view_customers_sub'),
           icon: '👥',
           category: 'Navigation',
           action: () => navigate('/customers'),
         },
         {
           id: 'nav-suppliers',
-          title: 'Suppliers & Ledgers',
-          subtitle: 'Manage vendor accounts',
+          title: t('command_center.commands.suppliers'),
+          subtitle: t('command_center.commands.suppliers_sub'),
           icon: '🤝',
           category: 'Navigation',
           action: () => navigate('/purchases?tab=suppliers'),
@@ -192,8 +194,8 @@ const CommandCenter: React.FC = () => {
     if (settings.expensesEnabled) {
       list.push({
         id: 'nav-expenses',
-        title: 'View Expenses',
-        subtitle: 'Shop expenditure history',
+        title: t('command_center.commands.view_expenses'),
+        subtitle: t('command_center.commands.view_expenses_sub'),
         icon: '💸',
         category: 'Navigation',
         action: () => navigate('/expenses'),
@@ -203,8 +205,8 @@ const CommandCenter: React.FC = () => {
     if (settings.quotationsEnabled) {
       list.push({
         id: 'nav-quotations',
-        title: 'View Quotations',
-        subtitle: 'Manage estimates and quotes',
+        title: t('command_center.commands.view_quotations'),
+        subtitle: t('command_center.commands.view_quotations_sub'),
         icon: '📄',
         category: 'Navigation',
         action: () => navigate('/quotations'),
@@ -214,8 +216,8 @@ const CommandCenter: React.FC = () => {
     if (settings.barcodeGenEnabled) {
       list.push({
         id: 'nav-barcode',
-        title: 'Barcode Generator',
-        subtitle: 'Create & print product labels',
+        title: t('command_center.commands.barcode'),
+        subtitle: t('command_center.commands.barcode_sub'),
         icon: '🏷️',
         category: 'Navigation',
         action: () => navigate('/barcode-gen'),
@@ -226,24 +228,24 @@ const CommandCenter: React.FC = () => {
     list.push(
       {
         id: 'report-summary',
-        title: 'Business Reports',
-        subtitle: 'Analytics & summaries',
+        title: t('command_center.commands.reports'),
+        subtitle: t('command_center.commands.reports_sub'),
         icon: '📊',
         category: 'Search',
         action: () => navigate('/reports'),
       },
       {
         id: 'report-sales',
-        title: 'Sales Report',
-        subtitle: 'View daily sales summary',
+        title: t('command_center.commands.sales_report'),
+        subtitle: t('command_center.commands.sales_report_sub'),
         icon: '💰',
         category: 'Search',
         action: () => navigate('/reports?tab=sales'),
       },
       {
         id: 'report-stock',
-        title: 'Stock Summary',
-        subtitle: 'Check inventory levels',
+        title: t('command_center.commands.stock_summary'),
+        subtitle: t('command_center.commands.stock_summary_sub'),
         icon: '📦',
         category: 'Search',
         action: () => navigate('/reports?tab=stock'),
@@ -253,8 +255,8 @@ const CommandCenter: React.FC = () => {
     if (settings.enableBatchTracking) {
       list.push({
         id: 'report-expiry',
-        title: 'Near Expiry Items',
-        subtitle: 'Items expiring soon',
+        title: t('command_center.commands.expiry_report'),
+        subtitle: t('command_center.commands.expiry_report_sub'),
         icon: '⏳',
         category: 'Search',
         action: () => navigate('/reports?tab=near-expiry'),
@@ -264,8 +266,8 @@ const CommandCenter: React.FC = () => {
     if (settings.gstEnabled) {
       list.push({
         id: 'report-gst',
-        title: 'GST / Tax Report',
-        subtitle: 'GSTR-1 & Input Tax Credit',
+        title: t('command_center.commands.gst_report'),
+        subtitle: t('command_center.commands.gst_report_sub'),
         icon: '📑',
         category: 'Search',
         action: () => navigate('/reports?tab=gst'),
@@ -274,8 +276,8 @@ const CommandCenter: React.FC = () => {
 
     list.push({
       id: 'billing-history',
-      title: 'View Bill History',
-      subtitle: 'Open recent transactions',
+      title: t('command_center.commands.bill_history'),
+      subtitle: t('command_center.commands.bill_history_sub'),
       icon: '🕒',
       category: 'Search',
       action: () => navigate('/billing?action=history'),
@@ -285,64 +287,64 @@ const CommandCenter: React.FC = () => {
     list.push(
       {
         id: 'settings-general',
-        title: 'App Settings',
-        subtitle: 'General configuration',
+        title: t('command_center.commands.settings_gen'),
+        subtitle: t('command_center.commands.settings_gen_sub'),
         icon: '⚙️',
         category: 'Navigation',
         action: () => navigate('/settings'),
       },
       {
         id: 'settings-shop',
-        title: 'Shop Profile',
-        subtitle: 'Edit business details',
+        title: t('command_center.commands.settings_shop'),
+        subtitle: t('command_center.commands.settings_shop_sub'),
         icon: '🏪',
         category: 'Navigation',
         action: () => navigate('/settings?tab=shop'),
       },
       {
         id: 'settings-inventory',
-        title: 'Inventory Rules',
-        subtitle: 'Business logic & tracking',
+        title: t('command_center.commands.settings_inv'),
+        subtitle: t('command_center.commands.settings_inv_sub'),
         icon: '📦',
         category: 'Navigation',
         action: () => navigate('/settings?tab=inventory'),
       },
       {
         id: 'settings-printing',
-        title: 'Printer Settings',
-        subtitle: 'Configure receipts & thermal',
+        title: t('command_center.commands.settings_print'),
+        subtitle: t('command_center.commands.settings_print_sub'),
         icon: '🖨️',
         category: 'Navigation',
         action: () => navigate('/settings?tab=printing'),
       },
       {
         id: 'settings-licensing',
-        title: 'License & Subscription',
-        subtitle: 'Manage your plan',
+        title: t('command_center.commands.settings_lic'),
+        subtitle: t('command_center.commands.settings_lic_sub'),
         icon: '🔑',
         category: 'Navigation',
         action: () => navigate('/settings?tab=licensing'),
       },
       {
         id: 'settings-data',
-        title: 'Backup & Data',
-        subtitle: 'Import, Export & Reset',
+        title: t('command_center.commands.settings_data'),
+        subtitle: t('command_center.commands.settings_data_sub'),
         icon: '💾',
         category: 'Navigation',
         action: () => navigate('/settings?tab=data'),
       },
       {
         id: 'settings-privacy',
-        title: 'Privacy & Terms',
-        subtitle: 'Legal information',
+        title: t('command_center.commands.settings_priv'),
+        subtitle: t('command_center.commands.settings_priv_sub'),
         icon: '🔒',
         category: 'Navigation',
         action: () => navigate('/settings?tab=privacy'),
       },
       {
         id: 'settings-debug',
-        title: 'System Debug',
-        subtitle: 'Health & dev tools',
+        title: t('command_center.commands.settings_debug'),
+        subtitle: t('command_center.commands.settings_debug_sub'),
         icon: '🛠️',
         category: 'Navigation',
         action: () => navigate('/settings?tab=debug'),
@@ -350,7 +352,7 @@ const CommandCenter: React.FC = () => {
     );
 
     return list;
-  }, [settings, navigate]);
+  }, [settings, navigate, t]);
 
   const filteredCommands = commands.filter(
     (cmd) =>
@@ -400,7 +402,7 @@ const CommandCenter: React.FC = () => {
             ref={inputRef}
             type="text"
             className="command-center-input"
-            placeholder="Type a command or search..."
+            placeholder={t('command_center.placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -425,17 +427,20 @@ const CommandCenter: React.FC = () => {
                   <span className="command-title">{cmd.title}</span>
                   {cmd.subtitle && <span className="command-subtitle">{cmd.subtitle}</span>}
                 </div>
-                <span className="command-category">{cmd.category}</span>
+                <span className="command-category">
+                  {t(`common.${cmd.category.toLowerCase()}`)}
+                </span>
               </div>
             ))
           ) : (
-            <div className="command-no-results">No commands found</div>
+            <div className="command-no-results">{t('command_center.no_results')}</div>
           )}
         </div>
 
         <div className="command-center-footer">
           <div className="footer-tip">
-            <kbd>↑↓</kbd> to navigate <kbd>Enter</kbd> to select <kbd>Esc</kbd> to close
+            <kbd>↑↓</kbd> {t('command_center.footer_tip')} <kbd>Enter</kbd>{' '}
+            {t('command_center.footer_select')} <kbd>Esc</kbd> {t('command_center.footer_close')}
           </div>
         </div>
       </div>

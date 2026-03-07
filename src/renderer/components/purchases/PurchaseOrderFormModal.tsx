@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPC, useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { PurchaseOrder, Product } from '@shared/types/ipc';
@@ -30,12 +31,12 @@ interface SupplierInfo {
   name: string;
   gstin?: string | null;
 }
-
 const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
   onClose,
   onSuccess,
   initialPoId,
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     supplierId: 0,
     supplierNameSnapshot: '',
@@ -280,8 +281,8 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
         <div className="modal-header">
           <h2>
             {initialPoId
-              ? `Edit Purchase Order - ${formData.poNumber}`
-              : 'Create Purchase Order (Draft)'}
+              ? t('procurement.po.form.title_edit', { no: formData.poNumber })
+              : t('procurement.po.form.title_new')}
           </h2>
           <button className="close-btn" onClick={onClose}>
             &times;
@@ -291,7 +292,7 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
           <div className="modal-body">
             <div className="form-grid header-grid">
               <div className="form-group">
-                <label>Supplier *</label>
+                <label>{t('procurement.form.supplier')}</label>
                 <SearchableSelect
                   value={formData.supplierId}
                   options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
@@ -307,12 +308,13 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
                       supplierGstin: sGstin,
                     });
                   }}
-                  placeholder="Select a Supplier..."
+                  placeholder={t('procurement.form.select_supplier')}
                 />
               </div>
               <div className="form-group">
                 <label>
-                  PO Number <small>(Auto-generated if empty)</small>
+                  {t('procurement.po.form.po_no')}{' '}
+                  <small>{t('procurement.po.form.po_no_hint')}</small>
                 </label>
                 <input
                   type="text"
@@ -322,7 +324,7 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
                 />
               </div>
               <div className="form-group">
-                <label>PO Date *</label>
+                <label>{t('procurement.po.form.po_date')}</label>
                 <input
                   type="date"
                   value={formData.poDate}
@@ -333,14 +335,14 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
             </div>
 
             <div className="items-section">
-              <h3>Requested Items</h3>
+              <h3>{t('procurement.po.form.items')}</h3>
               <div className="items-table-header grid-items">
-                <div>Product Name *</div>
-                <div>HSN</div>
-                <div className="text-center">Qty</div>
-                <div className="text-center">Unit Price</div>
-                <div className="text-center">GST %</div>
-                <div className="text-right">Total</div>
+                <div>{t('procurement.details.product')} *</div>
+                <div>{t('procurement.details.hsn')}</div>
+                <div className="text-center">{t('procurement.details.qty')}</div>
+                <div className="text-center">{t('procurement.details.rate')}</div>
+                <div className="text-center">{t('procurement.details.gst_percent')}</div>
+                <div className="text-right">{t('common.total')}</div>
                 <div></div>
               </div>
               <div className="items-table-body">
@@ -360,7 +362,7 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
                             }
                           }, 200);
                         }}
-                        placeholder="Item name"
+                        placeholder={t('procurement.form.item_placeholder')}
                         required
                         autoComplete="off"
                       />
@@ -381,7 +383,9 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
                               <div className="brand-name">{suggestion.name}</div>
                               <div className="salt-name">{suggestion.saltName}</div>
                               {suggestion.isLocal ? (
-                                <span className="inventory-tag">In Inventory</span>
+                                <span className="inventory-tag">
+                                  {t('billing.stock_prefix')} {t('common.active')}
+                                </span>
                               ) : (
                                 <span className="global-tag">New Global Medicine</span>
                               )}
@@ -395,7 +399,7 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
                         type="text"
                         value={item.hsnCode || ''}
                         onChange={(e) => updateItem(index, 'hsnCode', e.target.value)}
-                        placeholder="HSN"
+                        placeholder={t('procurement.details.hsn')}
                       />
                     </div>
                     <div>
@@ -439,7 +443,7 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
                         type="button"
                         className="btn-remove"
                         onClick={() => removeItem(index)}
-                        title="Remove Item"
+                        title={t('common.delete')}
                       >
                         &times;
                       </button>
@@ -448,30 +452,30 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
                 ))}
               </div>
               <button type="button" className="btn-outline" onClick={addItem}>
-                <span>+</span> Add Item
+                <span>+</span> {t('procurement.form.add_item')}
               </button>
             </div>
 
             <div className="purchase-footer">
               <div className="notes-area">
-                <label>Notes (Shipping instructions)</label>
+                <label>{t('procurement.po.form.notes')}</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Optional details..."
+                  placeholder={t('procurement.settle.notes')}
                 />
               </div>
               <div className="totals-area">
                 <div className="total-row">
-                  <span>Est. Taxable Amount:</span>
+                  <span>{t('procurement.po.form.taxable')}</span>
                   <span>{formatCurrency(totals.taxable)}</span>
                 </div>
                 <div className="total-row">
-                  <span>Est. GST Amount:</span>
+                  <span>{t('procurement.po.form.gst')}</span>
                   <span>{formatCurrency(totals.gst)}</span>
                 </div>
                 <div className="total-row grand-total">
-                  <span>Est. Grand Total:</span>
+                  <span>{t('procurement.po.form.total')}</span>
                   <span>{formatCurrency(totals.total)}</span>
                 </div>
               </div>
@@ -484,10 +488,10 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
               </div>
             )}
             <button type="button" className="btn-secondary" onClick={onClose}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Saving...' : 'Draft Purchase Order'}
+              {loading ? t('procurement.settle.saving') : t('procurement.po.form.save_draft')}
             </button>
           </div>
         </form>

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useIPC } from '../hooks/useIPC';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -22,6 +23,7 @@ interface Customer {
 }
 
 const CustomersPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
@@ -223,8 +225,8 @@ const CustomersPage: React.FC = () => {
       if (isDeactivating) {
         setConfirmDialog({
           isOpen: true,
-          title: 'Deactivate Customer',
-          message: `Are you sure you want to deactivate "${customer.name}"? This will hide them from the billing search.`,
+          title: t('customers.deactivate_confirm.title'),
+          message: t('customers.deactivate_confirm.message', { name: customer.name }),
           onConfirm: async () => {
             try {
               await toggleStatus({ id: customer.id, isActive: false });
@@ -244,7 +246,7 @@ const CustomersPage: React.FC = () => {
         console.error('Failed to toggle status:', err);
       }
     },
-    [toggleStatus, handleFormSuccess]
+    [toggleStatus, handleFormSuccess, t]
   );
 
   // No client-side search needed anymore, using server-side
@@ -312,7 +314,7 @@ const CustomersPage: React.FC = () => {
     <div className="page customers-page">
       <div className="page-content-wrapper animate-fade-in">
         <header className="page-header">
-          <h1 className="page-title">Customers & Udhaar</h1>
+          <h1 className="page-title">{t('customers.title')}</h1>
           <div className="header-actions">
             <div className="filter-group">
               <label className="filter-checkbox">
@@ -321,7 +323,7 @@ const CustomersPage: React.FC = () => {
                   checked={showInactive}
                   onChange={(e) => setShowInactive(e.target.checked)}
                 />
-                Show Inactive
+                {t('inventory.show_inactive')}
               </label>
 
               <label className="filter-checkbox">
@@ -330,26 +332,26 @@ const CustomersPage: React.FC = () => {
                   checked={showDuesOnly}
                   onChange={(e) => setShowDuesOnly(e.target.checked)}
                 />
-                Show Dues Only
+                {t('customers.show_dues_only')}
               </label>
             </div>
             <input
               ref={searchInputRef}
               type="text"
               className="search-input"
-              placeholder="Search Name / Phone / Address"
+              placeholder={t('customers.search_placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
             />
             <button className="btn-primary" onClick={handleAddCustomer}>
-              + Add Customer (Ctrl+N)
+              + {t('customers.add_customer')} (Ctrl+N)
             </button>
           </div>
         </header>
 
         <div className="customers-content">
-          {isInitialLoading && <div className="no-results">Loading customers...</div>}
+          {isInitialLoading && <div className="no-results">{t('customers.loading')}</div>}
           {error && (
             <div className="no-results" style={{ color: 'var(--color-error)' }}>
               Error: {error}
@@ -359,26 +361,26 @@ const CustomersPage: React.FC = () => {
           {(!isInitialLoading || customers.length > 0) && !error && (
             <div className="data-table-container" ref={listContainerRef}>
               <div className="data-table-header">
-                <div className="col-name">Name</div>
-                <div className="col-phone">Phone</div>
-                <div className="col-address">Address</div>
-                <div className="col-balance">Balance</div>
-                <div className="col-status">Status</div>
-                <div className="col-actions">Actions</div>
+                <div className="col-name">{t('customers.table.name')}</div>
+                <div className="col-phone">{t('customers.table.phone')}</div>
+                <div className="col-address">{t('customers.table.address')}</div>
+                <div className="col-balance">{t('customers.table.balance')}</div>
+                <div className="col-status">{t('customers.table.status')}</div>
+                <div className="col-actions">{t('common.actions')}</div>
               </div>
 
               {filteredCustomers.length === 0 ? (
                 <EmptyState
-                  title="No Customers Found"
+                  title={t('customers.no_customers')}
                   message={
                     searchQuery
-                      ? `We couldn't find any customers matching "${searchQuery}".`
-                      : 'Build your customer database to track sales and loyalty.'
+                      ? t('customers.no_matching', { query: searchQuery })
+                      : t('customers.get_started')
                   }
                   icon="👥"
                   action={
                     !searchQuery
-                      ? { label: 'Add New Customer', onClick: handleAddCustomer }
+                      ? { label: t('customers.add_customer'), onClick: handleAddCustomer }
                       : undefined
                   }
                 />
@@ -399,11 +401,15 @@ const CustomersPage: React.FC = () => {
                       className={`col-balance ${customer.balanceDue > 0 ? 'balance-due' : customer.balanceDue < 0 ? 'balance-advance' : ''}`}
                     >
                       {customer.balanceDue !== 0 ? formatCurrency(customer.balanceDue) : '₹ 0.00'}
-                      {customer.balanceDue > 0 ? ' (Due)' : customer.balanceDue < 0 ? ' (Adv)' : ''}
+                      {customer.balanceDue > 0
+                        ? ` ${t('customers.due')}`
+                        : customer.balanceDue < 0
+                          ? ` ${t('customers.adv')}`
+                          : ''}
                     </div>
                     <div className="col-status">
                       <span className={`status-badge ${customer.isActive ? 'active' : 'inactive'}`}>
-                        {customer.isActive ? 'Active' : 'Inactive'}
+                        {customer.isActive ? t('common.active') : t('common.inactive')}
                       </span>
                     </div>
                     <div className="col-actions" style={{ display: 'flex', gap: '0.25rem' }}>
@@ -413,7 +419,7 @@ const CustomersPage: React.FC = () => {
                           e.stopPropagation();
                           setSettleCustomer(customer);
                         }}
-                        title="Settle Balance"
+                        title={t('customers.actions.settle')}
                       >
                         <svg
                           width="18"
@@ -434,7 +440,10 @@ const CustomersPage: React.FC = () => {
                           className="action-icon-btn action-whatsapp"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const msg = `Namaste ${customer.name},\nThis is a gentle reminder that an amount of ₹${customer.balanceDue.toLocaleString('en-IN')} is pending. Please settle it at your earliest convenience.\nThank you!`;
+                            const msg = t('customers.actions.whatsapp_msg', {
+                              name: customer.name,
+                              amount: Math.abs(customer.balanceDue).toLocaleString('en-IN'),
+                            });
                             const cleanPhone = customer.phone?.replace(/\\D/g, '') || '';
                             const finalPhone =
                               cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
@@ -443,7 +452,7 @@ const CustomersPage: React.FC = () => {
                               '_blank'
                             );
                           }}
-                          title="Send WhatsApp Reminder"
+                          title={t('customers.actions.whatsapp')}
                           style={{ color: '#25D366' }}
                         >
                           <svg
@@ -463,7 +472,7 @@ const CustomersPage: React.FC = () => {
                           e.stopPropagation();
                           setLedgerCustomer(customer);
                         }}
-                        title="View Ledger"
+                        title={t('customers.actions.ledger')}
                       >
                         <svg
                           width="18"
@@ -485,7 +494,7 @@ const CustomersPage: React.FC = () => {
                           e.stopPropagation();
                           handleEditCustomer(customer);
                         }}
-                        title="Edit Customer"
+                        title={t('customers.actions.edit')}
                       >
                         <svg
                           width="18"
@@ -505,7 +514,11 @@ const CustomersPage: React.FC = () => {
                       <button
                         className={`action-icon-btn action-toggle ${customer.isActive ? 'active' : 'inactive'}`}
                         onClick={(e) => handleToggleStatus(customer, e)}
-                        title={customer.isActive ? 'Deactivate Customer' : 'Activate Customer'}
+                        title={
+                          customer.isActive
+                            ? t('customers.actions.deactivate')
+                            : t('customers.actions.activate')
+                        }
                       >
                         <svg
                           width="18"
@@ -529,12 +542,14 @@ const CustomersPage: React.FC = () => {
 
               {hasMore && (
                 <div ref={loaderRef} className="loading-more">
-                  {loading ? 'Loading more customers...' : 'Scroll for more'}
+                  {loading ? t('customers.loading') : t('customers.scroll_more')}
                 </div>
               )}
 
               {!hasMore && customers.length > 0 && totalCount > 100 && (
-                <div className="end-of-list">Showing all {totalCount} customers</div>
+                <div className="end-of-list">
+                  {t('customers.total_count', { count: totalCount })}
+                </div>
               )}
             </div>
           )}

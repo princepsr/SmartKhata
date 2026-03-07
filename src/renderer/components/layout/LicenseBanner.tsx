@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLicense } from '../../hooks/useLicense';
 import './LicenseBanner.css';
 
@@ -39,6 +40,7 @@ interface LicenseBannerProps {
 }
 
 const LicenseBanner: React.FC<LicenseBannerProps> = ({ onActivateClick }) => {
+  const { t } = useTranslation();
   const { status, loading } = useLicense();
 
   if (loading || !status) {
@@ -64,19 +66,22 @@ const LicenseBanner: React.FC<LicenseBannerProps> = ({ onActivateClick }) => {
   let message = '';
   if (status.type === 'TRIAL') {
     if (status.isLocked) {
-      message = 'Evaluation period ended. Please verify your license for full access.';
+      message = t('license.trial_end');
     } else if (status.isGracePeriod) {
-      message = `Evaluation ended. Please verify within ${status.graceDaysRemaining} days to avoid interruption.`;
+      message = t('license.trial_grace', { days: status.graceDaysRemaining });
     } else {
-      message = `Evaluation: ${status.daysRemaining} days / ${status.billsRemaining} bills remaining.`;
+      message = t('license.trial_status', {
+        days: status.daysRemaining,
+        bills: status.billsRemaining,
+      });
     }
   } else if (status.type === 'PAID') {
     if (status.isLocked) {
-      message = 'License period ended. Please verify your license to maintain access.';
+      message = t('license.paid_end');
     } else if (status.isGracePeriod) {
-      message = `License ended. Please verify within ${status.graceDaysRemaining} days to avoid interruption.`;
+      message = t('license.paid_grace', { days: status.graceDaysRemaining });
     } else {
-      message = `License valid for ${status.daysRemaining} more days.`;
+      message = t('license.paid_status', { days: status.daysRemaining });
     }
   }
 
@@ -89,7 +94,7 @@ const LicenseBanner: React.FC<LicenseBannerProps> = ({ onActivateClick }) => {
         <span className="banner-message">{message}</span>
       </div>
       <button className="banner-action" onClick={onActivateClick}>
-        {status.isLocked ? 'Verify Now' : 'License Details'}
+        {status.isLocked ? t('license.verify_now') : t('license.details')}
       </button>
     </div>
   );

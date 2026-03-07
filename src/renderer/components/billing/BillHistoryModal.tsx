@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPC, useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../../utils/formatters';
@@ -21,6 +22,7 @@ interface BillHistoryModalProps {
 }
 
 export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) => {
+  const { t } = useTranslation();
   const { settings } = useAppSettingsStore();
   const printerName = settings.printerName || '';
   // Fetch Today's Bills
@@ -71,12 +73,12 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) =
     try {
       const success = await reprintBill({ billId, printerName });
       if (success) {
-        showNotification('Reprint command sent!', 'success');
+        showNotification(t('billing.reprint_sent'), 'success');
       } else {
-        showNotification('Reprint failed. Check printer.', 'error');
+        showNotification(t('billing.reprint_failed'), 'error');
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Reprint failed';
+      const msg = err instanceof Error ? err.message : t('billing.reprint_failed');
       showNotification(msg, 'error');
       console.error(err);
     }
@@ -87,7 +89,7 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) =
       <div className="modal-content bill-history-modal">
         {/* Header */}
         <div className="modal-header">
-          <h2>Today's Sales</h2>
+          <h2>{t('billing.today_sales')}</h2>
           {notification && (
             <div
               className="success-notification"
@@ -107,24 +109,28 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) =
         {/* Body */}
         <div className="modal-body">
           <div className="bill-history-scroll-area">
-            {loading && <div className="loading">Loading history...</div>}
+            {loading && <div className="loading">{t('billing.loading_history')}</div>}
 
-            {error && <div className="error-banner">Error loading history: {error}</div>}
+            {error && (
+              <div className="error-banner">
+                {t('common.error')}: {error}
+              </div>
+            )}
 
             {!loading && !error && (!bills || bills.length === 0) && (
-              <div className="no-results">No sales recorded today.</div>
+              <div className="no-results">{t('billing.no_sales_today')}</div>
             )}
 
             {!loading && bills && bills.length > 0 && (
               <table className="history-table">
                 <thead>
                   <tr>
-                    <th>Time</th>
-                    <th>Bill No</th>
-                    <th>Customer</th>
-                    <th>Mode</th>
-                    <th className="text-right">Amount</th>
-                    <th className="text-right">Actions</th>
+                    <th>{t('inventory.history.table.date')}</th>
+                    <th>{t('billing.bill_no')}</th>
+                    <th>{t('common.customers')}</th>
+                    <th>{t('common.status')}</th>
+                    <th className="text-right">{t('common.amount')}</th>
+                    <th className="text-right">{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -147,14 +153,16 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) =
                         <button
                           className="bill-link-btn"
                           onClick={() => setSelectedBillNumber(bill.billNumber)}
-                          title="View Full Details"
+                          title={t('billing.bill_details')}
                         >
                           {bill.billNumber}
                         </button>
                       </td>
                       <td>
                         <span className="customer-name">
-                          {bill.customerName || <span className="text-muted">Walk-in</span>}
+                          {bill.customerName || (
+                            <span className="text-muted">{t('billing.walk_in')}</span>
+                          )}
                         </span>
                       </td>
                       <td>
@@ -167,7 +175,7 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) =
                           onClick={() => handleReprint(bill.id)}
                           disabled={reprinting}
                         >
-                          {reprinting ? '...' : 'Reprint'}
+                          {reprinting ? '...' : t('billing.reprint')}
                         </button>
                       </td>
                     </tr>
@@ -181,7 +189,7 @@ export const BillHistoryModal: React.FC<BillHistoryModalProps> = ({ onClose }) =
         {/* Footer */}
         <div className="modal-footer">
           <button onClick={onClose} className="btn-secondary">
-            Close (Esc)
+            {t('common.close')} (Esc)
           </button>
         </div>
 

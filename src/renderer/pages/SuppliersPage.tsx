@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
@@ -30,6 +31,7 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
     },
     ref
   ) => {
+    const { t } = useTranslation();
     const [internalSearchQuery, setInternalSearchQuery] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -122,8 +124,8 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
       if (isDeactivating) {
         setConfirmDialog({
           isOpen: true,
-          title: 'Deactivate Supplier',
-          message: `Are you sure you want to deactivate "${supplier.name}"? This will hide them from the active supplier list.`,
+          title: t('procurement.suppliers.deactivate.title'),
+          message: t('procurement.suppliers.deactivate.message', { name: supplier.name }),
           onConfirm: async () => {
             try {
               await toggleStatus({ id: supplier.id, isActive: false });
@@ -155,8 +157,8 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
         {showHeader && (
           <header className="page-header">
             <div>
-              <h1 className="page-title">Procurement & Suppliers</h1>
-              <p className="page-subtitle">Manage your suppliers and purchase orders</p>
+              <h1 className="page-title">{t('procurement.suppliers.title')}</h1>
+              <p className="page-subtitle">{t('procurement.suppliers.subtitle')}</p>
             </div>
             <div className="header-actions">
               <div className="filter-group">
@@ -170,7 +172,7 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
                       }
                     }}
                   />
-                  Show Inactive
+                  {t('procurement.suppliers.show_inactive')}
                 </label>
                 <label className="filter-checkbox">
                   <input
@@ -182,7 +184,7 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
                       }
                     }}
                   />
-                  Show Dues Only
+                  {t('procurement.suppliers.show_dues')}
                 </label>
               </div>
               <div className="search-bar">
@@ -199,7 +201,7 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
                 </svg>
                 <input
                   type="text"
-                  placeholder="Search by name, phone, GSTIN..."
+                  placeholder={t('procurement.suppliers.search_placeholder')}
                   value={searchQuery}
                   onChange={(e) => {
                     if (externalSearchQuery === undefined) {
@@ -220,7 +222,7 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                Add Supplier
+                {t('procurement.suppliers.add_supplier')}
               </button>
             </div>
           </header>
@@ -231,29 +233,31 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
 
           <div className="data-table-container">
             {loading ? (
-              <div className="loading-state">Loading suppliers...</div>
+              <div className="loading-state">{t('procurement.suppliers.loading')}</div>
             ) : filteredSuppliers.length === 0 ? (
               <EmptyState
-                title="No Suppliers Found"
+                title={t('procurement.suppliers.no_suppliers')}
                 message={
                   searchQuery
-                    ? 'Try matching different keywords.'
-                    : 'Add your first supplier to start taking purchases.'
+                    ? t('customers.no_matching', { query: searchQuery })
+                    : t('procurement.suppliers.no_suppliers_msg')
                 }
                 icon="👥"
                 action={
-                  !searchQuery ? { label: 'Add Supplier', onClick: handleCreateNew } : undefined
+                  !searchQuery
+                    ? { label: t('procurement.suppliers.add_supplier'), onClick: handleCreateNew }
+                    : undefined
                 }
               />
             ) : (
               <>
                 <div className="data-table-header grid-suppliers">
-                  <div>Name</div>
-                  <div>GSTIN</div>
-                  <div>Contact</div>
-                  <div>Balance Due</div>
-                  <div>Status</div>
-                  <div>Actions</div>
+                  <div>{t('procurement.suppliers.table.name')}</div>
+                  <div>{t('procurement.suppliers.table.gstin')}</div>
+                  <div>{t('procurement.suppliers.table.contact')}</div>
+                  <div>{t('procurement.suppliers.table.balance')}</div>
+                  <div>{t('procurement.suppliers.table.status')}</div>
+                  <div>{t('common.actions')}</div>
                 </div>
                 <div className="data-table-body">
                   {filteredSuppliers.map((supplier) => (
@@ -281,14 +285,14 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
                           className={`balance-badge ${supplier.balanceDue > 0 ? 'balance-due' : 'balance-settled'}`}
                         >
                           ₹{Math.abs(supplier.balanceDue).toFixed(2)}{' '}
-                          {supplier.balanceDue > 0 ? 'Dr' : ''}
+                          {supplier.balanceDue > 0 ? t('customers.due') : ''}
                         </span>
                       </div>
                       <div className="col-status">
                         <span
                           className={`status-badge ${supplier.isActive ? 'active' : 'inactive'}`}
                         >
-                          {supplier.isActive ? 'Active' : 'Inactive'}
+                          {supplier.isActive ? t('common.active') : t('common.inactive')}
                         </span>
                       </div>
                       <div className="col-actions">
@@ -298,7 +302,7 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
                             e.stopPropagation();
                             setSettleSupplier(supplier);
                           }}
-                          title="Settle Balance"
+                          title={t('procurement.settle.title')}
                         >
                           <svg
                             width="16"
@@ -320,7 +324,7 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
                             e.stopPropagation();
                             setLedgerSupplier(supplier);
                           }}
-                          title="Ledger"
+                          title={t('common.more')}
                           style={{ color: 'var(--color-primary)' }}
                         >
                           <svg
@@ -343,7 +347,7 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
                             e.stopPropagation();
                             handleEdit(supplier);
                           }}
-                          title="Edit"
+                          title={t('common.edit')}
                         >
                           <svg
                             width="16"
@@ -360,7 +364,11 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
                         <button
                           className={`action-icon-btn action-toggle ${supplier.isActive ? 'active' : 'inactive'}`}
                           onClick={(e) => handleToggleStatus(supplier, e)}
-                          title={supplier.isActive ? 'Deactivate Supplier' : 'Activate Supplier'}
+                          title={
+                            supplier.isActive
+                              ? t('procurement.suppliers.deactivate.title')
+                              : t('customers.actions.activate')
+                          }
                         >
                           <svg
                             width="18"
@@ -411,7 +419,7 @@ const SuppliersPage = forwardRef<SuppliersPageHandle, SuppliersPageProps>(
           onConfirm={confirmDialog.onConfirm}
           onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
           type="warning"
-          confirmLabel="Deactivate"
+          confirmLabel={t('common.confirm')}
         />
       </div>
     );
@@ -426,6 +434,7 @@ function SupplierFormModal({
   supplier: Supplier | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: supplier?.name || '',
     phone: supplier?.phone || '',
@@ -462,7 +471,11 @@ function SupplierFormModal({
     <div className="modal-overlay">
       <div className="modal-content" style={{ maxWidth: '500px' }}>
         <div className="modal-header">
-          <h2>{supplier ? 'Edit Supplier' : 'Add New Supplier'}</h2>
+          <h2>
+            {supplier
+              ? t('procurement.suppliers.form.edit_title')
+              : t('procurement.suppliers.form.add_title')}
+          </h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -471,7 +484,7 @@ function SupplierFormModal({
           {error && <div className="error-banner">{error}</div>}
           <form id="supplierForm" onSubmit={handleSubmit} className="form-layout">
             <div className="form-group">
-              <label>Supplier Name *</label>
+              <label>{t('procurement.suppliers.form.name')}</label>
               <input
                 type="text"
                 value={formData.name}
@@ -481,7 +494,7 @@ function SupplierFormModal({
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label>Phone Number</label>
+                <label>{t('procurement.suppliers.form.phone')}</label>
                 <input
                   type="text"
                   value={formData.phone}
@@ -489,7 +502,7 @@ function SupplierFormModal({
                 />
               </div>
               <div className="form-group">
-                <label>GSTIN</label>
+                <label>{t('procurement.suppliers.form.gstin')}</label>
                 <input
                   type="text"
                   value={formData.gstin}
@@ -498,7 +511,7 @@ function SupplierFormModal({
               </div>
             </div>
             <div className="form-group">
-              <label>Email</label>
+              <label>{t('procurement.suppliers.form.email')}</label>
               <input
                 type="email"
                 value={formData.email}
@@ -506,7 +519,7 @@ function SupplierFormModal({
               />
             </div>
             <div className="form-group">
-              <label>Address</label>
+              <label>{t('procurement.suppliers.form.address')}</label>
               <textarea
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
@@ -517,10 +530,10 @@ function SupplierFormModal({
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="submit" form="supplierForm" className="btn btn-primary">
-            Save Supplier
+            {t('procurement.suppliers.form.save')}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Product } from '@shared/types/ipc';
 import { formatCurrency } from '../../utils/formatters';
 import { CalculatedLineItem } from '@shared/utils/billing-math';
@@ -28,6 +29,7 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
   onRemove,
   autoFocus,
 }) => {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const { settings } = useAppSettingsStore();
 
@@ -120,14 +122,19 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
         <div className="product-info">
           <span className="product-title">{item.product.name}</span>
           {item.product.batchNumber && (
-            <span className="batch-badge">Batch: {item.product.batchNumber}</span>
+            <span className="batch-badge">
+              {t('inventory.table.batch')}: {item.product.batchNumber}
+            </span>
           )}
         </div>
         <div className="product-meta-sub">
-          <span>SKU: {item.product.sku || 'N/A'}</span>
+          <span>
+            {t('common.barcode')}: {item.product.sku || 'N/A'}
+          </span>
           {item.product.expiryDate && (
             <span className={new Date(item.product.expiryDate) < new Date() ? 'expired' : ''}>
-              Exp: {new Date(item.product.expiryDate).toLocaleDateString()}
+              {t('inventory.table.expiry')}:{' '}
+              {new Date(item.product.expiryDate).toLocaleDateString()}
             </span>
           )}
         </div>
@@ -149,7 +156,7 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder="0.000"
               />
-              <span className="weight-label-tag">KG</span>
+              <span className="weight-label-tag">{t('inventory.form.uom_options.kg')}</span>
             </div>
           </div>
         ) : (
@@ -177,7 +184,13 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
                 +
               </button>
             </div>
-            <span className="uom-label">{item.product.uom || 'Pcs'}</span>
+            <span className="uom-label">
+              {item.product.uom === 'Strip'
+                ? t('inventory.form.uom_options.strip')
+                : item.product.uom === 'Pcs'
+                  ? t('inventory.form.uom_options.pcs')
+                  : item.product.uom || t('inventory.form.uom_options.pcs')}
+            </span>
           </>
         )}
 
@@ -187,13 +200,13 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
               className="btn-tab-adjust"
               onClick={() => handleTabletInput(Math.round(item.quantity * stripSize) + 1)}
             >
-              +1 Tab
+              {t('billing.add_tab')}
             </button>
             <button
               className="btn-tab-adjust"
               onClick={() => handleTabletInput(Math.round(item.quantity * stripSize) - 1)}
             >
-              -1 Tab
+              {t('billing.remove_tab')}
             </button>
           </div>
         )}
@@ -203,7 +216,7 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
         <div className="main-price">{formatCurrency(item.product.salePrice)}</div>
         {isMedicalStrip && (
           <div className="sub-price">
-            {formatCurrency(item.product.salePrice / stripSize)} / tab
+            {formatCurrency(item.product.salePrice / stripSize)} {t('billing.per_tab')}
           </div>
         )}
       </div>
@@ -248,7 +261,7 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
       <button
         className="btn-item-remove"
         onClick={() => onRemove(item.product.id)}
-        aria-label="Remove item"
+        aria-label={t('common.delete')}
         tabIndex={0}
       >
         ×

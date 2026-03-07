@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { useConfirm } from '../hooks/useConfirm';
@@ -10,6 +11,7 @@ import EmptyState from '../components/common/EmptyState';
 import './QuotationsPage.css';
 
 function QuotationsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { alert, confirm } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,8 +35,10 @@ function QuotationsPage() {
       await printQuotation({ quotationId: id });
     } catch (err) {
       await alert({
-        title: 'Print Failed',
-        message: 'Failed to print quotation: ' + (err instanceof Error ? err.message : String(err)),
+        title: t('quotations_page.alerts.print_failed_title'),
+        message: t('quotations_page.alerts.print_failed_msg', {
+          error: err instanceof Error ? err.message : String(err),
+        }),
         type: 'danger',
       });
     }
@@ -42,10 +46,10 @@ function QuotationsPage() {
 
   const handleCancel = async (id: number) => {
     const ok = await confirm({
-      title: 'Cancel Quotation',
-      message: 'Are you sure you want to cancel this quotation?',
+      title: t('quotations_page.alerts.cancel_title'),
+      message: t('quotations_page.alerts.cancel_msg'),
       type: 'warning',
-      confirmLabel: 'Cancel Quote',
+      confirmLabel: t('quotations_page.alerts.cancel_btn'),
     });
 
     if (ok) {
@@ -54,9 +58,10 @@ function QuotationsPage() {
         fetchQuotations();
       } catch (err) {
         await alert({
-          title: 'Cancel Failed',
-          message:
-            'Failed to cancel quotation: ' + (err instanceof Error ? err.message : String(err)),
+          title: t('quotations_page.alerts.cancel_failed_title'),
+          message: t('quotations_page.alerts.cancel_failed_msg', {
+            error: err instanceof Error ? err.message : String(err),
+          }),
           type: 'danger',
         });
       }
@@ -99,7 +104,7 @@ function QuotationsPage() {
     <div className="page quotations-page">
       <div className="page-content-wrapper animate-fade-in">
         <header className="page-header">
-          <h1 className="page-title">Quotations & Estimates</h1>
+          <h1 className="page-title">{t('quotations_page.title')}</h1>
           <div className="header-actions">
             <div className="filter-group">
               <label className="filter-checkbox">
@@ -108,19 +113,19 @@ function QuotationsPage() {
                   checked={showPendingOnly}
                   onChange={(e) => setShowPendingOnly(e.target.checked)}
                 />
-                Pending Only
+                {t('quotations_page.pending_only')}
               </label>
             </div>
             <input
               type="text"
               className="search-input"
-              placeholder="Search by quote # or customer..."
+              placeholder={t('quotations_page.search_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               autoFocus
             />
             <button className="btn-primary" onClick={() => navigate('/billing?type=quotation')}>
-              + New Quotation
+              {t('quotations_page.new_quotation')}
             </button>
           </div>
         </header>
@@ -128,13 +133,13 @@ function QuotationsPage() {
         <div className="quotations-content">
           <div className="data-table-container">
             <div className="data-table-header">
-              <div className="col-qtn">Quote #</div>
-              <div className="col-date">Date</div>
-              <div className="col-customer">Customer</div>
-              <div className="col-amount">Amount</div>
-              <div className="col-expiry">Valid Until</div>
-              <div className="col-status">Status</div>
-              <div className="col-actions">Actions</div>
+              <div className="col-qtn">{t('quotations_page.table.quote_no')}</div>
+              <div className="col-date">{t('quotations_page.table.date')}</div>
+              <div className="col-customer">{t('quotations_page.table.customer')}</div>
+              <div className="col-amount">{t('quotations_page.table.amount')}</div>
+              <div className="col-expiry">{t('quotations_page.table.valid_until')}</div>
+              <div className="col-status">{t('quotations_page.table.status')}</div>
+              <div className="col-actions">{t('quotations_page.table.actions')}</div>
             </div>
 
             {loading ? (
@@ -147,17 +152,17 @@ function QuotationsPage() {
                 ))
             ) : filteredQuotations.length === 0 ? (
               <EmptyState
-                title="No Quotations Found"
+                title={t('quotations_page.empty_title')}
                 message={
                   searchTerm
-                    ? `We couldn't find any quotations matching "${searchTerm}".`
-                    : 'Start by creating a new quotation for your customers.'
+                    ? t('quotations_page.empty_msg_search', { searchTerm })
+                    : t('quotations_page.empty_msg')
                 }
                 icon="📄"
                 action={
                   !searchTerm
                     ? {
-                        label: 'Create New Quotation',
+                        label: t('quotations_page.create_new'),
                         onClick: () => navigate('/billing?type=quotation'),
                       }
                     : undefined
@@ -176,11 +181,15 @@ function QuotationsPage() {
                   </div>
                   <div className="col-customer">
                     <div className="customer-name">{quote.customerNameSnapshot}</div>
-                    {quote.customerId && <span className="customer-tag">Linked Account</span>}
+                    {quote.customerId && (
+                      <span className="customer-tag">{t('quotations_page.linked_account')}</span>
+                    )}
                   </div>
                   <div className="col-amount quote-amount">{formatCurrency(quote.grandTotal)}</div>
                   <div className="col-expiry">
-                    {quote.expiresAt ? new Date(quote.expiresAt).toLocaleDateString() : 'N/A'}
+                    {quote.expiresAt
+                      ? new Date(quote.expiresAt).toLocaleDateString()
+                      : t('quotations_page.na')}
                   </div>
                   <div className="col-status">
                     <span className={`status-badge ${getStatusColor(quote.status)}`}>
@@ -190,7 +199,7 @@ function QuotationsPage() {
                   <div className="col-actions">
                     <button
                       className="btn-icon-premium"
-                      title="Print Quote"
+                      title={t('quotations_page.tooltips.print')}
                       onClick={() => handlePrint(quote.id)}
                       disabled={quote.status === 'CANCELLED'}
                     >
@@ -198,7 +207,7 @@ function QuotationsPage() {
                     </button>
                     <button
                       className="btn-icon-premium"
-                      title="Convert to Bill"
+                      title={t('quotations_page.tooltips.convert')}
                       onClick={() => handleConvert(quote.id)}
                       disabled={quote.status === 'CONVERTED' || quote.status === 'CANCELLED'}
                     >
@@ -206,7 +215,7 @@ function QuotationsPage() {
                     </button>
                     <button
                       className="btn-icon-premium danger"
-                      title="Cancel Quote"
+                      title={t('quotations_page.tooltips.cancel')}
                       onClick={() => handleCancel(quote.id)}
                       disabled={quote.status === 'CONVERTED' || quote.status === 'CANCELLED'}
                     >

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { BackupMeta } from '@shared/types/ipc';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -20,6 +21,7 @@ export function DataManagement() {
     isLoading: settingsLoading,
   } = useAppSettingsStore();
   const { confirm, alert } = useConfirm();
+  const { t } = useTranslation();
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastAction, setLastAction] = useState<{
     type: 'backup' | 'restore';
@@ -308,12 +310,9 @@ export function DataManagement() {
       {/* 1. Manual Backup & Restore */}
       <div className="settings-section-card">
         <div className="section-header">
-          <h2>Backup & Restore</h2>
+          <h2>{t('settings_tabs.backup.title')}</h2>
         </div>
-        <p className="settings-description">
-          Keep your data safe by creating regular backups. You can restore data from a previous
-          backup if needed.
-        </p>
+        <p className="settings-description">{t('settings_tabs.backup.desc')}</p>
 
         <div className="data-actions" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <button
@@ -322,7 +321,7 @@ export function DataManagement() {
             className="btn btn-primary"
             style={{ flex: '1 1 200px' }}
           >
-            {isProcessing ? 'Processing...' : 'Create Backup'}
+            {isProcessing ? t('settings_tabs.backup.processing') : t('settings_tabs.backup.create')}
           </button>
 
           <button
@@ -331,7 +330,9 @@ export function DataManagement() {
             className="btn btn-danger"
             style={{ flex: '1 1 200px' }}
           >
-            {isProcessing ? 'Processing...' : 'Restore Data'}
+            {isProcessing
+              ? t('settings_tabs.backup.processing')
+              : t('settings_tabs.backup.restore')}
           </button>
         </div>
       </div>
@@ -339,7 +340,7 @@ export function DataManagement() {
       {/* 2. Automated Backups */}
       <div className="settings-section-card">
         <div className="section-header">
-          <h3>Automated Backups</h3>
+          <h3>{t('settings_tabs.backup.auto_title')}</h3>
           <div className="status-indicator">
             {settings.autoBackupEnabled && (
               <span
@@ -352,15 +353,14 @@ export function DataManagement() {
                   borderRadius: '12px',
                 }}
               >
-                ACTIVE
+                {t('settings_tabs.backup.active')}
               </span>
             )}
           </div>
         </div>
 
         <p className="settings-description" style={{ marginBottom: '1.5rem' }}>
-          SmartKhata can automatically back up your data in the background to ensure you never lose
-          your records.
+          {t('settings_tabs.backup.auto_desc')}
         </p>
 
         <div
@@ -378,11 +378,9 @@ export function DataManagement() {
                 checked={settings.autoBackupEnabled}
                 onChange={(e) => updateSettings({ autoBackupEnabled: e.target.checked })}
               />
-              Enable Automated Background Backups
+              {t('settings_tabs.backup.enable_auto')}
             </label>
-            <p className="help-text">
-              When enabled, the system will silently create backups at fixed intervals.
-            </p>
+            <p className="help-text">{t('settings_tabs.backup.enable_auto_help')}</p>
           </div>
 
           <div
@@ -393,10 +391,12 @@ export function DataManagement() {
               gridColumn: '1 / -1',
             }}
           >
-            <label htmlFor="backupInterval">Backup Frequency</label>
+            <label htmlFor="backupInterval">{t('settings_tabs.backup.frequency')}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Every</span>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  {t('settings_tabs.backup.every')}
+                </span>
                 <input
                   id="backupInterval"
                   type="number"
@@ -436,13 +436,11 @@ export function DataManagement() {
                   }
                 }}
               >
-                <option value="days">Day(s)</option>
-                <option value="hours">Hour(s)</option>
+                <option value="days">{t('settings_tabs.backup.days')}</option>
+                <option value="hours">{t('settings_tabs.backup.hours')}</option>
               </select>
             </div>
-            <p className="help-text">
-              Choose how frequently the system should automatically back up your data.
-            </p>
+            <p className="help-text">{t('settings_tabs.backup.freq_help')}</p>
           </div>
 
           <div
@@ -452,7 +450,7 @@ export function DataManagement() {
               pointerEvents: settings.autoBackupEnabled ? 'all' : 'none',
             }}
           >
-            <label htmlFor="retainCount">Keep Last N Backups</label>
+            <label htmlFor="retainCount">{t('settings_tabs.backup.keep_n')}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <input
                 id="retainCount"
@@ -476,19 +474,21 @@ export function DataManagement() {
                 className="form-input"
                 style={{ width: '100px' }}
               />
-              <span style={{ color: 'var(--text-secondary)' }}>Files</span>
+              <span style={{ color: 'var(--text-secondary)' }}>
+                {t('settings_tabs.backup.files')}
+              </span>
             </div>
           </div>
 
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              Last Auto-Backup:{' '}
+              {t('settings_tabs.backup.last_auto')}{' '}
               {settings.lastAutoBackup
                 ? new Date(settings.lastAutoBackup).toLocaleString('en-IN', {
                     dateStyle: 'long',
                     timeStyle: 'short',
                   })
-                : 'Never performed yet'}
+                : t('settings_tabs.backup.never_performed')}
             </div>
           </div>
         </div>
@@ -503,7 +503,9 @@ export function DataManagement() {
             className="btn btn-primary"
             disabled={settingsLoading}
           >
-            {settingsLoading ? 'Saving...' : 'Save Backup Settings'}
+            {settingsLoading
+              ? t('settings_tabs.backup.saving')
+              : t('settings_tabs.backup.save_backup')}
           </button>
         </div>
       </div>
@@ -511,7 +513,7 @@ export function DataManagement() {
       {/* 3. Google Drive Sync */}
       <div className="settings-section-card">
         <div className="section-header">
-          <h3>Google Drive Sync</h3>
+          <h3>{t('settings_tabs.backup.gdrive_title')}</h3>
           <div className="status-indicator">
             {googleProfile && (
               <span
@@ -524,14 +526,14 @@ export function DataManagement() {
                   borderRadius: '12px',
                 }}
               >
-                LINKED
+                {t('settings_tabs.backup.linked')}
               </span>
             )}
           </div>
         </div>
 
         <p className="settings-description" style={{ marginBottom: '1.5rem' }}>
-          Securely sync your latest backup to Google Drive for ultimate data safety.
+          {t('settings_tabs.backup.gdrive_desc')}
         </p>
 
         {!googleProfile ? (
@@ -545,7 +547,7 @@ export function DataManagement() {
             }}
           >
             <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>
-              No Google account linked. Link your account to enable cloud backups.
+              {t('settings_tabs.backup.no_account')}
             </p>
             <button
               onClick={handleGoogleAuth}
@@ -553,7 +555,7 @@ export function DataManagement() {
               className="btn btn-primary"
               style={{ margin: '0 auto' }}
             >
-              🔗 Link Google Drive Account
+              {t('settings_tabs.backup.link_btn')}
             </button>
           </div>
         ) : (
@@ -579,7 +581,7 @@ export function DataManagement() {
               >
                 <div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    Linked Account
+                    {t('settings_tabs.backup.linked_account')}
                   </div>
                   <div style={{ fontWeight: '450', color: 'var(--primary-accent)' }}>
                     {googleProfile.email}
@@ -590,7 +592,7 @@ export function DataManagement() {
                   className="btn btn-secondary btn-sm"
                   style={{ color: '#ef4444' }}
                 >
-                  Unlink
+                  {t('settings_tabs.backup.unlink')}
                 </button>
               </div>
             </div>
@@ -602,19 +604,19 @@ export function DataManagement() {
                   checked={settings.googleDriveSyncEnabled}
                   onChange={(e) => updateSettings({ googleDriveSyncEnabled: e.target.checked })}
                 />
-                Auto-sync backups to Google Drive
+                {t('settings_tabs.backup.auto_sync')}
               </label>
             </div>
 
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                Last Cloud Sync:{' '}
+                {t('settings_tabs.backup.last_sync')}{' '}
                 {settings.lastCloudSync
                   ? new Date(settings.lastCloudSync).toLocaleString('en-IN', {
                       dateStyle: 'long',
                       timeStyle: 'short',
                     })
-                  : 'Not synced yet'}
+                  : t('settings_tabs.backup.not_synced')}
               </div>
             </div>
 
@@ -632,14 +634,16 @@ export function DataManagement() {
                 disabled={isSyncing || isProcessing}
                 className="btn btn-primary"
               >
-                {isSyncing ? 'Syncing...' : 'Sync Now'}
+                {isSyncing ? t('settings_tabs.backup.syncing') : t('settings_tabs.backup.sync_now')}
               </button>
               <button
                 onClick={handleDriveRestore}
                 disabled={isSyncing || isProcessing}
                 className="btn btn-danger"
               >
-                {isSyncing ? 'Restoring...' : 'Restore from Drive'}
+                {isSyncing
+                  ? t('settings_tabs.backup.restoring')
+                  : t('settings_tabs.backup.restore_drive')}
               </button>
             </div>
           </div>
@@ -655,7 +659,9 @@ export function DataManagement() {
             className="btn btn-primary"
             disabled={settingsLoading}
           >
-            {settingsLoading ? 'Saving...' : 'Save Cloud Settings'}
+            {settingsLoading
+              ? t('settings_tabs.backup.saving')
+              : t('settings_tabs.backup.save_cloud')}
           </button>
         </div>
       </div>
@@ -676,7 +682,9 @@ export function DataManagement() {
           }}
         >
           <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
-            {lastAction.type === 'backup' ? 'Backup Result' : 'Restore Result'}
+            {lastAction.type === 'backup'
+              ? t('settings_tabs.backup.backup_result')
+              : t('settings_tabs.backup.restore_result')}
           </div>
           <div>{lastAction.message}</div>
         </div>

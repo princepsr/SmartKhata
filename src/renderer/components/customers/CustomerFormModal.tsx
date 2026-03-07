@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import './CustomerFormModal.css';
@@ -42,6 +43,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
   onSuccess,
   initialData,
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<FormData>(INITIAL_STATE);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const firstInputRef = useRef<HTMLInputElement>(null);
@@ -122,20 +124,20 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
     let isValid = true;
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('customers.form.errors.name_req');
       isValid = false;
     }
 
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+      newErrors.phone = t('customers.form.errors.phone_req');
       isValid = false;
     } else if (!/^\d{10}$/.test(formData.phone.replace(/[\s-()]/g, ''))) {
-      newErrors.phone = 'Enter a valid 10-digit phone number';
+      newErrors.phone = t('customers.form.errors.phone_invalid');
       isValid = false;
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Enter a valid email address';
+      newErrors.email = t('customers.form.errors.email_invalid');
       isValid = false;
     }
 
@@ -174,7 +176,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
     <div className="modal-overlay">
       <div className="modal-content customer-form-modal">
         <div className="modal-header">
-          <h2>{isEditMode ? 'Edit Customer' : 'Add New Customer'}</h2>
+          <h2>{isEditMode ? t('customers.form.edit_title') : t('customers.form.add_title')}</h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -185,14 +187,14 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
         <form id="customer-form" onSubmit={handleSubmit}>
           <div className="modal-body">
             <div className="form-group">
-              <label>Full Name *</label>
+              <label>{t('customers.form.name')}</label>
               <input
                 ref={firstInputRef}
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="e.g. Rahul Sharma"
+                placeholder={t('customers.form.name_placeholder')}
                 className={errors.name ? 'error' : ''}
                 disabled={isLoading}
               />
@@ -200,13 +202,13 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label>Phone Number *</label>
+              <label>{t('customers.form.phone')}</label>
               <input
                 type="text"
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                placeholder="10-digit mobile number"
+                placeholder={t('customers.form.phone_placeholder')}
                 className={errors.phone ? 'error' : ''}
                 disabled={isLoading}
               />
@@ -214,13 +216,13 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label>Email Address (Optional)</label>
+              <label>{t('customers.form.email')}</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="customer@example.com"
+                placeholder={t('customers.form.email_placeholder')}
                 className={errors.email ? 'error' : ''}
                 disabled={isLoading}
               />
@@ -228,12 +230,12 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label>Address (Optional)</label>
+              <label>{t('customers.form.address')}</label>
               <textarea
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                placeholder="Full mailing address..."
+                placeholder={t('customers.form.address_placeholder')}
                 rows={3}
                 disabled={isLoading}
               />
@@ -257,7 +259,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                     disabled={isLoading}
                     style={{ width: 'auto' }}
                   />
-                  Active Customer
+                  {t('customers.form.active_customer')}
                 </label>
               </div>
             )}
@@ -266,10 +268,14 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
 
         <div className="modal-actions">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="submit" form="customer-form" className="btn-primary" disabled={isLoading}>
-            {isLoading ? 'Saving...' : isEditMode ? 'Update Customer' : 'Create Customer'}
+            {isLoading
+              ? t('customers.form.saving')
+              : isEditMode
+                ? t('customers.form.edit_title')
+                : t('customers.form.add_title')}
           </button>
         </div>
       </div>

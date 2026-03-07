@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppSettingsStore } from '../../store/useAppSettingsStore';
 import { useLicense } from '../../hooks/useLicense';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import '../ConfirmModal.css'; // Leverage existing modal styles
 
 export const ReferralModal: React.FC = () => {
+  const { t } = useTranslation();
   const { settings, updateSettings, saveSettings } = useAppSettingsStore();
   const { status } = useLicense();
   const [isVisible, setIsVisible] = useState(false);
@@ -57,15 +59,14 @@ export const ReferralModal: React.FC = () => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="confirm-header info">
-          <h3>🎁 Earn 10% Cashback!</h3>
+          <h3>🎁 {t('common.referral_title')}</h3>
           <button className="close-btn" onClick={handleClose}>
             &times;
           </button>
         </div>
         <div className="confirm-body" style={{ textAlign: 'center', paddingTop: '1rem' }}>
           <p style={{ fontSize: '1.05rem', marginBottom: '1.5rem', color: '#4b5563' }}>
-            Love SmartKhata? Refer another shop and get <strong>10% commission</strong> on their
-            license purchase!
+            {t('common.referral_msg')}
           </p>
 
           {isPaid ? (
@@ -86,7 +87,7 @@ export const ReferralModal: React.FC = () => {
                   marginBottom: '0.5rem',
                 }}
               >
-                Your Customer ID
+                {t('common.customer_id')}
               </p>
               <div
                 className="font-mono"
@@ -101,7 +102,7 @@ export const ReferralModal: React.FC = () => {
                 {referralCode}
               </div>
               <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                Share this code with your friends when they purchase a license.
+                {t('common.referral_share_msg')}
               </p>
             </div>
           ) : (
@@ -114,14 +115,14 @@ export const ReferralModal: React.FC = () => {
               }}
             >
               <p style={{ fontSize: '0.9rem', color: '#991b1b', marginBottom: '0.5rem' }}>
-                Activate a full license to get your unique referral code.
+                {t('common.activate_license_msg')}
               </p>
               <button
                 onClick={handleClose}
                 className="btn-primary"
                 style={{ width: '100%', marginTop: '0.5rem' }}
               >
-                Okay
+                {t('common.ok')}
               </button>
             </div>
           )}

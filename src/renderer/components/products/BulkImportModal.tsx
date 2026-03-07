@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { parseCSV, ParsedCSV } from '../../utils/csv-parser';
@@ -26,20 +27,29 @@ interface ColumnMapping {
   isGstInclusive: string;
 }
 
-const SYSTEM_FIELDS: { key: keyof ColumnMapping; label: string; required: boolean }[] = [
-  { key: 'name', label: 'Product Name', required: true },
-  { key: 'salePrice', label: 'Sale Price', required: true },
-  { key: 'purchasePrice', label: 'Purchase Price', required: false },
-  { key: 'stockQty', label: 'Stock Quantity', required: false },
-  { key: 'sku', label: 'SKU', required: false },
-  { key: 'barcode', label: 'Barcode', required: false },
-  { key: 'gstPercent', label: 'GST %', required: false },
-  { key: 'isActive', label: 'Active Status (true/false/1/0)', required: false },
-  { key: 'trackInventory', label: 'Track Inventory (true/false/1/0)', required: false },
-  { key: 'isGstInclusive', label: 'GST Inclusive (true/false/1/0)', required: false },
-];
-
 export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const { t } = useTranslation();
+
+  const SYSTEM_FIELDS: { key: keyof ColumnMapping; label: string; required: boolean }[] = useMemo(
+    () => [
+      { key: 'name', label: t('inventory.form.name').replace(' *', ''), required: true },
+      { key: 'salePrice', label: t('inventory.form.sale_price'), required: true },
+      { key: 'purchasePrice', label: t('inventory.form.purchase_price'), required: false },
+      { key: 'stockQty', label: t('inventory.form.opening_stock'), required: false },
+      {
+        key: 'sku',
+        label: t('inventory.form.sku_optional').replace(' (Optional)', ''),
+        required: false,
+      },
+      { key: 'barcode', label: t('common.barcode'), required: false },
+      { key: 'gstPercent', label: t('inventory.form.gst_percent'), required: false },
+      { key: 'isActive', label: t('inventory.form.active_product'), required: false },
+      { key: 'trackInventory', label: t('inventory.form.track_inventory'), required: false },
+      { key: 'isGstInclusive', label: t('inventory.form.gst_inclusive_mrp'), required: false },
+    ],
+    [t]
+  );
+
   const [stage, setStage] = useState<ImportStage>('UPLOAD');
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<ParsedCSV | null>(null);
@@ -87,7 +97,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
           });
 
           if (rows.length === 0) {
-            throw new Error('No text found in PDF');
+            throw new Error(t('inventory.import.errors.parse'));
           }
           result = {
             headers: rows[0],
@@ -98,7 +108,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
           setStage('IMPORTING'); // Show loading for excel parsing
           const response = await parseExcelFile(selectedFile.path);
           if (!response) {
-            throw new Error('Failed to parse Excel file');
+            throw new Error(t('inventory.import.errors.parse'));
           }
           result = response;
         } else {
@@ -148,7 +158,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
         setMapping(newMapping);
       } catch (err) {
         console.error('Parse error', err);
-        setImportErrors(['Failed to parse file. Please ensure it is a valid CSV.']);
+        setImportErrors([t('inventory.import.errors.parse')]);
       }
     }
   };
@@ -173,7 +183,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
       });
       return previewRow;
     });
-  }, [parsedData, mapping]);
+  }, [parsedData, mapping, SYSTEM_FIELDS]);
 
   const validateAndImport = async () => {
     if (!parsedData) {
@@ -221,7 +231,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
     const validProducts = productsToImport.filter((p) => p.name && p.salePrice);
 
     if (validProducts.length === 0) {
-      setImportErrors(['No valid products found. Ensure Name and Sale Price are mapped.']);
+      setImportErrors([t('inventory.import.errors.no_valid')]);
       return;
     }
 
@@ -254,7 +264,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
     <div className="modal-overlay">
       <div className="modal-content bulk-import-modal">
         <div className="modal-header">
-          <h2>Bulk Import Products</h2>
+          <h2>{t('inventory.import.title')}</h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -265,7 +275,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
             {stage === 'UPLOAD' && (
               <div className="upload-zone" onClick={() => fileInputRef.current?.click()}>
                 <div className="upload-icon">📂</div>
-                <p>Click to upload CSV or PDF or Drag & Drop</p>
+                <p>{t('inventory.import.upload_instruction')}</p>
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -273,14 +283,14 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
                   onChange={handleFileChange}
                   style={{ display: 'none' }}
                 />
-                <p className="hint">Supported formats: CSV, PDF (Simple Tables)</p>
+                <p className="hint">{t('inventory.import.supported_formats')}</p>
               </div>
             )}
 
             {stage === 'MAP' && parsedData && (
               <div className="mapping-zone">
                 <p className="instruction">
-                  Map columns from <strong>{file?.name}</strong> to System Fields
+                  {t('inventory.import.map_instruction', { file: file?.name })}
                 </p>
 
                 <div className="mapping-grid">
@@ -294,7 +304,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
                         onChange={(e) => mapField(field.key, e.target.value)}
                         className={!mapping[field.key] && field.required ? 'invalid' : ''}
                       >
-                        <option value="">-- Ignore --</option>
+                        <option value="">{t('inventory.import.ignore')}</option>
                         {parsedData.headers.map((h, i) => (
                           <option key={i} value={i}>
                             {h}
@@ -306,7 +316,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
                 </div>
 
                 <div className="preview-table-wrapper">
-                  <h4>Preview (First 5 rows)</h4>
+                  <h4>{t('inventory.import.preview_rows')}</h4>
                   <table className="preview-table">
                     <thead>
                       <tr>
@@ -332,14 +342,14 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
             {stage === 'IMPORTING' && (
               <div className="loading-state">
                 <div className="spinner"></div>
-                <p>{importMessage || 'Processing file...'}</p>
+                <p>{importMessage || t('inventory.import.processing')}</p>
               </div>
             )}
 
             {stage === 'DONE' && (
               <div className="success-state">
                 <div className="success-icon">✅</div>
-                <p>Import Successful!</p>
+                <p>{t('inventory.import.success')}</p>
               </div>
             )}
 
@@ -349,7 +359,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
                   <div key={i}>{e}</div>
                 ))}
                 {ipcError && <div>{ipcError}</div>}
-                {loading && <div>Wait...</div>}
+                {loading && <div>{t('common.processing')}</div>}
               </div>
             )}
           </div>
@@ -358,13 +368,13 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
         <div className="modal-actions">
           {stage !== 'DONE' && stage !== 'IMPORTING' && (
             <button className="btn-secondary" onClick={stage === 'MAP' ? reset : onClose}>
-              {stage === 'MAP' ? 'Back' : 'Cancel'}
+              {stage === 'MAP' ? t('inventory.import.back') : t('common.cancel')}
             </button>
           )}
 
           {stage === 'MAP' && (
             <button className="btn-primary" onClick={validateAndImport}>
-              Import Now
+              {t('inventory.import.import_now')}
             </button>
           )}
         </div>

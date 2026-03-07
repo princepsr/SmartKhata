@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPC } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../../utils/formatters';
@@ -42,6 +43,7 @@ export const CustomerLedgerModal: React.FC<CustomerLedgerModalProps> = ({
   onClose,
   customer,
 }) => {
+  const { t } = useTranslation();
   const [selectedBillId, setSelectedBillId] = React.useState<string | null>(null);
 
   const {
@@ -82,7 +84,7 @@ export const CustomerLedgerModal: React.FC<CustomerLedgerModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content ledger-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Ledger: {customer.name}</h2>
+          <h2>{t('customers.ledger.title', { name: customer.name })}</h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -93,7 +95,7 @@ export const CustomerLedgerModal: React.FC<CustomerLedgerModalProps> = ({
           {history && (
             <div className="ledger-header-summary">
               <div>
-                <div className="net-balance-label">Net Balance</div>
+                <div className="net-balance-label">{t('customers.ledger.net_balance')}</div>
                 <div
                   className={`net-balance-value ${
                     history.customer.balanceDue > 0
@@ -106,10 +108,10 @@ export const CustomerLedgerModal: React.FC<CustomerLedgerModalProps> = ({
                   {formatCurrency(Math.abs(history.customer.balanceDue))}
                   <span className="net-balance-text">
                     {history.customer.balanceDue > 0
-                      ? 'Due To You'
+                      ? t('customers.ledger.due_to_you')
                       : history.customer.balanceDue < 0
-                        ? 'Advance'
-                        : 'Settled'}
+                        ? t('customers.ledger.advance')
+                        : t('customers.ledger.settled')}
                   </span>
                 </div>
               </div>
@@ -130,13 +132,13 @@ export const CustomerLedgerModal: React.FC<CustomerLedgerModalProps> = ({
                   <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                   <path d="M3 3v5h5" />
                 </svg>
-                Refresh
+                {t('customers.ledger.refresh')}
               </button>
             </div>
           )}
 
           {loading && !history ? (
-            <div className="loading">Loading ledger...</div>
+            <div className="loading">{t('customers.ledger.loading')}</div>
           ) : error ? (
             <div className="error">{error}</div>
           ) : history && history.ledger.length > 0 ? (
@@ -145,11 +147,11 @@ export const CustomerLedgerModal: React.FC<CustomerLedgerModalProps> = ({
                 <table className="ledger-table">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Description</th>
-                      <th>Reference</th>
-                      <th style={{ textAlign: 'right' }}>You Gave</th>
-                      <th style={{ textAlign: 'right' }}>You Got</th>
+                      <th>{t('customers.ledger.table.date')}</th>
+                      <th>{t('customers.ledger.table.desc')}</th>
+                      <th>{t('customers.ledger.table.ref')}</th>
+                      <th style={{ textAlign: 'right' }}>{t('customers.ledger.table.gave')}</th>
+                      <th style={{ textAlign: 'right' }}>{t('customers.ledger.table.got')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -167,10 +169,13 @@ export const CustomerLedgerModal: React.FC<CustomerLedgerModalProps> = ({
                           </td>
                           <td className="col-desc">
                             <div>
-                              {entry.type === 'SALE' && 'Bill Sale'}
-                              {entry.type === 'PAYMENT_IN' && 'Payment (Got)'}
-                              {entry.type === 'PAYMENT_OUT' && 'Payment (Gave)'}
-                              {entry.type === 'OPENING_BALANCE' && 'Opening Balance'}
+                              {entry.type === 'SALE' && t('customers.ledger.types.sale')}
+                              {entry.type === 'PAYMENT_IN' &&
+                                t('customers.ledger.types.payment_in')}
+                              {entry.type === 'PAYMENT_OUT' &&
+                                t('customers.ledger.types.payment_out')}
+                              {entry.type === 'OPENING_BALANCE' &&
+                                t('customers.ledger.types.opening')}
                               {!['SALE', 'PAYMENT_IN', 'PAYMENT_OUT', 'OPENING_BALANCE'].includes(
                                 entry.type
                               ) && entry.type}
@@ -182,7 +187,7 @@ export const CustomerLedgerModal: React.FC<CustomerLedgerModalProps> = ({
                               <button
                                 className="bill-link-btn"
                                 onClick={() => setSelectedBillId(entry.referenceNumber!)}
-                                title="View Bill Details"
+                                title={t('common.view_details')}
                               >
                                 {entry.referenceNumber}
                               </button>
@@ -211,14 +216,14 @@ export const CustomerLedgerModal: React.FC<CustomerLedgerModalProps> = ({
             </div>
           ) : (
             <div className="no-data">
-              <p>No transaction history found for this customer.</p>
+              <p>{t('customers.ledger.no_history')}</p>
             </div>
           )}
         </div>
 
         <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose}>
-            Close
+            {t('common.close')}
           </button>
         </div>
       </div>

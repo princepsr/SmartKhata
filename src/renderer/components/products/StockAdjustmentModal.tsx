@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import './StockAdjustmentModal.css';
@@ -26,6 +27,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
   onSuccess,
   product,
 }) => {
+  const { t } = useTranslation();
   const [adjustmentType, setAdjustmentType] = useState<AdjustmentType>('add');
   const [quantity, setQuantity] = useState<string>('');
   const [reason, setReason] = useState<ReasonType>('');
@@ -143,17 +145,17 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
   const validate = (): boolean => {
     const qty = parseInt(quantity, 10);
     if (isNaN(qty) || qty <= 0) {
-      setError('Please enter a valid positive quantity');
+      setError(t('inventory.adjustment.errors.invalid_qty'));
       return false;
     }
 
     if (!reason) {
-      setError('Please select a reason');
+      setError(t('inventory.adjustment.errors.select_reason'));
       return false;
     }
 
     if (adjustmentType === 'remove' && qty > product.stockQty) {
-      setError(`Cannot remove more than current stock (${product.stockQty})`);
+      setError(t('inventory.adjustment.errors.insufficient_stock', { qty: product.stockQty }));
       return false;
     }
 
@@ -170,7 +172,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     <div className="modal-overlay">
       <div className="modal-content stock-adjustment-modal">
         <div className="modal-header">
-          <h2>Adjust Stock</h2>
+          <h2>{t('inventory.adjustment.title')}</h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -179,7 +181,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
         <div className="product-info-banner">
           <span className="product-name">{product.name}</span>
           <span className="current-stock">
-            Current Stock: <strong>{product.stockQty}</strong>
+            {t('inventory.adjustment.current_stock')} <strong>{product.stockQty}</strong>
           </span>
         </div>
 
@@ -189,7 +191,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
 
             <div className="form-row" style={{ alignItems: 'flex-end', gap: '1.5rem' }}>
               <div className="form-group" style={{ flex: 1 }}>
-                <label>Quantity *</label>
+                <label>{t('inventory.form.quantity')}</label>
                 <input
                   ref={qtyInputRef}
                   type="number"
@@ -230,24 +232,24 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
                   htmlFor="trackInventory"
                   style={{ margin: 0, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
                 >
-                  Track Inventory
+                  {t('inventory.form.track_inventory')}
                 </label>
               </div>
             </div>
 
             <div className="form-row" style={{ gap: '1rem', marginTop: '1rem' }}>
               <div className="form-group" style={{ flex: 1 }}>
-                <label>Batch Number</label>
+                <label>{t('inventory.form.batch')}</label>
                 <input
                   type="text"
                   value={batchNumber}
                   onChange={(e) => setBatchNumber(e.target.value)}
-                  placeholder="Enter batch #"
+                  placeholder={t('inventory.form.batch_placeholder')}
                   disabled={loading}
                 />
               </div>
               <div className="form-group" style={{ flex: 1 }}>
-                <label>Expiry Date</label>
+                <label>{t('inventory.form.expiry')}</label>
                 <input
                   type="date"
                   value={expiryDate}
@@ -267,7 +269,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
                       checked={adjustmentType === 'add'}
                       onChange={() => setAdjustmentType('add')}
                     />
-                    <span>+ Add Stock</span>
+                    <span>+ {t('inventory.adjustment.add_stock')}</span>
                   </label>
                   <label
                     className={`type-option ${adjustmentType === 'remove' ? 'active remove' : ''}`}
@@ -278,12 +280,12 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
                       checked={adjustmentType === 'remove'}
                       onChange={() => setAdjustmentType('remove')}
                     />
-                    <span>- Remove Stock</span>
+                    <span>- {t('inventory.adjustment.remove_stock')}</span>
                   </label>
                 </div>
 
                 <div className="form-group">
-                  <label>Reason *</label>
+                  <label>{t('inventory.adjustment.reason')}</label>
                   <select
                     value={reason}
                     onChange={(e) => setReason(e.target.value as ReasonType)}
@@ -291,38 +293,44 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
                     className={!reason ? 'placeholder' : ''}
                   >
                     <option value="" disabled>
-                      Select a reason...
+                      {t('inventory.adjustment.select_reason')}
                     </option>
                     {adjustmentType === 'add' ? (
                       <>
-                        <option value="PURCHASE">New Purchase / Stock In</option>
-                        <option value="RETURN">Customer Return</option>
-                        <option value="ADJUSTMENT">Inventory Correction (Found)</option>
+                        <option value="PURCHASE">
+                          {t('inventory.adjustment.reasons.PURCHASE')}
+                        </option>
+                        <option value="RETURN">{t('inventory.adjustment.reasons.RETURN')}</option>
+                        <option value="ADJUSTMENT">
+                          {t('inventory.adjustment.reasons.ADJUSTMENT_ADD')}
+                        </option>
                       </>
                     ) : (
                       <>
-                        <option value="DAMAGE">Damaged / Expired</option>
-                        <option value="THEFT">Theft / Lost</option>
-                        <option value="ADJUSTMENT">Inventory Correction (Missing)</option>
-                        <option value="USE">Internal Use</option>
+                        <option value="DAMAGE">{t('inventory.adjustment.reasons.DAMAGE')}</option>
+                        <option value="THEFT">{t('inventory.adjustment.reasons.THEFT')}</option>
+                        <option value="ADJUSTMENT">
+                          {t('inventory.adjustment.reasons.ADJUSTMENT_REMOVE')}
+                        </option>
+                        <option value="USE">{t('inventory.adjustment.reasons.USE')}</option>
                       </>
                     )}
                   </select>
                 </div>
 
                 <div className="form-group">
-                  <label>Notes (Optional)</label>
+                  <label>{t('inventory.adjustment.notes')}</label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add details..."
+                    placeholder={t('inventory.adjustment.notes_placeholder')}
                     rows={2}
                     disabled={loading}
                   />
                 </div>
 
                 <div className="stock-preview">
-                  <span>New Stock Level:</span>
+                  <span>{t('inventory.adjustment.new_level')}</span>
                   <span className={`new-stock-value ${newStock < 0 ? 'negative' : ''}`}>
                     {newStock}
                   </span>
@@ -339,8 +347,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
                   color: '#666',
                 }}
               >
-                Inventory tracking is disabled for this item. Stock quantity will not be tracked or
-                updated.
+                {t('inventory.form.inventory_disabled_help')}
               </div>
             )}
           </div>
@@ -348,7 +355,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
 
         <div className="modal-actions">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={loading}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -357,10 +364,10 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
             disabled={loading}
           >
             {loading
-              ? 'Saving...'
+              ? t('common.processing')
               : trackInventory !== product?.trackInventory && (!quantity || parseInt(quantity) <= 0)
-                ? 'Save Changes'
-                : 'Confirm Adjustment'}
+                ? t('common.save')
+                : t('inventory.adjustment.confirm')}
           </button>
         </div>
       </div>

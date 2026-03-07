@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import GlobalMessages from './GlobalMessages';
 import LicenseBanner from './layout/LicenseBanner';
 import CommandCenter from './layout/CommandCenter';
@@ -172,6 +173,7 @@ function Layout() {
     return localStorage.getItem('sidebarCollapsed') === 'true';
   });
   const { settings, fetchSettings } = useAppSettingsStore();
+  const { t } = useTranslation();
 
   const navigate = useNavigate();
 
@@ -338,7 +340,7 @@ function Layout() {
               <span className="nav-icon">
                 <BillingIcon />
               </span>
-              <span className="nav-label">Billing</span>
+              <span className="nav-label">{t('common.billing')}</span>
               <kbd className="nav-shortcut">F2</kbd>
             </NavLink>
 
@@ -346,7 +348,7 @@ function Layout() {
               <span className="nav-icon">
                 <ProductsIcon />
               </span>
-              <span className="nav-label">Products</span>
+              <span className="nav-label">{t('common.inventory')}</span>
               <kbd className="nav-shortcut">F3</kbd>
             </NavLink>
 
@@ -355,7 +357,7 @@ function Layout() {
                 <span className="nav-icon">
                   <CustomersIcon />
                 </span>
-                <span className="nav-label">Customers</span>
+                <span className="nav-label">{t('common.customers')}</span>
                 <kbd className="nav-shortcut">F4</kbd>
               </NavLink>
             )}
@@ -364,7 +366,7 @@ function Layout() {
               <span className="nav-icon">
                 <ReportsIcon />
               </span>
-              <span className="nav-label">Reports</span>
+              <span className="nav-label">{t('common.reports')}</span>
               <kbd className="nav-shortcut">F5</kbd>
             </NavLink>
 
@@ -390,7 +392,7 @@ function Layout() {
                       <circle cx="5" cy="12" r="1"></circle>
                     </svg>
                   </span>
-                  <span className="nav-label">More</span>
+                  <span className="nav-label">{t('common.more')}</span>
                   <div className="nav-dropdown-btn">
                     <svg
                       width="16"
@@ -414,7 +416,7 @@ function Layout() {
                         <span className="nav-icon">
                           <PurchasesIcon />
                         </span>
-                        <span className="nav-label">Purchases</span>
+                        <span className="nav-label">{t('common.purchases')}</span>
                         <kbd className="nav-shortcut">F7</kbd>
                       </NavLink>
                     )}
@@ -424,7 +426,7 @@ function Layout() {
                         <span className="nav-icon">
                           <ExpensesIcon />
                         </span>
-                        <span className="nav-label">Expenses</span>
+                        <span className="nav-label">{t('common.expenses')}</span>
                         <kbd className="nav-shortcut">F8</kbd>
                       </NavLink>
                     )}
@@ -434,7 +436,7 @@ function Layout() {
                         <span className="nav-icon">
                           <QuotationsIcon />
                         </span>
-                        <span className="nav-label">Quotation</span>
+                        <span className="nav-label">{t('common.quotations')}</span>
                         <kbd className="nav-shortcut">F9</kbd>
                       </NavLink>
                     )}
@@ -444,7 +446,7 @@ function Layout() {
                         <span className="nav-icon">
                           <BarcodeIcon />
                         </span>
-                        <span className="nav-label">Barcodes</span>
+                        <span className="nav-label">{t('common.barcodes')}</span>
                         <kbd className="nav-shortcut">F10</kbd>
                       </NavLink>
                     )}
@@ -457,7 +459,7 @@ function Layout() {
               <span className="nav-icon">
                 <SettingsIcon />
               </span>
-              <span className="nav-label">Settings</span>
+              <span className="nav-label">{t('common.settings')}</span>
               <kbd className="nav-shortcut">F6</kbd>
             </NavLink>
           </nav>

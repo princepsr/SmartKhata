@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { useAppSettingsStore } from '../../store';
@@ -87,6 +88,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onSuccess,
   initialData,
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<FormData>(INITIAL_STATE);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [saltSuggestions, setSaltSuggestions] = useState<string[]>([]);
@@ -239,20 +241,20 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     let isValid = true;
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Product name is required';
+      newErrors.name = t('inventory.form.name_required');
       isValid = false;
     }
 
     const salePrice = parseFloat(formData.salePrice);
     if (isNaN(salePrice) || salePrice <= 0) {
-      newErrors.salePrice = 'Valid sale price is required';
+      newErrors.salePrice = t('inventory.form.errors.sale_price_required');
       isValid = false;
     }
 
     if (formData.gstPercent) {
       const gst = parseFloat(formData.gstPercent);
       if (isNaN(gst) || gst < 0 || gst > 100) {
-        newErrors.gstPercent = 'GST must be between 0 and 100';
+        newErrors.gstPercent = t('inventory.form.errors.gst_range');
         isValid = false;
       }
     }
@@ -261,7 +263,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     if (formData.purchasePrice) {
       const pp = parseFloat(formData.purchasePrice);
       if (isNaN(pp) || pp < 0) {
-        newErrors.purchasePrice = 'Invalid purchase price';
+        newErrors.purchasePrice = t('inventory.form.errors.purchase_price_invalid');
         isValid = false;
       }
     }
@@ -322,7 +324,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     <div className="modal-overlay">
       <div className="modal-content product-form-modal">
         <div className="modal-header">
-          <h2>{isEditMode ? 'Edit Product' : 'Add New Product'}</h2>
+          <h2>{isEditMode ? t('inventory.form.edit_title') : t('inventory.form.add_title')}</h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -335,7 +337,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             )}
 
             <div className="form-group salt-suggestions-container">
-              <label>Product Name *</label>
+              <label>{t('inventory.form.name')}</label>
               <input
                 ref={firstInputRef}
                 type="text"
@@ -351,7 +353,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     setMedicineSuggestions([]);
                   }
                 }}
-                placeholder="e.g. Dolo 650"
+                placeholder={t('inventory.form.name_placeholder')}
                 className={errors.name ? 'error' : ''}
                 autoFocus
                 disabled={isLoading}
@@ -382,7 +384,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
             {settings.appMode === 'MEDICAL' && (
               <div className="form-group salt-suggestions-container">
-                <label>Generic Salt Name (Optional)</label>
+                <label>{t('inventory.form.generic_salt')}</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type="text"
@@ -398,7 +400,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         setSaltSuggestions([]);
                       }
                     }}
-                    placeholder="e.g. Paracetamol"
+                    placeholder={t('inventory.form.salt_placeholder')}
                     disabled={isLoading}
                     autoComplete="off"
                   />
@@ -424,24 +426,24 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
             <div className="form-row">
               <div className="form-group">
-                <label>SKU (Optional)</label>
+                <label>{t('inventory.form.sku_optional')}</label>
                 <input
                   type="text"
                   name="sku"
                   value={formData.sku}
                   onChange={handleChange}
-                  placeholder="Unique Code"
+                  placeholder={t('inventory.form.sku_placeholder')}
                   disabled={isLoading}
                 />
               </div>
               <div className="form-group">
-                <label>Barcode (Scan)</label>
+                <label>{t('inventory.form.barcode_scan')}</label>
                 <input
                   type="text"
                   name="barcode"
                   value={formData.barcode}
                   onChange={handleChange}
-                  placeholder="Scan barcode"
+                  placeholder={t('inventory.form.barcode_scan')}
                   disabled={isLoading}
                 />
               </div>
@@ -449,7 +451,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
             <div className="form-row">
               <div className="form-group">
-                <label>Unit of Measure (UOM)</label>
+                <label>{t('inventory.form.uom')}</label>
                 <select
                   name="uom"
                   value={formData.uom}
@@ -458,48 +460,48 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 >
                   {settings.appMode === 'MEDICAL' ? (
                     <>
-                      <option value="Strip">Strip (Medicine)</option>
-                      <option value="Tablet">Tablet (Single)</option>
-                      <option value="Capsule">Capsule</option>
-                      <option value="Bottle">Bottle (Syrup/Drops)</option>
-                      <option value="Tube">Tube (Ointment)</option>
-                      <option value="Injection">Injection (Vial/Ampoule)</option>
-                      <option value="Sachet">Sachet</option>
-                      <option value="Pcs">General Piece</option>
+                      <option value="Strip">{t('inventory.form.uom_options.strip')}</option>
+                      <option value="Tablet">{t('inventory.form.uom_options.tablet')}</option>
+                      <option value="Capsule">{t('inventory.form.uom_options.capsule')}</option>
+                      <option value="Bottle">{t('inventory.form.uom_options.bottle')}</option>
+                      <option value="Tube">{t('inventory.form.uom_options.tube')}</option>
+                      <option value="Injection">{t('inventory.form.uom_options.injection')}</option>
+                      <option value="Sachet">{t('inventory.form.uom_options.sachet')}</option>
+                      <option value="Pcs">{t('inventory.form.uom_options.pcs')}</option>
                     </>
                   ) : settings.appMode === 'KIRANA' ? (
                     <>
-                      <option value="Pcs">Pcs (Piece)</option>
-                      <option value="Kg">Kg (Kilogram)</option>
-                      <option value="Ltr">Ltr (Litre)</option>
-                      <option value="Packet">Packet</option>
-                      <option value="Box">Box</option>
-                      <option value="Bag">Bag (Bora)</option>
-                      <option value="Dozen">Dozen</option>
+                      <option value="Pcs">{t('inventory.form.uom_options.pcs')}</option>
+                      <option value="Kg">{t('inventory.form.uom_options.kg')}</option>
+                      <option value="Ltr">{t('inventory.form.uom_options.ltr')}</option>
+                      <option value="Packet">{t('inventory.form.uom_options.packet')}</option>
+                      <option value="Box">{t('inventory.form.uom_options.box')}</option>
+                      <option value="Bag">{t('inventory.form.uom_options.bag')}</option>
+                      <option value="Dozen">{t('inventory.form.uom_options.dozen')}</option>
                     </>
                   ) : (
                     <>
-                      <option value="Pcs">Piece (Pcs)</option>
-                      <option value="Unit">Unit</option>
-                      <option value="Packet">Packet</option>
-                      <option value="Box">Box</option>
-                      <option value="Set">Set</option>
-                      <option value="Bottle">Bottle</option>
-                      <option value="Kg">Kg</option>
-                      <option value="Ltr">Ltr</option>
+                      <option value="Pcs">{t('inventory.form.uom_options.pcs')}</option>
+                      <option value="Unit">{t('inventory.form.uom_options.unit')}</option>
+                      <option value="Packet">{t('inventory.form.uom_options.packet')}</option>
+                      <option value="Box">{t('inventory.form.uom_options.box')}</option>
+                      <option value="Set">{t('inventory.form.uom_options.set')}</option>
+                      <option value="Bottle">{t('inventory.form.uom_options.bottle')}</option>
+                      <option value="Kg">{t('inventory.form.uom_options.kg')}</option>
+                      <option value="Ltr">{t('inventory.form.uom_options.ltr')}</option>
                     </>
                   )}
                 </select>
               </div>
               {settings.gstEnabled && (
                 <div className="form-group">
-                  <label>HSN / SAC (Optional)</label>
+                  <label>{t('inventory.form.hsn')}</label>
                   <input
                     type="text"
                     name="hsnCode"
                     value={formData.hsnCode}
                     onChange={handleChange}
-                    placeholder="8-digit code"
+                    placeholder={t('inventory.form.hsn_placeholder')}
                     disabled={isLoading}
                     maxLength={12}
                   />
@@ -510,18 +512,18 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             {settings.enableBatchTracking && (
               <div className="form-row">
                 <div className="form-group">
-                  <label>Batch Number (Optional)</label>
+                  <label>{t('inventory.form.batch')}</label>
                   <input
                     type="text"
                     name="batchNumber"
                     value={formData.batchNumber}
                     onChange={handleChange}
-                    placeholder="e.g. B12345"
+                    placeholder={t('inventory.form.batch_placeholder')}
                     disabled={isLoading}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Expiry Date (Optional)</label>
+                  <label>{t('inventory.form.expiry')}</label>
                   <input
                     type="date"
                     name="expiryDate"
@@ -552,11 +554,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     display: 'block',
                   }}
                 >
-                  💊 Medical Classification
+                  💊 {t('inventory.form.medical_classification')}
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <label htmlFor="drugCategory" style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                    Drug Category (for Safety Warnings)
+                    {t('inventory.form.drug_category')}
                   </label>
                   <select
                     id="drugCategory"
@@ -565,15 +567,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     onChange={handleChange}
                     disabled={isLoading}
                   >
-                    <option value="">None (General Medicine / OTC)</option>
-                    <option value="H">Schedule H (Prescription Only)</option>
-                    <option value="H1">Schedule H1 (Controlled Drug)</option>
-                    <option value="X">Schedule X (Psychotropic/Narcotic)</option>
-                    <option value="G">Schedule G (Medical Supervision Required)</option>
+                    <option value="">{t('inventory.form.drug_category_options.none')}</option>
+                    <option value="H">{t('inventory.form.drug_category_options.h')}</option>
+                    <option value="H1">{t('inventory.form.drug_category_options.h1')}</option>
+                    <option value="X">{t('inventory.form.drug_category_options.x')}</option>
+                    <option value="G">{t('inventory.form.drug_category_options.g')}</option>
                   </select>
                   <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>
-                    Setting a schedule category will show a billing alert for prescription
-                    verification.
+                    {t('inventory.form.drug_category_help')}
                   </p>
                 </div>
               </div>
@@ -581,7 +582,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
             <div className="form-row">
               <div className="form-group">
-                <label>Sale Price (₹) *</label>
+                <label>{t('inventory.form.sale_price')}</label>
                 <input
                   type="number"
                   name="salePrice"
@@ -595,7 +596,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 {errors.salePrice && <span className="error-text">{errors.salePrice}</span>}
               </div>
               <div className="form-group">
-                <label>Purchase Price (₹)</label>
+                <label>{t('inventory.form.purchase_price')}</label>
                 <input
                   type="number"
                   name="purchasePrice"
@@ -609,7 +610,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
               {settings.gstEnabled && (
                 <div className="form-group gst-group">
-                  <label>GST %</label>
+                  <label>{t('inventory.form.gst_percent')}</label>
                   <div className="gst-select-wrapper">
                     <div className="gst-display-value">{formData.gstPercent}%</div>
                     <select
@@ -657,7 +658,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         accentColor: 'var(--color-primary)',
                       }}
                     />
-                    Track Inventory
+                    {t('inventory.form.track_inventory')}
                   </label>
                 )}
 
@@ -685,7 +686,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         accentColor: 'var(--color-primary)',
                       }}
                     />
-                    GST Inclusive (MRP)
+                    {t('inventory.form.gst_inclusive_mrp')}
                   </label>
                 )}
 
@@ -713,7 +714,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         accentColor: 'var(--color-primary)',
                       }}
                     />
-                    Sold by Weight (Weighing Scale)
+                    {t('inventory.form.sold_by_weight')} ({t('inventory.form.weight_description')})
                   </label>
                 )}
               </div>
@@ -731,8 +732,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     borderLeft: '4px solid #d1d5db',
                   }}
                 >
-                  Inventory tracking is disabled for this item. Stock quantity will not be tracked
-                  or updated.
+                  {t('inventory.form.inventory_disabled_help')}
                 </div>
               )}
             </div>
@@ -741,7 +741,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <div className="form-row">
                 {!isEditMode && (
                   <div className="form-group">
-                    <label>Opening Stock</label>
+                    <label>{t('inventory.form.opening_stock')}</label>
                     <input
                       type="number"
                       name="stockQty"
@@ -753,7 +753,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </div>
                 )}
                 <div className="form-group">
-                  <label>Low Stock Alert Qty</label>
+                  <label>{t('inventory.form.low_stock_threshold')}</label>
                   <input
                     type="number"
                     name="lowStockAlert"
@@ -791,7 +791,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         accentColor: 'var(--color-primary)',
                       }}
                     />
-                    Active Product
+                    {t('inventory.form.active_product')}
                   </label>
                 </div>
               </div>
@@ -801,10 +801,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
         <div className="modal-actions">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="submit" form="product-form" className="btn-primary" disabled={isLoading}>
-            {isLoading ? 'Saving...' : isEditMode ? 'Update Product' : 'Create Product'}
+            {isLoading
+              ? t('common.processing')
+              : isEditMode
+                ? t('inventory.form.update')
+                : t('inventory.form.save')}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Product } from '@shared/types/ipc';
 import { BillItemRow } from './BillItemRow';
 import { CalculatedLineItem } from '@shared/utils/billing-math';
@@ -25,6 +26,7 @@ export const BillItemList: React.FC<BillItemListProps> = ({
   onUpdateDiscount,
   onRemove,
 }) => {
+  const { t } = useTranslation();
   if (cart.length === 0) {
     return (
       <div
@@ -41,8 +43,8 @@ export const BillItemList: React.FC<BillItemListProps> = ({
         }}
       >
         <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🛒</div>
-        <h2 style={{ margin: 0 }}>Cart Empty</h2>
-        <p>Scan barcode or search (F2) to add items</p>
+        <h2 style={{ margin: 0 }}>{t('common.items')}</h2>
+        <p>{t('billing.search_placeholder')}</p>
       </div>
     );
   }
@@ -54,11 +56,11 @@ export const BillItemList: React.FC<BillItemListProps> = ({
     >
       {/* Header Row */}
       <div className="cart-header">
-        <span className="col-item">ITEM</span>
-        <span className="col-qty">QTY</span>
-        <span className="col-price">PRICE</span>
-        <span className="col-disc">DISC</span>
-        <span className="col-total">TOTAL</span>
+        <span className="col-item">{t('common.items').toUpperCase()}</span>
+        <span className="col-qty">{t('common.quantity').toUpperCase()}</span>
+        <span className="col-price">{t('common.price').toUpperCase()}</span>
+        <span className="col-disc">{t('common.discount').toUpperCase()}</span>
+        <span className="col-total">{t('common.total').toUpperCase()}</span>
         <span className="col-actions"></span>
       </div>
 

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPC } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../../utils/formatters';
@@ -46,6 +47,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
   onClose,
   billNumber,
 }) => {
+  const { t } = useTranslation();
   const [isCreditNoteModalOpen, setIsCreditNoteModalOpen] = React.useState(false);
   const { settings } = useAppSettingsStore();
   const { data, loading, error, execute: fetchBill } = useIPC<BillDetail>(IPC_CHANNELS.BILL_GET);
@@ -64,7 +66,9 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
     <div className="modal-overlay bill-detail-overlay" onClick={onClose}>
       <div className="modal-content bill-detail-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Bill Details: {billNumber}</h2>
+          <h2>
+            {t('billing.bill_details')}: {billNumber}
+          </h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -72,13 +76,17 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
 
         <div className="modal-body">
           <div className="bill-detail-scroll-area">
-            {loading && <div className="loading">Loading bill details...</div>}
-            {error && <div className="error">Error: {error}</div>}
+            {loading && <div className="loading">{t('billing.loading_details')}</div>}
+            {error && (
+              <div className="error">
+                {t('common.error')}: {error}
+              </div>
+            )}
 
             {data && (
               <div className="bill-info">
                 <div className="bill-meta">
-                  <strong>Date:</strong>{' '}
+                  <strong>{t('inventory.history.table.date')}:</strong>{' '}
                   {new Date(data.bill.createdAt).toLocaleString('en-IN', {
                     day: '2-digit',
                     month: 'short',
@@ -91,28 +99,30 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
                   <span className={`mode-badge ${data.bill.paymentMode.toLowerCase()}`}>
                     {data.bill.paymentMode.toUpperCase()}
                   </span>
-                  {data.bill.isPrinted && <span className="lock-badge-ui">🔒 LOCKED</span>}
+                  {data.bill.isPrinted && (
+                    <span className="lock-badge-ui">🔒 {t('billing.locked')}</span>
+                  )}
                 </div>
 
                 <div
                   className="bill-meta"
                   style={{ marginTop: '8px', borderTop: '1px dashed #eee', paddingTop: '8px' }}
                 >
-                  <strong>Customer:</strong>{' '}
+                  <strong>{t('common.customers')}:</strong>{' '}
                   {data.bill.customerName ? (
                     <span className="customer-name-tag">{data.bill.customerName}</span>
                   ) : (
-                    <span className="text-muted">Walk-in Customer</span>
+                    <span className="text-muted">{t('billing.walk_in_customer')}</span>
                   )}
                 </div>
 
                 <table className="items-table">
                   <thead>
                     <tr>
-                      <th>Item</th>
-                      <th className="text-right">Qty</th>
-                      <th className="text-right">Price</th>
-                      <th className="text-right">Total</th>
+                      <th>{t('common.items')}</th>
+                      <th className="text-right">{t('procurement.details.qty')}</th>
+                      <th className="text-right">{t('common.price')}</th>
+                      <th className="text-right">{t('common.total')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -129,7 +139,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
 
                 <div className="bill-summary">
                   <div className="summary-row">
-                    <span>Subtotal:</span>
+                    <span>{t('common.subtotal')}:</span>
                     <span>{formatCurrency(data.bill.subtotal)}</span>
                   </div>
 
@@ -168,12 +178,12 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
 
                   {data.bill.discountAmount > 0 && (
                     <div className="summary-row discount">
-                      <span>Discount:</span>
+                      <span>{t('common.discount')}:</span>
                       <span>-{formatCurrency(data.bill.discountAmount)}</span>
                     </div>
                   )}
                   <div className="summary-row grand-total">
-                    <span>Grand Total:</span>
+                    <span>{t('procurement.form.grand_total')}</span>
                     <span>{formatCurrency(data.bill.grandTotal)}</span>
                   </div>
                 </div>
@@ -185,11 +195,11 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
         <div className="modal-footer">
           {settings.gstEnabled && (
             <button className="btn-outline-danger" onClick={() => setIsCreditNoteModalOpen(true)}>
-              Issue Credit Note
+              {t('billing.issue_credit_note')}
             </button>
           )}
           <button className="btn-secondary" onClick={onClose}>
-            Close
+            {t('common.close')}
           </button>
         </div>
       </div>

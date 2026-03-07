@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLicense } from '../../hooks/useLicense';
 import { Portal } from '../common/Portal';
 import './LicenseActivationModal.css';
@@ -9,6 +10,7 @@ interface LicenseActivationModalProps {
 }
 
 const LicenseActivationModal: React.FC<LicenseActivationModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   const { status, activateLicense } = useLicense();
   const [segments, setSegments] = useState(['', '', '']);
   const [activating, setActivating] = useState(false);
@@ -39,7 +41,7 @@ const LicenseActivationModal: React.FC<LicenseActivationModalProps> = ({ isOpen,
     e.preventDefault();
     const licenseKey = segments.join('');
     if (licenseKey.length !== 12) {
-      setMessage({ text: 'Please enter the full 12-character key.', type: 'error' });
+      setMessage({ text: t('license.activation.error_full_key'), type: 'error' });
       return;
     }
 
@@ -49,13 +51,13 @@ const LicenseActivationModal: React.FC<LicenseActivationModalProps> = ({ isOpen,
     const result = await activateLicense(`KRN-${segments.join('-')}`);
     if (result.success) {
       setMessage({
-        text: 'Verification complete. SmartKhata is now fully activated!',
+        text: t('license.activation.success_msg'),
         type: 'success',
       });
       setTimeout(onClose, 2000);
     } else {
       setMessage({
-        text: result.error || 'Verification failed. Please check your key.',
+        text: result.error || t('license.activation.error_generic'),
         type: 'error',
       });
     }
@@ -67,35 +69,33 @@ const LicenseActivationModal: React.FC<LicenseActivationModalProps> = ({ isOpen,
       <div className="modal-overlay">
         <div className="modal-content license-modal">
           <div className="modal-header">
-            <h2>License Verification</h2>
+            <h2>{t('license.activation.title')}</h2>
             <button className="close-btn" onClick={onClose}>
               &times;
             </button>
           </div>
           <div className="modal-body">
-            <p className="description">
-              Please enter your verification key to unlock full features.
-            </p>
+            <p className="description">{t('license.activation.description')}</p>
 
             <div className="info-section">
               <div className="info-row">
-                <span className="info-label">System ID:</span>
+                <span className="info-label">{t('license.activation.system_id')}</span>
                 <code className="system-id">{status?.deviceId}</code>
                 <button
                   className="copy-btn"
                   onClick={() => navigator.clipboard.writeText(status?.deviceId || '')}
-                  title="Copy to clipboard"
+                  title={t('license.activation.copy_title')}
                   style={{ fontSize: '0.8rem', padding: '2px 8px' }}
                 >
-                  Copy
+                  {t('license.activation.copy')}
                 </button>
               </div>
-              <p className="info-note">Provide this System ID to get your Activation Key.</p>
+              <p className="info-note">{t('license.activation.note')}</p>
             </div>
 
             <form onSubmit={handleActivate}>
               <div className="form-group">
-                <label>Activation Key</label>
+                <label>{t('license.activation.key_label')}</label>
                 <div className="key-input-container">
                   <span className="key-prefix">KRN</span>
                   <span className="key-dash">-</span>
@@ -123,7 +123,7 @@ const LicenseActivationModal: React.FC<LicenseActivationModalProps> = ({ isOpen,
 
           <div className="modal-actions">
             <button type="button" className="btn-secondary" onClick={onClose}>
-              Later
+              {t('license.activation.later')}
             </button>
             <button
               type="button"
@@ -131,7 +131,7 @@ const LicenseActivationModal: React.FC<LicenseActivationModalProps> = ({ isOpen,
               disabled={activating || segments.join('').length !== 12}
               onClick={(e: any) => handleActivate(e)}
             >
-              {activating ? 'Verifying...' : 'Verify License'}
+              {activating ? t('license.activation.verifying') : t('license.activation.verify_btn')}
             </button>
           </div>
         </div>

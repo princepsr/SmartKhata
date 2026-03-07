@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useConfirm } from '../hooks/useConfirm';
 import { useAppSettingsStore } from '../store';
@@ -29,6 +30,7 @@ function SettingsPage() {
     useAppSettingsStore();
   const { alert } = useConfirm();
   const { refresh } = useLicense();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<SettingsTab>('shop');
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -65,27 +67,27 @@ function SettingsPage() {
   const validate = () => {
     const errors: Record<string, string> = {};
     if (!settings.shopName.trim()) {
-      errors.shopName = 'Shop Name is required';
+      errors.shopName = t('settings.validation.shop_name');
     }
     if (settings.gstEnabled) {
       if (!settings.address?.trim()) {
-        errors.address = 'Postal Address is required for GST compliance';
+        errors.address = t('settings.validation.address_gst');
       }
       if (!settings.gstNumber?.trim()) {
-        errors.gstNumber = 'GST Number is required';
+        errors.gstNumber = t('settings.validation.gstin_required');
       } else if (!/^[0-9A-Z]{15}$/.test(settings.gstNumber)) {
-        errors.gstNumber = 'GST Number must be 15 alphanumeric characters';
+        errors.gstNumber = t('settings.validation.gstin_invalid');
       }
       if (!settings.stateCode?.trim()) {
-        errors.stateCode = 'State Code is required';
+        errors.stateCode = t('settings.validation.state_code_required');
       }
       if (!settings.placeOfSupply?.trim()) {
-        errors.placeOfSupply = 'Place of Supply is required';
+        errors.placeOfSupply = t('settings.validation.pos_required');
       }
     }
 
     if (settings.phone && !/^\d{10}$/.test(settings.phone.replace(/[\s-()]/g, ''))) {
-      errors.phone = 'Phone must be a 10-digit number';
+      errors.phone = t('settings.validation.phone_invalid');
     }
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -110,7 +112,7 @@ function SettingsPage() {
     <div className="tab-content-wrapper fade-in">
       <div className="settings-section-card">
         <div className="section-header">
-          <h2>Shop Information</h2>
+          <h2>{t('settings.shop_info')}</h2>
           <div className="status-indicator">
             {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
             {saveStatus === 'error' && (
@@ -118,9 +120,7 @@ function SettingsPage() {
             )}
           </div>
         </div>
-        <p className="settings-description">
-          Configure your shop details that will appear on printed receipts and invoices.
-        </p>
+        <p className="settings-description">{t('settings.shop_info_desc')}</p>
 
         <div className="settings-form">
           <div className="form-group full-width">
@@ -139,14 +139,16 @@ function SettingsPage() {
           </div>
 
           <div className="form-group full-width">
-            <label htmlFor="shopAddress">Postal Address {settings.gstEnabled && '*'}</label>
+            <label htmlFor="shopAddress">
+              {t('settings.postal_address')} {settings.gstEnabled && '*'}
+            </label>
             <textarea
               id="shopAddress"
               value={settings.address || ''}
               onChange={(e) => updateSettings({ address: e.target.value })}
               className={`form-input ${validationErrors.address ? 'error' : ''}`}
               rows={3}
-              placeholder="Full address for receipt printing..."
+              placeholder={t('settings.address_placeholder')}
             />
             {validationErrors.address && (
               <span className="error-text">{validationErrors.address}</span>
@@ -154,14 +156,14 @@ function SettingsPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="phone">Phone Number</label>
+            <label htmlFor="phone">{t('settings.phone')}</label>
             <input
               id="phone"
               type="text"
               value={settings.phone || ''}
               onChange={(e) => updateSettings({ phone: e.target.value })}
               className={`form-input ${validationErrors.phone ? 'error' : ''}`}
-              placeholder="10-digit mobile number"
+              placeholder={t('settings.phone_placeholder')}
             />
             {validationErrors.phone && <span className="error-text">{validationErrors.phone}</span>}
           </div>
@@ -169,14 +171,14 @@ function SettingsPage() {
           {settings.gstEnabled && (
             <>
               <div className="form-group">
-                <label htmlFor="gstNumber">GST Number (GSTIN) *</label>
+                <label htmlFor="gstNumber">{t('settings.gstin')}</label>
                 <input
                   id="gstNumber"
                   type="text"
                   value={settings.gstNumber || ''}
                   onChange={(e) => updateSettings({ gstNumber: e.target.value.toUpperCase() })}
                   className={`form-input ${validationErrors.gstNumber ? 'error' : ''}`}
-                  placeholder="15-character GSTIN"
+                  placeholder={t('settings.gstin_placeholder')}
                 />
                 {validationErrors.gstNumber && (
                   <span className="error-text">{validationErrors.gstNumber}</span>
@@ -184,7 +186,7 @@ function SettingsPage() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="supplyType">Supply Type (GST)</label>
+                <label htmlFor="supplyType">{t('settings.supply_type')}</label>
                 <select
                   id="supplyType"
                   value={settings.supplyType || 'intrastate'}
@@ -195,16 +197,14 @@ function SettingsPage() {
                   }
                   className="form-input"
                 >
-                  <option value="intrastate">Intra-State (CGST + SGST)</option>
-                  <option value="interstate">Inter-State (IGST)</option>
+                  <option value="intrastate">{t('settings.intrastate')}</option>
+                  <option value="interstate">{t('settings.interstate')}</option>
                 </select>
-                <p className="help-text">
-                  Intra-State: buyer &amp; seller in the same state. Inter-State: different states.
-                </p>
+                <p className="help-text">{t('settings.supply_type_help')}</p>
               </div>
 
               <div className="form-group">
-                <label htmlFor="stateCode">State Code (2-digit) *</label>
+                <label htmlFor="stateCode">{t('settings.state_code')}</label>
                 <input
                   id="stateCode"
                   type="text"
@@ -212,30 +212,28 @@ function SettingsPage() {
                   value={settings.stateCode || ''}
                   onChange={(e) => updateSettings({ stateCode: e.target.value })}
                   className={`form-input ${validationErrors.stateCode ? 'error' : ''}`}
-                  placeholder="e.g. 07 (Delhi), 27 (Maharashtra)"
+                  placeholder={t('settings.state_code_placeholder')}
                 />
                 {validationErrors.stateCode && (
                   <span className="error-text">{validationErrors.stateCode}</span>
                 )}
-                <p className="help-text">
-                  Two-digit GST state code (first 2 digits of your GSTIN).
-                </p>
+                <p className="help-text">{t('settings.state_code_help')}</p>
               </div>
 
               <div className="form-group">
-                <label htmlFor="placeOfSupply">Place of Supply *</label>
+                <label htmlFor="placeOfSupply">{t('settings.place_of_supply')}</label>
                 <input
                   id="placeOfSupply"
                   type="text"
                   value={settings.placeOfSupply || ''}
                   onChange={(e) => updateSettings({ placeOfSupply: e.target.value })}
                   className={`form-input ${validationErrors.placeOfSupply ? 'error' : ''}`}
-                  placeholder="e.g. Maharashtra, Delhi"
+                  placeholder={t('settings.place_of_supply_placeholder')}
                 />
                 {validationErrors.placeOfSupply && (
                   <span className="error-text">{validationErrors.placeOfSupply}</span>
                 )}
-                <p className="help-text">Printed on Tax Invoice as required by GST law.</p>
+                <p className="help-text">{t('settings.place_of_supply_help')}</p>
               </div>
             </>
           )}
@@ -243,39 +241,58 @@ function SettingsPage() {
       </div>
 
       <div className="settings-section-card">
+        <div className="section-header">
+          <h3>{t('settings.regional_preferences')}</h3>
+        </div>
+        <p className="settings-description">{t('settings.regional_description')}</p>
+        <div className="settings-form">
+          <div className="form-group">
+            <label htmlFor="language">{t('settings.language')}</label>
+            <select
+              id="language"
+              value={settings.language || 'en'}
+              onChange={(e) => updateSettings({ language: e.target.value as 'en' | 'hi' })}
+              className="form-input"
+            >
+              <option value="en">{t('settings.english')} (default)</option>
+              <option value="hi">{t('settings.hindi')} (हिन्दी)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section-card">
         {/* Payment Integrations */}
         <div className="section-header">
-          <h3>Payment Integrations</h3>
+          <h3>{t('settings.payment_integrations')}</h3>
         </div>
-        <p className="settings-description">Configure dynamic payment methods for checkout</p>
+        <p className="settings-description">{t('settings.payment_desc')}</p>
 
         <div className="settings-grid">
           <div className="form-group">
-            <label htmlFor="upiId">Store UPI ID (VPA)</label>
+            <label htmlFor="upiId">{t('settings.upi_id')}</label>
             <input
               type="text"
               id="upiId"
               value={settings.upiId || ''}
               onChange={(e) => updateSettings({ upiId: e.target.value })}
               className="form-input"
-              placeholder="9876543210@paytm"
+              placeholder={t('settings.upi_id_placeholder')}
             />
-            <p className="help-text">
-              Used to dynamically generate a payment QR code during billing.
-            </p>
+            <p className="help-text">{t('settings.upi_id_help')}</p>
           </div>
 
           <div className="form-group">
-            <label htmlFor="upiName">Payee Name</label>
+            <label htmlFor="upiName">{t('settings.payee_name')}</label>
             <input
               type="text"
               id="upiName"
               value={settings.upiName || ''}
               onChange={(e) => updateSettings({ upiName: e.target.value })}
               className="form-input"
-              placeholder="SmartKhata Store"
+              placeholder={t('settings.payee_name_placeholder')}
             />
-            <p className="help-text">The display name shown when the customer scans the QR code.</p>
+            <p className="help-text">{t('settings.payee_name_help')}</p>
           </div>
         </div>
 
@@ -305,14 +322,12 @@ function SettingsPage() {
     <div className="tab-content-wrapper fade-in">
       <div className="settings-section-card">
         <div className="section-header">
-          <h2>Business Rules</h2>
+          <h2>{t('settings.business_rules')}</h2>
           <div className="status-indicator">
             {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
           </div>
         </div>
-        <p className="settings-description">
-          Set your preferences for taxes, bill rounding, and standard rates.
-        </p>
+        <p className="settings-description">{t('settings.business_description')}</p>
 
         <div className="settings-form">
           <div className="form-group">
@@ -322,12 +337,9 @@ function SettingsPage() {
                 checked={settings.billingOnly}
                 onChange={(e) => updateSettings({ billingOnly: e.target.checked })}
               />
-              Billing Only Mode (Skip Inventory)
+              {t('settings.business.billing_only')}
             </label>
-            <p className="help-text">
-              When enabled, billing will not check or update product stock levels. Useful if you
-              only need billing without inventory management.
-            </p>
+            <p className="help-text">{t('settings.business.billing_only_help')}</p>
           </div>
 
           <div className="form-group">
@@ -337,9 +349,9 @@ function SettingsPage() {
                 checked={settings.roundOffEnabled}
                 onChange={(e) => updateSettings({ roundOffEnabled: e.target.checked })}
               />
-              Enable Bill Rounding (to nearest ₹)
+              {t('settings.business.rounding')}
             </label>
-            <p className="help-text">Round bill totals to avoid fractional currency amounts.</p>
+            <p className="help-text">{t('settings.business.rounding_help')}</p>
           </div>
 
           <div className="form-group">
@@ -349,12 +361,9 @@ function SettingsPage() {
                 checked={settings.customersEnabled}
                 onChange={(e) => updateSettings({ customersEnabled: e.target.checked })}
               />
-              Enable Customers & Udhaar Tracking
+              {t('settings.business.customers')}
             </label>
-            <p className="help-text">
-              Toggle the visibility of the Customers page and related features like balance (Udhaar)
-              tracking.
-            </p>
+            <p className="help-text">{t('settings.business.customers_help')}</p>
           </div>
 
           <div className="form-group">
@@ -364,16 +373,14 @@ function SettingsPage() {
                 checked={settings.gstEnabled}
                 onChange={(e) => updateSettings({ gstEnabled: e.target.checked })}
               />
-              Enable GST Calculation
+              {t('settings.business.gst_calc')}
             </label>
-            <p className="help-text">
-              Automatically calculate GST on bills based on standard rate.
-            </p>
+            <p className="help-text">{t('settings.business.gst_calc_help')}</p>
           </div>
 
           {settings.gstEnabled && (
             <div className="form-group">
-              <label htmlFor="gstPercentage">Standard GST Rate (%)</label>
+              <label htmlFor="gstPercentage">{t('settings.business.gst_rate')}</label>
               <select
                 id="gstPercentage"
                 value={settings.gstPercentage}
@@ -386,7 +393,7 @@ function SettingsPage() {
                   </option>
                 ))}
               </select>
-              <p className="help-text">Default rate used for tax calculations when enabled.</p>
+              <p className="help-text">{t('settings.business.gst_rate_help')}</p>
             </div>
           )}
 
@@ -398,12 +405,9 @@ function SettingsPage() {
                   checked={settings.gstExclusiveMode}
                   onChange={(e) => updateSettings({ gstExclusiveMode: e.target.checked })}
                 />
-                GST Exclusive Mode (Master Switch)
+                {t('settings.business.gst_exclusive')}
               </label>
-              <p className="help-text">
-                When enabled, all products use tax-exclusive pricing and individual GST toggles are
-                hidden. When disabled, products default to GST Inclusive (MRP).
-              </p>
+              <p className="help-text">{t('settings.business.gst_exclusive_help')}</p>
             </div>
           )}
 
@@ -414,11 +418,9 @@ function SettingsPage() {
                 checked={settings.enableBatchTracking}
                 onChange={(e) => updateSettings({ enableBatchTracking: e.target.checked })}
               />
-              Enable Batch & Expiry Tracking
+              {t('settings.business.batch_tracking')}
             </label>
-            <p className="help-text">
-              Track expiry dates and unique batch numbers for your inventory.
-            </p>
+            <p className="help-text">{t('settings.business.batch_tracking_help')}</p>
           </div>
 
           <div className="form-group">
@@ -428,9 +430,9 @@ function SettingsPage() {
                 checked={settings.expensesEnabled}
                 onChange={(e) => updateSettings({ expensesEnabled: e.target.checked })}
               />
-              Enable Expense Tracking
+              {t('settings.business.expenses')}
             </label>
-            <p className="help-text">Track and manage your day-to-day business expenses.</p>
+            <p className="help-text">{t('settings.business.expenses_help')}</p>
           </div>
 
           <div className="form-group">
@@ -440,9 +442,9 @@ function SettingsPage() {
                 checked={settings.quotationsEnabled}
                 onChange={(e) => updateSettings({ quotationsEnabled: e.target.checked })}
               />
-              Enable Quotations / Estimates
+              {t('settings.business.quotations')}
             </label>
-            <p className="help-text">Create and print pre-sale estimates for your customers.</p>
+            <p className="help-text">{t('settings.business.quotations_help')}</p>
           </div>
 
           <div className="form-group">
@@ -452,9 +454,9 @@ function SettingsPage() {
                 checked={settings.barcodeGenEnabled}
                 onChange={(e) => updateSettings({ barcodeGenEnabled: e.target.checked })}
               />
-              Enable Barcode Generator
+              {t('settings.business.barcode_gen')}
             </label>
-            <p className="help-text">Generate and print custom barcode labels for your products.</p>
+            <p className="help-text">{t('settings.business.barcode_gen_help')}</p>
           </div>
         </div>
 
@@ -465,7 +467,7 @@ function SettingsPage() {
             className="btn btn-secondary"
             disabled={isLoading}
           >
-            Reset
+            {t('settings.reset')}
           </button>
           <button
             type="button"
@@ -473,7 +475,7 @@ function SettingsPage() {
             className="btn btn-primary"
             disabled={isLoading}
           >
-            {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
+            {saveStatus === 'saving' ? t('settings.saving') : t('settings.save')}
           </button>
         </div>
       </div>
@@ -484,37 +486,35 @@ function SettingsPage() {
     <div className="tab-content-wrapper fade-in">
       <div className="settings-section-card">
         <div className="section-header">
-          <h2>Printer Configuration</h2>
+          <h2>{t('settings.printer.title')}</h2>
           <div className="status-indicator">
             {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
           </div>
         </div>
-        <p className="settings-description">
-          Set up your thermal printer and customize how your receipts are printed.
-        </p>
+        <p className="settings-description">{t('settings.printer.desc')}</p>
 
         <div className="settings-form">
           {/* Printer Selection - Row 1 */}
           <div className="form-group full-width">
-            <label htmlFor="printerName">Available Printers</label>
+            <label htmlFor="printerName">{t('settings.printer.available')}</label>
             <select
               id="printerName"
               value={settings.printerName || ''}
               onChange={(e) => updateSettings({ printerName: e.target.value })}
               className="form-input"
             >
-              <option value="">Default System Printer</option>
+              <option value="">{t('settings.printer.default_system')}</option>
               {printerList.map((printer) => (
                 <option key={printer.name} value={printer.name}>
                   {printer.name} {printer.isDefault ? '(Default)' : ''}
                 </option>
               ))}
             </select>
-            <p className="help-text">Select the thermal printer for receipt printing.</p>
+            <p className="help-text">{t('settings.printer.available_help')}</p>
           </div>
 
           <div className="form-group">
-            <label htmlFor="printCopies">Number of Copies</label>
+            <label htmlFor="printCopies">{t('settings.printer.copies')}</label>
             <select
               id="printCopies"
               value={settings.printCopies}
@@ -527,7 +527,7 @@ function SettingsPage() {
                 </option>
               ))}
             </select>
-            <p className="help-text">How many identical receipts should be printed per sale.</p>
+            <p className="help-text">{t('settings.printer.copies_help')}</p>
           </div>
 
           <div className="form-group">
@@ -537,22 +537,18 @@ function SettingsPage() {
                 checked={settings.autoPrint}
                 onChange={(e) => updateSettings({ autoPrint: e.target.checked })}
               />
-              Auto-Print Bill after Checkout
+              {t('settings.printer.auto_print')}
             </label>
-            <p className="help-text">
-              Automatically trigger printing as soon as a sale is confirmed.
-            </p>
+            <p className="help-text">{t('settings.printer.auto_print_help')}</p>
           </div>
         </div>
       </div>
 
       <div className="settings-section-card">
         <div className="section-header">
-          <h2>Bill Formatting</h2>
+          <h2>{t('settings.printer.formatting')}</h2>
         </div>
-        <p className="settings-description">
-          Customize how your receipts look and select paper dimensions.
-        </p>
+        <p className="settings-description">{t('settings.printer.formatting_desc')}</p>
 
         <div className="settings-form">
           <div className="form-group">
@@ -562,9 +558,9 @@ function SettingsPage() {
                 checked={settings.showLogo}
                 onChange={(e) => updateSettings({ showLogo: e.target.checked })}
               />
-              Show Logo Space (Top Margin)
+              {t('settings.printer.show_logo')}
             </label>
-            <p className="help-text">Enables additional space at the top for shop branding.</p>
+            <p className="help-text">{t('settings.printer.show_logo_help')}</p>
           </div>
 
           <div className="form-group">
@@ -582,13 +578,13 @@ function SettingsPage() {
                 checked={settings.showCustomerDetails}
                 onChange={(e) => updateSettings({ showCustomerDetails: e.target.checked })}
               />
-              Show Customer ID on Receipt
+              {t('settings.printer.show_customer')}
             </label>
-            <p className="help-text">Include customer identification on printed bills.</p>
+            <p className="help-text">{t('settings.printer.show_customer_help')}</p>
           </div>
 
           <div className="form-group">
-            <label>Paper Size</label>
+            <label>{t('settings.printer.paper_size')}</label>
             <div
               className="radio-group"
               style={{
@@ -638,12 +634,12 @@ function SettingsPage() {
               </label>
             </div>
             <p className="help-text" style={{ marginTop: '0.5rem' }}>
-              Select paper width based on your printer model.
+              {t('settings.printer.paper_size_help')}
             </p>
           </div>
 
           <div className="form-group">
-            <label>Print Maintenance</label>
+            <label>{t('settings.printer.maintenance')}</label>
             <div style={{ marginTop: '0.5rem' }}>
               <button
                 type="button"
@@ -676,14 +672,16 @@ function SettingsPage() {
                 }}
                 disabled={isTestPrinting}
               >
-                {isTestPrinting ? 'Printing...' : 'Run Test Print'}
+                {isTestPrinting
+                  ? t('settings.printer.test_printing')
+                  : t('settings.printer.test_print')}
               </button>
-              <p className="help-text">Prints a test receipt to verify printer connection.</p>
+              <p className="help-text">{t('settings.printer.test_print_help')}</p>
             </div>
           </div>
 
           <div className="form-group full-width">
-            <label htmlFor="footerMessage">Footer Message</label>
+            <label htmlFor="footerMessage">{t('settings.printer.footer_msg')}</label>
             <textarea
               id="footerMessage"
               value={settings.footerMessage}
@@ -694,7 +692,7 @@ function SettingsPage() {
               placeholder="e.g. Thank you! Visit Again"
               style={{ height: 'auto', minHeight: '80px', padding: '12px' }}
             />
-            <p className="help-text">Custom message printed at the bottom of every bill.</p>
+            <p className="help-text">{t('settings.printer.footer_msg_help')}</p>
           </div>
         </div>
 
@@ -787,53 +785,54 @@ function SettingsPage() {
     <div className="page settings-page">
       <div className="page-content-wrapper animate-fade-in">
         <header className="page-header settings-header">
-          <h1 className="page-title">Settings</h1>
-          <p className="page-subtitle text-secondary">Configure your POS system preferences</p>
+          <h1 className="page-title">{t('settings.title')}</h1> {/* Translated title */}
+          <p className="page-subtitle text-secondary">{t('settings.subtitle')}</p>{' '}
+          {/* Translated subtitle */}
         </header>
 
         <div className="settings-toolbar">
-          <div className="tabs">
+          <div className="settings-tabs">
             <button
-              className={activeTab === 'shop' ? 'active' : ''}
+              className={`tab-btn ${activeTab === 'shop' ? 'active' : ''}`}
               onClick={() => setActiveTab('shop')}
             >
-              Shop Info
+              {t('settings.shop_info')}
             </button>
             <button
-              className={activeTab === 'inventory' ? 'active' : ''}
+              className={`tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
               onClick={() => setActiveTab('inventory')}
             >
-              Business Rules
+              {t('settings.business_rules')}
             </button>
             <button
-              className={activeTab === 'printing' ? 'active' : ''}
+              className={`tab-btn ${activeTab === 'printing' ? 'active' : ''}`}
               onClick={() => setActiveTab('printing')}
             >
-              Printing
+              {t('settings.printing')}
             </button>
             <button
-              className={activeTab === 'licensing' ? 'active' : ''}
+              className={`tab-btn ${activeTab === 'licensing' ? 'active' : ''}`}
               onClick={() => setActiveTab('licensing')}
             >
-              Licensing
+              {t('settings.licensing')}
             </button>
             <button
-              className={activeTab === 'data' ? 'active' : ''}
+              className={`tab-btn ${activeTab === 'data' ? 'active' : ''}`}
               onClick={() => setActiveTab('data')}
             >
-              Data Management
+              {t('settings.data_management')}
             </button>
             <button
-              className={activeTab === 'privacy' ? 'active' : ''}
+              className={`tab-btn ${activeTab === 'privacy' ? 'active' : ''}`}
               onClick={() => setActiveTab('privacy')}
             >
-              Privacy
+              {t('settings.privacy_policy')}
             </button>
             <button
-              className={activeTab === 'debug' ? 'active' : ''}
+              className={`tab-btn ${activeTab === 'debug' ? 'active' : ''}`}
               onClick={() => setActiveTab('debug')}
             >
-              System Debug
+              {t('settings.debug')}
             </button>
           </div>
         </div>

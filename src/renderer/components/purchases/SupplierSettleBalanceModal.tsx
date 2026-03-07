@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../../utils/formatters';
@@ -17,6 +18,7 @@ export const SupplierSettleBalanceModal: React.FC<SupplierSettleBalanceModalProp
   onSuccess,
   supplier,
 }) => {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [transactionType, setTransactionType] = useState<'GOT' | 'GAVE'>('GAVE');
@@ -56,7 +58,7 @@ export const SupplierSettleBalanceModal: React.FC<SupplierSettleBalanceModalProp
     setError('');
 
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      setError('Please enter a valid amount greater than 0.');
+      setError(t('procurement.settle.error_amount'));
       return;
     }
 
@@ -68,12 +70,16 @@ export const SupplierSettleBalanceModal: React.FC<SupplierSettleBalanceModalProp
       await addPayment({
         id: supplier.id,
         amount: submitAmount,
-        notes: notes || (transactionType === 'GOT' ? 'Payment Received (Refund)' : 'Payment Given'),
+        notes:
+          notes ||
+          (transactionType === 'GOT'
+            ? t('procurement.ledger.types.pay_in')
+            : t('procurement.ledger.types.pay_out')),
       });
 
       onSuccess();
     } catch (err: any) {
-      setError(err.message || 'Failed to add payment. Please try again.');
+      setError(err.message || t('procurement.settle.error_fail'));
     }
   };
 
@@ -81,8 +87,8 @@ export const SupplierSettleBalanceModal: React.FC<SupplierSettleBalanceModalProp
     <div className="modal-overlay">
       <div className="modal-content" style={{ width: '400px', maxWidth: '90vw' }}>
         <div className="modal-header">
-          <h2>Settle Balance</h2>
-          <button className="icon-btn" onClick={onClose} title="Close">
+          <h2>{t('procurement.settle.title')}</h2>
+          <button className="icon-btn" onClick={onClose} title={t('common.close')}>
             <svg
               width="24"
               height="24"
@@ -108,10 +114,14 @@ export const SupplierSettleBalanceModal: React.FC<SupplierSettleBalanceModalProp
             margin: '0 1.5rem',
           }}
         >
-          <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Supplier</div>
+          <div style={{ fontSize: '0.9rem', color: '#64748b' }}>
+            {t('procurement.purchases.table.supplier')}
+          </div>
           <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{supplier.name}</div>
           <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Current Balance:</span>
+            <span style={{ fontSize: '0.9rem', color: '#64748b' }}>
+              {t('procurement.settle.balance')}
+            </span>
             <span
               style={{
                 fontWeight: 'bold',
@@ -124,7 +134,11 @@ export const SupplierSettleBalanceModal: React.FC<SupplierSettleBalanceModalProp
               }}
             >
               {formatCurrency(Math.abs(supplier.balanceDue))}{' '}
-              {supplier.balanceDue > 0 ? '(Payable)' : supplier.balanceDue < 0 ? '(Adv)' : ''}
+              {supplier.balanceDue > 0
+                ? t('procurement.settle.payable')
+                : supplier.balanceDue < 0
+                  ? t('procurement.settle.adv')
+                  : ''}
             </span>
           </div>
         </div>
@@ -169,7 +183,7 @@ export const SupplierSettleBalanceModal: React.FC<SupplierSettleBalanceModalProp
                 textAlign: 'center',
               }}
             >
-              You Gave ₹
+              {t('procurement.settle.you_gave')}
             </button>
             <button
               type="button"
@@ -185,12 +199,12 @@ export const SupplierSettleBalanceModal: React.FC<SupplierSettleBalanceModalProp
                 textAlign: 'center',
               }}
             >
-              You Got ₹
+              {t('procurement.settle.you_got')}
             </button>
           </div>
 
           <div className="form-group" style={{ margin: '0 1.5rem 1rem' }}>
-            <label>Amount (₹)</label>
+            <label>{t('procurement.settle.amount')}</label>
             <input
               type="number"
               value={amount}
@@ -204,20 +218,22 @@ export const SupplierSettleBalanceModal: React.FC<SupplierSettleBalanceModalProp
           </div>
 
           <div className="form-group" style={{ margin: '0 1.5rem 1rem' }}>
-            <label>Notes (Optional)</label>
+            <label>{t('procurement.settle.notes')}</label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={
-                transactionType === 'GOT' ? 'e.g., Refund for return' : 'e.g., Paid via PhonePe'
+                transactionType === 'GOT'
+                  ? t('procurement.settle.notes_got')
+                  : t('procurement.settle.notes_gave')
               }
             />
           </div>
 
           <div className="modal-actions">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={loading}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -228,7 +244,7 @@ export const SupplierSettleBalanceModal: React.FC<SupplierSettleBalanceModalProp
                 borderColor: transactionType === 'GAVE' ? '#ef4444' : '#10b981',
               }}
             >
-              {loading ? 'Saving...' : 'Save Payment'}
+              {loading ? t('procurement.settle.saving') : t('procurement.settle.save')}
             </button>
           </div>
         </form>

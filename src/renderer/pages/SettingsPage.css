@@ -50,7 +50,7 @@
   z-index: 9;
 }
 
-.settings-page .tabs {
+.settings-page .settings-tabs {
   display: flex !important;
   gap: 0.25rem !important;
   background-color: var(--bg-app, #f1f5f9) !important;
@@ -59,7 +59,7 @@
   margin-left: 0 !important;
 }
 
-.settings-page .tabs button {
+.settings-page .tab-btn {
   padding: 0.5rem 1.25rem !important;
   border: none !important;
   background: transparent !important;
@@ -71,12 +71,12 @@
   font-size: 0.875rem !important;
 }
 
-.settings-page .tabs button:hover {
+.settings-page .tab-btn:hover {
   color: var(--text-primary, #0f172a) !important;
   background-color: rgba(0, 0, 0, 0.03) !important;
 }
 
-.settings-page .tabs button.active {
+.settings-page .tab-btn.active {
   background-color: #ffffff !important;
   color: var(--color-primary) !important;
   box-shadow: var(--shadow-sm) !important;

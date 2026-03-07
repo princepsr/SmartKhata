@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPC } from '@renderer/hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { PurchaseOrder } from '@shared/types/ipc';
@@ -17,6 +18,7 @@ export default function PurchaseOrdersTab({
   onCreateClick?: () => void;
   onReceive?: (po: PurchaseOrder) => void;
 }) {
+  const { t } = useTranslation();
   const [editingPoId, setEditingPoId] = useState<number | null>(null);
   const {
     data: posResult,
@@ -33,16 +35,16 @@ export default function PurchaseOrdersTab({
   return (
     <>
       {loading ? (
-        <div className="loading-state">Loading purchase orders...</div>
+        <div className="loading-state">{t('procurement.po.loading')}</div>
       ) : pos.length === 0 ? (
         <EmptyState
-          title="No Pending Orders"
-          message="Create a purchase order to request stock from your suppliers."
+          title={t('procurement.po.no_pending')}
+          message={t('procurement.po.empty_msg')}
           icon="📝"
           action={
             onCreateClick
               ? {
-                  label: 'Create First PO',
+                  label: t('procurement.po.create_first'),
                   onClick: onCreateClick,
                 }
               : undefined
@@ -51,12 +53,12 @@ export default function PurchaseOrdersTab({
       ) : (
         <div className="data-table-container">
           <div className="data-table-header grid-orders">
-            <div className="col-date">Date</div>
-            <div className="col-po-no">PO #</div>
-            <div className="col-supplier">Supplier</div>
-            <div className="col-grand-total">Grand Total</div>
-            <div className="col-status">Status</div>
-            <div className="col-actions">Actions</div>
+            <div className="col-date">{t('procurement.po.table.date')}</div>
+            <div className="col-po-no">{t('procurement.po.table.po_no')}</div>
+            <div className="col-supplier">{t('procurement.po.table.supplier')}</div>
+            <div className="col-grand-total">{t('procurement.po.table.total')}</div>
+            <div className="col-status">{t('procurement.po.table.status')}</div>
+            <div className="col-actions">{t('common.actions')}</div>
           </div>
           <div className="data-table-body">
             {pos.map((p) => (
@@ -77,7 +79,7 @@ export default function PurchaseOrdersTab({
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
                         className="action-icon-btn action-edit"
-                        title="Edit Order"
+                        title={t('procurement.po.actions.edit')}
                         onClick={() => setEditingPoId(p.id)}
                       >
                         <svg
@@ -96,7 +98,7 @@ export default function PurchaseOrdersTab({
                       </button>
                       <button
                         className="action-icon-btn action-settle"
-                        title="Mark Received"
+                        title={t('procurement.po.actions.receive')}
                         onClick={() => onReceive && onReceive(p)}
                       >
                         <svg

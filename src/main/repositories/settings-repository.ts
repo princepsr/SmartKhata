@@ -45,6 +45,7 @@ export interface AppConfig {
   autoUpdateEnabled: boolean;
   lastReferralBannerSeen: string | null;
   lastGstReminderSeen: string | null;
+  language: 'en' | 'hi';
   appMode: 'GENERAL' | 'KIRANA' | 'MEDICAL';
   updatedAt: Date;
 }
@@ -104,6 +105,7 @@ export class SettingsRepository extends BaseRepository {
       auto_update_enabled: number;
       last_referral_banner_seen: string | null;
       last_gst_reminder_seen: string | null;
+      language: string;
       app_mode: string;
       updated_at: string;
     }>(sql);
@@ -152,6 +154,7 @@ export class SettingsRepository extends BaseRepository {
         autoUpdateEnabled: true,
         lastReferralBannerSeen: null,
         lastGstReminderSeen: null,
+        language: 'en',
         appMode: 'GENERAL',
         updatedAt: new Date(),
       };
@@ -211,6 +214,7 @@ export class SettingsRepository extends BaseRepository {
       autoUpdateEnabled: 'auto_update_enabled',
       lastReferralBannerSeen: 'last_referral_banner_seen',
       lastGstReminderSeen: 'last_gst_reminder_seen',
+      language: 'language',
       appMode: 'app_mode',
     };
 
@@ -287,6 +291,7 @@ export class SettingsRepository extends BaseRepository {
     auto_update_enabled: number;
     last_referral_banner_seen: string | null;
     last_gst_reminder_seen: string | null;
+    language: string;
     app_mode: string;
     updated_at: string;
   }): AppConfig {
@@ -331,6 +336,7 @@ export class SettingsRepository extends BaseRepository {
       autoUpdateEnabled: row.auto_update_enabled === 1,
       lastReferralBannerSeen: row.last_referral_banner_seen,
       lastGstReminderSeen: row.last_gst_reminder_seen,
+      language: (row.language as 'en' | 'hi') || 'en',
       appMode: (row.app_mode as 'GENERAL' | 'KIRANA' | 'MEDICAL') || 'GENERAL',
       updatedAt: this.parseDate(row.updated_at),
     };

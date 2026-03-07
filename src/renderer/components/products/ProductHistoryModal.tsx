@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPC } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { BillDetailModal } from '../billing/BillDetailModal';
@@ -24,6 +25,7 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
   onClose,
   product,
 }) => {
+  const { t } = useTranslation();
   const {
     data: history,
     loading,
@@ -47,18 +49,24 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content history-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Stock History: {product.name}</h2>
+          <h2>
+            {t('inventory.history.title')}: {product.name}
+          </h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
         </div>
 
         <div className="modal-body">
-          {loading && <div className="loading">Loading history...</div>}
-          {error && <div className="error">Error: {error}</div>}
+          {loading && <div className="loading">{t('common.loading')}</div>}
+          {error && (
+            <div className="error">
+              {t('common.error')}: {error}
+            </div>
+          )}
 
           {!loading && !error && history && history.length === 0 && (
-            <div className="no-data">No history available for this product.</div>
+            <div className="no-data">{t('inventory.history.no_history')}</div>
           )}
 
           {!loading && !error && history && history.length > 0 && (
@@ -67,18 +75,18 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
                 <table className="history-table">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Change</th>
-                      <th>Reason</th>
-                      <th>Reference</th>
-                      <th>Notes</th>
+                      <th>{t('inventory.history.table.date')}</th>
+                      <th>{t('inventory.history.table.delta')}</th>
+                      <th>{t('inventory.history.table.reason')}</th>
+                      <th>{t('inventory.history.table.reference')}</th>
+                      <th>{t('inventory.history.table.notes')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {history.map((log) => (
                       <tr key={log.id}>
                         <td className="col-date">
-                          {new Date(log.date).toLocaleString('en-IN', {
+                          {new Date(log.date).toLocaleString(t('common.locale') || 'en-IN', {
                             day: '2-digit',
                             month: 'short',
                             year: '2-digit',
@@ -96,7 +104,7 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
                             <button
                               className="bill-link-btn"
                               onClick={() => setSelectedBillNumber(log.reference)}
-                              title="View Bill Details"
+                              title={t('billing.view_bill_details')}
                             >
                               {log.reference}
                             </button>
@@ -116,7 +124,7 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
 
         <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose}>
-            Close
+            {t('common.close')}
           </button>
         </div>
 

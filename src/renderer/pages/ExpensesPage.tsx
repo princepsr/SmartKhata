@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
@@ -28,6 +29,7 @@ const CATEGORIES = [
 ];
 
 function ExpensesPage() {
+  const { t } = useTranslation();
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
@@ -104,19 +106,19 @@ function ExpensesPage() {
     <div className="page expenses-page">
       <div className="page-content-wrapper animate-fade-in">
         <header className="page-header">
-          <h1 className="page-title">Expense Management</h1>
+          <h1 className="page-title">{t('expenses.title')}</h1>
 
           <div className="header-actions">
             <input
               type="text"
               className="search-input"
-              placeholder="Search expenses..."
+              placeholder={t('expenses.search_placeholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               autoFocus
             />
             <button className="btn-primary" onClick={() => setShowModal(true)}>
-              + Record Expense
+              {t('expenses.record_expense')}
             </button>
           </div>
         </header>
@@ -124,11 +126,11 @@ function ExpensesPage() {
         <div className="expenses-content">
           <div className="data-table-container">
             <div className="data-table-header">
-              <div className="col-date">Date</div>
-              <div className="col-category">Category</div>
-              <div className="col-desc">Description</div>
-              <div className="col-method">Method</div>
-              <div className="col-amount text-right">Amount</div>
+              <div className="col-date">{t('expenses.table.date')}</div>
+              <div className="col-category">{t('expenses.table.category')}</div>
+              <div className="col-desc">{t('expenses.table.desc')}</div>
+              <div className="col-method">{t('expenses.table.method')}</div>
+              <div className="col-amount text-right">{t('expenses.table.amount')}</div>
             </div>
 
             {loading ? (
@@ -141,17 +143,17 @@ function ExpensesPage() {
                 ))
             ) : filteredExpenses.length === 0 ? (
               <EmptyState
-                title="No Expenses Found"
+                title={t('expenses.empty_title')}
                 message={
                   searchTerm
-                    ? `We couldn't find any expenses matching "${searchTerm}".`
-                    : 'Track your shop expenditures by recording a new expense.'
+                    ? t('expenses.empty_msg_search', { searchTerm })
+                    : t('expenses.empty_msg')
                 }
                 icon="💸"
                 action={
                   !searchTerm
                     ? {
-                        label: 'Record First Expense',
+                        label: t('expenses.record_first'),
                         onClick: () => setShowModal(true),
                       }
                     : undefined
@@ -163,11 +165,13 @@ function ExpensesPage() {
                   <div className="col-date">{formatDateTime(expense.date)}</div>
                   <div className="col-category">
                     <span className={`category-badge ${expense.category.toLowerCase()}`}>
-                      {expense.category}
+                      {t(`expenses.categories.${expense.category.toLowerCase()}`, expense.category)}
                     </span>
                   </div>
                   <div className="col-desc truncate">{expense.description || '-'}</div>
-                  <div className="col-method text-capitalize">{expense.paymentMode}</div>
+                  <div className="col-method text-capitalize">
+                    {t(`expenses.payment_modes.${expense.paymentMode}`, expense.paymentMode)}
+                  </div>
                   <div className="col-amount text-right expense-amount">
                     -{formatCurrency(expense.amount)}
                   </div>
@@ -182,7 +186,7 @@ function ExpensesPage() {
         <div className="modal-overlay">
           <div className="modal-content animate-zoom-in">
             <div className="modal-header">
-              <h2>Record New Expense</h2>
+              <h2>{t('expenses.form.title')}</h2>
               <button className="close-btn" onClick={() => setShowModal(false)}>
                 &times;
               </button>
@@ -191,7 +195,7 @@ function ExpensesPage() {
               <div className="modal-body">
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Date</label>
+                    <label>{t('expenses.table.date')}</label>
                     <input
                       type="date"
                       value={formData.date}
@@ -200,14 +204,14 @@ function ExpensesPage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Category</label>
+                    <label>{t('expenses.table.category')}</label>
                     <select
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     >
                       {CATEGORIES.map((c) => (
                         <option key={c} value={c}>
-                          {c}
+                          {t(`expenses.categories.${c.toLowerCase()}`, c)}
                         </option>
                       ))}
                     </select>
@@ -216,7 +220,7 @@ function ExpensesPage() {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Amount (₹)</label>
+                    <label>{t('expenses.form.amount')}</label>
                     <input
                       type="number"
                       step="0.01"
@@ -227,24 +231,24 @@ function ExpensesPage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Payment Mode</label>
+                    <label>{t('expenses.form.payment_mode')}</label>
                     <select
                       value={formData.paymentMode}
                       onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value })}
                     >
-                      <option value="cash">Cash</option>
-                      <option value="upi">UPI / Online</option>
-                      <option value="bank">Bank Transfer</option>
+                      <option value="cash">{t('expenses.payment_modes.cash')}</option>
+                      <option value="upi">{t('expenses.payment_modes.upi')}</option>
+                      <option value="bank">{t('expenses.payment_modes.bank')}</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label>Description</label>
+                  <label>{t('expenses.table.desc')}</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="What was this expense for?"
+                    placeholder={t('expenses.form.desc_placeholder')}
                     rows={3}
                   />
                 </div>
@@ -255,10 +259,10 @@ function ExpensesPage() {
                   className="btn btn-secondary"
                   onClick={() => setShowModal(false)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={creating}>
-                  {creating ? 'Saving...' : 'Save Expense'}
+                  {creating ? t('expenses.form.saving') : t('expenses.form.save')}
                 </button>
               </div>
             </form>

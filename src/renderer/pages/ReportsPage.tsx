@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import './ReportsPage.css';
 import EmptyState from '../components/common/EmptyState';
@@ -130,6 +131,7 @@ const SkeletonLoader: React.FC<{ type: 'sales' | 'gst' | 'stock' }> = ({ type })
 );
 
 const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
+  const { t } = useTranslation();
   const { settings } = useAppSettingsStore();
   const [chartField, setChartField] = useState<keyof AnalyticsPeriod>('netSales');
 
@@ -140,15 +142,15 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
   const maxVal = Math.max(...data.periods.map((p) => Math.abs(Number(p[chartField]) || 0)), 1);
 
   const fieldOptions = [
-    { id: 'totalSales', label: 'Total Sales' },
-    { id: 'netSales', label: 'Revenue' },
+    { id: 'totalSales', label: t('reports.analytics.total_sales') },
+    { id: 'netSales', label: t('reports.analytics.revenue') },
     ...(settings.expensesEnabled
       ? [
-          { id: 'totalProfit', label: 'Gross Profit' },
-          { id: 'totalExpenses', label: 'Expenses' },
+          { id: 'totalProfit', label: t('reports.analytics.gross_profit') },
+          { id: 'totalExpenses', label: t('reports.analytics.expenses') },
         ]
       : []),
-    { id: 'trueNetProfit', label: 'Net Profit' },
+    { id: 'trueNetProfit', label: t('reports.analytics.net_profit') },
   ];
 
   return (
@@ -156,12 +158,12 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
       {/* Annual Summary Cards */}
       <div className="summary-cards">
         <RichTooltip
-          title="Total Sales"
-          meta="Total billing amount before any discounts or GST adjustments. Represents the maximum potential revenue."
+          title={t('reports.analytics.total_sales')}
+          meta={t('reports.analytics.total_sales_meta')}
         >
           <div className="card card-gross">
             <div className="card-header-row">
-              <h3>Total Sales</h3>
+              <h3>{t('reports.analytics.total_sales')}</h3>
               <div className="icon-box icon-gross">📈</div>
             </div>
             <p className="value">₹{data.totalSales.toLocaleString('en-IN')}</p>
@@ -169,12 +171,12 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
         </RichTooltip>
 
         <RichTooltip
-          title="Revenue"
-          meta="Total taxable value (Sales Price - Discount) + GST. This is the actual amount collected from customers."
+          title={t('reports.analytics.revenue')}
+          meta={t('reports.analytics.revenue_meta')}
         >
           <div className="card card-net">
             <div className="card-header-row">
-              <h3>Revenue</h3>
+              <h3>{t('reports.analytics.revenue')}</h3>
               <div className="icon-box icon-net">💰</div>
             </div>
             <div className="value highlight">₹{data.totalNet.toLocaleString('en-IN')}</div>
@@ -182,12 +184,12 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
         </RichTooltip>
 
         <RichTooltip
-          title="Discount"
-          meta="Total savings given to customers across all bills in this period."
+          title={t('reports.analytics.discount')}
+          meta={t('reports.analytics.discount_meta')}
         >
           <div className="card card-discount">
             <div className="card-header-row">
-              <h3>Discount</h3>
+              <h3>{t('reports.analytics.discount')}</h3>
               <div className="icon-box icon-discount">✂️</div>
             </div>
             <div className="value">
@@ -200,10 +202,13 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
         </RichTooltip>
 
         {settings.expensesEnabled && (
-          <RichTooltip title="Expenses" meta="Total operating expenses recorded for this period.">
+          <RichTooltip
+            title={t('reports.analytics.expenses')}
+            meta={t('reports.analytics.expenses_meta')}
+          >
             <div className="card card-discount">
               <div className="card-header-row">
-                <h3>Expenses</h3>
+                <h3>{t('reports.analytics.expenses')}</h3>
                 <div className="icon-box icon-discount">📉</div>
               </div>
               <div className="value">
@@ -217,16 +222,24 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
         )}
 
         <RichTooltip
-          title={settings.expensesEnabled ? 'Net Profit' : 'Gross Profit'}
+          title={
+            settings.expensesEnabled
+              ? t('reports.analytics.net_profit')
+              : t('reports.analytics.gross_profit')
+          }
           meta={
             settings.expensesEnabled
-              ? 'Estimated Gross Profit minus recorded Expenses.'
-              : 'Estimated profit before operating expenses.'
+              ? t('reports.analytics.profit_meta_net')
+              : t('reports.analytics.profit_meta_gross')
           }
         >
           <div className="card card-profit">
             <div className="card-header-row">
-              <h3>{settings.expensesEnabled ? 'Net Profit' : 'Gross Profit'}</h3>
+              <h3>
+                {settings.expensesEnabled
+                  ? t('reports.analytics.net_profit')
+                  : t('reports.analytics.gross_profit')}
+              </h3>
               <div className="icon-box icon-profit">💰</div>
             </div>
             <div className="value highlight">
@@ -243,16 +256,13 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
         <div className="reports-info-row animate-fade-in">
           <span className="info-icon">ℹ️</span>
           <span className="info-text">
-            Profit metrics are calculated based on taxable value (excluding GST) for{' '}
-            <strong>
-              {Math.round(
+            {t('reports.analytics.info_profit', {
+              percent: Math.round(
                 (data.periods.reduce((acc, p) => acc + (p.salesWithCost || 0), 0) /
                   (data.periods.reduce((acc, p) => acc + (p.totalItemSales || 0), 0) || 1)) *
                   100
-              )}
-              %
-            </strong>{' '}
-            of items where cost data was available.
+              ),
+            })}
           </span>
         </div>
       )}
@@ -260,7 +270,7 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
       {/* Visual Timeline Chart */}
       <div className="chart-container">
         <div className="chart-header">
-          <h3>Trend Analysis</h3>
+          <h3>{t('reports.analytics.trend_analysis')}</h3>
           <div className="chart-selector">
             {fieldOptions.map((opt) => (
               <button
@@ -300,19 +310,29 @@ const AnalyticsView: React.FC<{ data: TrendAnalytics | null }> = ({ data }) => {
 
       {/* Detailed Table */}
       <div className="table-container">
-        <h3>Detailed Breakdown</h3>
+        <h3>{t('reports.analytics.detailed_breakdown')}</h3>
         <table className="report-table">
           <thead>
             <tr>
-              <th>Period</th>
-              <th className="text-right">Bills</th>
-              <th className="text-right">Gross Sales</th>
-              <th className="text-right">Revenue</th>
-              {settings.expensesEnabled && <th className="text-right">Gross Profit</th>}
-              {settings.expensesEnabled && <th className="text-right">Expenses</th>}
-              <th className="text-right">Margin</th>
-              <th className="text-right">Coverage</th>
-              <th className="text-right">{settings.expensesEnabled ? 'Net Profit' : 'Profit'}</th>
+              <th>{t('reports.analytics.period')}</th>
+              <th className="text-right">{t('reports.analytics.bills')}</th>
+              <th className="text-right">
+                {t('reports.analytics.table.gross_sales', 'Gross Sales')}
+              </th>
+              <th className="text-right">{t('reports.analytics.revenue')}</th>
+              {settings.expensesEnabled && (
+                <th className="text-right">{t('reports.analytics.gross_profit')}</th>
+              )}
+              {settings.expensesEnabled && (
+                <th className="text-right">{t('reports.analytics.expenses')}</th>
+              )}
+              <th className="text-right">{t('reports.analytics.margin')}</th>
+              <th className="text-right">{t('reports.analytics.coverage')}</th>
+              <th className="text-right">
+                {settings.expensesEnabled
+                  ? t('reports.analytics.net_profit')
+                  : t('reports.analytics.profit')}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -384,14 +404,15 @@ const StockAgingView: React.FC<{ data: StockAgingItem[] | null; loading: boolean
   data,
   loading,
 }) => {
+  const { t } = useTranslation();
   if (loading) {
     return <SkeletonLoader type="stock" />;
   }
   if (!data || data.length === 0) {
     return (
       <EmptyState
-        title="No Aged Stock Found"
-        message="All your inventory has recent sales activity or is fresh. Good job!"
+        title={t('reports.stock.aging.empty_title')}
+        message={t('reports.stock.aging.empty_msg')}
         icon="✨"
       />
     );
@@ -401,21 +422,18 @@ const StockAgingView: React.FC<{ data: StockAgingItem[] | null; loading: boolean
     <div className="report-view aging-view animate-fade-in">
       <div className="reports-info-row mb-4">
         <span className="info-icon">🕒</span>
-        <span className="info-text">
-          Showing items that haven't been sold for over <strong>30 days</strong>. Consider running
-          promotions on these items.
-        </span>
+        <span className="info-text">{t('reports.stock.aging.info')}</span>
       </div>
       <div className="table-container">
         <table className="report-table">
           <thead>
             <tr>
-              <th>Item Name</th>
-              <th>SKU</th>
-              <th className="text-right">Current Stock</th>
-              <th className="text-right">Last Sold</th>
-              <th className="text-right">Idle Days</th>
-              <th className="text-right">Stock Value</th>
+              <th>{t('reports.stock.table.product')}</th>
+              <th>{t('reports.stock.table.sku')}</th>
+              <th className="text-right">{t('reports.stock.table.qty')}</th>
+              <th className="text-right">{t('reports.stock.table.last_sold')}</th>
+              <th className="text-right">{t('reports.stock.table.idle_days')}</th>
+              <th className="text-right">{t('reports.stock.table.stock_value')}</th>
             </tr>
           </thead>
           <tbody>
@@ -429,7 +447,7 @@ const StockAgingView: React.FC<{ data: StockAgingItem[] | null; loading: boolean
                   <span
                     className={`badge ${item.idleDays > 60 ? 'badge-danger' : 'badge-warning'}`}
                   >
-                    {item.idleDays} Days
+                    {item.idleDays}
                   </span>
                 </td>
                 <td className="text-right">₹{item.stockValue.toLocaleString('en-IN')}</td>
@@ -448,6 +466,7 @@ const StockNearExpiryView: React.FC<{
   days: number;
   onDaysChange: (days: number) => void;
 }> = ({ data, loading, days, onDaysChange }) => {
+  const { t } = useTranslation();
   if (loading) {
     return <SkeletonLoader type="stock" />;
   }
@@ -465,9 +484,7 @@ const StockNearExpiryView: React.FC<{
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span className="info-icon">⚠️</span>
-          <span className="info-text">
-            Showing items expiring within the next <strong>{days} days</strong>.
-          </span>
+          <span className="info-text">{t('reports.stock.near_expiry.info', { days })}</span>
         </div>
         <div
           className="near-expiry-filter-group"
@@ -484,7 +501,7 @@ const StockNearExpiryView: React.FC<{
               alignItems: 'center',
             }}
           >
-            Window:
+            {t('reports.stock.near_expiry.window')}
           </label>
           <select
             className="select-sm"
@@ -511,8 +528,8 @@ const StockNearExpiryView: React.FC<{
 
       {!data || data.length === 0 ? (
         <EmptyState
-          title="No Near Expiry Stock"
-          message="Great! No items are expiring soon in your inventory."
+          title={t('reports.stock.near_expiry.empty_title')}
+          message={t('reports.stock.near_expiry.empty_msg')}
           icon="✅"
         />
       ) : (
@@ -520,11 +537,11 @@ const StockNearExpiryView: React.FC<{
           <table className="report-table">
             <thead>
               <tr>
-                <th>Product Name</th>
-                <th>Batch #</th>
-                <th>Expiry Date</th>
-                <th className="text-right">Current Stock</th>
-                <th className="text-right">Status</th>
+                <th>{t('reports.stock.table.product')}</th>
+                <th>{t('reports.stock.table.batch')}</th>
+                <th>{t('reports.stock.table.expiry')}</th>
+                <th className="text-right">{t('reports.stock.table.qty')}</th>
+                <th className="text-right">{t('reports.stock.table.status')}</th>
               </tr>
             </thead>
             <tbody>
@@ -539,7 +556,9 @@ const StockNearExpiryView: React.FC<{
                   </td>
                   <td className="text-right">{item.stockQty}</td>
                   <td className="text-right">
-                    <span className="status-badge status-warning">EXPIRING</span>
+                    <span className="status-badge status-warning">
+                      {t('reports.stock.table.alert', 'EXPIRING')}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -552,6 +571,7 @@ const StockNearExpiryView: React.FC<{
 };
 
 const ReportsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('sales');
   const [dateRange, setDateRange] = useState({
     startDate: toLocalDateISO(),
@@ -952,20 +972,22 @@ const ReportsPage: React.FC = () => {
     <div className="page reports-page">
       <div className="page-content-wrapper animate-fade-in">
         <header className="page-header">
-          <h1 className="page-title">Reports Dashboard</h1>
+          <h1 className="page-title">{t('reports.title')}</h1>
           <div className="header-actions">
             <button
               className="btn-secondary btn-excel"
               onClick={handleExportExcel}
               disabled={loading}
             >
-              {activeTab === 'gst' ? 'Export GSTR-1' : 'Export Excel'}
+              {activeTab === 'gst'
+                ? t('reports.actions.export_gstr1')
+                : t('reports.actions.export_excel')}
             </button>
             <button className="btn-secondary btn-pdf" onClick={handleExportPdf} disabled={loading}>
-              Save PDF
+              {t('reports.actions.save_pdf')}
             </button>
             <button className="btn-primary" onClick={handlePrint} disabled={loading}>
-              Print Report
+              {t('reports.actions.print')}
             </button>
             {activeTab === 'sales' && (
               <button
@@ -973,7 +995,9 @@ const ReportsPage: React.FC = () => {
                 onClick={handleWhatsAppShare}
                 disabled={loading || sharingWhatsApp}
               >
-                {sharingWhatsApp ? 'Generating...' : 'Share WhatsApp'}
+                {sharingWhatsApp
+                  ? t('reports.actions.generating')
+                  : t('reports.actions.share_whatsapp')}
               </button>
             )}
           </div>
@@ -1026,7 +1050,7 @@ const ReportsPage: React.FC = () => {
                 <button
                   className="btn-nav"
                   onClick={() => navigateInterval('prev')}
-                  title="Previous Interval"
+                  title={t('reports.toolbar.prev')}
                   disabled={activeTab === 'stock'}
                 >
                   ‹
@@ -1036,26 +1060,26 @@ const ReportsPage: React.FC = () => {
                   onClick={() => applyPreset('daily')}
                   disabled={activeTab === 'stock'}
                 >
-                  Daily
+                  {t('reports.toolbar.daily')}
                 </button>
                 <button
                   className={`btn-preset ${selectedPreset === 'weekly' ? 'active' : ''}`}
                   onClick={() => applyPreset('weekly')}
                   disabled={activeTab === 'stock'}
                 >
-                  Weekly
+                  {t('reports.toolbar.weekly')}
                 </button>
                 <button
                   className={`btn-preset ${selectedPreset === 'monthly' ? 'active' : ''}`}
                   onClick={() => applyPreset('monthly')}
                   disabled={activeTab === 'stock'}
                 >
-                  Monthly
+                  {t('reports.toolbar.monthly')}
                 </button>
                 <button
                   className="btn-nav"
                   onClick={() => navigateInterval('next')}
-                  title="Next Interval"
+                  title={t('reports.toolbar.next')}
                   disabled={isNextDisabled()}
                 >
                   ›
@@ -1064,7 +1088,7 @@ const ReportsPage: React.FC = () => {
 
               <div className="date-inputs">
                 <label>
-                  Start
+                  {t('reports.toolbar.start')}
                   <input
                     type="date"
                     value={dateRange.startDate}
@@ -1073,7 +1097,7 @@ const ReportsPage: React.FC = () => {
                   />
                 </label>
                 <label>
-                  End
+                  {t('reports.toolbar.end')}
                   <input
                     type="date"
                     value={dateRange.endDate}
@@ -1086,7 +1110,7 @@ const ReportsPage: React.FC = () => {
                   onClick={() => applyPreset('daily')}
                   disabled={activeTab === 'stock'}
                 >
-                  Today
+                  {t('reports.toolbar.today')}
                 </button>
               </div>
             </div>
@@ -1097,14 +1121,14 @@ const ReportsPage: React.FC = () => {
               className={activeTab === 'sales' ? 'active' : ''}
               onClick={() => setActiveTab('sales')}
             >
-              Sales
+              {t('reports.tabs.sales')}
             </button>
             {settings.gstEnabled && (
               <button
                 className={activeTab === 'gst' ? 'active' : ''}
                 onClick={() => setActiveTab('gst')}
               >
-                GST
+                {t('reports.tabs.gst')}
               </button>
             )}
             {!settings.billingOnly && (
@@ -1112,14 +1136,14 @@ const ReportsPage: React.FC = () => {
                 className={activeTab === 'stock' ? 'active' : ''}
                 onClick={() => setActiveTab('stock')}
               >
-                Stock {activeStockTab === 'aging' ? '(Aging)' : ''}
+                {t('reports.tabs.stock')}
               </button>
             )}
             <button
               className={activeTab === 'analytics' ? 'active' : ''}
               onClick={() => setActiveTab('analytics')}
             >
-              Trends
+              {t('reports.tabs.analytics')}
             </button>
           </div>
         </div>
@@ -1136,8 +1160,8 @@ const ReportsPage: React.FC = () => {
               {activeTab === 'gst' &&
                 (!gstReport || gstReport.slabs.length === 0 ? (
                   <EmptyState
-                    title="No GST Data"
-                    message="We couldn't find any taxable transactions for the selected date range. Try adjusting your filters."
+                    title={t('reports.gst.empty_title')}
+                    message={t('reports.gst.empty_msg')}
                     icon="🧾"
                   />
                 ) : (
@@ -1151,10 +1175,11 @@ const ReportsPage: React.FC = () => {
                       <span className="info-text">
                         <strong>
                           {gstReport.supplyType === 'interstate'
-                            ? 'Inter-State Supply (IGST)'
-                            : 'Intra-State Supply (CGST + SGST)'}
+                            ? t('reports.gst.interstate')
+                            : t('reports.gst.intrastate')}
                         </strong>
-                        {' — '}Tax collected is split accordingly. Total GST payable to Government.
+                        {' — '}
+                        {t('reports.gst.banner_info')}
                       </span>
                     </div>
 
@@ -1172,7 +1197,7 @@ const ReportsPage: React.FC = () => {
                     >
                       <div className="itc-col" style={{ flex: 1 }}>
                         <h4 style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                          OUTPUT GST (Total Collected)
+                          {t('reports.gst.output')}
                         </h4>
                         <h2 style={{ fontSize: '1.8rem', color: '#dc3545' }}>
                           ₹{gstReport.totalGst.toLocaleString('en-IN')}
@@ -1181,7 +1206,7 @@ const ReportsPage: React.FC = () => {
                       <div className="itc-divider" style={{ width: '1px', background: '#eee' }} />
                       <div className="itc-col" style={{ flex: 1 }}>
                         <h4 style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                          INPUT TAX CREDIT (ITC Available)
+                          {t('reports.gst.input')}
                         </h4>
                         <h2 style={{ fontSize: '1.8rem', color: '#28a745' }}>
                           ₹{(itcSummary?.totalItc || 0).toLocaleString('en-IN')}
@@ -1190,14 +1215,15 @@ const ReportsPage: React.FC = () => {
                       <div className="itc-divider" style={{ width: '1px', background: '#eee' }} />
                       <div className="itc-col" style={{ flex: 1 }}>
                         <h4 style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                          NET GST PAYABLE
+                          {t('reports.gst.net')}
                         </h4>
                         <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>
                           {formatCurrency(gstReport.netGstPayable)}
                         </h2>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                          Output - ITC - Credit Notes (
-                          {formatCurrency(gstReport.totalCreditNoteGst)})
+                          {t('reports.gst.output_minus_itc', {
+                            cn: formatCurrency(gstReport.totalCreditNoteGst),
+                          })}
                         </p>
                       </div>
                     </div>
@@ -1205,7 +1231,7 @@ const ReportsPage: React.FC = () => {
                     <div className="summary-cards">
                       <div className="card card-gross">
                         <div className="card-header-row">
-                          <h3>Taxable Value</h3>
+                          <h3>{t('reports.gst.taxable_total')}</h3>
                           <div className="icon-box icon-gross">📈</div>
                         </div>
                         <div className="value">{formatCurrency(gstReport.totalTaxable)}</div>
@@ -1213,7 +1239,7 @@ const ReportsPage: React.FC = () => {
 
                       <div className="card card-net">
                         <div className="card-header-row">
-                          <h3>Total GST</h3>
+                          <h3>{t('reports.gst.gst_total')}</h3>
                           <div className="icon-box icon-net">💰</div>
                         </div>
                         <div className="value highlight">{formatCurrency(gstReport.totalGst)}</div>
@@ -1221,7 +1247,7 @@ const ReportsPage: React.FC = () => {
 
                       <div className="card card-profit">
                         <div className="card-header-row">
-                          <h3>Grand Total</h3>
+                          <h3>{t('reports.gst.grand_total')}</h3>
                           <div className="icon-box icon-profit">💸</div>
                         </div>
                         <div className="value">{formatCurrency(gstReport.totalAmount)}</div>
@@ -1231,17 +1257,19 @@ const ReportsPage: React.FC = () => {
                     <div className="table-section">
                       <div className="reports-section-header">
                         <div className="reports-section-title">
-                          GST Slab Summary ({gstReport.supplyType.toUpperCase()})
+                          {t('reports.gst.slab_summary', {
+                            type: gstReport.supplyType.toUpperCase(),
+                          })}
                         </div>
                       </div>
                       <div className="data-table-container">
                         <div className="data-table-header grid-gst">
-                          <div>Slab</div>
-                          <div className="text-right">Taxable</div>
-                          <div className="text-right">CGST</div>
-                          <div className="text-right">SGST</div>
-                          <div className="text-right">IGST</div>
-                          <div className="text-right">GST Total</div>
+                          <div>{t('reports.gst.table.slab')}</div>
+                          <div className="text-right">{t('reports.gst.table.taxable')}</div>
+                          <div className="text-right">{t('reports.gst.table.cgst')}</div>
+                          <div className="text-right">{t('reports.gst.table.sgst')}</div>
+                          <div className="text-right">{t('reports.gst.table.igst')}</div>
+                          <div className="text-right">{t('reports.gst.table.total')}</div>
                         </div>
                         {gstReport.slabs.map((slab) => (
                           <div key={slab.gstPercent} className="data-table-row grid-gst">
@@ -1254,7 +1282,7 @@ const ReportsPage: React.FC = () => {
                           </div>
                         ))}
                         <div className="data-table-row grid-gst data-table-footer">
-                          <div>Total</div>
+                          <div>{t('common.total')}</div>
                           <div className="text-right">{formatCurrency(gstReport.totalTaxable)}</div>
                           <div className="text-right">{formatCurrency(gstReport.totalCgst)}</div>
                           <div className="text-right">{formatCurrency(gstReport.totalSgst)}</div>
@@ -1269,20 +1297,20 @@ const ReportsPage: React.FC = () => {
               {activeTab === 'sales' &&
                 (!dailySummary || dailySummary.billCount === 0 ? (
                   <EmptyState
-                    title="No Sales Data"
-                    message="We couldn't find any sales for the selected date range. Try adjusting your filters."
+                    title={t('reports.sales.empty_title')}
+                    message={t('reports.sales.empty_msg')}
                     icon="📭"
                   />
                 ) : (
                   <div className="report-view sales-view">
                     <div className="summary-cards">
                       <RichTooltip
-                        title="Gross Sales"
-                        meta="Total billing amount before any discounts or GST adjustments."
+                        title={t('reports.sales.gross_sales')}
+                        meta={t('reports.sales.gross_sales_meta')}
                       >
                         <div className="card card-gross">
                           <div className="card-header-row">
-                            <h3>Gross Sales</h3>
+                            <h3>{t('reports.sales.gross_sales')}</h3>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               {dailySummary.comparison?.totalSales && (
                                 <TrendChip
@@ -1298,12 +1326,12 @@ const ReportsPage: React.FC = () => {
                       </RichTooltip>
 
                       <RichTooltip
-                        title="Revenue"
-                        meta="Total taxable value (Sales Price - Discount) + GST. This is the final amount billed."
+                        title={t('reports.sales.revenue')}
+                        meta={t('reports.sales.revenue_meta')}
                       >
                         <div className="card card-net">
                           <div className="card-header-row">
-                            <h3>Revenue</h3>
+                            <h3>{t('reports.sales.revenue')}</h3>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               {dailySummary.comparison?.netSales && (
                                 <TrendChip
@@ -1321,12 +1349,12 @@ const ReportsPage: React.FC = () => {
                       </RichTooltip>
 
                       <RichTooltip
-                        title="Discount"
-                        meta="Total discount amount deducted from gross sales."
+                        title={t('reports.sales.discount')}
+                        meta={t('reports.sales.discount_meta')}
                       >
                         <div className="card card-discount">
                           <div className="card-header-row">
-                            <h3>Discount</h3>
+                            <h3>{t('reports.sales.discount')}</h3>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               {dailySummary.comparison?.totalDiscount && (
                                 <TrendChip
@@ -1342,10 +1370,13 @@ const ReportsPage: React.FC = () => {
                       </RichTooltip>
 
                       {settings.expensesEnabled && (
-                        <RichTooltip title="Expenses" meta="Operating expenses recorded for today.">
+                        <RichTooltip
+                          title={t('reports.sales.expenses')}
+                          meta={t('reports.sales.expenses_meta')}
+                        >
                           <div className="card card-discount">
                             <div className="card-header-row">
-                              <h3>Expenses</h3>
+                              <h3>{t('reports.sales.expenses')}</h3>
                               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                 {dailySummary.comparison?.totalExpenses && (
                                   <TrendChip
@@ -1364,16 +1395,24 @@ const ReportsPage: React.FC = () => {
                       )}
 
                       <RichTooltip
-                        title={settings.expensesEnabled ? 'Net Profit' : 'Gross Profit'}
+                        title={
+                          settings.expensesEnabled
+                            ? t('reports.analytics.net_profit')
+                            : t('reports.analytics.gross_profit')
+                        }
                         meta={
                           settings.expensesEnabled
-                            ? 'Estimated Gross Profit minus recorded Expenses.'
-                            : 'Estimated profit before operating expenses.'
+                            ? t('reports.sales.profit_meta_net')
+                            : t('reports.sales.profit_meta_gross')
                         }
                       >
                         <div className="card card-profit">
                           <div className="card-header-row">
-                            <h3>{settings.expensesEnabled ? 'Net Profit' : 'Gross Profit'}</h3>
+                            <h3>
+                              {settings.expensesEnabled
+                                ? t('reports.analytics.net_profit')
+                                : t('reports.analytics.gross_profit')}
+                            </h3>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               {dailySummary.comparison?.trueNetProfit && (
                                 <TrendChip
@@ -1401,19 +1440,19 @@ const ReportsPage: React.FC = () => {
                           className="info-text"
                           title={`Wait! Only ₹${dailySummary.salesWithCost.toLocaleString()} of ₹${dailySummary.totalItemSales.toLocaleString()} sales have cost data.`}
                         >
-                          Profit metrics are calculated based on taxable value (excluding GST) for{' '}
-                          <strong>
-                            {Math.round(
+                          {t('reports.sales.cost_data_warning', {
+                            percent: Math.round(
                               (dailySummary.salesWithCost / (dailySummary.totalItemSales || 1)) *
                                 100
-                            )}
-                            %
-                          </strong>{' '}
-                          of sales. Some items may be missing purchase prices.
+                            ),
+                          })}
                           {dailySummary.marginPercent > 0 && (
                             <>
                               {' '}
-                              • <strong>{dailySummary.marginPercent}% Average Margin</strong>
+                              •{' '}
+                              <strong>
+                                {dailySummary.marginPercent}% {t('reports.sales.average_margin')}
+                              </strong>
                             </>
                           )}
                         </span>
@@ -1422,7 +1461,7 @@ const ReportsPage: React.FC = () => {
 
                     <div className="payment-summary">
                       <div className="mode-badge mode-badge-bills">
-                        <span className="mode-name">TRANSACTIONS</span>
+                        <span className="mode-name">{t('reports.sales.transactions')}</span>
                         <span className="mode-val">{dailySummary.billCount}</span>
                       </div>
                       {/* Explicitly show Cash and UPI first */}
@@ -1456,17 +1495,19 @@ const ReportsPage: React.FC = () => {
 
                     <div className="table-section">
                       <div className="reports-section-header">
-                        <div className="reports-section-title">Billwise Details</div>
+                        <div className="reports-section-title">
+                          {t('reports.sales.billwise_details')}
+                        </div>
                       </div>
                       <div className="data-table-container">
                         <div className="data-table-header grid-sales">
-                          <div>Time</div>
-                          <div>Bill #</div>
-                          <div>Customer</div>
-                          <div>Mode</div>
-                          <div className="text-center">Qty</div>
+                          <div>{t('reports.sales.table.time')}</div>
+                          <div>{t('reports.sales.table.bill')}</div>
+                          <div>{t('reports.sales.table.customer')}</div>
+                          <div>{t('reports.sales.table.mode')}</div>
+                          <div className="text-center">{t('reports.sales.table.qty')}</div>
                           <div className="text-right" title="Bill Grand Total (Incl. GST)">
-                            Total
+                            {t('reports.sales.table.total')}
                           </div>
                           <div className="text-right"></div>
                         </div>
@@ -1491,7 +1532,7 @@ const ReportsPage: React.FC = () => {
                               <button
                                 className="bill-link-btn"
                                 onClick={() => handleViewBill(bill.billNumber)}
-                                title="View Full Details"
+                                title={t('reports.sales.view_details')}
                               >
                                 {bill.billNumber}
                               </button>
@@ -1505,7 +1546,7 @@ const ReportsPage: React.FC = () => {
                                 className="btn-secondary btn-sm"
                                 onClick={() => handleReprintBill(bill.id)}
                               >
-                                Print
+                                {t('common.print', 'Print')}
                               </button>
                             </div>
                           </div>
@@ -1522,19 +1563,19 @@ const ReportsPage: React.FC = () => {
                       className={`sub-tab ${activeStockTab === 'current' ? 'active' : ''}`}
                       onClick={() => setActiveStockTab('current')}
                     >
-                      Current Stock
+                      {t('reports.stock.current')}
                     </button>
                     <button
                       className={`sub-tab ${activeStockTab === 'aging' ? 'active' : ''}`}
                       onClick={() => setActiveStockTab('aging')}
                     >
-                      Stock Aging (Slow Moving)
+                      {t('reports.stock.aging_tab')}
                     </button>
                     <button
                       className={`sub-tab ${activeStockTab === 'nearExpiry' ? 'active' : ''}`}
                       onClick={() => setActiveStockTab('nearExpiry')}
                     >
-                      Near Expiry Report
+                      {t('reports.stock.near_expiry_tab')}
                     </button>
                   </div>
 
@@ -1544,12 +1585,12 @@ const ReportsPage: React.FC = () => {
                         <>
                           <div className="summary-cards">
                             <RichTooltip
-                              title="Total Items"
-                              meta="Unique number of products currently in your active inventory."
+                              title={t('reports.stock.items')}
+                              meta={t('reports.stock.tooltips.items')}
                             >
                               <div className="card card-bills">
                                 <div className="card-header-row">
-                                  <h3>Items</h3>
+                                  <h3>{t('reports.stock.items')}</h3>
                                   <div className="icon-box icon-bills">📦</div>
                                 </div>
                                 <div className="value">{stockSummary.totalItems}</div>
@@ -1557,12 +1598,12 @@ const ReportsPage: React.FC = () => {
                             </RichTooltip>
 
                             <RichTooltip
-                              title="Total Value"
-                              meta="Total monetary value of your stock, calculated as Sum(Stock Qty * Purchase Price)."
+                              title={t('reports.stock.value')}
+                              meta={t('reports.stock.tooltips.value')}
                             >
                               <div className="card card-net">
                                 <div className="card-header-row">
-                                  <h3>Value</h3>
+                                  <h3>{t('reports.stock.value')}</h3>
                                   <div className="icon-box icon-net">💎</div>
                                 </div>
                                 <div className="value highlight">
@@ -1589,18 +1630,18 @@ const ReportsPage: React.FC = () => {
                                     setStockFilter(e.target.checked ? 'low_stock' : 'all')
                                   }
                                 />
-                                <span>Low Stock Only</span>
+                                <span>{t('reports.stock.low_stock_filter')}</span>
                               </label>
                             </div>
 
                             <div className="data-table-container">
                               <div className="data-table-header grid-stock">
-                                <div>Product</div>
-                                <div>Batch #</div>
-                                <div>Expiry</div>
-                                <div className="text-right">Stock</div>
-                                <div className="text-right">Alert</div>
-                                <div className="text-center">Status</div>
+                                <div>{t('reports.stock.table.product')}</div>
+                                <div>{t('reports.stock.table.batch')}</div>
+                                <div>{t('reports.stock.table.expiry')}</div>
+                                <div className="text-right">{t('reports.stock.table.qty')}</div>
+                                <div className="text-right">{t('reports.stock.table.alert')}</div>
+                                <div className="text-center">{t('reports.stock.table.status')}</div>
                               </div>
                               {stockSummary.items.map((item) => (
                                 <div key={item.id} className="data-table-row grid-stock">

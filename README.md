@@ -17,6 +17,7 @@ A fast, offline-first point-of-sale system originally built for Indian kirana sh
 | **Build Tool**        | Vite 6                           |
 | **Database**          | SQLite (better-sqlite3)          |
 | **Testing**           | Vitest + sql.js (In-memory WASM) |
+| **Localization**      | react-i18next                    |
 | **Package Manager**   | pnpm                             |
 | **Linting**           | ESLint + Prettier                |
 
@@ -172,6 +173,7 @@ SQLite Database
 - **🚀 Command Center**: Unified hub for zero-friction navigation and high-frequency actions (Add Product/Customer, Reports, Settings).
 - **⚡ Super-Speed Billing**: High-performance transaction engine with virtual barcode support and instant thermal printing.
 - **🛡️ Secure Licensing**: Hardware-bound machine activation with offline support and transparent IST-aligned trial management.
+- **🌐 Dual-Language Support**: Full localization interface for **English and Hindi**, allowing seamless switching for local business accessibility.
 - **🎁 Referral Program**: Built-in 10% cashback referral system driven by deterministically generated, easy-to-spell Customer IDs (Crockford Base32) designed for offline data safety.
 - **📈 Domain Specialization**: Specific UI and Logic layers for **Medical Stores** (Batch/Expiry tracking, H-Schedule warnings, Salt/Generic Name search) and **Kirana Stores** (Weighing Scale serial-port integration).
 - **📝 Supply Chain**: Comprehensive tracking of **Purchase Orders**, Supplier Ledgers, and advanced Stock management.
@@ -322,6 +324,7 @@ pnpm build:win:portable
 | [TYPESCRIPT_SETUP.md](docs/development/TYPESCRIPT_SETUP.md)                 | Path aliases & TS configuration       |
 | [DEVELOPER_DATABASE_GUIDE.md](docs/development/DEVELOPER_DATABASE_GUIDE.md) | **DB dumping & restoration commands** |
 | [GIT_WORKFLOW.md](docs/development/GIT_WORKFLOW.md)                         | Branching & merge protocols           |
+| [LOCALIZATION.md](docs/development/LOCALIZATION.md)                         | **Multi-language support guide**      |
 
 ---
 

@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppSettingsStore } from '../../store/useAppSettingsStore';
 import '../ConfirmModal.css';
 
 export const GstReminderModal: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const { settings, updateSettings, saveSettings } = useAppSettingsStore();
   const [isVisible, setIsVisible] = useState(false);
 
@@ -43,9 +45,11 @@ export const GstReminderModal: React.FC = () => {
       targetDate.setMonth(targetDate.getMonth() + 1);
     }
 
-    const monthName = targetDate.toLocaleString('default', { month: 'long' });
-    return `11th of ${monthName}`;
-  }, []);
+    const monthName = targetDate.toLocaleString(i18n.language === 'hi' ? 'hi-IN' : 'en-IN', {
+      month: 'long',
+    });
+    return i18n.language === 'hi' ? `${monthName} की 11 तारीख तक` : `11th of ${monthName}`;
+  }, [i18n.language]);
 
   const handleClose = async () => {
     setIsVisible(false);
@@ -76,7 +80,7 @@ export const GstReminderModal: React.FC = () => {
           }}
         >
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#b45309' }}>
-            <span style={{ fontSize: '1.25rem' }}>📅</span> GST Filing Reminder
+            <span style={{ fontSize: '1.25rem' }}>📅</span> {t('common.gst_reminder_title')}
           </h3>
           <button className="close-btn" onClick={handleClose}>
             &times;
@@ -84,9 +88,7 @@ export const GstReminderModal: React.FC = () => {
         </div>
 
         <div className="confirm-body" style={{ textAlign: 'left', color: '#4b5563' }}>
-          <p style={{ fontSize: '1.05rem', lineHeight: '1.5' }}>
-            Remember to export and file your <strong>GSTR-1</strong> for the current period.
-          </p>
+          <p style={{ fontSize: '1.05rem', lineHeight: '1.5' }}>{t('common.gst_reminder_msg')}</p>
 
           <div
             style={{
@@ -98,7 +100,9 @@ export const GstReminderModal: React.FC = () => {
               color: '#92400e',
             }}
           >
-            <p style={{ margin: 0, fontWeight: 500 }}>Deadline: By the {dueDateText}</p>
+            <p style={{ margin: 0, fontWeight: 500 }}>
+              {t('common.gst_deadline_prefix')} {dueDateText}
+            </p>
           </div>
 
           <button
@@ -111,7 +115,7 @@ export const GstReminderModal: React.FC = () => {
               borderColor: '#f59e0b',
             }}
           >
-            Acknowledge
+            {t('common.acknowledge')}
           </button>
         </div>
       </div>

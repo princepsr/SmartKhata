@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPC } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { Product } from '@shared/types/ipc';
@@ -6,6 +7,7 @@ import { formatCurrency } from '../utils/formatters';
 import './BarcodeGenPage.css';
 
 const BarcodeGenPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [labelCount, setLabelCount] = useState(24);
@@ -111,7 +113,7 @@ const BarcodeGenPage: React.FC = () => {
       </div>
       {showPrice && (
         <div className="label-pricing">
-          <span className="mrp-tag">MRP:</span>
+          <span className="mrp-tag">{t('inventory.table.mrp')}:</span>
           <span className="mrp-val">{formatCurrency(product.salePrice)}</span>
         </div>
       )}
@@ -121,14 +123,14 @@ const BarcodeGenPage: React.FC = () => {
   return (
     <div className="page barcode-gen-page">
       <header className="page-header">
-        <h1 className="page-title">Barcode Label Generator</h1>
+        <h1 className="page-title">{t('inventory.barcode.title')}</h1>
         <div className="header-actions">
           <div className="header-search-container">
             <div className="search-box">
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search Product..."
+                placeholder={t('inventory.barcode.search_placeholder')}
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 onFocus={() => searchQuery.length > 0 && setShowDropdown(true)}
@@ -157,20 +159,20 @@ const BarcodeGenPage: React.FC = () => {
                     <div className="item-info">
                       <span className="item-name">{p.name}</span>
                       <span className="item-meta">
-                        {p.sku || 'No SKU'} • {formatCurrency(p.salePrice)}
+                        {p.sku || t('common.no_sku')} • {formatCurrency(p.salePrice)}
                       </span>
                     </div>
                     {p.trackInventory && (
                       <span
                         className={`item-stock ${p.stockQty <= (p.lowStockAlert || 0) ? 'low' : ''}`}
                       >
-                        {p.stockQty} in stock
+                        {p.stockQty} {t('inventory.sufficient_stock')}
                       </span>
                     )}
                   </div>
                 ))}
                 {searchResults?.items.length === 0 && (
-                  <div className="dropdown-no-results">No products found</div>
+                  <div className="dropdown-no-results">{t('inventory.barcode.no_results')}</div>
                 )}
               </div>
             )}
@@ -192,7 +194,7 @@ const BarcodeGenPage: React.FC = () => {
               <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
               <rect width="12" height="8" x="6" y="14" />
             </svg>
-            Print Labels
+            {t('inventory.barcode.print_btn')}
           </button>
         </div>
       </header>
@@ -203,9 +205,9 @@ const BarcodeGenPage: React.FC = () => {
             {selectedProduct ? (
               <div className="selected-product-view">
                 <div className="panel-header-simple">
-                  <h3>Selected Product</h3>
+                  <h3>{t('inventory.barcode.selected_product')}</h3>
                   <button className="btn-link" onClick={() => setSelectedProduct(null)}>
-                    Clear
+                    {t('common.clear')}
                   </button>
                 </div>
 
@@ -213,7 +215,7 @@ const BarcodeGenPage: React.FC = () => {
                   <div className="product-details">
                     <div className="selected-name">{selectedProduct.name}</div>
                     <div className="selected-meta">
-                      SKU: {selectedProduct.sku || 'N/A'} •{' '}
+                      SKU: {selectedProduct.sku || t('common.no_sku')} •{' '}
                       {formatCurrency(selectedProduct.salePrice)}
                     </div>
                   </div>
@@ -221,7 +223,7 @@ const BarcodeGenPage: React.FC = () => {
 
                 <div className="label-settings">
                   <div className="settings-section">
-                    <h4>Label Options</h4>
+                    <h4>{t('inventory.barcode.label_options')}</h4>
                     <div className="toggles-grid">
                       <label className="toggle-item">
                         <input
@@ -229,7 +231,7 @@ const BarcodeGenPage: React.FC = () => {
                           checked={showBrand}
                           onChange={(e) => setShowBrand(e.target.checked)}
                         />
-                        <span>Show Brand Name</span>
+                        <span>{t('inventory.barcode.show_brand')}</span>
                       </label>
                       <label className="toggle-item">
                         <input
@@ -237,7 +239,7 @@ const BarcodeGenPage: React.FC = () => {
                           checked={showPrice}
                           onChange={(e) => setShowPrice(e.target.checked)}
                         />
-                        <span>Show MRP / Price</span>
+                        <span>{t('inventory.barcode.show_price')}</span>
                       </label>
                     </div>
                   </div>
@@ -245,9 +247,9 @@ const BarcodeGenPage: React.FC = () => {
                   <div className="settings-divider" />
 
                   <div className="settings-section">
-                    <h4>Print Settings</h4>
+                    <h4>{t('inventory.barcode.print_settings')}</h4>
                     <div className="form-group">
-                      <label>Number of Labels</label>
+                      <label>{t('inventory.barcode.label_count')}</label>
                       <div className="number-input-group">
                         <button onClick={() => setLabelCount(Math.max(1, labelCount - 1))}>
                           -
@@ -262,7 +264,7 @@ const BarcodeGenPage: React.FC = () => {
                         />
                         <button onClick={() => setLabelCount(labelCount + 1)}>+</button>
                       </div>
-                      <p className="setting-hint">Standard sheet has 24 labels</p>
+                      <p className="setting-hint">{t('inventory.barcode.sheet_hint')}</p>
                     </div>
                   </div>
                 </div>
@@ -270,8 +272,8 @@ const BarcodeGenPage: React.FC = () => {
             ) : (
               <div className="empty-state-workspace">
                 <div className="selection-header">
-                  <h3>Quick Select</h3>
-                  <p>Or use the search box in header</p>
+                  <h3>{t('inventory.barcode.quick_select')}</h3>
+                  <p>{t('inventory.barcode.search_hint')}</p>
                 </div>
                 <div className="recent-products-grid custom-scrollbar">
                   {recentProductsData?.items.map((p) => (
@@ -282,12 +284,12 @@ const BarcodeGenPage: React.FC = () => {
                     >
                       <div className="recent-info">
                         <div className="recent-name">{p.name}</div>
-                        <div className="recent-meta">{p.sku || 'No SKU'}</div>
+                        <div className="recent-meta">{p.sku || t('common.no_sku')}</div>
                       </div>
                     </div>
                   ))}
                   {(!recentProductsData || recentProductsData.items.length === 0) && (
-                    <div className="no-recent">Start searching to select products</div>
+                    <div className="no-recent">{t('inventory.barcode.start_searching')}</div>
                   )}
                 </div>
               </div>
@@ -296,19 +298,19 @@ const BarcodeGenPage: React.FC = () => {
 
           <div className="preview-panel card">
             <div className="panel-header-simple">
-              <h3>Preview Workspace</h3>
+              <h3>{t('inventory.barcode.preview_workspace')}</h3>
               <div className="preview-toggles">
                 <button
                   className={`toggle-btn ${previewMode === 'single' ? 'active' : ''}`}
                   onClick={() => setPreviewMode('single')}
                 >
-                  Single Label
+                  {t('inventory.barcode.single_label')}
                 </button>
                 <button
                   className={`toggle-btn ${previewMode === 'sheet' ? 'active' : ''}`}
                   onClick={() => setPreviewMode('sheet')}
                 >
-                  Full Sheet (24)
+                  {t('inventory.barcode.full_sheet')}
                 </button>
               </div>
             </div>
@@ -319,7 +321,7 @@ const BarcodeGenPage: React.FC = () => {
                   {previewMode === 'single' ? (
                     <div className="single-preview-wrap">
                       {renderLabelMockup(selectedProduct)}
-                      <div className="preview-badge">Actual Size: 38 x 25 mm</div>
+                      <div className="preview-badge">{t('inventory.barcode.actual_size')}</div>
                     </div>
                   ) : (
                     <div className="sheet-preview-wrap">
@@ -330,14 +332,14 @@ const BarcodeGenPage: React.FC = () => {
                           </div>
                         ))}
                       </div>
-                      <div className="preview-badge">Print Layout: A4 Sheet (3x8)</div>
+                      <div className="preview-badge">{t('inventory.barcode.print_layout')}</div>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="preview-placeholder">
                   <div className="placeholder-icon">🖨️</div>
-                  <p>Select a product to visualize your labels here</p>
+                  <p>{t('inventory.barcode.select_hint')}</p>
                 </div>
               )}
             </div>

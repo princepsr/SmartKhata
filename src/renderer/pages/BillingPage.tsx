@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
@@ -72,6 +73,7 @@ interface Customer {
 }
 
 function BillingPage() {
+  const { t } = useTranslation();
   // Settings (for billing-only mode)
   const { settings } = useAppSettingsStore();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -386,8 +388,8 @@ function BillingPage() {
         if (product.drugCategory && ['H', 'H1', 'X', 'G'].includes(product.drugCategory)) {
           setAlertState({
             isOpen: true,
-            title: `Schedule ${product.drugCategory} Drug Warning`,
-            message: `"${product.name}" is a controlled drug. Ensure you have a valid prescription and record doctor details if required.`,
+            title: t('billing.medicine_warning_title', { category: product.drugCategory }),
+            message: t('billing.medicine_warning_msg', { name: product.name }),
             type: 'warning',
           });
         }
@@ -400,8 +402,8 @@ function BillingPage() {
         ) {
           setAlertState({
             isOpen: true,
-            title: 'Out of Stock',
-            message: `"${product.name}" only has ${product.stockQty} available.`,
+            title: t('billing.out_of_stock'),
+            message: t('billing.stock_qty_msg', { name: product.name, qty: product.stockQty }),
             type: 'warning',
           });
           return prevCart;
@@ -748,8 +750,10 @@ function BillingPage() {
         {/* 1. Header & Actions */}
         <header className="page-header sticky-header">
           <div className="page-title">
-            <span>Billing</span>
-            {isQuotationMode && <span className="badge-quotation">QUOTATION MODE</span>}
+            <span>{t('common.billing')}</span>
+            {isQuotationMode && (
+              <span className="badge-quotation">{t('billing.quotation_mode')}</span>
+            )}
           </div>
 
           <div className="header-actions">
@@ -760,13 +764,17 @@ function BillingPage() {
                   <div className="success-icon">✓</div>
                   <div className="success-details">
                     <strong>
-                      {isQuotationMode ? 'Quotation' : 'Bill'} #{successMessage.billNumber} Saved
+                      {isQuotationMode ? t('common.quotation') : t('common.bill')} #
+                      {successMessage.billNumber} {t('billing.saved')}
                     </strong>
                     <span>
                       {successMessage.received
-                        ? `Received ${successMessage.received} (Total ${successMessage.total})`
-                        : `Total ${successMessage.total}`}{' '}
-                      | {successMessage.customerName || 'Cash'}
+                        ? t('billing.received_total', {
+                            received: successMessage.received,
+                            total: successMessage.total,
+                          })
+                        : t('billing.total_only', { total: successMessage.total })}{' '}
+                      | {successMessage.customerName || t('billing.payment_modes.cash')}
                     </span>
                   </div>
                 </div>
@@ -780,7 +788,7 @@ function BillingPage() {
                 ref={searchInputRef}
                 type="text"
                 className="search-input"
-                placeholder="Search Item (F2) - Name / SKU / Barcode"
+                placeholder={t('inventory.search_placeholder_long')}
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -823,7 +831,7 @@ function BillingPage() {
                         >
                           <span className="product-name">{product.name}</span>
                           <span className="product-meta">
-                            SKU: {product.sku || product.barcode || '-'}
+                            {t('common.barcode')}: {product.sku || product.barcode || '-'}
                           </span>
                           <div className="product-price">
                             {!settings.billingOnly && product.trackInventory && (
@@ -837,10 +845,10 @@ function BillingPage() {
                                 }`}
                               >
                                 {product.stockQty <= 0
-                                  ? 'Out'
+                                  ? t('billing.stock_out')
                                   : product.stockQty <= (product.lowStockAlert || 0)
-                                    ? `Low (${product.stockQty})`
-                                    : `Stock: ${product.stockQty}`}
+                                    ? `${t('billing.stock_low')} (${product.stockQty})`
+                                    : `${t('billing.stock_prefix')} ${product.stockQty}`}
                               </span>
                             )}
                             {formatCurrency(product.salePrice)}
@@ -849,7 +857,7 @@ function BillingPage() {
                       ))
                     ) : (
                       <div className="no-results" style={{ padding: '1rem', textAlign: 'center' }}>
-                        No products found.
+                        {t('billing.no_products_found')}
                       </div>
                     )}
 
@@ -857,7 +865,8 @@ function BillingPage() {
                     {settings.appMode === 'MEDICAL' && saltAlternatives.length > 0 && (
                       <div className="salt-alternatives-section">
                         <div className="salt-alternatives-header">
-                          💊 Alternatives with same Salt ({saltAlternatives[0].saltName})
+                          💊{' '}
+                          {t('billing.alternatives_title', { salt: saltAlternatives[0].saltName })}
                         </div>
                         {saltAlternatives.map((alt) => (
                           <div
@@ -867,7 +876,7 @@ function BillingPage() {
                           >
                             <span className="product-name">{alt.name}</span>
                             <span className="product-meta">
-                              {alt.sku || alt.barcode || 'Shared Salt'}
+                              {alt.sku || alt.barcode || t('billing.shared_salt')}
                             </span>
                             <div className="product-price">
                               {!settings.billingOnly && alt.trackInventory && (
@@ -881,10 +890,10 @@ function BillingPage() {
                                   }`}
                                 >
                                   {alt.stockQty <= 0
-                                    ? 'Out'
+                                    ? t('billing.stock_out')
                                     : alt.stockQty <= (alt.lowStockAlert || 0)
-                                      ? `Low (${alt.stockQty})`
-                                      : `Stock: ${alt.stockQty}`}
+                                      ? `${t('billing.stock_low')} (${alt.stockQty})`
+                                      : `${t('billing.stock_prefix')} ${alt.stockQty}`}
                                 </span>
                               )}
                               {formatCurrency(alt.salePrice)}
@@ -902,10 +911,10 @@ function BillingPage() {
             <button
               onClick={() => setShowHistory(true)}
               className="header-btn"
-              title="View Bill History (F4)"
+              title={`${t('billing.bill_history')} (F4)`}
             >
               <span>🕒</span>
-              <span>History</span>
+              <span>{t('billing.history')}</span>
             </button>
 
             {settings.customersEnabled &&
@@ -938,7 +947,7 @@ function BillingPage() {
                 >
                   <input
                     type="text"
-                    placeholder="Customer (Optional)"
+                    placeholder={t('billing.customer_placeholder')}
                     className="header-input"
                     value={customerQuery}
                     onChange={(e) => {
@@ -967,7 +976,9 @@ function BillingPage() {
                       }}
                     >
                       {searchingCustomers ? (
-                        <div style={{ padding: '0.5rem', color: '#6b7280' }}>Searching...</div>
+                        <div style={{ padding: '0.5rem', color: '#6b7280' }}>
+                          {t('billing.searching')}
+                        </div>
                       ) : customerResults.items.length > 0 ? (
                         customerResults.items.map((c) => (
                           <div
@@ -993,7 +1004,9 @@ function BillingPage() {
                           </div>
                         ))
                       ) : (
-                        <div style={{ padding: '0.5rem', color: '#6b7280' }}>No customer found</div>
+                        <div style={{ padding: '0.5rem', color: '#6b7280' }}>
+                          {t('billing.no_customer_found')}
+                        </div>
                       )}
                     </div>
                   )}
@@ -1018,18 +1031,18 @@ function BillingPage() {
           <div className="totals-panel">
             <div className="totals-area">
               <div className="summary-row">
-                <span>Subtotal</span>
+                <span>{t('common.subtotal')}</span>
                 <span>{calculation ? formatCurrency(calculation.subtotal) : '₹ 0.00'}</span>
               </div>
               {settings.gstEnabled && (
                 <div className="summary-row gst-row">
-                  <span>GST</span>
+                  <span>{t('common.gst')}</span>
                   <span>{calculation ? formatCurrency(calculation.gstTotal) : '₹ 0.00'}</span>
                 </div>
               )}
 
               <div className="summary-row discount-row">
-                <span>Discount</span>
+                <span>{t('common.discount')}</span>
                 <div className="discount-controls">
                   <div className="discount-toggle-group">
                     <button
@@ -1072,7 +1085,7 @@ function BillingPage() {
                       textAlign: 'left',
                     }}
                   >
-                    Amount Received (₹)
+                    {t('billing.payment_received')}
                   </label>
                   <input
                     type="number"
@@ -1093,7 +1106,7 @@ function BillingPage() {
                           textAlign: 'left',
                         }}
                       >
-                        Udhaar Added:{' '}
+                        {t('billing.udhaar_added')}:{' '}
                         {formatCurrency(calculation.grandTotal - parseFloat(amountPaid))}
                       </div>
                     )}
@@ -1143,7 +1156,8 @@ function BillingPage() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
                         <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
-                          Scan to pay <strong>{formatCurrency(effectivePaymentAmount)}</strong>
+                          {t('billing.scan_to_pay')}{' '}
+                          <strong>{formatCurrency(effectivePaymentAmount)}</strong>
                         </span>
                         <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
                           {settings.upiId}
@@ -1152,11 +1166,7 @@ function BillingPage() {
                     </>
                   ) : (
                     <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
-                      <p style={{ margin: '0 0 0.5rem 0' }}>UPI is not configured.</p>
-                      <p style={{ margin: 0 }}>
-                        Go to <strong>Settings &gt; Business Rules</strong> to add your Store UPI
-                        ID.
-                      </p>
+                      <p style={{ margin: '0 0 0.5rem 0' }}>{t('billing.upi_unconfigured')}</p>
                     </div>
                   )}
                 </div>
@@ -1172,7 +1182,7 @@ function BillingPage() {
                     fontSize: '0.9rem',
                   }}
                 >
-                  Error: {finalizingError || quotationError}
+                  {t('common.error')}: {finalizingError || quotationError}
                 </div>
               )}
 
@@ -1183,27 +1193,27 @@ function BillingPage() {
                 onClick={handleCheckout}
               >
                 {finalizing || creatingQuotation
-                  ? 'Processing...'
+                  ? t('common.processing')
                   : isQuotationMode
-                    ? 'SAVE QUOTATION (F9)'
-                    : `PAY (F9)`}
+                    ? t('billing.save_quotation')
+                    : t('billing.pay')}
               </button>
             </div>
 
             {todaySummary && (
               <div className="billing-mini-dashboard side-panel animate-fade-in">
                 <div className="dash-item">
-                  <span className="dash-label">Today's Sales</span>
+                  <span className="dash-label">{t('billing.today_sales')}</span>
                   <span className="dash-value">{formatCurrency(todaySummary.totalSales)}</span>
                 </div>
                 <div className="dash-item">
-                  <span className="dash-label">Net Sales</span>
+                  <span className="dash-label">{t('billing.net_sales')}</span>
                   <span className="dash-value highlight">
                     {formatCurrency(todaySummary.netSales)}
                   </span>
                 </div>
                 <div className="dash-item">
-                  <span className="dash-label">Bills</span>
+                  <span className="dash-label">{t('billing.bills')}</span>
                   <span className="dash-value">{todaySummary.billCount}</span>
                 </div>
               </div>
@@ -1225,16 +1235,16 @@ function BillingPage() {
               }}
             >
               <div>
-                <strong style={{ color: '#475569' }}>F2</strong> Search
+                <strong style={{ color: '#475569' }}>F2</strong> {t('billing.shortcuts.search')}
               </div>
               <div>
-                <strong style={{ color: '#475569' }}>Enter</strong> Add
+                <strong style={{ color: '#475569' }}>Enter</strong> {t('billing.shortcuts.add')}
               </div>
               <div>
-                <strong style={{ color: '#475569' }}>F9</strong> Pay
+                <strong style={{ color: '#475569' }}>F9</strong> {t('billing.shortcuts.pay')}
               </div>
               <div>
-                <strong style={{ color: '#475569' }}>Esc</strong> Reset
+                <strong style={{ color: '#475569' }}>Esc</strong> {t('billing.shortcuts.reset')}
               </div>
             </div>
           </div>
@@ -1256,8 +1266,8 @@ function BillingPage() {
                 textAlign: 'center',
               }}
             >
-              <h3 style={{ marginTop: 0 }}>Clear Bill?</h3>
-              <p>Are you sure you want to discard the current sale?</p>
+              <h3 style={{ marginTop: 0 }}>{t('billing.clear_bill')}?</h3>
+              <p>{t('billing.clear_bill_prompt')}</p>
               <div
                 style={{
                   display: 'flex',
@@ -1276,7 +1286,7 @@ function BillingPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={() => {
@@ -1293,7 +1303,7 @@ function BillingPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  Clear Bill
+                  {t('billing.clear_bill')}
                 </button>
               </div>
             </div>

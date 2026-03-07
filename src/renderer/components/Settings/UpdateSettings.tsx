@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useUpdateStore } from '../../store/useUpdateStore';
 import { useAppSettingsStore } from '../../store/useAppSettingsStore';
 import { UpdateStatus } from '@shared/types/update';
@@ -11,6 +12,7 @@ import { IPC_CHANNELS } from '@shared/ipc/channels';
  * Handles update checks, downloads, and mandatory update UI.
  */
 export function UpdateSettings() {
+  const { t } = useTranslation();
   const { settings, updateSettings, saveSettings } = useAppSettingsStore();
   const {
     status,
@@ -82,22 +84,23 @@ export function UpdateSettings() {
       <div className="mandatory-update-overlay">
         <NoInternetModal isOpen={showOfflineModal} onClose={() => setShowOfflineModal(false)} />
         <div className="mandatory-modal">
-          <h2>Critical Update Required</h2>
-          <p>
-            A mandatory security or stability update (v{updateInfo.version}) is required to continue
-            using SmartKhata.
-          </p>
+          <h2>{t('settings_tabs.debug.update.critical_req')}</h2>
+          <p>{t('settings_tabs.debug.update.mandatory_desc', { version: updateInfo.version })}</p>
 
           {status === UpdateStatus.AVAILABLE && (
             <button className="btn btn-primary" onClick={handleDownload}>
-              Download and Install Now
+              {t('settings_tabs.debug.update.download_now')}
             </button>
           )}
 
           {status === UpdateStatus.DOWNLOADING && (
             <div className="progress-container">
               <div className="progress-bar" style={{ width: `${progress?.percent || 0}%` }} />
-              <span>Downloading... {Math.round(progress?.percent || 0)}%</span>
+              <span>
+                {t('settings_tabs.debug.update.downloading', {
+                  percent: Math.round(progress?.percent || 0),
+                })}
+              </span>
             </div>
           )}
 
@@ -111,14 +114,12 @@ export function UpdateSettings() {
     <div className="debug-component-content">
       <NoInternetModal isOpen={showOfflineModal} onClose={() => setShowOfflineModal(false)} />
 
-      <h3 className="debug-sub-title">Software Update Channel</h3>
+      <h3 className="debug-sub-title">{t('settings_tabs.debug.update.channel_title')}</h3>
 
       <div className="debug-row">
         <div className="debug-info">
-          <span className="debug-label">Automatic Updates</span>
-          <p className="debug-description">
-            Periodically check for the latest releases and notify via banner.
-          </p>
+          <span className="debug-label">{t('settings_tabs.debug.update.auto_update')}</span>
+          <p className="debug-description">{t('settings_tabs.debug.update.auto_desc')}</p>
         </div>
         <div className="debug-actions">
           <label className="switch">
@@ -137,43 +138,54 @@ export function UpdateSettings() {
 
       <div className="debug-row">
         <div className="debug-info">
-          <span className="debug-label">Update Status</span>
+          <span className="debug-label">{t('settings_tabs.debug.update.status_title')}</span>
           <p className="debug-description">
-            {status === UpdateStatus.IDLE && 'Ready to check for the latest release.'}
-            {status === UpdateStatus.CHECKING && 'Retrieving release information from GitHub...'}
+            {status === UpdateStatus.IDLE && t('settings_tabs.debug.update.status_idle')}
+            {status === UpdateStatus.CHECKING && t('settings_tabs.debug.update.status_checking')}
             {status === UpdateStatus.AVAILABLE &&
-              `New version (v${updateInfo?.version}) is available for download.`}
+              t('settings_tabs.debug.update.status_available', { version: updateInfo?.version })}
             {status === UpdateStatus.DOWNLOADING &&
-              `Downloading update... ${Math.round(progress?.percent || 0)}% complete.`}
+              t('settings_tabs.debug.update.status_downloading', {
+                percent: Math.round(progress?.percent || 0),
+              })}
             {status === UpdateStatus.DOWNLOADED &&
-              'Update package is ready to be installed. A restart is required.'}
+              t('settings_tabs.debug.update.status_downloaded')}
             {status === UpdateStatus.NOT_AVAILABLE &&
-              'System is up to date with the latest production release.'}
-            {status === UpdateStatus.ERROR && (error || 'Failed to sync with update server.')}
+              t('settings_tabs.debug.update.status_not_available')}
+            {status === UpdateStatus.ERROR &&
+              (error || t('settings_tabs.debug.update.status_error'))}
           </p>
         </div>
         <div className={`status-badge ${status.toLowerCase()}`}>
-          {status === UpdateStatus.IDLE ? '• Ready' : ''}
-          {status === UpdateStatus.CHECKING ? '◌ Checking' : ''}
-          {status === UpdateStatus.AVAILABLE ? '↓ Available' : ''}
-          {status === UpdateStatus.DOWNLOADING ? '⇣ Downloading' : ''}
-          {status === UpdateStatus.DOWNLOADED ? '✓ Ready' : ''}
-          {status === UpdateStatus.NOT_AVAILABLE ? '✓ Latest' : ''}
-          {status === UpdateStatus.ERROR ? '✗ Sync Error' : ''}
+          {status === UpdateStatus.IDLE ? `• ${t('settings_tabs.debug.update.badge_ready')}` : ''}
+          {status === UpdateStatus.CHECKING
+            ? `◌ ${t('settings_tabs.debug.update.badge_checking')}`
+            : ''}
+          {status === UpdateStatus.AVAILABLE
+            ? `↓ ${t('settings_tabs.debug.update.badge_available')}`
+            : ''}
+          {status === UpdateStatus.DOWNLOADING
+            ? `⇣ ${t('settings_tabs.debug.update.badge_downloading')}`
+            : ''}
+          {status === UpdateStatus.DOWNLOADED
+            ? `✓ ${t('settings_tabs.debug.update.badge_ready')}`
+            : ''}
+          {status === UpdateStatus.NOT_AVAILABLE
+            ? `✓ ${t('settings_tabs.debug.update.badge_latest')}`
+            : ''}
+          {status === UpdateStatus.ERROR ? `✗ ${t('settings_tabs.debug.update.badge_error')}` : ''}
         </div>
       </div>
 
       <div className="debug-row">
         <div className="debug-info">
-          <span className="debug-label">Maintenance Controls</span>
-          <p className="debug-description">
-            Manually trigger a check or manage the current update lifecycle.
-          </p>
+          <span className="debug-label">{t('settings_tabs.debug.update.controls_title')}</span>
+          <p className="debug-description">{t('settings_tabs.debug.update.controls_desc')}</p>
         </div>
         <div className="debug-actions">
           {status === UpdateStatus.DOWNLOADED ? (
             <button className="btn btn-primary" onClick={installUpdate}>
-              Install & Restart
+              {t('settings_tabs.debug.update.install_restart')}
             </button>
           ) : (
             <button
@@ -181,7 +193,9 @@ export function UpdateSettings() {
               onClick={handleCheck}
               disabled={status === UpdateStatus.CHECKING || status === UpdateStatus.DOWNLOADING}
             >
-              {status === UpdateStatus.CHECKING ? 'Checking...' : 'Check for Updates'}
+              {status === UpdateStatus.CHECKING
+                ? t('settings_tabs.debug.update.checking_btn')
+                : t('settings_tabs.debug.update.check_btn')}
             </button>
           )}
 
@@ -191,7 +205,7 @@ export function UpdateSettings() {
               onClick={handleDownload}
               style={{ marginLeft: '8px' }}
             >
-              Download Now
+              {t('settings_tabs.debug.update.download_btn')}
             </button>
           )}
         </div>
@@ -199,15 +213,15 @@ export function UpdateSettings() {
 
       <div className="debug-data-grid">
         <div className="grid-item">
-          <span className="label">Installed Version</span>
+          <span className="label">{t('settings_tabs.debug.update.installed_ver')}</span>
           <span className="value">v{currentVersion}</span>
         </div>
         <div className="grid-item">
-          <span className="label">Update Channel</span>
-          <span className="value">Production (Stable)</span>
+          <span className="label">{t('settings_tabs.debug.update.channel_label')}</span>
+          <span className="value">{t('settings_tabs.debug.update.production')}</span>
         </div>
         <div className="grid-item">
-          <span className="label">Release Date</span>
+          <span className="label">{t('settings_tabs.debug.update.release_date')}</span>
           <span className="value">
             {updateInfo?.releaseDate
               ? new Date(updateInfo.releaseDate).toLocaleDateString()
@@ -215,8 +229,12 @@ export function UpdateSettings() {
           </span>
         </div>
         <div className="grid-item">
-          <span className="label">Priority</span>
-          <span className="value">{updateInfo?.isMandatory ? 'Critical' : 'Routine'}</span>
+          <span className="label">{t('settings_tabs.debug.update.priority')}</span>
+          <span className="value">
+            {updateInfo?.isMandatory
+              ? t('settings_tabs.debug.update.critical')
+              : t('settings_tabs.debug.update.routine')}
+          </span>
         </div>
       </div>
 
@@ -224,7 +242,9 @@ export function UpdateSettings() {
         <div className="debug-alert info" style={{ marginTop: '1.5rem' }}>
           <span className="icon">📝</span>
           <div className="message">
-            <strong>Release Notes (v{updateInfo.version}):</strong>
+            <strong>
+              {t('settings_tabs.debug.update.release_notes', { version: updateInfo.version })}
+            </strong>
             <pre
               style={{
                 fontSize: '11px',
@@ -247,7 +267,7 @@ export function UpdateSettings() {
         </div>
       )}
 
-      <div className="debug-footer-note">Updates: Managed by GitHub Releases API</div>
+      <div className="debug-footer-note">{t('settings_tabs.debug.update.managed_by')}</div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { useConfirm } from '../hooks/useConfirm';
 import { useSearchParams } from 'react-router-dom';
@@ -27,6 +28,7 @@ interface PurchaseItem {
 }
 
 const PurchasesPage: React.FC = () => {
+  const { t } = useTranslation();
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [poDataForPurchase, setPoDataForPurchase] = useState<PurchaseOrder | null>(null);
   const [viewingPurchaseId, setViewingPurchaseId] = useState<number | null>(null);
@@ -98,8 +100,8 @@ const PurchasesPage: React.FC = () => {
     return (
       <div className="page purchases-page">
         <EmptyState
-          title="GST Feature Disabled"
-          message="Purchases and ITC tracking require GST to be enabled. You can enable it in the Settings page."
+          title={t('procurement.purchases.gst_disabled_title')}
+          message={t('procurement.purchases.gst_disabled_msg')}
           icon="📦"
         />
       </div>
@@ -111,7 +113,7 @@ const PurchasesPage: React.FC = () => {
       <div className="page-content-wrapper animate-fade-in">
         <header className="page-header">
           <div>
-            <h1 className="page-title">Procurement</h1>
+            <h1 className="page-title">{t('procurement.title')}</h1>
           </div>
           <div className="header-actions">
             {(activeTab === 'purchases' || activeTab === 'orders') && (
@@ -122,7 +124,7 @@ const PurchasesPage: React.FC = () => {
                     value={dateRange.startDate}
                     onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
                   />
-                  <span>to</span>
+                  <span>{t('procurement.filters.to')}</span>
                   <input
                     type="date"
                     value={dateRange.endDate}
@@ -131,11 +133,11 @@ const PurchasesPage: React.FC = () => {
                 </div>
                 {activeTab === 'purchases' ? (
                   <button className="btn-primary" onClick={() => setIsAddingNew(true)}>
-                    + Record Purchase
+                    + {t('procurement.actions.record_purchase')}
                   </button>
                 ) : (
                   <button className="btn-primary" onClick={() => setIsAddingNew(true)}>
-                    + Create Purchase Order
+                    + {t('procurement.actions.create_order')}
                   </button>
                 )}
               </>
@@ -149,7 +151,7 @@ const PurchasesPage: React.FC = () => {
                       checked={showInactiveSuppliers}
                       onChange={(e) => setShowInactiveSuppliers(e.target.checked)}
                     />
-                    Show Inactive
+                    {t('procurement.filters.show_inactive')}
                   </label>
                   <label className="filter-checkbox">
                     <input
@@ -157,14 +159,14 @@ const PurchasesPage: React.FC = () => {
                       checked={showDuesOnlySuppliers}
                       onChange={(e) => setShowDuesOnlySuppliers(e.target.checked)}
                     />
-                    Show Dues Only
+                    {t('procurement.filters.show_dues')}
                   </label>
                 </div>
                 <div className="search-bar">
                   <input
                     type="text"
                     className="search-input"
-                    placeholder="Search Name / Phone / GSTIN"
+                    placeholder={t('procurement.filters.search_placeholder')}
                     value={supplierSearchQuery}
                     onChange={(e) => setSupplierSearchQuery(e.target.value)}
                   />
@@ -173,7 +175,7 @@ const PurchasesPage: React.FC = () => {
                   className="btn-primary"
                   onClick={() => suppliersPageRef.current?.handleCreateNew()}
                 >
-                  + Add Supplier
+                  + {t('procurement.actions.add_supplier')}
                 </button>
               </>
             )}
@@ -185,19 +187,19 @@ const PurchasesPage: React.FC = () => {
             className={activeTab === 'purchases' ? 'active' : ''}
             onClick={() => setActiveTab('purchases')}
           >
-            Purchases & Invoices
+            {t('procurement.tabs.purchases')}
           </button>
           <button
             className={activeTab === 'orders' ? 'active' : ''}
             onClick={() => setActiveTab('orders')}
           >
-            Purchase Orders
+            {t('procurement.tabs.orders')}
           </button>
           <button
             className={activeTab === 'suppliers' ? 'active' : ''}
             onClick={() => setActiveTab('suppliers')}
           >
-            Suppliers & Ledgers
+            {t('procurement.tabs.suppliers')}
           </button>
         </div>
 
@@ -205,27 +207,27 @@ const PurchasesPage: React.FC = () => {
           {activeTab === 'purchases' ? (
             <>
               {loading ? (
-                <div className="loading-state">Loading purchases...</div>
+                <div className="loading-state">{t('procurement.purchases.loading')}</div>
               ) : !purchases || purchases.data.length === 0 ? (
                 <EmptyState
-                  title="No purchases found"
-                  message="Start recording your supplier invoices to track Input Tax Credit (ITC)."
+                  title={t('procurement.purchases.no_found')}
+                  message={t('procurement.purchases.empty_msg')}
                   icon="📦"
                   action={{
-                    label: 'Record Your First Purchase',
+                    label: t('procurement.actions.record_first'),
                     onClick: () => setIsAddingNew(true),
                   }}
                 />
               ) : (
                 <div className="data-table-container">
                   <div className="data-table-header grid-purchases">
-                    <div className="col-date">Date</div>
-                    <div className="col-purchase-no">Purchase #</div>
-                    <div className="col-supplier">Supplier</div>
-                    <div className="col-inv">Inv #</div>
-                    <div className="col-gst">GST</div>
-                    <div>Total</div>
-                    <div className="col-actions">Actions</div>
+                    <div className="col-date">{t('procurement.purchases.table.date')}</div>
+                    <div className="col-purchase-no">{t('procurement.purchases.table.p_no')}</div>
+                    <div className="col-supplier">{t('procurement.purchases.table.supplier')}</div>
+                    <div className="col-inv">{t('procurement.purchases.table.inv_no')}</div>
+                    <div className="col-gst">{t('procurement.purchases.table.gst')}</div>
+                    <div>{t('procurement.purchases.table.total')}</div>
+                    <div className="col-actions">{t('procurement.purchases.table.actions')}</div>
                   </div>
                   <div className="data-table-body">
                     {purchases.data.map((p) => (
@@ -250,7 +252,7 @@ const PurchasesPage: React.FC = () => {
                         <div className="col-actions">
                           <button
                             className="action-icon-btn"
-                            title="View Details"
+                            title={t('common.view_details')}
                             onClick={(e) => {
                               e.stopPropagation();
                               setViewingPurchaseId(p.id);
@@ -350,6 +352,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
   onSuccess,
   initialPoData,
 }) => {
+  const { t } = useTranslation();
   const { alert } = useConfirm();
   const [formData, setFormData] = useState({
     supplierId: initialPoData?.supplierId || (undefined as number | undefined),
@@ -504,16 +507,16 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
     e.preventDefault();
     if (!formData.supplierName) {
       await alert({
-        title: 'Missing Information',
-        message: 'Supplier name is required.',
+        title: t('procurement.form.errors.missing_info'),
+        message: t('procurement.form.errors.supplier_req'),
         type: 'warning',
       });
       return;
     }
     if (items.some((i) => !i.productName)) {
       await alert({
-        title: 'Incomplete Items',
-        message: 'Product name is required for all items.',
+        title: t('procurement.form.errors.missing_info'),
+        message: t('procurement.form.errors.product_req'),
         type: 'warning',
       });
       return;
@@ -550,8 +553,8 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
     } catch (err) {
       console.error('Record purchase failed:', err);
       await alert({
-        title: 'Error',
-        message: 'An unexpected error occurred while recording the purchase.',
+        title: t('common.error'),
+        message: t('procurement.form.errors.record_fail'),
         type: 'danger',
       });
     }
@@ -561,7 +564,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content purchase-form-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Record New Purchase</h2>
+          <h2>{t('procurement.form.title_new')}</h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -570,7 +573,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
           <div className="modal-body">
             <div className="form-grid">
               <div className="form-group">
-                <label>Supplier *</label>
+                <label>{t('procurement.form.supplier')}</label>
                 <SearchableSelect
                   value={formData.supplierId || ''}
                   options={
@@ -590,11 +593,11 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
                       });
                     }
                   }}
-                  placeholder="Select Supplier"
+                  placeholder={t('procurement.form.select_supplier')}
                 />
               </div>
               <div className="form-group">
-                <label>Payment Status</label>
+                <label>{t('procurement.form.payment_status')}</label>
                 <div className="radio-group">
                   <label className="radio-label">
                     <input
@@ -603,7 +606,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
                       checked={formData.paymentStatus === 'PAID'}
                       onChange={() => setFormData({ ...formData, paymentStatus: 'PAID' })}
                     />
-                    Paid
+                    {t('procurement.form.paid')}
                   </label>
                   <label className="radio-label">
                     <input
@@ -612,12 +615,12 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
                       checked={formData.paymentStatus === 'PENDING'}
                       onChange={() => setFormData({ ...formData, paymentStatus: 'PENDING' })}
                     />
-                    Credit
+                    {t('procurement.form.credit')}
                   </label>
                 </div>
               </div>
               <div className="form-group">
-                <label>Amount Paid</label>
+                <label>{t('procurement.form.amount_paid')}</label>
                 <input
                   type="number"
                   value={formData.amountPaid}
@@ -627,7 +630,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
                 />
               </div>
               <div className="form-group">
-                <label>Invoice Number</label>
+                <label>{t('procurement.form.inv_no')}</label>
                 <input
                   type="text"
                   value={formData.invoiceNumber}
@@ -636,7 +639,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
                 />
               </div>
               <div className="form-group">
-                <label>Invoice Date *</label>
+                <label>{t('procurement.form.inv_date')}</label>
                 <input
                   type="date"
                   value={formData.invoiceDate}
@@ -647,23 +650,23 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
             </div>
 
             <div className="items-section">
-              <h3>Items</h3>
+              <h3>{t('procurement.form.items')}</h3>
               <table className="items-entry-table">
                 <thead>
                   <tr>
-                    <th>Product Name *</th>
-                    <th style={{ width: '100px' }}>HSN</th>
+                    <th>{t('procurement.form.item_name_label')}</th>
+                    <th style={{ width: '100px' }}>{t('procurement.form.hsn_label')}</th>
                     <th style={{ width: '90px' }} className="text-center">
-                      Qty
+                      {t('procurement.form.qty_label')}
                     </th>
                     <th style={{ width: '140px' }} className="text-center">
-                      Unit Price
+                      {t('procurement.form.unit_price_label')}
                     </th>
                     <th style={{ width: '110px' }} className="text-center">
-                      GST %
+                      {t('procurement.form.gst_label')} %
                     </th>
                     <th style={{ width: '150px' }} className="text-right">
-                      Total
+                      {t('procurement.form.total_label')}
                     </th>
                     <th style={{ width: '50px' }}></th>
                   </tr>
@@ -677,7 +680,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
                           list="purchase-products-datalist"
                           value={item.productName}
                           onChange={(e) => updateItem(index, 'productName', e.target.value)}
-                          placeholder="Item name"
+                          placeholder={t('procurement.form.item_placeholder')}
                           required
                         />
                       </td>
@@ -752,24 +755,24 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
 
             <div className="purchase-footer">
               <div className="notes-area">
-                <label>Notes</label>
+                <label>{t('procurement.form.notes')}</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Optional details..."
+                  placeholder={t('procurement.form.notes_placeholder')}
                 />
               </div>
               <div className="totals-area">
                 <div className="total-row">
-                  <span>Taxable Amount:</span>
+                  <span>{t('procurement.form.taxable_amt')}</span>
                   <span>{formatCurrency(totals.taxable)}</span>
                 </div>
                 <div className="total-row">
-                  <span>GST Amount:</span>
+                  <span>{t('procurement.form.gst_amt')}</span>
                   <span>{formatCurrency(totals.gst)}</span>
                 </div>
                 <div className="total-row grand-total">
-                  <span>Grand Total:</span>
+                  <span>{t('procurement.form.grand_total')}</span>
                   <span>{formatCurrency(totals.total)}</span>
                 </div>
               </div>
@@ -782,10 +785,10 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
               </div>
             )}
             <button type="button" className="btn-secondary" onClick={onClose}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="submit" className="btn-primary" disabled={modalLoading}>
-              {modalLoading ? 'Recording...' : 'Save Purchase'}
+              {modalLoading ? t('procurement.form.saving') : t('procurement.form.save')}
             </button>
           </div>
         </form>
@@ -817,6 +820,7 @@ interface DetailedPurchase extends Purchase {
 }
 
 const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId, onClose }) => {
+  const { t } = useTranslation();
   const {
     data: purchase,
     loading,
@@ -846,7 +850,7 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
           onClick={(e) => e.stopPropagation()}
           style={{ width: '600px', padding: '2rem', textAlign: 'center' }}
         >
-          Loading details...
+          {t('procurement.form.loading_details')}
         </div>
       </div>
     );
@@ -856,7 +860,7 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content purchase-form-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Purchase Details - {purchase.purchaseNumber}</h2>
+          <h2>{t('procurement.form.title_details', { no: purchase.purchaseNumber })}</h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -877,7 +881,7 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
                 className="text-muted"
                 style={{ fontSize: '0.8rem', textTransform: 'uppercase' }}
               >
-                Supplier
+                {t('procurement.purchases.table.supplier')}
               </div>
               <div style={{ fontWeight: 600 }}>{purchase.supplierName}</div>
               {purchase.supplierGstin && (
@@ -891,7 +895,7 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
                 className="text-muted"
                 style={{ fontSize: '0.8rem', textTransform: 'uppercase' }}
               >
-                Date
+                {t('procurement.purchases.table.date')}
               </div>
               <div style={{ fontWeight: 600 }}>
                 {new Date(purchase.invoiceDate).toLocaleDateString('en-IN')}
@@ -902,7 +906,7 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
                 className="text-muted"
                 style={{ fontSize: '0.8rem', textTransform: 'uppercase' }}
               >
-                Invoice No
+                {t('procurement.details.inv_no_label')}
               </div>
               <div style={{ fontWeight: 600 }}>{purchase.invoiceNumber || '-'}</div>
             </div>
@@ -911,12 +915,12 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
           <table className="items-entry-table">
             <thead>
               <tr>
-                <th>Product</th>
-                <th>HSN</th>
-                <th className="text-right">Qty</th>
-                <th className="text-right">Rate</th>
-                <th className="text-right">GST %</th>
-                <th className="text-right">Total</th>
+                <th>{t('procurement.details.product')}</th>
+                <th>{t('procurement.form.hsn_label')}</th>
+                <th className="text-right">{t('procurement.details.qty')}</th>
+                <th className="text-right">{t('procurement.details.rate')}</th>
+                <th className="text-right">{t('procurement.form.gst_label')} %</th>
+                <th className="text-right">{t('procurement.form.total_label')}</th>
               </tr>
             </thead>
             <tbody>
@@ -953,7 +957,7 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
                     className="text-muted"
                     style={{ fontSize: '0.85rem', display: 'block', marginBottom: '0.5rem' }}
                   >
-                    Notes
+                    {t('procurement.form.notes')}
                   </label>
                   <div
                     style={{
@@ -973,7 +977,7 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
               style={{ background: '#f8f9fa', padding: '1rem', borderRadius: '8px' }}
             >
               <div className="total-row">
-                <span>Taxable Amount:</span>
+                <span>{t('procurement.form.taxable_amt')}</span>
                 <span>{formatCurrency(purchase.totalTaxable)}</span>
               </div>
               <div className="total-row">
@@ -996,7 +1000,7 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
                   paddingTop: '0.5rem',
                 }}
               >
-                <span>Grand Total:</span>
+                <span>{t('procurement.form.grand_total')}</span>
                 <span>{formatCurrency(purchase.grandTotal)}</span>
               </div>
             </div>
@@ -1005,7 +1009,7 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
 
         <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose}>
-            Close
+            {t('common.close')}
           </button>
         </div>
       </div>

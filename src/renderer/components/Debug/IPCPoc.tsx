@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { useIPC } from '../../hooks/useIPC';
 
@@ -9,6 +10,7 @@ import { useIPC } from '../../hooks/useIPC';
  * Provides diagnostic tools for system health.
  */
 export const IPCPoc: React.FC = () => {
+  const { t } = useTranslation();
   // Use IPC Hook for App Info
   const {
     data: appInfo,
@@ -26,17 +28,17 @@ export const IPCPoc: React.FC = () => {
   return (
     <div className="debug-component-content">
       {/* IPC Connectivity Test */}
-      <h3 className="debug-sub-title">IPC Connectivity Test</h3>
+      <h3 className="debug-sub-title">{t('settings_tabs.debug.ipc_poc.title')}</h3>
 
       <div className="debug-row">
         <div className="debug-info">
-          <span className="debug-label">System Ping</span>
-          <p className="debug-description">
-            Verify the communication bridge with the main process.
-          </p>
+          <span className="debug-label">{t('settings_tabs.debug.ipc_poc.ping_title')}</span>
+          <p className="debug-description">{t('settings_tabs.debug.ipc_poc.ping_desc')}</p>
         </div>
         <button onClick={() => executePing()} disabled={loadingPing} className="btn btn-secondary">
-          {loadingPing ? 'Pinging...' : 'Send Ping'}
+          {loadingPing
+            ? t('settings_tabs.debug.ipc_poc.pinging')
+            : t('settings_tabs.debug.ipc_poc.send_ping')}
         </button>
       </div>
 
@@ -44,7 +46,7 @@ export const IPCPoc: React.FC = () => {
         <div className="debug-alert success">
           <span className="icon">✅</span>
           <span className="message">
-            Response: <strong>{pingData}</strong>
+            {t('settings_tabs.debug.ipc_poc.response')}: <strong>{pingData}</strong>
           </span>
         </div>
       )}
@@ -52,11 +54,13 @@ export const IPCPoc: React.FC = () => {
       {/* App Info Test */}
       <div className="debug-row">
         <div className="debug-info">
-          <span className="debug-label">Application Metadata</span>
-          <p className="debug-description">Retrieve build version and environment details.</p>
+          <span className="debug-label">{t('settings_tabs.debug.ipc_poc.meta_title')}</span>
+          <p className="debug-description">{t('settings_tabs.debug.ipc_poc.meta_desc')}</p>
         </div>
         <button onClick={() => fetchAppInfo()} disabled={loadingInfo} className="btn btn-secondary">
-          {loadingInfo ? 'Loading...' : 'Get Details'}
+          {loadingInfo
+            ? t('settings_tabs.debug.ipc_poc.loading')
+            : t('settings_tabs.debug.ipc_poc.get_details')}
         </button>
       </div>
 
@@ -70,21 +74,21 @@ export const IPCPoc: React.FC = () => {
       {appInfo && (
         <div className="debug-data-grid">
           <div className="grid-item">
-            <span className="label">Name</span>
+            <span className="label">{t('settings_tabs.debug.ipc_poc.name')}</span>
             <span className="value">{appInfo.name}</span>
           </div>
           <div className="grid-item">
-            <span className="label">Version</span>
+            <span className="label">{t('settings_tabs.debug.ipc_poc.version')}</span>
             <span className="value">{appInfo.version}</span>
           </div>
           <div className="grid-item">
-            <span className="label">Platform</span>
+            <span className="label">{t('settings_tabs.debug.ipc_poc.platform')}</span>
             <span className="value">{appInfo.platform}</span>
           </div>
         </div>
       )}
 
-      <div className="debug-footer-note">Powered by SmartKhata IPC Client Wrapper</div>
+      <div className="debug-footer-note">{t('settings_tabs.debug.ipc_poc.powered_by')}</div>
     </div>
   );
 };

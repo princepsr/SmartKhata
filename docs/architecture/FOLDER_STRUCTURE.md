@@ -89,6 +89,7 @@ SmartKhata/
 │   │   │   ├── useIPC.ts
 │   │   │   ├── useLocalStorage.ts
 │   │   │   └── useLicense.ts
+│   │   ├── i18n/                  # Localization (en/hi)
 │   │   ├── services/              # Shared IPC abstractions
 │   │   │   └── report-api.ts
 │   │   ├── styles/                # Global styles
@@ -197,6 +198,7 @@ SmartKhata/
 | `components/`        | Reusable UI components        | `ProductSearch.tsx` - search widget                    |
 | `components/common/` | Generic UI elements           | `Button.tsx`, `Modal.tsx`                              |
 | `hooks/`             | Custom React hooks            | `useProducts.ts` - fetch products via IPC              |
+| `i18n/`              | Localization logic            | `config.ts` initializes react-i18next                  |
 | `services/`          | IPC wrappers (API layer)      | `product-api.ts` wraps `window.electron.getProducts()` |
 | `styles/`            | Global CSS, themes            | `variables.css` - color palette, spacing               |
 | `utils/`             | Renderer-specific utilities   | `formatters.ts` - format currency, dates               |

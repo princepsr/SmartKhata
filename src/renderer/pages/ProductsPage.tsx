@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { useIPC } from '../hooks/useIPC';
+import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../utils/formatters';
@@ -39,6 +40,7 @@ const SkeletonRows: React.FC = () => (
 );
 
 const ProductsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { settings } = useAppSettingsStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -262,7 +264,7 @@ const ProductsPage: React.FC = () => {
     handleFormSuccess();
   }, [handleFormSuccess]);
 
-  const { execute: toggleStatus } = useIPC(IPC_CHANNELS.PRODUCT_TOGGLE_STATUS);
+  const { execute: toggleStatus } = useIPCMutation(IPC_CHANNELS.PRODUCT_TOGGLE_STATUS);
 
   const handleToggleStatus = useCallback(
     async (e: React.MouseEvent, product: Product) => {
@@ -272,8 +274,8 @@ const ProductsPage: React.FC = () => {
       if (isDeactivating) {
         setConfirmDialog({
           isOpen: true,
-          title: 'Deactivate Product',
-          message: `Are you sure you want to deactivate "${product.name}"? It will be hidden from the billing search.`,
+          title: t('inventory.deactivate_title'),
+          message: t('inventory.deactivate_msg', { name: product.name }),
           onConfirm: async () => {
             try {
               await toggleStatus({ id: product.id, isActive: false });
@@ -293,7 +295,7 @@ const ProductsPage: React.FC = () => {
         console.error('Failed to toggle product status:', err);
       }
     },
-    [toggleStatus, handleFormSuccess]
+    [toggleStatus, handleFormSuccess, t]
   );
 
   // Filter products (client side filters only, search is server side)
@@ -373,11 +375,24 @@ const ProductsPage: React.FC = () => {
     setSelectedIndex(0);
   }, [searchQuery]);
 
+  const getStockStatusLabel = useCallback(
+    (product: Product) => {
+      if (product.stockQty <= 0) {
+        return t('inventory.stock_out_warning');
+      }
+      if (product.stockQty <= (product.lowStockAlert || 0)) {
+        return t('inventory.stock_low_warning');
+      }
+      return t('inventory.sufficient_stock');
+    },
+    [t]
+  );
+
   return (
     <div className="page products-page">
       <div className="page-content-wrapper animate-fade-in">
         <header className="page-header">
-          <h1 className="page-title">Products & Inventory</h1>
+          <h1 className="page-title">{t('inventory.title')}</h1>
           <div className="header-actions">
             <div className="filter-group">
               <label className="filter-checkbox">
@@ -386,7 +401,7 @@ const ProductsPage: React.FC = () => {
                   checked={showLowStockOnly}
                   onChange={(e) => setShowLowStockOnly(e.target.checked)}
                 />
-                Low Stock Only
+                {t('inventory.low_stock_only')}
               </label>
               <label className="filter-checkbox">
                 <input
@@ -394,7 +409,7 @@ const ProductsPage: React.FC = () => {
                   checked={includeInactive}
                   onChange={(e) => setIncludeInactive(e.target.checked)}
                 />
-                Show Inactive
+                {t('inventory.show_inactive')}
               </label>
             </div>
             <button
@@ -402,19 +417,21 @@ const ProductsPage: React.FC = () => {
               onClick={() => setIsImportOpen(true)}
               style={{ marginRight: '1rem' }}
             >
-              Import CSV
+              {t('inventory.import_csv')}
             </button>
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="search-input"
-              placeholder="Search Product (F2) - Name / SKU / Barcode"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
-            />
+            <div className="search-box">
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="search-input"
+                placeholder={t('inventory.search_placeholder_long')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+              />
+            </div>
             <button className="btn-primary" onClick={handleAddProduct} title="Ctrl + N">
-              + Add Product (Ctrl+N)
+              + {t('inventory.add_product')} (Ctrl+N)
             </button>
           </div>
         </header>
@@ -434,27 +451,27 @@ const ProductsPage: React.FC = () => {
           {(!isInitialLoading || products.length > 0) && !error && (
             <div className="data-table-container" ref={listContainerRef}>
               <div className="data-table-header">
-                <div className="col-name">Name</div>
-                <div className="col-sku">SKU / Barcode</div>
-                <div className="col-price">Sale Price</div>
-                <div className="col-cost">Purchase</div>
-                <div className="col-stock">Stock</div>
-                <div className="col-status">Status</div>
-                <div className="col-actions">Actions</div>
+                <div className="col-name">{t('inventory.table.name')}</div>
+                <div className="col-sku">{t('inventory.form.barcode')}</div>
+                <div className="col-price">{t('inventory.table.price')}</div>
+                <div className="col-cost">{t('inventory.table.purchase_price')}</div>
+                <div className="col-stock">{t('inventory.table.stock')}</div>
+                <div className="col-status">{t('common.status')}</div>
+                <div className="col-actions">{t('common.actions')}</div>
               </div>
 
               {filteredProducts.length === 0 ? (
                 <EmptyState
-                  title="No Products Found"
+                  title={t('inventory.no_products_found')}
                   message={
                     searchQuery
-                      ? `We couldn't find any products matching "${searchQuery}".`
-                      : "You haven't added any products yet. Let's get started!"
+                      ? t('inventory.no_matching_products', { query: searchQuery })
+                      : t('inventory.get_started_message')
                   }
                   icon="📦"
                   action={
                     !searchQuery
-                      ? { label: 'Add New Product', onClick: handleAddProduct }
+                      ? { label: t('inventory.add_btn'), onClick: handleAddProduct }
                       : undefined
                   }
                 />
@@ -489,7 +506,7 @@ const ProductsPage: React.FC = () => {
                         !settings.gstExclusiveMode && (
                           <span
                             className="inclusive-badge"
-                            title="Price is inclusive of GST"
+                            title={t('inventory.price_inclusive_gst')}
                             style={{
                               fontSize: '0.7rem',
                               padding: '2px 6px',
@@ -510,7 +527,7 @@ const ProductsPage: React.FC = () => {
                         formatCurrency(product.purchasePrice)
                       ) : (
                         <span className="text-muted" style={{ fontSize: '0.8rem' }}>
-                          N/A
+                          {t('common.no_sku')}
                         </span>
                       )}
                     </div>
@@ -524,32 +541,26 @@ const ProductsPage: React.FC = () => {
                                 ? 'stock-low'
                                 : 'stock-ok'
                           }
-                          title={
-                            product.stockQty <= 0
-                              ? 'Out of Stock'
-                              : product.stockQty <= (product.lowStockAlert || 0)
-                                ? 'Low Stock Warning'
-                                : 'Sufficient Stock'
-                          }
+                          title={getStockStatusLabel(product)}
                         >
                           {product.stockQty}
                         </span>
                       ) : (
-                        <span className="text-muted" title="Not Tracked">
+                        <span className="text-muted" title={t('inventory.not_tracked')}>
                           -
                         </span>
                       )}
                     </div>
                     <div className="col-status">
                       <span className={`status-badge ${product.isActive ? 'active' : 'inactive'}`}>
-                        {product.isActive ? 'Active' : 'Inactive'}
+                        {product.isActive ? t('common.active') : t('common.inactive')}
                       </span>
                     </div>
                     <div className="col-actions">
                       <button
                         className="action-icon-btn action-edit"
                         onClick={() => handleEditProduct(product)}
-                        title="Edit Product"
+                        title={t('inventory.tooltips.edit')}
                       >
                         <svg
                           width="18"
@@ -570,7 +581,7 @@ const ProductsPage: React.FC = () => {
                         <button
                           className="action-icon-btn action-adjust"
                           onClick={(e) => handleAdjustStock(e, product)}
-                          title="Adjust Stock"
+                          title={t('inventory.tooltips.adjust_stock')}
                         >
                           <svg
                             width="18"
@@ -601,7 +612,7 @@ const ProductsPage: React.FC = () => {
                       <button
                         className="action-icon-btn action-history"
                         onClick={(e) => handleViewHistory(e, product)}
-                        title="Stock History"
+                        title={t('inventory.tooltips.stock_history')}
                       >
                         <svg
                           width="18"
@@ -622,7 +633,11 @@ const ProductsPage: React.FC = () => {
                       <button
                         className={`action-icon-btn action-toggle ${product.isActive ? 'active' : 'inactive'}`}
                         onClick={(e) => handleToggleStatus(e, product)}
-                        title={product.isActive ? 'Deactivate Product' : 'Activate Product'}
+                        title={
+                          product.isActive
+                            ? t('inventory.tooltips.deactivate')
+                            : t('inventory.tooltips.activate')
+                        }
                       >
                         <svg
                           width="18"
@@ -644,15 +659,19 @@ const ProductsPage: React.FC = () => {
                 ))
               )}
 
-              {hasMore && (
-                <div ref={loaderRef} className="loading-more">
-                  {loading ? 'Loading more products...' : 'Scroll for more'}
-                </div>
-              )}
+              <div className="table-footer-status">
+                {loading && <div className="loading-indicator">{t('inventory.loading_more')}</div>}
 
-              {!hasMore && products.length > 0 && totalCount > 100 && (
-                <div className="end-of-list">Showing all {totalCount} products</div>
-              )}
+                {!hasMore && products.length > 0 && totalCount > 100 && (
+                  <div className="end-message">
+                    {t('inventory.showing_all', { count: totalCount })}
+                  </div>
+                )}
+
+                {hasMore && !loading && (
+                  <div className="scroll-tip">{t('inventory.scroll_for_more')}</div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -697,7 +716,7 @@ const ProductsPage: React.FC = () => {
         onConfirm={confirmDialog.onConfirm}
         onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
         type="warning"
-        confirmLabel="Deactivate"
+        confirmLabel={t('inventory.deactivate_confirm')}
       />
     </div>
   );

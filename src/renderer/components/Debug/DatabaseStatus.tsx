@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 
 /**
@@ -16,6 +17,7 @@ interface DatabaseStatusInfo {
 }
 
 export function DatabaseStatus() {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<DatabaseStatusInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,17 +43,17 @@ export function DatabaseStatus() {
 
   return (
     <div className="debug-component-content">
-      <h3 className="debug-sub-title">Storage Health</h3>
+      <h3 className="debug-sub-title">{t('settings_tabs.debug.db_status.title')}</h3>
 
       <div className="debug-row">
         <div className="debug-info">
-          <span className="debug-label">SQLite Engine Status</span>
-          <p className="debug-description">
-            Perform a real-time check of the local database connection.
-          </p>
+          <span className="debug-label">{t('settings_tabs.debug.db_status.engine_status')}</span>
+          <p className="debug-description">{t('settings_tabs.debug.db_status.engine_desc')}</p>
         </div>
         <button onClick={fetchDatabaseStatus} disabled={loading} className="btn btn-secondary">
-          {loading ? 'Checking...' : 'Check Status'}
+          {loading
+            ? t('settings_tabs.debug.db_status.checking')
+            : t('settings_tabs.debug.db_status.check_btn')}
         </button>
       </div>
 
@@ -59,7 +61,7 @@ export function DatabaseStatus() {
         <div className="debug-alert error">
           <span className="icon">❌</span>
           <span className="message">
-            <strong>Error:</strong> {error}
+            <strong>{t('settings_tabs.debug.db_status.error')}:</strong> {error}
           </span>
         </div>
       )}
@@ -67,27 +69,29 @@ export function DatabaseStatus() {
       {status && (
         <div className="debug-data-grid database-grid">
           <div className="grid-item">
-            <span className="label">Status</span>
+            <span className="label">{t('settings_tabs.debug.db_status.status_label')}</span>
             <span className={`value status-badge ${status.isReady ? 'ready' : 'not-ready'}`}>
-              {status.isReady ? '✓ Healthy' : '✗ Unreachable'}
+              {status.isReady
+                ? `✓ ${t('settings_tabs.debug.db_status.healthy')}`
+                : `✗ ${t('settings_tabs.debug.db_status.unreachable')}`}
             </span>
           </div>
           <div className="grid-item">
-            <span className="label">Database Path</span>
+            <span className="label">{t('settings_tabs.debug.db_status.db_path')}</span>
             <span className="value font-mono text-xs">{status.path}</span>
           </div>
           <div className="grid-item">
-            <span className="label">Schema</span>
+            <span className="label">{t('settings_tabs.debug.db_status.schema')}</span>
             <span className="value">v{status.schemaVersion}</span>
           </div>
           <div className="grid-item">
-            <span className="label">Total Tables</span>
+            <span className="label">{t('settings_tabs.debug.db_status.total_tables')}</span>
             <span className="value">{status.tableCount}</span>
           </div>
         </div>
       )}
 
-      <div className="debug-footer-note">Database: SQLite 3.x (Local Storage)</div>
+      <div className="debug-footer-note">{t('settings_tabs.debug.db_status.note')}</div>
     </div>
   );
 }

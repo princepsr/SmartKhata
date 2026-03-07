@@ -77,6 +77,7 @@ SmartKhata POS follows a **layered architecture** with clear separation of conce
 - ✅ Collect user input
 - ✅ Manage UI state
 - ✅ Call IPC methods via `window.api`
+- ✅ Handle multi-language support (English/Hindi) via `react-i18next`
 - ❌ NO business logic
 - ❌ NO direct database access
 - ❌ NO SQL queries
@@ -498,6 +499,7 @@ pnpm test:coverage     # Coverage report
 - [`CUSTOMER_MANAGEMENT.md`](../features/CUSTOMER_MANAGEMENT.md) - Profiles and Ledger Integration
 - [`SECURITY_AND_VALIDATION.md`](../security/SECURITY_AND_VALIDATION.md) - Zod and IPCHandler Middleware
 - [`UI_PATTERNS.md`](../development/UI_PATTERNS.md) - Loading, Pagination, and Resilience
+- [`LOCALIZATION.md`](../development/LOCALIZATION.md) - **Multi-language support and i18n guide**
 
 ### Repository Layer
 

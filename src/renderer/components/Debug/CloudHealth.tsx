@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { useIPC } from '../../hooks/useIPC';
 import { useUpdateStore } from '../../store/useUpdateStore';
@@ -10,6 +11,7 @@ import NoInternetModal from '../modals/NoInternetModal';
  * Provides visibility into Google Drive sync status.
  */
 export function CloudHealth() {
+  const { t } = useTranslation();
   const { checkConnectivity } = useUpdateStore();
   const [showOfflineModal, setShowOfflineModal] = useState(false);
 
@@ -43,52 +45,60 @@ export function CloudHealth() {
     <div className="debug-component-content">
       <NoInternetModal isOpen={showOfflineModal} onClose={() => setShowOfflineModal(false)} />
 
-      <h3 className="debug-sub-title">Cloud Sync Health</h3>
+      <h3 className="debug-sub-title">{t('settings_tabs.debug.cloud_health.title')}</h3>
 
       <div className="debug-row">
         <div className="debug-info">
-          <span className="debug-label">Account Link Status</span>
+          <span className="debug-label">
+            {t('settings_tabs.debug.cloud_health.account_status')}
+          </span>
           <p className="debug-description">
-            {profile ? `Linked to ${profile.email}` : 'No Google account linked for cloud backups.'}
+            {profile
+              ? t('settings_tabs.debug.cloud_health.linked_to', { email: profile.email })
+              : t('settings_tabs.debug.cloud_health.not_linked')}
           </p>
         </div>
         <div className={`status-badge ${profile ? 'ready' : 'not-ready'}`}>
-          {profile ? '✓ Connected' : '✗ Disconnected'}
+          {profile
+            ? `✓ ${t('settings_tabs.debug.cloud_health.connected')}`
+            : `✗ ${t('settings_tabs.debug.cloud_health.disconnected')}`}
         </div>
       </div>
 
       <div className="debug-row">
         <div className="debug-info">
-          <span className="debug-label">Cloud Backup Metadata</span>
-          <p className="debug-description">
-            Retrieve the latest backup information directly from Google Drive.
-          </p>
+          <span className="debug-label">
+            {t('settings_tabs.debug.cloud_health.metadata_title')}
+          </span>
+          <p className="debug-description">{t('settings_tabs.debug.cloud_health.metadata_desc')}</p>
         </div>
         <button
           onClick={handleFetchMetadata}
           disabled={loading || !profile}
           className="btn btn-secondary"
         >
-          {loading ? 'Fetching...' : 'Fetch Metadata'}
+          {loading
+            ? t('settings_tabs.debug.cloud_health.fetching')
+            : t('settings_tabs.debug.cloud_health.fetch_btn')}
         </button>
       </div>
 
       {backupInfo && (
         <div className="debug-data-grid">
           <div className="grid-item full-width">
-            <span className="label">Latest File Name</span>
+            <span className="label">{t('settings_tabs.debug.cloud_health.file_name')}</span>
             <span className="value">{backupInfo.name}</span>
           </div>
           <div className="grid-item">
-            <span className="label">File Size</span>
+            <span className="label">{t('settings_tabs.debug.cloud_health.file_size')}</span>
             <span className="value">{backupInfo.size}</span>
           </div>
           <div className="grid-item">
-            <span className="label">Last Modified</span>
+            <span className="label">{t('settings_tabs.debug.cloud_health.last_modified')}</span>
             <span className="value">{new Date(backupInfo.modifiedTime).toLocaleString()}</span>
           </div>
           <div className="grid-item">
-            <span className="label">Provider</span>
+            <span className="label">{t('settings_tabs.debug.cloud_health.provider')}</span>
             <span className="value">Google Drive API v3</span>
           </div>
         </div>
@@ -101,7 +111,9 @@ export function CloudHealth() {
         </div>
       )}
 
-      <div className="debug-footer-note">Sync: Automated (On Database Changes)</div>
+      <div className="debug-footer-note">
+        {t('settings_tabs.debug.cloud_health.automated_note')}
+      </div>
     </div>
   );
 }
