@@ -179,6 +179,7 @@ SQLite Database
 - **📝 Supply Chain**: Comprehensive tracking of **Purchase Orders**, Supplier Ledgers, and advanced Stock management.
 - **📊 Advanced Analytics**: Daily/Weekly/Monthly trend insights with full GST-ready reporting, including **Sales Returns (Credit Notes)** and **Input Tax Credit (ITC)** from purchases.
 - **☁️ Cloud Sync & Backups**: Automated, configurable background database backups with seamless Google Drive synchronization to prevent data loss.
+- **📖 Knowledge Hub**: Integrated, high-density bilingual documentation system with step-by-step guides and expert tips for all modules.
 
 **See [DATABASE_SCHEMA.md](docs/database/DATABASE_SCHEMA.md) for complete schema documentation.**
 
@@ -264,6 +265,7 @@ pnpm build:win:portable
 | [KIRANA_MODE.md](docs/features/KIRANA_MODE.md)                         | Weighing scales, Quick Pick, WhatsApp  |
 | [SUPPLIERS_AND_PURCHASES.md](docs/features/SUPPLIERS_AND_PURCHASES.md) | Ledger, Purchase Invoices, Debit Notes |
 | [PURCHASE_ORDERS.md](docs/features/PURCHASE_ORDERS.md)                 | Drafts, Fulfillment, Auto-ordering     |
+| [KNOWLEDGE_HUB.md](docs/features/KNOWLEDGE_HUB.md)                     | **Bilingual Help & Support System**    |
 
 ### 🏗️ Architecture & Core Logic
 
