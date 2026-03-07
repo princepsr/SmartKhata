@@ -402,6 +402,40 @@ export class ProductRepository extends BaseRepository {
   }
 
   /**
+   * Fuzzy search by multiple salt components (AND condition)
+   */
+  public searchByFuzzySalts(salts: string[]): Product[] {
+    if (!salts || salts.length === 0) {
+      return [];
+    }
+
+    // Build dynamic AND conditions: (salt_name LIKE '%' || ? || '%' AND ...)
+    // SQLite's LIKE is case-insensitive by default for ASCII.
+    const conditions = salts.map(() => 'salt_name LIKE ?').join(' AND ');
+    const params = salts.map((salt) => `%${salt}%`);
+
+    const sql = `SELECT * FROM products WHERE is_active = 1 AND (${conditions}) ORDER BY name ASC`;
+    const rows = this.queryAll<any>(sql, params);
+    return rows.map((row) => this._mapToProduct(row));
+  }
+
+  /**
+   * Get unique salt names matching the query from existing products
+   */
+  public getUniqueSaltNames(query: string): string[] {
+    const sql = `
+      SELECT DISTINCT salt_name
+      FROM products
+      WHERE salt_name LIKE ? 
+      AND salt_name IS NOT NULL 
+      AND is_active = 1
+      ORDER BY salt_name ASC
+    `;
+    const rows = this.queryAll<{ salt_name: string }>(sql, [`%${query}%`]);
+    return rows.map((row) => row.salt_name);
+  }
+
+  /**
    * Find product by barcode
    */
   public findByBarcode(barcode: string, includeInactive: boolean = false): Product | null {

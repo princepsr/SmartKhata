@@ -63,6 +63,7 @@ export class PurchaseOrderRepository extends BaseRepository {
       unitPrice: item.unit_price,
       gstPercent: item.gst_percent,
       lineTotal: item.line_total,
+      saltName: item.salt_name,
     }));
 
     return po;
@@ -85,11 +86,7 @@ export class PurchaseOrderRepository extends BaseRepository {
     const insertItem = this.db.prepare(`
       INSERT INTO purchase_order_items (
         purchase_order_id, product_id, product_name, hsn_code,
-        quantity, unit_price, gst_percent, line_total
-      ) VALUES (
-        @poId, @productId, @productName, @hsnCode,
-        @quantity, @unitPrice, @gstPercent, @lineTotal
-      )
+        quantity, unit_price, gst_percent, line_total, salt_name) VALUES (@poId, @productId, @productName, @hsnCode, @quantity, @unitPrice, @gstPercent, @lineTotal, @saltName)
     `);
 
     const transaction = this.db.transaction((poData: any) => {
@@ -145,8 +142,7 @@ export class PurchaseOrderRepository extends BaseRepository {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             gstPercent: item.gstPercent,
-            lineTotal: item.lineTotal,
-          });
+            lineTotal: item.lineTotal, saltName: item.saltName || null });
         }
       }
 
@@ -204,11 +200,7 @@ export class PurchaseOrderRepository extends BaseRepository {
     const insertItem = this.db.prepare(`
       INSERT INTO purchase_order_items (
         purchase_order_id, product_id, product_name, hsn_code,
-        quantity, unit_price, gst_percent, line_total
-      ) VALUES (
-        @poId, @productId, @productName, @hsnCode,
-        @quantity, @unitPrice, @gstPercent, @lineTotal
-      )
+        quantity, unit_price, gst_percent, line_total, salt_name) VALUES (@poId, @productId, @productName, @hsnCode, @quantity, @unitPrice, @gstPercent, @lineTotal, @saltName)
     `);
 
     const transaction = this.db.transaction((poData: any) => {
@@ -239,8 +231,7 @@ export class PurchaseOrderRepository extends BaseRepository {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             gstPercent: item.gstPercent,
-            lineTotal: item.lineTotal,
-          });
+            lineTotal: item.lineTotal, saltName: item.saltName || null });
         }
       }
 
@@ -277,3 +268,4 @@ export class PurchaseOrderRepository extends BaseRepository {
     };
   }
 }
+

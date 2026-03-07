@@ -315,14 +315,14 @@
   grid-template-columns: repeat(3, 1fr) !important;
 }
 
-.form-group {
+.purchase-form-modal .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.4rem; /* Reduced gap */
   min-height: 60px; /* Reduced height */
 }
 
-.form-group label {
+.purchase-form-modal .form-group label {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text-secondary);
@@ -332,14 +332,14 @@
   white-space: nowrap;
 }
 
-.form-group label small {
+.purchase-form-modal .form-group label small {
   font-weight: 400;
   opacity: 0.7;
   font-size: 0.75rem;
 }
 
-.form-group input,
-.form-group select {
+.purchase-form-modal .form-group input,
+.purchase-form-modal .form-group select {
   height: 42px; /* Standardize height */
   padding: 0 0.8rem;
   border: 1px solid var(--color-border);
@@ -600,4 +600,71 @@
   background-color: white;
   color: var(--color-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Medicine/Salt Suggestions Dropdown for Items Table */
+.items-table-row {
+  position: relative;
+}
+
+.items-suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 350px;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  max-height: 250px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.items-suggestion-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-bg-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.items-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.items-suggestion-item:hover {
+  background-color: var(--color-bg-secondary);
+}
+
+.items-suggestion-item .brand-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.items-suggestion-item .salt-name {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.items-suggestion-item .inventory-tag {
+  font-size: 0.65rem;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.items-suggestion-item .global-tag {
+  font-size: 0.65rem;
+  color: var(--color-success);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
 }

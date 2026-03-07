@@ -12,6 +12,7 @@ import type {
   PaymentModeSummary,
   GstReport,
   StockSummary,
+  StockItem,
   BillSummary,
   DateRange,
   PaginatedResult,
@@ -149,6 +150,14 @@ export const reportApi = {
    */
   getStockAgingReport: async (days: number = 30): Promise<any[] | null> => {
     const result = await ipcClient.call<any[]>(IPC_CHANNELS.REPORT_STOCK_AGING, days);
+    return result.data;
+  },
+
+  /**
+   * Get Near Expiry Report
+   */
+  getNearExpiryReport: async (days: number = 60): Promise<StockItem[] | null> => {
+    const result = await ipcClient.call<StockItem[]>(IPC_CHANNELS.REPORT_NEAR_EXPIRY, days);
     return result.data;
   },
 };

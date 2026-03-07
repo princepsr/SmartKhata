@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useConfirm } from '../hooks/useConfirm';
 import { useAppSettingsStore } from '../store';
 import { IPCPoc } from '../components/Debug/IPCPoc';
 import { DatabaseStatus } from '../components/Debug/DatabaseStatus';
@@ -26,6 +27,7 @@ type SettingsTab = 'shop' | 'inventory' | 'printing' | 'licensing' | 'data' | 'p
 function SettingsPage() {
   const { settings, updateSettings, fetchSettings, saveSettings, resetSettings, isLoading, error } =
     useAppSettingsStore();
+  const { alert } = useConfirm();
   const { refresh } = useLicense();
   const [activeTab, setActiveTab] = useState<SettingsTab>('shop');
   const [showLicenseModal, setShowLicenseModal] = useState(false);
@@ -104,41 +106,8 @@ function SettingsPage() {
     }
   };
 
-  const renderGSTReminder = () => {
-    if (!settings.gstNumber || !settings.gstEnabled) {
-      return null;
-    }
-    return (
-      <div
-        className="gst-filing-reminder animate-fade-in"
-        style={{
-          background: 'var(--color-warning-light)',
-          border: '1px solid var(--color-warning)',
-          padding: '1rem',
-          borderRadius: '12px',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          color: '#856404',
-        }}
-      >
-        <span style={{ fontSize: '1.2rem' }}>📅</span>
-        <div>
-          <strong>GST Filing Reminder:</strong> GSTR-1 for the current period should be exported and
-          filed by the 11th of{' '}
-          {new Date(new Date().setMonth(new Date().getMonth() + 1)).toLocaleString('default', {
-            month: 'long',
-          })}
-          .
-        </div>
-      </div>
-    );
-  };
-
   const renderShopInfo = () => (
     <div className="tab-content-wrapper fade-in">
-      {renderGSTReminder()}
       <div className="settings-section-card">
         <div className="section-header">
           <h2>Shop Information</h2>
@@ -690,9 +659,17 @@ function SettingsPage() {
                     if (!result?.success && !result) {
                       throw new Error('Printer might be offline or unavailable.');
                     }
-                    alert('Test print sent successfully!');
+                    await alert({
+                      title: 'Success',
+                      message: 'Test print sent successfully!',
+                      type: 'info',
+                    });
                   } catch (err: any) {
-                    alert(`Print Error: ${err.message || 'Unknown error'}`);
+                    await alert({
+                      title: 'Print Error',
+                      message: `Print Error: ${err.message || 'Unknown error'}`,
+                      type: 'danger',
+                    });
                   } finally {
                     setIsTestPrinting(false);
                   }

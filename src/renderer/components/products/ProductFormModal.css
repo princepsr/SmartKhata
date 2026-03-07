@@ -1,24 +1,22 @@
-.product-form-modal {
-  width: 550px;
-}
-
-.form-group {
+.product-form-modal .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   flex: 1;
+  min-width: 0; /* Prevent flex items from overflowing */
 }
 
 .form-row {
   display: flex;
   gap: 1rem;
+  width: 100%;
 }
 
-.form-group.sm {
+.product-form-modal .form-group.sm {
   flex: 0 0 80px;
 }
 
-.form-group.gst-group {
+.product-form-modal .form-group.gst-group {
   flex: 0 0 75px;
 }
 
@@ -73,6 +71,7 @@
 
 .product-form-modal input[type='text'],
 .product-form-modal input[type='number'],
+.product-form-modal input[type='date'],
 .product-form-modal select,
 .gst-display-value {
   padding: 0.5rem 0.75rem;
@@ -83,6 +82,7 @@
   background-color: white;
   height: 40px; /* Force consistent height */
   box-sizing: border-box;
+  width: 100%; /* Ensure full width */
 }
 
 .product-form-modal input:focus,

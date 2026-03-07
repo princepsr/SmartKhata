@@ -34,8 +34,7 @@ export interface PurchaseItem {
   lineCgst: number;
   lineSgst: number;
   lineIgst: number;
-  lineTotal: number;
-}
+  lineTotal: number; saltName: string | null; }
 
 export interface PurchaseWithItems {
   purchase: Purchase;
@@ -71,8 +70,7 @@ export interface CreatePurchaseItemInput {
   lineCgst: number;
   lineSgst: number;
   lineIgst: number;
-  lineTotal: number;
-}
+  lineTotal: number; saltName: string | null; }
 
 export interface ITCSummary {
   totalTaxable: number;
@@ -125,8 +123,7 @@ export class PurchaseRepository extends BaseRepository {
         INSERT INTO purchase_items (
           purchase_id, product_id, product_name, hsn_code,
           quantity, unit_price, gst_percent,
-          line_taxable, line_cgst, line_sgst, line_igst, line_total
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          line_taxable, line_cgst, line_sgst, line_igst, line_total, salt_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       const createdItems: PurchaseItem[] = [];
@@ -142,9 +139,7 @@ export class PurchaseRepository extends BaseRepository {
           item.lineTaxable,
           item.lineCgst,
           item.lineSgst,
-          item.lineIgst,
-          item.lineTotal
-        );
+          item.lineIgst, item.lineTotal, item.saltName || null);
         createdItems.push({
           id: Number(ir.lastInsertRowid),
           purchaseId,
@@ -158,8 +153,7 @@ export class PurchaseRepository extends BaseRepository {
           lineCgst: item.lineCgst,
           lineSgst: item.lineSgst,
           lineIgst: item.lineIgst,
-          lineTotal: item.lineTotal,
-        });
+          lineTotal: item.lineTotal, saltName: item.saltName || null });
       }
 
       logger.info('Purchase recorded', {
@@ -339,7 +333,7 @@ export class PurchaseRepository extends BaseRepository {
       lineCgst: row.line_cgst,
       lineSgst: row.line_sgst,
       lineIgst: row.line_igst,
-      lineTotal: row.line_total,
-    };
+      lineTotal: row.line_total, saltName: row.salt_name };
   }
 }
+

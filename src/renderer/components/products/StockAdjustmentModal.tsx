@@ -12,6 +12,8 @@ interface StockAdjustmentModalProps {
     name: string;
     stockQty: number;
     trackInventory: boolean;
+    batchNumber?: string;
+    expiryDate?: string;
   } | null;
 }
 
@@ -29,6 +31,8 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
   const [reason, setReason] = useState<ReasonType>('');
   const [notes, setNotes] = useState<string>('');
   const [trackInventory, setTrackInventory] = useState<boolean>(true);
+  const [batchNumber, setBatchNumber] = useState<string>('');
+  const [expiryDate, setExpiryDate] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   const qtyInputRef = useRef<HTMLInputElement>(null);
@@ -54,6 +58,8 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
       setReason('');
       setNotes('');
       setTrackInventory(product.trackInventory);
+      setBatchNumber(product.batchNumber || '');
+      setExpiryDate(product.expiryDate || '');
       setError(null);
       setTimeout(() => qtyInputRef.current?.focus(), 50);
     }
@@ -77,33 +83,30 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     }
 
     const hasTrackingChanged = trackInventory !== product.trackInventory;
+    const hasBatchChanged = batchNumber !== (product.batchNumber || '');
+    const hasExpiryChanged = expiryDate !== (product.expiryDate || '');
     const hasAdjustment = quantity && parseInt(quantity, 10) > 0;
 
-    // Case 1: Just changing tracking status (no adjustment)
-    if (hasTrackingChanged && !hasAdjustment) {
+    // Update product info if changed
+    if (hasTrackingChanged || hasBatchChanged || hasExpiryChanged) {
       try {
         await updateProduct({
           id: product.id,
-          data: { trackInventory },
+          data: {
+            trackInventory,
+            batchNumber: batchNumber || undefined,
+            expiryDate: expiryDate || undefined,
+          },
         });
-        onSuccess();
-        onClose();
-        return;
-      } catch (err) {
-        console.error('Failed to update tracking status:', err);
-        return;
-      }
-    }
 
-    // Case 2: Changing tracking AND adjusting stock (or just adjusting)
-    if (hasTrackingChanged) {
-      try {
-        await updateProduct({
-          id: product.id,
-          data: { trackInventory },
-        });
+        // If only info changed and no adjustment, close
+        if (!hasAdjustment) {
+          onSuccess();
+          onClose();
+          return;
+        }
       } catch (err) {
-        console.error('Failed to update tracking status:', err);
+        console.error('Failed to update product info:', err);
         return;
       }
     }
@@ -229,6 +232,28 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
                 >
                   Track Inventory
                 </label>
+              </div>
+            </div>
+
+            <div className="form-row" style={{ gap: '1rem', marginTop: '1rem' }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label>Batch Number</label>
+                <input
+                  type="text"
+                  value={batchNumber}
+                  onChange={(e) => setBatchNumber(e.target.value)}
+                  placeholder="Enter batch #"
+                  disabled={loading}
+                />
+              </div>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label>Expiry Date</label>
+                <input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  disabled={loading}
+                />
               </div>
             </div>
 

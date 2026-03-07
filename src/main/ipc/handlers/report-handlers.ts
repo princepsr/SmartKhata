@@ -158,4 +158,17 @@ export function registerReportHandlers(): void {
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );
+
+  // ============================================
+  // NEAR EXPIRY
+  // ============================================
+  IPCHandler.handle<number, any[]>(
+    IPC_CHANNELS.REPORT_NEAR_EXPIRY,
+    async (days) => {
+      return reportService.getNearExpiryReport(days);
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
 }

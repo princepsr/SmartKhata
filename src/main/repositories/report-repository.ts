@@ -309,7 +309,7 @@ export class ReportRepository extends BaseRepository {
     };
 
     let listQuery = `
-      SELECT id, name, sku, stock_qty as stockQty, low_stock_alert as lowStockAlert, sale_price as salePrice
+      SELECT id, name, sku, stock_qty as stockQty, low_stock_alert as lowStockAlert, sale_price as salePrice, batch_number as batchNumber, expiry_date as expiryDate
       FROM products
       WHERE is_active = 1
     `;
@@ -329,8 +329,29 @@ export class ReportRepository extends BaseRepository {
       items: items.map((item) => ({
         ...item,
         salePrice: item.salePrice,
+        batchNumber: item.batchNumber,
+        expiryDate: item.expiryDate,
       })),
     };
+  }
+
+  /**
+   * Get Near Expiry Report
+   */
+  public getNearExpiryReport(daysAhead: number = 60): StockItem[] {
+    const query = `
+      SELECT id, name, sku, stock_qty as stockQty, low_stock_alert as lowStockAlert, sale_price as salePrice, batch_number as batchNumber, expiry_date as expiryDate
+      FROM products
+      WHERE is_active = 1 
+      AND expiry_date IS NOT NULL 
+      AND expiry_date != ''
+      AND date(expiry_date) <= date('now', '+' || ? || ' days')
+      AND date(expiry_date) >= date('now')
+      ORDER BY expiry_date ASC
+    `;
+
+    const items = this.db.prepare(query).all(daysAhead) as StockItem[];
+    return items;
   }
 
   /**

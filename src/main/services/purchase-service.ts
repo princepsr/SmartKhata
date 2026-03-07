@@ -25,6 +25,7 @@ export interface PurchaseItemServiceInput {
   quantity: number;
   unitPrice: number;
   gstPercent: number; // e.g. 12 for 12%
+  saltName?: string;
 }
 
 export interface RecordPurchaseInput {
@@ -118,6 +119,8 @@ export class PurchaseService extends BaseService {
               hsnCode: item.hsnCode,
               stockQty: 0, // Will be incremented later
               trackInventory: true,
+              saltName: item.saltName,
+              uom: config.appMode === 'MEDICAL' ? 'Strips' : 'Pcs',
             });
             productId = newProduct.id;
             logger.info('Auto-created missing product during purchase', {
@@ -178,6 +181,7 @@ export class PurchaseService extends BaseService {
         lineSgst,
         lineIgst,
         lineTotal,
+        saltName: item.saltName,
       };
     });
 

@@ -44,6 +44,7 @@ export interface AppConfig {
   privacyPolicyAccepted: boolean;
   autoUpdateEnabled: boolean;
   lastReferralBannerSeen: string | null;
+  lastGstReminderSeen: string | null;
   appMode: 'GENERAL' | 'KIRANA' | 'MEDICAL';
   updatedAt: Date;
 }
@@ -102,6 +103,7 @@ export class SettingsRepository extends BaseRepository {
       privacy_policy_accepted: number;
       auto_update_enabled: number;
       last_referral_banner_seen: string | null;
+      last_gst_reminder_seen: string | null;
       app_mode: string;
       updated_at: string;
     }>(sql);
@@ -149,6 +151,7 @@ export class SettingsRepository extends BaseRepository {
         privacyPolicyAccepted: false,
         autoUpdateEnabled: true,
         lastReferralBannerSeen: null,
+        lastGstReminderSeen: null,
         appMode: 'GENERAL',
         updatedAt: new Date(),
       };
@@ -207,6 +210,7 @@ export class SettingsRepository extends BaseRepository {
       privacyPolicyAccepted: 'privacy_policy_accepted',
       autoUpdateEnabled: 'auto_update_enabled',
       lastReferralBannerSeen: 'last_referral_banner_seen',
+      lastGstReminderSeen: 'last_gst_reminder_seen',
       appMode: 'app_mode',
     };
 
@@ -282,6 +286,7 @@ export class SettingsRepository extends BaseRepository {
     privacy_policy_accepted: number;
     auto_update_enabled: number;
     last_referral_banner_seen: string | null;
+    last_gst_reminder_seen: string | null;
     app_mode: string;
     updated_at: string;
   }): AppConfig {
@@ -325,6 +330,7 @@ export class SettingsRepository extends BaseRepository {
       privacyPolicyAccepted: row.privacy_policy_accepted === 1,
       autoUpdateEnabled: row.auto_update_enabled === 1,
       lastReferralBannerSeen: row.last_referral_banner_seen,
+      lastGstReminderSeen: row.last_gst_reminder_seen,
       appMode: (row.app_mode as 'GENERAL' | 'KIRANA' | 'MEDICAL') || 'GENERAL',
       updatedAt: this.parseDate(row.updated_at),
     };

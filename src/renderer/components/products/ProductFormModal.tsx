@@ -90,6 +90,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [formData, setFormData] = useState<FormData>(INITIAL_STATE);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [saltSuggestions, setSaltSuggestions] = useState<string[]>([]);
+  const [medicineSuggestions, setMedicineSuggestions] = useState<any[]>([]);
   const firstInputRef = useRef<HTMLInputElement>(null);
   const { settings } = useAppSettingsStore();
 
@@ -150,12 +151,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           drugCategory: initialData.drugCategory || '',
         });
       } else {
+        const defaultUom = settings.appMode === 'MEDICAL' ? 'Strip' : 'Pcs';
         setFormData({
           ...INITIAL_STATE,
           gstPercent: (settings?.gstPercentage ?? 18).toString(),
           isGstInclusive: settings?.gstExclusiveMode ? false : true,
-          uom:
-            settings.appMode === 'MEDICAL' ? 'Strip' : settings.appMode === 'KIRANA' ? 'Kg' : 'Pcs',
+          uom: defaultUom,
+          isWeightBased: false,
         });
       }
       setErrors({});
@@ -200,14 +202,26 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setFormData((prev) => {
       const updated = { ...prev, [name]: finalValue };
 
-      // Auto-update UOM logic
-      if (name === 'isWeightBased' && finalValue === true) {
-        if (updated.uom === 'Pcs' || !updated.uom) {
-          updated.uom = 'Kg';
+      // Auto-update logic for "Sold by Weight" based on UOM (Kirana only)
+      if (name === 'uom') {
+        const weightUnits = ['Kg', 'Ltr'];
+        if (settings.appMode === 'KIRANA') {
+          updated.isWeightBased = weightUnits.includes(String(finalValue));
+        } else {
+          updated.isWeightBased = false;
         }
-      } else if (name === 'isWeightBased' && finalValue === false) {
-        if (updated.uom === 'Kg') {
-          updated.uom = 'Pcs';
+      }
+
+      // Auto-update UOM logic based on checkbox (legacy support - Kirana only)
+      if (settings.appMode === 'KIRANA') {
+        if (name === 'isWeightBased' && finalValue === true) {
+          if (updated.uom !== 'Kg' && updated.uom !== 'Ltr') {
+            updated.uom = 'Kg';
+          }
+        } else if (name === 'isWeightBased' && finalValue === false) {
+          if (updated.uom === 'Kg' || updated.uom === 'Ltr') {
+            updated.uom = 'Pcs';
+          }
         }
       }
 
@@ -320,18 +334,49 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <div className="error-banner">{errorMsg}</div>
             )}
 
-            <div className="form-group">
+            <div className="form-group salt-suggestions-container">
               <label>Product Name *</label>
               <input
                 ref={firstInputRef}
                 type="text"
                 name="name"
                 value={formData.name}
-                onChange={handleChange}
-                placeholder="Product Name"
+                onChange={async (e) => {
+                  const val = e.target.value;
+                  handleChange(e);
+                  if (settings.appMode === 'MEDICAL' && val.length >= 2) {
+                    const suggestions = await medicalApi.getMedicineSuggestions(val);
+                    setMedicineSuggestions(suggestions);
+                  } else {
+                    setMedicineSuggestions([]);
+                  }
+                }}
+                placeholder="e.g. Dolo 650"
                 className={errors.name ? 'error' : ''}
+                autoFocus
                 disabled={isLoading}
               />
+              {medicineSuggestions.length > 0 && (
+                <ul className="salt-suggestions-dropdown">
+                  {medicineSuggestions.map((med) => (
+                    <li
+                      key={med.name}
+                      className="salt-suggestion-item"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          name: med.name,
+                          saltName: med.saltName,
+                        }));
+                        setMedicineSuggestions([]);
+                      }}
+                    >
+                      <div style={{ fontWeight: 600 }}>{med.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{med.saltName}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
               {errors.name && <span className="error-text">{errors.name}</span>}
             </div>
 
@@ -405,14 +450,46 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             <div className="form-row">
               <div className="form-group">
                 <label>Unit of Measure (UOM)</label>
-                <input
-                  type="text"
+                <select
                   name="uom"
                   value={formData.uom}
                   onChange={handleChange}
-                  placeholder="e.g. Pcs, Kg, Strip, Ltr"
                   disabled={isLoading}
-                />
+                >
+                  {settings.appMode === 'MEDICAL' ? (
+                    <>
+                      <option value="Strip">Strip (Medicine)</option>
+                      <option value="Tablet">Tablet (Single)</option>
+                      <option value="Capsule">Capsule</option>
+                      <option value="Bottle">Bottle (Syrup/Drops)</option>
+                      <option value="Tube">Tube (Ointment)</option>
+                      <option value="Injection">Injection (Vial/Ampoule)</option>
+                      <option value="Sachet">Sachet</option>
+                      <option value="Pcs">General Piece</option>
+                    </>
+                  ) : settings.appMode === 'KIRANA' ? (
+                    <>
+                      <option value="Pcs">Pcs (Piece)</option>
+                      <option value="Kg">Kg (Kilogram)</option>
+                      <option value="Ltr">Ltr (Litre)</option>
+                      <option value="Packet">Packet</option>
+                      <option value="Box">Box</option>
+                      <option value="Bag">Bag (Bora)</option>
+                      <option value="Dozen">Dozen</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Pcs">Piece (Pcs)</option>
+                      <option value="Unit">Unit</option>
+                      <option value="Packet">Packet</option>
+                      <option value="Box">Box</option>
+                      <option value="Set">Set</option>
+                      <option value="Bottle">Bottle</option>
+                      <option value="Kg">Kg</option>
+                      <option value="Ltr">Ltr</option>
+                    </>
+                  )}
+                </select>
               </div>
               {settings.gstEnabled && (
                 <div className="form-group">
@@ -487,14 +564,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     value={formData.drugCategory}
                     onChange={handleChange}
                     disabled={isLoading}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      backgroundColor: 'white',
-                      fontSize: '0.95rem',
-                    }}
                   >
                     <option value="">None (General Medicine / OTC)</option>
                     <option value="H">Schedule H (Prescription Only)</option>

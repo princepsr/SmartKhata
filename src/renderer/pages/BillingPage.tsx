@@ -20,6 +20,7 @@ import { reportApi } from '@renderer/services/report-api';
 import { medicalApi } from '@renderer/services/medical-api';
 import type { DailySalesSummary } from '@shared/types/report.types';
 import { ReferralModal } from '../components/modals/ReferralModal';
+import { GstReminderModal } from '../components/modals/GstReminderModal';
 import { QRCodeSVG } from 'qrcode.react';
 
 /**
@@ -486,7 +487,12 @@ function BillingPage() {
         const product = searchResults.items[selectedResultIndex];
         if (product.saltName) {
           const alternatives = await medicalApi.getAlternatives(product.saltName, product.id);
-          setSaltAlternatives(alternatives);
+
+          // Deduplicate: Don't show products that are already in the main search results
+          const mainResultIds = new Set(searchResults.items.map((p) => p.id));
+          const filteredAlternatives = alternatives.filter((alt) => !mainResultIds.has(alt.id));
+
+          setSaltAlternatives(filteredAlternatives);
         } else {
           setSaltAlternatives([]);
         }
@@ -1308,6 +1314,9 @@ function BillingPage() {
 
       {/* Referral Program Modal (Daily popup on login) */}
       <ReferralModal />
+
+      {/* GST Filing Reminder Modal (Daily popup) */}
+      <GstReminderModal />
     </div>
   );
 }

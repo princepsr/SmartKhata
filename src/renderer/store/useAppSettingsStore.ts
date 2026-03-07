@@ -44,6 +44,7 @@ export interface AppSettings {
   privacyPolicyAccepted: boolean;
   autoUpdateEnabled: boolean;
   lastReferralBannerSeen: string | null;
+  lastGstReminderSeen: string | null;
   // GST compliance fields
   supplyType: 'intrastate' | 'interstate';
   stateCode: string | null;
@@ -99,6 +100,7 @@ const defaultSettings: AppSettings = {
   privacyPolicyAccepted: false,
   autoUpdateEnabled: true,
   lastReferralBannerSeen: null,
+  lastGstReminderSeen: null,
   supplyType: 'intrastate',
   stateCode: null,
   placeOfSupply: null,

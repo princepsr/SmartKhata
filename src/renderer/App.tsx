@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import AppRouter from './Router';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { useUpdateStore } from './store/useUpdateStore';
+import { GlobalPopupProvider } from './components/layout/GlobalPopupProvider';
 import './App.css';
 
 /**
@@ -38,7 +39,12 @@ function App() {
     };
   }, [setOnline]);
 
-  return <AppRouter />;
+  return (
+    <>
+      <AppRouter />
+      <GlobalPopupProvider />
+    </>
+  );
 }
 
 export default App;

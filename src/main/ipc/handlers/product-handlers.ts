@@ -547,6 +547,16 @@ export function registerProductHandlers(): void {
     }
   );
 
+  IPCHandler.handle<string, any[]>(
+    IPC_CHANNELS.MEDICAL_MEDICINE_SUGGESTIONS,
+    async (query) => {
+      return medicalService.getMedicineSuggestions(query);
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
+
   IPCHandler.handle<{ saltName: string; excludeProductId: number }, any[]>(
     IPC_CHANNELS.MEDICAL_ALTERNATIVES,
     async ({ saltName, excludeProductId }) => {

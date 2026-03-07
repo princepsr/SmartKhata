@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSettingsStore } from '../store/useAppSettingsStore';
 import { PrivacyPolicy } from '../components/Settings/PrivacyPolicy';
+import { useConfirm } from '../hooks/useConfirm';
 import './OnboardingPage.css';
 
 /**
@@ -13,6 +14,7 @@ import './OnboardingPage.css';
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const { settings, saveSettings } = useAppSettingsStore();
+  const { alert } = useConfirm();
   const [step, setStep] = useState(1); // 1: Welcome/Mode, 2: Privacy
   const [selectedMode, setSelectedMode] = useState<'GENERAL' | 'KIRANA' | 'MEDICAL'>('GENERAL');
   const [hasReadToBottom, setHasReadToBottom] = useState(false);
@@ -82,7 +84,11 @@ export default function OnboardingPage() {
       if (result.success) {
         navigate('/billing', { replace: true });
       } else {
-        alert('Failed to save settings. Please try again.');
+        await alert({
+          title: 'Save Failed',
+          message: 'Failed to save settings. Please try again.',
+          type: 'danger',
+        });
         setIsSubmitting(false);
       }
     } catch (error) {

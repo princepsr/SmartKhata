@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
+import { useConfirm } from '../hooks/useConfirm';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import type { Quotation } from '@shared/types/ipc';
@@ -10,6 +11,7 @@ import './QuotationsPage.css';
 
 function QuotationsPage() {
   const navigate = useNavigate();
+  const { alert, confirm } = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [showPendingOnly, setShowPendingOnly] = useLocalStorage('quotations_show_pending', false);
 
@@ -30,17 +32,33 @@ function QuotationsPage() {
     try {
       await printQuotation({ quotationId: id });
     } catch (err) {
-      alert('Failed to print quotation: ' + (err instanceof Error ? err.message : String(err)));
+      await alert({
+        title: 'Print Failed',
+        message: 'Failed to print quotation: ' + (err instanceof Error ? err.message : String(err)),
+        type: 'danger',
+      });
     }
   };
 
   const handleCancel = async (id: number) => {
-    if (window.confirm('Are you sure you want to cancel this quotation?')) {
+    const ok = await confirm({
+      title: 'Cancel Quotation',
+      message: 'Are you sure you want to cancel this quotation?',
+      type: 'warning',
+      confirmLabel: 'Cancel Quote',
+    });
+
+    if (ok) {
       try {
         await updateStatus({ id, status: 'CANCELLED' });
         fetchQuotations();
       } catch (err) {
-        alert('Failed to cancel quotation: ' + (err instanceof Error ? err.message : String(err)));
+        await alert({
+          title: 'Cancel Failed',
+          message:
+            'Failed to cancel quotation: ' + (err instanceof Error ? err.message : String(err)),
+          type: 'danger',
+        });
       }
     }
   };

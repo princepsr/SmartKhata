@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAppSettingsStore } from '../../store/useAppSettingsStore';
 import './CommandCenter.css';
 
 interface CommandItem {
@@ -16,6 +17,7 @@ const CommandCenter: React.FC = () => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
+  const { settings } = useAppSettingsStore();
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -61,154 +63,300 @@ const CommandCenter: React.FC = () => {
     }
   }, [selectedIndex, isOpen]);
 
-  const commands: CommandItem[] = [
-    // ... (rest of commands remains similar)
-    {
-      id: 'nav-billing',
-      title: 'Go to Billing',
-      subtitle: 'Create a new sale',
-      icon: '💳',
-      category: 'Navigation',
-      action: () => navigate('/billing'),
-    },
-    {
-      id: 'nav-products',
-      title: 'Go to Products',
-      subtitle: 'Manage inventory and pricing',
-      icon: '📦',
-      category: 'Navigation',
-      action: () => navigate('/products'),
-    },
-    {
-      id: 'nav-customers',
-      title: 'Go to Customers',
-      subtitle: 'Manage customer database',
-      icon: '👥',
-      category: 'Navigation',
-      action: () => navigate('/customers'),
-    },
-    {
-      id: 'nav-reports',
-      title: 'Go to Reports',
-      subtitle: 'View sales and analytics',
-      icon: '📊',
-      category: 'Navigation',
-      action: () => navigate('/reports'),
-    },
-    {
-      id: 'nav-settings',
-      title: 'Go to Settings',
-      subtitle: 'App configuration',
-      icon: '⚙️',
-      category: 'Navigation',
-      action: () => navigate('/settings'),
-    },
-    {
-      id: 'action-new-product',
-      title: 'Add New Product',
-      subtitle: 'Quickly create a new item',
-      icon: '➕',
-      category: 'Actions',
-      action: () => {
-        navigate('/products?action=add');
+  const commands: CommandItem[] = useMemo(() => {
+    const list: CommandItem[] = [
+      // --- QUICK ACTIONS ---
+      {
+        id: 'action-billing',
+        title: 'New Sale / Billing',
+        subtitle: 'Open the POS interface',
+        icon: '💳',
+        category: 'Actions',
+        action: () => navigate('/billing'),
       },
-    },
-    {
-      id: 'action-new-customer',
-      title: 'Add New Customer',
-      subtitle: 'Register a new buyer',
-      icon: '👤',
-      category: 'Actions',
-      action: () => {
-        navigate('/customers?action=add');
+      {
+        id: 'action-new-product',
+        title: 'Add New Product',
+        subtitle: 'Create a new inventory item',
+        icon: '📦',
+        category: 'Actions',
+        action: () => navigate('/products?action=add'),
       },
-    },
-    {
-      id: 'report-sales',
-      title: 'Sales Report',
-      subtitle: 'View daily sales summary',
-      icon: '💰',
-      category: 'Search',
-      action: () => {
-        navigate('/reports?tab=sales');
-      },
-    },
-    {
-      id: 'report-stock',
-      title: 'Stock Summary',
-      subtitle: 'Check inventory levels',
-      icon: '📦',
-      category: 'Search',
-      action: () => {
-        navigate('/reports?tab=stock');
-      },
-    },
-    {
-      id: 'report-gst',
-      title: 'GST Report',
-      subtitle: 'View tax summaries',
-      icon: '📑',
-      category: 'Search',
-      action: () => {
-        navigate('/reports?tab=gst');
-      },
-    },
-    {
+    ];
+
+    if (settings.gstEnabled) {
+      list.push(
+        {
+          id: 'action-new-purchase',
+          title: 'Record New Purchase',
+          subtitle: 'Log a supplier invoice',
+          icon: '📥',
+          category: 'Actions',
+          action: () => navigate('/purchases?action=purchase'),
+        },
+        {
+          id: 'action-new-po',
+          title: 'Create Purchase Order',
+          subtitle: 'Draft a new order',
+          icon: '📝',
+          category: 'Actions',
+          action: () => navigate('/purchases?action=order'),
+        }
+      );
+    }
+
+    if (settings.expensesEnabled) {
+      list.push({
+        id: 'action-new-expense',
+        title: 'Record New Expense',
+        subtitle: 'Log a shop expenditure',
+        icon: '💸',
+        category: 'Actions',
+        action: () => navigate('/expenses?action=add'),
+      });
+    }
+
+    if (settings.quotationsEnabled) {
+      list.push({
+        id: 'action-new-quotation',
+        title: 'Create New Quotation',
+        subtitle: 'Draft a new estimate',
+        icon: '📄',
+        category: 'Actions',
+        action: () => navigate('/billing?type=quotation'),
+      });
+    }
+
+    if (settings.customersEnabled) {
+      list.push({
+        id: 'action-new-customer',
+        title: 'Add New Customer',
+        subtitle: 'Register a new buyer',
+        icon: '👥',
+        category: 'Actions',
+        action: () => navigate('/customers?action=add'),
+      });
+    }
+
+    list.push({
       id: 'billing-clear',
       title: 'Clear Current Cart',
       subtitle: 'Reset the billing screen',
       icon: '🧹',
       category: 'Actions',
-      action: () => {
-        navigate('/billing?action=clear-cart');
+      action: () => navigate('/billing?action=clear-cart'),
+    });
+
+    // --- NAVIGATION ---
+    list.push({
+      id: 'nav-products',
+      title: 'View Inventory',
+      subtitle: 'Manage stock and pricing',
+      icon: '📦',
+      category: 'Navigation',
+      action: () => navigate('/products'),
+    });
+
+    if (settings.gstEnabled) {
+      list.push({
+        id: 'nav-purchases',
+        title: 'View Procurement',
+        subtitle: 'Purchases, Invoices & Orders',
+        icon: '🛒',
+        category: 'Navigation',
+        action: () => navigate('/purchases'),
+      });
+    }
+
+    if (settings.customersEnabled) {
+      list.push(
+        {
+          id: 'nav-customers',
+          title: 'View Customers',
+          subtitle: 'Customer database & ledger',
+          icon: '👥',
+          category: 'Navigation',
+          action: () => navigate('/customers'),
+        },
+        {
+          id: 'nav-suppliers',
+          title: 'Suppliers & Ledgers',
+          subtitle: 'Manage vendor accounts',
+          icon: '🤝',
+          category: 'Navigation',
+          action: () => navigate('/purchases?tab=suppliers'),
+        }
+      );
+    }
+
+    if (settings.expensesEnabled) {
+      list.push({
+        id: 'nav-expenses',
+        title: 'View Expenses',
+        subtitle: 'Shop expenditure history',
+        icon: '💸',
+        category: 'Navigation',
+        action: () => navigate('/expenses'),
+      });
+    }
+
+    if (settings.quotationsEnabled) {
+      list.push({
+        id: 'nav-quotations',
+        title: 'View Quotations',
+        subtitle: 'Manage estimates and quotes',
+        icon: '📄',
+        category: 'Navigation',
+        action: () => navigate('/quotations'),
+      });
+    }
+
+    if (settings.barcodeGenEnabled) {
+      list.push({
+        id: 'nav-barcode',
+        title: 'Barcode Generator',
+        subtitle: 'Create & print product labels',
+        icon: '🏷️',
+        category: 'Navigation',
+        action: () => navigate('/barcode-gen'),
+      });
+    }
+
+    // --- REPORTS & SEARCH ---
+    list.push(
+      {
+        id: 'report-summary',
+        title: 'Business Reports',
+        subtitle: 'Analytics & summaries',
+        icon: '📊',
+        category: 'Search',
+        action: () => navigate('/reports'),
       },
-    },
-    {
+      {
+        id: 'report-sales',
+        title: 'Sales Report',
+        subtitle: 'View daily sales summary',
+        icon: '💰',
+        category: 'Search',
+        action: () => navigate('/reports?tab=sales'),
+      },
+      {
+        id: 'report-stock',
+        title: 'Stock Summary',
+        subtitle: 'Check inventory levels',
+        icon: '📦',
+        category: 'Search',
+        action: () => navigate('/reports?tab=stock'),
+      }
+    );
+
+    if (settings.enableBatchTracking) {
+      list.push({
+        id: 'report-expiry',
+        title: 'Near Expiry Items',
+        subtitle: 'Items expiring soon',
+        icon: '⏳',
+        category: 'Search',
+        action: () => navigate('/reports?tab=near-expiry'),
+      });
+    }
+
+    if (settings.gstEnabled) {
+      list.push({
+        id: 'report-gst',
+        title: 'GST / Tax Report',
+        subtitle: 'GSTR-1 & Input Tax Credit',
+        icon: '📑',
+        category: 'Search',
+        action: () => navigate('/reports?tab=gst'),
+      });
+    }
+
+    list.push({
       id: 'billing-history',
       title: 'View Bill History',
       subtitle: 'Open recent transactions',
       icon: '🕒',
       category: 'Search',
-      action: () => {
-        navigate('/billing?action=history');
+      action: () => navigate('/billing?action=history'),
+    });
+
+    // --- SETTINGS ---
+    list.push(
+      {
+        id: 'settings-general',
+        title: 'App Settings',
+        subtitle: 'General configuration',
+        icon: '⚙️',
+        category: 'Navigation',
+        action: () => navigate('/settings'),
       },
-    },
-    {
-      id: 'settings-shop',
-      title: 'Shop Settings',
-      subtitle: 'Edit business profile',
-      icon: '🏪',
-      category: 'Navigation',
-      action: () => {
-        navigate('/settings?tab=shop');
+      {
+        id: 'settings-shop',
+        title: 'Shop Profile',
+        subtitle: 'Edit business details',
+        icon: '🏪',
+        category: 'Navigation',
+        action: () => navigate('/settings?tab=shop'),
       },
-    },
-    {
-      id: 'settings-printing',
-      title: 'Printer Settings',
-      subtitle: 'Configure receipts',
-      icon: '🖨️',
-      category: 'Navigation',
-      action: () => {
-        navigate('/settings?tab=printing');
+      {
+        id: 'settings-inventory',
+        title: 'Inventory Rules',
+        subtitle: 'Business logic & tracking',
+        icon: '📦',
+        category: 'Navigation',
+        action: () => navigate('/settings?tab=inventory'),
       },
-    },
-    {
-      id: 'settings-data',
-      title: 'Backup & Data',
-      subtitle: 'Improt/Export & Recovery',
-      icon: '💾',
-      category: 'Navigation',
-      action: () => {
-        navigate('/settings?tab=data');
+      {
+        id: 'settings-printing',
+        title: 'Printer Settings',
+        subtitle: 'Configure receipts & thermal',
+        icon: '🖨️',
+        category: 'Navigation',
+        action: () => navigate('/settings?tab=printing'),
       },
-    },
-  ];
+      {
+        id: 'settings-licensing',
+        title: 'License & Subscription',
+        subtitle: 'Manage your plan',
+        icon: '🔑',
+        category: 'Navigation',
+        action: () => navigate('/settings?tab=licensing'),
+      },
+      {
+        id: 'settings-data',
+        title: 'Backup & Data',
+        subtitle: 'Import, Export & Reset',
+        icon: '💾',
+        category: 'Navigation',
+        action: () => navigate('/settings?tab=data'),
+      },
+      {
+        id: 'settings-privacy',
+        title: 'Privacy & Terms',
+        subtitle: 'Legal information',
+        icon: '🔒',
+        category: 'Navigation',
+        action: () => navigate('/settings?tab=privacy'),
+      },
+      {
+        id: 'settings-debug',
+        title: 'System Debug',
+        subtitle: 'Health & dev tools',
+        icon: '🛠️',
+        category: 'Navigation',
+        action: () => navigate('/settings?tab=debug'),
+      }
+    );
+
+    return list;
+  }, [settings, navigate]);
 
   const filteredCommands = commands.filter(
     (cmd) =>
       cmd.title.toLowerCase().includes(query.toLowerCase()) ||
-      cmd.category.toLowerCase().includes(query.toLowerCase())
+      cmd.category.toLowerCase().includes(query.toLowerCase()) ||
+      cmd.subtitle?.toLowerCase().includes(query.toLowerCase())
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

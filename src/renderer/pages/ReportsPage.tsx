@@ -8,6 +8,7 @@ import {
   PaymentModeSummary,
   GstReport,
   StockSummary,
+  StockItem,
   BillSummary,
   TrendAnalytics,
   AnalyticsPeriod,
@@ -441,6 +442,115 @@ const StockAgingView: React.FC<{ data: StockAgingItem[] | null; loading: boolean
   );
 };
 
+const StockNearExpiryView: React.FC<{
+  data: StockItem[] | null;
+  loading: boolean;
+  days: number;
+  onDaysChange: (days: number) => void;
+}> = ({ data, loading, days, onDaysChange }) => {
+  if (loading) {
+    return <SkeletonLoader type="stock" />;
+  }
+  return (
+    <div className="report-view near-expiry-view animate-fade-in">
+      <div
+        className="reports-info-row mb-4"
+        style={{
+          display: 'flex',
+          width: '100%',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          margin: '0 0 1rem 0',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span className="info-icon">⚠️</span>
+          <span className="info-text">
+            Showing items expiring within the next <strong>{days} days</strong>.
+          </span>
+        </div>
+        <div
+          className="near-expiry-filter-group"
+          style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px' }}
+        >
+          <label
+            style={{
+              fontWeight: 600,
+              fontSize: '0.75rem',
+              whiteSpace: 'nowrap',
+              color: 'inherit',
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            Window:
+          </label>
+          <select
+            className="select-sm"
+            style={{
+              padding: '2px 8px',
+              borderRadius: '4px',
+              border: '1px solid rgba(0,0,0,0.1)',
+              fontSize: '0.75rem',
+              background: 'white',
+              width: 'auto',
+              minWidth: '100px',
+              cursor: 'pointer',
+            }}
+            value={days}
+            onChange={(e) => onDaysChange(Number(e.target.value))}
+          >
+            <option value={30}>30 Days</option>
+            <option value={60}>60 Days</option>
+            <option value={90}>90 Days</option>
+            <option value={180}>180 Days</option>
+          </select>
+        </div>
+      </div>
+
+      {!data || data.length === 0 ? (
+        <EmptyState
+          title="No Near Expiry Stock"
+          message="Great! No items are expiring soon in your inventory."
+          icon="✅"
+        />
+      ) : (
+        <div className="table-container">
+          <table className="report-table">
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>Batch #</th>
+                <th>Expiry Date</th>
+                <th className="text-right">Current Stock</th>
+                <th className="text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((item) => (
+                <tr key={item.id} className="near-expiry-row">
+                  <td>{item.name}</td>
+                  <td>{item.batchNumber || '-'}</td>
+                  <td>
+                    <span className="expiry-badge">
+                      {item.expiryDate ? formatDate(item.expiryDate) : '-'}
+                    </span>
+                  </td>
+                  <td className="text-right">{item.stockQty}</td>
+                  <td className="text-right">
+                    <span className="status-badge status-warning">EXPIRING</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ReportsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('sales');
   const [dateRange, setDateRange] = useState({
@@ -466,7 +576,11 @@ const ReportsPage: React.FC = () => {
     breakdown: ITCTransaction[];
   } | null>(null);
   const [stockAgingData, setStockAgingData] = useState<StockAgingItem[] | null>(null);
-  const [activeStockTab, setActiveStockTab] = useState<'current' | 'aging'>('current');
+  const [nearExpiryData, setNearExpiryData] = useState<StockItem[] | null>(null);
+  const [expiryDays, setExpiryDays] = useState(60);
+  const [activeStockTab, setActiveStockTab] = useState<'current' | 'aging' | 'nearExpiry'>(
+    'current'
+  );
   const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
   const [searchParams] = useSearchParams();
 
@@ -555,16 +669,29 @@ const ReportsPage: React.FC = () => {
       }
 
       // Independent fetch for stock aging if on stock tab
-      if (activeTab === 'stock' && activeStockTab === 'aging') {
-        const aging = await reportApi.getStockAgingReport(30);
-        setStockAgingData(aging);
+      if (activeTab === 'stock') {
+        if (activeStockTab === 'aging') {
+          const aging = await reportApi.getStockAgingReport(30);
+          setStockAgingData(aging);
+        } else if (activeStockTab === 'nearExpiry') {
+          const nearExpiry = await reportApi.getNearExpiryReport(expiryDays);
+          setNearExpiryData(nearExpiry);
+        }
       }
     } catch (error) {
       console.error('Failed to load report data:', error);
     } finally {
       setLoading(false);
     }
-  }, [activeTab, dateRange, stockFilter, trendGranularity, trendLookback, activeStockTab]);
+  }, [
+    activeTab,
+    dateRange,
+    stockFilter,
+    trendGranularity,
+    trendLookback,
+    activeStockTab,
+    expiryDays,
+  ]);
 
   useEffect(() => {
     loadReportData();
@@ -1403,6 +1530,12 @@ const ReportsPage: React.FC = () => {
                     >
                       Stock Aging (Slow Moving)
                     </button>
+                    <button
+                      className={`sub-tab ${activeStockTab === 'nearExpiry' ? 'active' : ''}`}
+                      onClick={() => setActiveStockTab('nearExpiry')}
+                    >
+                      Near Expiry Report
+                    </button>
                   </div>
 
                   {activeStockTab === 'current' ? (
@@ -1463,6 +1596,8 @@ const ReportsPage: React.FC = () => {
                             <div className="data-table-container">
                               <div className="data-table-header grid-stock">
                                 <div>Product</div>
+                                <div>Batch #</div>
+                                <div>Expiry</div>
                                 <div className="text-right">Stock</div>
                                 <div className="text-right">Alert</div>
                                 <div className="text-center">Status</div>
@@ -1470,6 +1605,10 @@ const ReportsPage: React.FC = () => {
                               {stockSummary.items.map((item) => (
                                 <div key={item.id} className="data-table-row grid-stock">
                                   <div className="col-name">{item.name}</div>
+                                  <div className="col-batch">{item.batchNumber || '-'}</div>
+                                  <div className="col-expiry">
+                                    {item.expiryDate ? formatDate(item.expiryDate) : '-'}
+                                  </div>
                                   <div className="text-right">
                                     <span
                                       className={
@@ -1498,8 +1637,15 @@ const ReportsPage: React.FC = () => {
                         </>
                       )}
                     </div>
-                  ) : (
+                  ) : activeStockTab === 'aging' ? (
                     <StockAgingView data={stockAgingData} loading={loading} />
+                  ) : (
+                    <StockNearExpiryView
+                      data={nearExpiryData}
+                      loading={loading}
+                      days={expiryDays}
+                      onDaysChange={(d) => setExpiryDays(d)}
+                    />
                   )}
                 </div>
               )}

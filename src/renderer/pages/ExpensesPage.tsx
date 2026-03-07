@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency, formatDateTime } from '../utils/formatters';
@@ -36,6 +37,7 @@ function ExpensesPage() {
     paymentMode: 'cash',
     date: new Date().toISOString().split('T')[0],
   });
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data, loading, execute: fetchExpenses } = useIPC<Expense[]>(IPC_CHANNELS.EXPENSE_LIST);
   const { execute: createExpense, loading: creating } = useIPCMutation(IPC_CHANNELS.EXPENSE_CREATE);
@@ -43,6 +45,18 @@ function ExpensesPage() {
   useEffect(() => {
     fetchExpenses();
   }, [fetchExpenses]);
+
+  // Handle action triggers
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'add') {
+      setShowModal(true);
+      // Remove action from URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('action');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

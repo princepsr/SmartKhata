@@ -693,7 +693,7 @@
   grid-template-columns: 0.8fr 1.5fr 1.2fr 1.2fr 1.2fr 1.5fr;
 }
 .grid-stock {
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 0.8fr 0.8fr 0.8fr;
   gap: 1rem;
 }
 

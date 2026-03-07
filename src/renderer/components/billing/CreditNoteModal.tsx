@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../../utils/formatters';
+import { useConfirm } from '../../hooks/useConfirm';
 import './CreditNoteModal.css';
 
 interface BillItem {
@@ -54,6 +55,7 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
     loading,
     error,
   } = useIPCMutation<any, any>(IPC_CHANNELS.CREDIT_NOTE_CREATE);
+  const { alert } = useConfirm();
 
   useEffect(() => {
     if (isOpen) {
@@ -102,7 +104,11 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
   const handleSubmit = async () => {
     const itemsToReturn = returnItems.filter((i) => i.returnQty > 0);
     if (itemsToReturn.length === 0) {
-      alert('Please select at least one item to return');
+      await alert({
+        title: 'Selection Required',
+        message: 'Please select at least one item to return.',
+        type: 'warning',
+      });
       return;
     }
 

@@ -4,6 +4,8 @@ import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { PurchaseOrder, Product } from '@shared/types/ipc';
 import { formatCurrency } from '../../utils/formatters';
 import SearchableSelect from '../ui/SearchableSelect';
+import { useAppSettingsStore } from '../../store';
+import { medicalApi } from '../../services/medical-api';
 
 interface PurchaseItem {
   productId?: number;
@@ -13,6 +15,7 @@ interface PurchaseItem {
   unitPrice: number;
   gstPercent: number;
   lineTotal: number;
+  saltName?: string;
 }
 
 interface PurchaseOrderFormModalProps {
@@ -45,6 +48,10 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
   const [items, setItems] = useState<PurchaseItem[]>([
     { productName: '', quantity: 1, unitPrice: 0, gstPercent: 0, lineTotal: 0 },
   ]);
+
+  const [medicineSuggestions, setMedicineSuggestions] = useState<any[]>([]);
+  const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
+  const { settings } = useAppSettingsStore();
 
   // Fetch active suppliers for the dropdown
   const { data: suppliersData, execute: fetchSuppliers } = useIPC<{ items: SupplierInfo[] }>(
@@ -86,6 +93,7 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
             unitPrice: i.unitPrice,
             gstPercent: i.gstPercent,
             lineTotal: i.lineTotal,
+            saltName: i.saltName,
           }))
         );
       }
@@ -132,6 +140,9 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
     if (field === 'hsnCode') {
       item.hsnCode = String(value);
     }
+    if (field === 'saltName') {
+      item.saltName = String(value);
+    }
 
     // Recalculate line total for numeric fields
     if (field === 'quantity' || field === 'unitPrice' || field === 'gstPercent') {
@@ -156,6 +167,29 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
 
     if (field === 'productName') {
       const valStr = String(value).trim().toLowerCase();
+      setActiveRowIndex(index);
+
+      if (settings.appMode === 'MEDICAL' && valStr.length >= 2) {
+        // 1. Get internal inventory matches
+        const localMatches = (productsData?.items || [])
+          .filter((p) => p.name.toLowerCase().includes(valStr))
+          .map((p) => ({ ...p, isLocal: true }))
+          .slice(0, 5);
+
+        // 2. Get global medicine database matches
+        medicalApi.getMedicineSuggestions(valStr).then((globalMatches) => {
+          const localNames = new Set(localMatches.map((p) => p.name.toLowerCase()));
+          const uniqueGlobal = globalMatches
+            .filter((g) => !localNames.has(g.name.toLowerCase()))
+            .map((g) => ({ ...g, isLocal: false }))
+            .slice(0, 10);
+
+          setMedicineSuggestions([...localMatches, ...uniqueGlobal]);
+        });
+      } else {
+        setMedicineSuggestions([]);
+      }
+
       const match = productsData?.items?.find((p) => p.name.trim().toLowerCase() === valStr);
       if (match) {
         item.productId = match.id;
@@ -165,6 +199,9 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
         }
         if (match.purchasePrice) {
           item.unitPrice = match.purchasePrice;
+        }
+        if (match.saltName) {
+          item.saltName = match.saltName;
         }
 
         const q = Number(item.quantity) || 0;
@@ -218,6 +255,7 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
         gstPercent: Number(i.gstPercent) || 0,
         hsnCode: i.hsnCode,
         lineTotal: Number(i.lineTotal) || 0,
+        saltName: i.saltName,
       })),
     };
 
@@ -308,15 +346,49 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
               <div className="items-table-body">
                 {items.map((item, index) => (
                   <div key={index} className="items-table-row grid-items">
-                    <div>
+                    <div style={{ position: 'relative' }}>
                       <input
                         type="text"
-                        list="po-products-datalist"
                         value={item.productName}
                         onChange={(e) => updateItem(index, 'productName', e.target.value)}
+                        onBlur={() => {
+                          // Tiny delay to allow onClick to fire on suggestions
+                          setTimeout(() => {
+                            if (activeRowIndex === index) {
+                              setMedicineSuggestions([]);
+                              setActiveRowIndex(null);
+                            }
+                          }, 200);
+                        }}
                         placeholder="Item name"
                         required
+                        autoComplete="off"
                       />
+                      {activeRowIndex === index && medicineSuggestions.length > 0 && (
+                        <div className="items-suggestions-dropdown">
+                          {medicineSuggestions.map((suggestion, sIdx) => (
+                            <div
+                              key={`${suggestion.name}-${sIdx}`}
+                              className="items-suggestion-item"
+                              onMouseDown={(e) => {
+                                e.preventDefault(); // Prevent input onBlur
+                                updateItem(index, 'productName', suggestion.name);
+                                updateItem(index, 'saltName', suggestion.saltName);
+                                setMedicineSuggestions([]);
+                                setActiveRowIndex(null);
+                              }}
+                            >
+                              <div className="brand-name">{suggestion.name}</div>
+                              <div className="salt-name">{suggestion.saltName}</div>
+                              {suggestion.isLocal ? (
+                                <span className="inventory-tag">In Inventory</span>
+                              ) : (
+                                <span className="global-tag">New Global Medicine</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <input
@@ -375,11 +447,6 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
                   </div>
                 ))}
               </div>
-              <datalist id="po-products-datalist">
-                {productsData?.items?.map((p) => (
-                  <option key={p.id} value={p.name} />
-                ))}
-              </datalist>
               <button type="button" className="btn-outline" onClick={addItem}>
                 <span>+</span> Add Item
               </button>

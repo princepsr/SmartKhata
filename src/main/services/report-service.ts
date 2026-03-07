@@ -5,6 +5,7 @@ import {
   PaymentModeSummary,
   GstReport,
   StockSummary,
+  StockItem,
   BillSummary,
   DateRange,
   PaginatedResult,
@@ -142,6 +143,10 @@ export class ReportService extends BaseService {
 
   public getStockSummary(filter: 'all' | 'low_stock' = 'all'): StockSummary {
     return this.reportRepo.getStockSummary(filter);
+  }
+
+  public getNearExpiryReport(daysAhead: number = 60): StockItem[] {
+    return this.reportRepo.getNearExpiryReport(daysAhead);
   }
 
   public getBillwiseSales(

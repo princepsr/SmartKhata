@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
+import { useConfirm } from '../hooks/useConfirm';
+import { useSearchParams } from 'react-router-dom';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { Purchase, Supplier, PurchaseOrder, Product } from '@shared/types/ipc';
@@ -21,6 +23,7 @@ interface PurchaseItem {
   unitPrice: number;
   gstPercent: number;
   lineTotal: number;
+  saltName?: string;
 }
 
 const PurchasesPage: React.FC = () => {
@@ -53,12 +56,43 @@ const PurchasesPage: React.FC = () => {
 
   const { settings } = useAppSettingsStore();
   const { execute: fetchPoDetails } = useIPCMutation<number, PurchaseOrder>(IPC_CHANNELS.PO_GET);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     if (settings.gstEnabled) {
       fetchPurchases(dateRange);
     }
   }, [dateRange, fetchPurchases, settings.gstEnabled]);
+
+  // Handle action triggers
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const tab = searchParams.get('tab');
+
+    if (
+      tab &&
+      (tab === 'purchases' || tab === 'suppliers' || tab === 'orders') &&
+      tab !== activeTab
+    ) {
+      setActiveTab(tab as 'purchases' | 'suppliers' | 'orders');
+    }
+
+    if (action === 'purchase') {
+      setActiveTab('purchases');
+      setIsAddingNew(true);
+      // Remove action from URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('action');
+      setSearchParams(newParams, { replace: true });
+    } else if (action === 'order') {
+      setActiveTab('orders');
+      setIsAddingNew(true);
+      // Remove action from URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('action');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, activeTab]);
 
   if (!settings.gstEnabled) {
     return (
@@ -316,6 +350,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
   onSuccess,
   initialPoData,
 }) => {
+  const { alert } = useConfirm();
   const [formData, setFormData] = useState({
     supplierId: initialPoData?.supplierId || (undefined as number | undefined),
     supplierName: initialPoData?.supplierName || '',
@@ -336,6 +371,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
       unitPrice: item.unitPrice,
       gstPercent: item.gstPercent,
       lineTotal: item.lineTotal,
+      saltName: item.saltName,
     })) || [{ productName: '', quantity: 1, unitPrice: 0, gstPercent: 0, lineTotal: 0 }]
   );
 
@@ -420,6 +456,10 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
           item.unitPrice = match.purchasePrice;
         }
 
+        if (match.saltName) {
+          item.saltName = match.saltName;
+        }
+
         // Recalculate totals
         const qt = Number(item.quantity) || 0;
         const p = item.unitPrice;
@@ -463,11 +503,19 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.supplierName) {
-      alert('Supplier name is required');
+      await alert({
+        title: 'Missing Information',
+        message: 'Supplier name is required.',
+        type: 'warning',
+      });
       return;
     }
     if (items.some((i) => !i.productName)) {
-      alert('Product name is required for all items');
+      await alert({
+        title: 'Incomplete Items',
+        message: 'Product name is required for all items.',
+        type: 'warning',
+      });
       return;
     }
 
@@ -488,6 +536,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
           gstPercent: Number(i.gstPercent),
           hsnCode: i.hsnCode,
           productId: i.productId,
+          saltName: i.saltName,
         })),
       });
 
@@ -500,7 +549,11 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
       }
     } catch (err) {
       console.error('Record purchase failed:', err);
-      alert('An unexpected error occurred');
+      await alert({
+        title: 'Error',
+        message: 'An unexpected error occurred while recording the purchase.',
+        type: 'danger',
+      });
     }
   };
 

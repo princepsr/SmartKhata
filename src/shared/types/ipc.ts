@@ -98,6 +98,7 @@ export interface PurchaseOrderItem {
   unitPrice: number;
   gstPercent: number;
   lineTotal: number;
+  saltName?: string;
 }
 
 export interface PurchaseOrder {

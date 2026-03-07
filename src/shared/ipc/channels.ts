@@ -87,11 +87,13 @@ export const IPC_CHANNELS = {
   REPORT_ANALYTICS: 'report:analytics',
   REPORT_WHATSAPP_SUMMARY: 'report:whatsapp-summary',
   REPORT_STOCK_AGING: 'report:stock-aging',
+  REPORT_NEAR_EXPIRY: 'report:near-expiry',
 
   // Medical Specialization
   MEDICAL_DRUG_WARNING: 'medical:drug-warning',
   MEDICAL_EXPIRING: 'medical:expiring',
   MEDICAL_SALT_SUGGESTIONS: 'medical:salt-suggestions',
+  MEDICAL_MEDICINE_SUGGESTIONS: 'medical:medicine-suggestions',
   MEDICAL_ALTERNATIVES: 'medical:alternatives',
 
   // ============================================

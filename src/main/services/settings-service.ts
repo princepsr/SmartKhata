@@ -254,5 +254,11 @@ export class SettingsService extends BaseService {
         );
       }
     }
+
+    if (config.lastGstReminderSeen !== undefined && config.lastGstReminderSeen !== null) {
+      if (isNaN(Date.parse(config.lastGstReminderSeen))) {
+        throw new ValidationError('Invalid date for last GST reminder seen', 'lastGstReminderSeen');
+      }
+    }
   }
 }

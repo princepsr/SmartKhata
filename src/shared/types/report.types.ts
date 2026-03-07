@@ -90,6 +90,8 @@ export interface StockItem {
   stockQty: number;
   lowStockAlert: number;
   salePrice: number;
+  batchNumber?: string;
+  expiryDate?: string;
 }
 
 export interface StockSummary {

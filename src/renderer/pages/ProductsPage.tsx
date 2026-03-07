@@ -26,6 +26,8 @@ interface Product {
   isActive: boolean;
   isGstInclusive: boolean;
   trackInventory: boolean;
+  batchNumber?: string;
+  expiryDate?: string;
 }
 
 const SkeletonRows: React.FC = () => (
@@ -464,7 +466,21 @@ const ProductsPage: React.FC = () => {
                     onClick={() => setSelectedIndex(index)}
                     onDoubleClick={() => handleEditProduct(product)}
                   >
-                    <div className="col-name">{product.name}</div>
+                    <div className="col-name">
+                      <div className="product-info-wrapper">
+                        <span className="product-display-name">{product.name}</span>
+                        {(product.batchNumber || product.expiryDate) && (
+                          <div className="product-sub-info">
+                            {product.batchNumber && (
+                              <span className="info-batch">{product.batchNumber}</span>
+                            )}
+                            {product.expiryDate && (
+                              <span className="info-expiry">{product.expiryDate}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <div className="col-sku">{product.sku || product.barcode || '-'}</div>
                     <div className="col-price">
                       {formatCurrency(product.salePrice)}

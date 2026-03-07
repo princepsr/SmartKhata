@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { BackupMeta } from '@shared/types/ipc';
+import { useConfirm } from '../../hooks/useConfirm';
 import { useAppSettingsStore } from '../../store';
 import { RestoreConfirmationModal } from './RestoreConfirmationModal';
 import { RestoreSuccessModal } from './RestoreSuccessModal';
@@ -18,6 +19,7 @@ export function DataManagement() {
     saveSettings,
     isLoading: settingsLoading,
   } = useAppSettingsStore();
+  const { confirm, alert } = useConfirm();
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastAction, setLastAction] = useState<{
     type: 'backup' | 'restore';
@@ -75,7 +77,11 @@ export function DataManagement() {
     } catch (err) {
       console.error('Google auth error:', err);
       if (err instanceof Error && !err.message.includes('closed')) {
-        alert(`Authentication failed: ${err.message}`);
+        await alert({
+          title: 'Authentication Failed',
+          message: `Authentication failed: ${err.message}`,
+          type: 'danger',
+        });
       }
     } finally {
       setIsProcessing(false);
@@ -83,7 +89,15 @@ export function DataManagement() {
   };
 
   const handleGoogleLogout = async () => {
-    if (confirm('Are you sure you want to unlink your Google account?')) {
+    const ok = await confirm({
+      title: 'Unlink Google Account',
+      message:
+        'Are you sure you want to unlink your Google account? Automatic cloud backups will be disabled.',
+      type: 'warning',
+      confirmLabel: 'Unlink Account',
+    });
+
+    if (ok) {
       try {
         await window.api.invoke(IPC_CHANNELS.GOOGLE_LOGOUT);
         setGoogleProfile(null);
