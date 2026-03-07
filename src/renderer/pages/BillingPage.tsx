@@ -75,7 +75,11 @@ interface Customer {
 function BillingPage() {
   const { t } = useTranslation();
   // Settings (for billing-only mode)
-  const { settings } = useAppSettingsStore();
+  const billingOnly = useAppSettingsStore((state) => state.settings.billingOnly);
+  const appMode = useAppSettingsStore((state) => state.settings.appMode);
+  const gstEnabled = useAppSettingsStore((state) => state.settings.gstEnabled);
+  const gstExclusiveMode = useAppSettingsStore((state) => state.settings.gstExclusiveMode);
+  const supplyType = useAppSettingsStore((state) => state.settings.supplyType);
   const [searchParams, setSearchParams] = useSearchParams();
   const isQuotationMode = searchParams.get('type') === 'quotation';
 
@@ -395,11 +399,7 @@ function BillingPage() {
         }
 
         // Skip stock check in billing-only mode OR if product doesn't track inventory
-        if (
-          !settings.billingOnly &&
-          product.trackInventory &&
-          currentQtyInCart + 1 > product.stockQty
-        ) {
+        if (!billingOnly && product.trackInventory && currentQtyInCart + 1 > product.stockQty) {
           setAlertState({
             isOpen: true,
             title: t('billing.out_of_stock'),
@@ -481,7 +481,7 @@ function BillingPage() {
   useEffect(() => {
     const fetchAlternatives = async () => {
       if (
-        settings.appMode === 'MEDICAL' &&
+        appMode === 'MEDICAL' &&
         searchResults?.items &&
         selectedResultIndex !== -1 &&
         searchResults.items[selectedResultIndex]
@@ -504,7 +504,7 @@ function BillingPage() {
     };
 
     fetchAlternatives();
-  }, [selectedResultIndex, searchResults, settings.appMode]);
+  }, [selectedResultIndex, searchResults, appMode]);
 
   // Reset Bill State (Next Sale)
   const resetBill = useCallback(() => {
@@ -727,22 +727,15 @@ function BillingPage() {
       const preview = calculateBillPreview(
         cart,
         discountAmount,
-        settings.gstEnabled,
-        settings.gstExclusiveMode,
-        settings.supplyType
+        gstEnabled,
+        gstExclusiveMode,
+        supplyType
       );
       setCalculation(preview);
     } else {
       setCalculation(null);
     }
-  }, [
-    cart,
-    discountAmount,
-    settings.gstEnabled,
-    settings.gstExclusiveMode,
-    settings.supplyType,
-    setCalculation,
-  ]);
+  }, [cart, discountAmount, gstEnabled, gstExclusiveMode, supplyType, setCalculation]);
 
   return (
     <div className="page billing-page">
@@ -834,7 +827,7 @@ function BillingPage() {
                             {t('common.barcode')}: {product.sku || product.barcode || '-'}
                           </span>
                           <div className="product-price">
-                            {!settings.billingOnly && product.trackInventory && (
+                            {!billingOnly && product.trackInventory && (
                               <span
                                 className={`search-stock-status ${
                                   product.stockQty <= 0
@@ -862,7 +855,7 @@ function BillingPage() {
                     )}
 
                     {/* Salt Alternatives Partition */}
-                    {settings.appMode === 'MEDICAL' && saltAlternatives.length > 0 && (
+                    {appMode === 'MEDICAL' && saltAlternatives.length > 0 && (
                       <div className="salt-alternatives-section">
                         <div className="salt-alternatives-header">
                           💊{' '}
@@ -879,7 +872,7 @@ function BillingPage() {
                               {alt.sku || alt.barcode || t('billing.shared_salt')}
                             </span>
                             <div className="product-price">
-                              {!settings.billingOnly && alt.trackInventory && (
+                              {!billingOnly && alt.trackInventory && (
                                 <span
                                   className={`search-stock-status ${
                                     alt.stockQty <= 0
@@ -917,7 +910,7 @@ function BillingPage() {
               <span>{t('billing.history')}</span>
             </button>
 
-            {settings.customersEnabled &&
+            {useAppSettingsStore.getState().settings.customersEnabled &&
               (selectedCustomer ? (
                 <div className="selected-customer-badge">
                   <span style={{ fontWeight: 600 }}>{selectedCustomer.name}</span>
@@ -1034,7 +1027,7 @@ function BillingPage() {
                 <span>{t('common.subtotal')}</span>
                 <span>{calculation ? formatCurrency(calculation.subtotal) : '₹ 0.00'}</span>
               </div>
-              {settings.gstEnabled && (
+              {gstEnabled && (
                 <div className="summary-row gst-row">
                   <span>{t('common.gst')}</span>
                   <span>{calculation ? formatCurrency(calculation.gstTotal) : '₹ 0.00'}</span>
@@ -1074,7 +1067,7 @@ function BillingPage() {
             </div>
 
             <div className="actions-area">
-              {settings.customersEnabled && selectedCustomer && (
+              {useAppSettingsStore.getState().settings.customersEnabled && selectedCustomer && (
                 <div className="amount-paid-section">
                   <label
                     style={{
@@ -1135,7 +1128,7 @@ function BillingPage() {
                     marginBottom: '0.5rem',
                   }}
                 >
-                  {settings.upiId ? (
+                  {useAppSettingsStore.getState().settings.upiId ? (
                     <>
                       <div
                         style={{
@@ -1147,8 +1140,10 @@ function BillingPage() {
                         }}
                       >
                         <QRCodeSVG
-                          value={`upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(
-                            settings.upiName || settings.shopName || 'Merchant'
+                          value={`upi://pay?pa=${useAppSettingsStore.getState().settings.upiId}&pn=${encodeURIComponent(
+                            useAppSettingsStore.getState().settings.upiName ||
+                              useAppSettingsStore.getState().settings.shopName ||
+                              'Merchant'
                           )}&am=${effectivePaymentAmount}&cu=INR`}
                           size={100}
                           level="M"
@@ -1160,7 +1155,7 @@ function BillingPage() {
                           <strong>{formatCurrency(effectivePaymentAmount)}</strong>
                         </span>
                         <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                          {settings.upiId}
+                          {useAppSettingsStore.getState().settings.upiId}
                         </span>
                       </div>
                     </>

@@ -27,6 +27,14 @@ export const BillItemList: React.FC<BillItemListProps> = ({
   onRemove,
 }) => {
   const { t } = useTranslation();
+
+  // Optimization: Create a lookup map for calculated line items to avoid O(N^2) complexity in the loop below
+  const calculatedMap = React.useMemo(() => {
+    const map = new Map<number, CalculatedLineItem>();
+    calculatedItems.forEach((ci) => map.set(ci.productId, ci));
+    return map;
+  }, [calculatedItems]);
+
   if (cart.length === 0) {
     return (
       <div
@@ -70,7 +78,7 @@ export const BillItemList: React.FC<BillItemListProps> = ({
           <BillItemRow
             key={item.product.id}
             item={item}
-            calculatedLine={calculatedItems.find((ci) => ci.productId === item.product.id)}
+            calculatedLine={calculatedMap.get(item.product.id)}
             index={index}
             onUpdateQuantity={onUpdateQuantity}
             onUpdateDiscount={onUpdateDiscount}

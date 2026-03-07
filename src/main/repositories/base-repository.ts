@@ -15,11 +15,40 @@ import Database from 'better-sqlite3';
  */
 
 export abstract class BaseRepository {
+  /**
+   * Prepared statement cache, grouped by database instance.
+   * This ensures that if the database is reset (e.g., in tests), stale statements aren't used.
+   */
+  private static statementCache = new WeakMap<Database.Database, Map<string, Database.Statement>>();
+
   protected get db(): Database.Database {
     return databaseManager.getDatabase();
   }
 
   constructor() {}
+
+  /**
+   * Get or create a prepared statement from the cache for the current database instance
+   */
+  private getStatement(sql: string): Database.Statement {
+    const db = this.db;
+    let dbCache = BaseRepository.statementCache.get(db);
+
+    if (!dbCache) {
+      dbCache = new Map<string, Database.Statement>();
+      BaseRepository.statementCache.set(db, dbCache);
+    }
+
+    let stmt = dbCache.get(sql);
+    if (!stmt) {
+      logger.debug('SQL Statement Preparing (Cache Miss)', { sql });
+      stmt = db.prepare(sql);
+      dbCache.set(sql, stmt);
+    } else {
+      logger.debug('SQL Statement Cache Hit', { sql });
+    }
+    return stmt;
+  }
 
   /**
    * Execute a query that doesn't return data (INSERT, UPDATE, DELETE)
@@ -29,11 +58,10 @@ export abstract class BaseRepository {
    * @returns RunResult with lastInsertRowid and changes
    */
   protected execute(sql: string, params: unknown[] = []): Database.RunResult {
+    logger.debug('SQL Execute', { sql, params });
     try {
-      logger.debug('Executing SQL', { sql, params });
-      const stmt = this.db.prepare(sql);
+      const stmt = this.getStatement(sql);
       const result = stmt.run(...params);
-      logger.debug('SQL executed', { changes: result.changes, lastId: result.lastInsertRowid });
       return result;
     } catch (error) {
       logger.error('SQL execution failed', { sql, params, error });
@@ -49,11 +77,10 @@ export abstract class BaseRepository {
    * @returns Single row or undefined
    */
   protected queryOne<T>(sql: string, params: unknown[] = []): T | undefined {
+    logger.debug('SQL Query One', { sql, params });
     try {
-      logger.debug('Querying one', { sql, params });
-      const stmt = this.db.prepare(sql);
+      const stmt = this.getStatement(sql);
       const result = stmt.get(...params) as T | undefined;
-      logger.debug('Query one result', { found: !!result });
       return result;
     } catch (error) {
       logger.error('Query one failed', { sql, params, error });
@@ -69,11 +96,10 @@ export abstract class BaseRepository {
    * @returns Array of rows (empty if no results)
    */
   protected queryAll<T>(sql: string, params: unknown[] = []): T[] {
+    logger.debug('SQL Query All', { sql, params });
     try {
-      logger.debug('Querying all', { sql, params });
-      const stmt = this.db.prepare(sql);
+      const stmt = this.getStatement(sql);
       const results = stmt.all(...params) as T[];
-      logger.debug('Query all result', { count: results.length });
       return results;
     } catch (error) {
       logger.error('Query all failed', { sql, params, error });
@@ -89,9 +115,7 @@ export abstract class BaseRepository {
    */
   protected transaction<T>(fn: () => T): T {
     try {
-      logger.debug('Starting transaction');
       const result = databaseManager.transaction(fn);
-      logger.debug('Transaction committed');
       return result;
     } catch (error) {
       logger.error('Transaction failed (rolled back)', { error });

@@ -41,7 +41,9 @@ const SkeletonRows: React.FC = () => (
 
 const ProductsPage: React.FC = () => {
   const { t } = useTranslation();
-  const { settings } = useAppSettingsStore();
+  const billingOnly = useAppSettingsStore((state) => state.settings.billingOnly);
+  const gstEnabled = useAppSettingsStore((state) => state.settings.gstEnabled);
+  const gstExclusiveMode = useAppSettingsStore((state) => state.settings.gstExclusiveMode);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
@@ -501,26 +503,24 @@ const ProductsPage: React.FC = () => {
                     <div className="col-sku">{product.sku || product.barcode || '-'}</div>
                     <div className="col-price">
                       {formatCurrency(product.salePrice)}
-                      {product.isGstInclusive &&
-                        settings.gstEnabled &&
-                        !settings.gstExclusiveMode && (
-                          <span
-                            className="inclusive-badge"
-                            title={t('inventory.price_inclusive_gst')}
-                            style={{
-                              fontSize: '0.7rem',
-                              padding: '2px 6px',
-                              background: '#e0e7ff',
-                              color: '#4338ca',
-                              borderRadius: '10px',
-                              marginLeft: '6px',
-                              fontWeight: '600',
-                              verticalAlign: 'middle',
-                            }}
-                          >
-                            MRP
-                          </span>
-                        )}
+                      {product.isGstInclusive && gstEnabled && !gstExclusiveMode && (
+                        <span
+                          className="inclusive-badge"
+                          title={t('inventory.price_inclusive_gst')}
+                          style={{
+                            fontSize: '0.7rem',
+                            padding: '2px 6px',
+                            background: '#e0e7ff',
+                            color: '#4338ca',
+                            borderRadius: '10px',
+                            marginLeft: '6px',
+                            fontWeight: '600',
+                            verticalAlign: 'middle',
+                          }}
+                        >
+                          MRP
+                        </span>
+                      )}
                     </div>
                     <div className="col-cost">
                       {product.purchasePrice && product.purchasePrice > 0 ? (
@@ -577,7 +577,7 @@ const ProductsPage: React.FC = () => {
                           <path d="m15 5 4 4" />
                         </svg>
                       </button>
-                      {!settings.billingOnly && (
+                      {!billingOnly && (
                         <button
                           className="action-icon-btn action-adjust"
                           onClick={(e) => handleAdjustStock(e, product)}

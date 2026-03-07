@@ -161,9 +161,10 @@ class DatabaseManager {
       this.db.pragma('busy_timeout = 5000');
       dbLogger.debug('Busy timeout set to 5000ms');
 
-      // Synchronous mode: FULL (maximum safety)
-      this.db.pragma('synchronous = FULL');
-      dbLogger.debug('Synchronous mode set to FULL');
+      // Synchronous mode: NORMAL (balanced safety and speed)
+      // In WAL mode, NORMAL is safe against app crashes and much faster than FULL.
+      this.db.pragma('synchronous = NORMAL');
+      dbLogger.debug('Synchronous mode set to NORMAL');
     } catch (error) {
       dbLogger.error('Failed to configure database', error);
       throw error;
