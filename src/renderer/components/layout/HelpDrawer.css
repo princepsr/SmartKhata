@@ -1,0 +1,304 @@
+.help-drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 3000;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.help-drawer-content {
+  width: 500px;
+  height: 100%;
+  background-color: var(--color-bg);
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.help-drawer-header {
+  padding: var(--spacing-xl) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--color-bg);
+}
+
+.help-drawer-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.help-close-btn {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  border-radius: 50%;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.help-close-btn:hover {
+  background-color: var(--color-error);
+  color: white;
+  border-color: var(--color-error);
+  transform: rotate(90deg);
+}
+
+.help-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.help-topics-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
+}
+
+.help-topic-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: var(--color-bg);
+}
+
+.help-topic-item:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.help-topic-item.expanded {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.topic-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.topic-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--color-text);
+}
+
+.topic-content {
+  padding: 0 var(--spacing-lg) var(--spacing-lg) var(--spacing-lg);
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Structured Content Sections */
+.help-section {
+  margin-bottom: var(--spacing-lg);
+  position: relative;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section-label {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: var(--spacing-xs);
+}
+
+/* Why Section */
+.help-section-why {
+  background-color: rgba(30, 58, 138, 0.03);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-primary);
+}
+
+.help-section-why .help-section-label {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+/* How Section */
+.help-section-how {
+  padding: 4px 0;
+}
+
+.help-section-how .help-section-label {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+/* Pro Tip Section - Premium Card */
+.help-section-tip {
+  background: linear-gradient(135deg, var(--color-bg-secondary) 0%, rgba(30, 58, 138, 0.05) 100%);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--color-primary);
+  margin-top: var(--spacing-lg);
+}
+
+.help-section-tip .help-section-label {
+  background-color: #f59e0b; /* Amber for Tips */
+  color: white;
+}
+
+.help-section p {
+  margin: 0;
+}
+
+.help-section-how p {
+  margin-bottom: var(--spacing-xs);
+}
+
+.no-help-results {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.help-drawer-footer {
+  padding: var(--spacing-lg);
+  background-color: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.help-drawer-footer p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.help-deep-link {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.help-deep-link:hover {
+  color: var(--color-primary-dark);
+  background-color: rgba(30, 58, 138, 0.05);
+  border-radius: 2px;
+}
+
+/* Scrollbar styling */
+.help-drawer-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.help-drawer-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.help-drawer-body::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.help-drawer-body::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+.help-highlight {
+  background-color: rgba(30, 58, 138, 0.15);
+  color: var(--color-primary);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.open-full-hub-btn {
+  width: 100%;
+  margin-top: var(--spacing-xl);
+  padding: 14px;
+  background-color: var(--color-bg-secondary);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.open-full-hub-btn:hover {
+  background-color: var(--color-primary);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(30, 58, 138, 0.2);
+}
+
+.open-full-hub-btn:active {
+  transform: translateY(0);
+}

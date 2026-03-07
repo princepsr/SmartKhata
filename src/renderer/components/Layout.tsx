@@ -5,6 +5,7 @@ import GlobalMessages from './GlobalMessages';
 import LicenseBanner from './layout/LicenseBanner';
 import CommandCenter from './layout/CommandCenter';
 import UpdateBanner from './layout/UpdateBanner';
+import HelpDrawer from './layout/HelpDrawer';
 import LicenseActivationModal from './modals/LicenseActivationModal';
 import { useAppSettingsStore } from '../store';
 import './Layout.css';
@@ -168,6 +169,7 @@ const BarcodeIcon = () => (
 function Layout() {
   const [appVersion, setAppVersion] = useState<string>('');
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+  const [isHelpDrawerOpen, setIsHelpDrawerOpen] = useState(false);
   const [isMoreExpanded, setIsMoreExpanded] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem('sidebarCollapsed') === 'true';
@@ -285,6 +287,13 @@ function Layout() {
     <div className="app-container">
       {/* Global Messages (loading, error, success) */}
       <GlobalMessages />
+
+      {/* Help Drawer */}
+      <HelpDrawer
+        isOpen={isHelpDrawerOpen}
+        onClose={() => setIsHelpDrawerOpen(false)}
+        currentPath={window.location.pathname}
+      />
 
       {/* Command Center (Ctrl+K) */}
       <CommandCenter />
@@ -466,7 +475,78 @@ function Layout() {
 
           <div className="sidebar-footer">
             <div className="store-info">
-              {!isSidebarCollapsed && <span className="store-name">{settings.shopName}</span>}
+              {!isSidebarCollapsed && (
+                <>
+                  <span className="store-name">{settings.shopName}</span>
+                  <button
+                    className="nav-item help-button"
+                    onClick={() => setIsHelpDrawerOpen(true)}
+                    style={{
+                      marginTop: 'var(--spacing-sm)',
+                      padding: 'var(--spacing-sm) var(--spacing-md)',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: 'none',
+                      color: 'white',
+                      width: '100%',
+                      margin: '0',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    <span className="nav-icon" style={{ width: '20px', height: '20px' }}>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                      </svg>
+                    </span>
+                    <span className="nav-label">{t('help.title')}</span>
+                  </button>
+                </>
+              )}
+              {isSidebarCollapsed && (
+                <button
+                  className="nav-item help-button-collapsed"
+                  onClick={() => setIsHelpDrawerOpen(true)}
+                  title={t('help.title')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'white',
+                    cursor: 'pointer',
+                    padding: 'var(--spacing-sm)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    width: '100%',
+                  }}
+                >
+                  <span className="nav-icon">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </aside>

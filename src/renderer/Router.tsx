@@ -11,6 +11,7 @@ import OnboardingPage from './pages/OnboardingPage';
 import ExpensesPage from './pages/ExpensesPage';
 import QuotationsPage from './pages/QuotationsPage';
 import BarcodeGenPage from './pages/BarcodeGenPage';
+import KnowledgeHubPage from './pages/KnowledgeHubPage';
 import LoadingScreen from './components/common/LoadingScreen';
 import { useAppSettingsStore } from './store/useAppSettingsStore';
 import { useEffect, useState } from 'react';
@@ -64,6 +65,7 @@ function AppRouter() {
             <Route path="quotations" element={<QuotationsPage />} />
             <Route path="barcode-gen" element={<BarcodeGenPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="help" element={<KnowledgeHubPage />} />
 
             {/* 404 - redirect to billing */}
             <Route path="*" element={<Navigate to="/billing" replace />} />

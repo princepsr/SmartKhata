@@ -55,7 +55,11 @@
     "referral_share_msg": "Share this code with your friends when they purchase a license.",
     "activate_license_msg": "Activate a full license to get your unique referral code.",
     "clear": "Clear",
-    "no_sku": "No SKU"
+    "no_sku": "No SKU",
+    "why": "Purpose",
+    "how": "Workflow",
+    "tip": "Expert Tip",
+    "read_more": "Read Full Guide"
   },
   "billing": {
     "title": "New Sale / Billing",
@@ -1193,6 +1197,57 @@
         "routine": "Routine",
         "release_notes": "Release Notes (v{{version}}):",
         "managed_by": "Updates: Managed by GitHub Releases API"
+      }
+    }
+  },
+  "help": {
+    "title": "Help & Support",
+    "subtitle": "Comprehensive Guide for SmartKhata POS",
+    "search_placeholder": "Search features, shortcuts or guides...",
+    "topics": {
+      "getting_started": {
+        "title": "Getting Started",
+        "content": "WHY: SmartKhata is more than just a billing tool—it's your business partner. Setting up your profile correctly from Day 1 ensures your tax filings (GSTR-1) and profitability reports are 100% accurate.\n\nFROM SCRATCH:\n1. Shop Identity: Navigate to Settings > Shop Profile. Enter your business name, full address, and upload your logo. These details appear on every printed bill.\n2. Business Rules: Switch on 'GST Calculation' if you are registered. Set your 'Place of Supply' (State) to ensure correct CGST/SGST/IGST splits.\n3. Hardware Setup: Go to Settings > Printing. Select your Thermal Printer (2/3 inch) or A4 Laser jet. Test the alignment with a 'Test Print'.\n4. Load Inventory: Add your first product. For large shops, use the 'Excel Bulk Import' feature to upload thousands of items in seconds.\n\nPRO TIP: Use the 'Onboarding Checklist' on the Dashboard to track your progress. A fully completed profile unlocks professional invoice themes."
+      },
+      "billing": {
+        "title": "Billing & Sales (F2)",
+        "content": "WHY: Your billing counter should be the fastest part of your shop. We've optimized every millisecond so you can serve more customers and reduce checkout queues.\n\nFROM SCRATCH:\n1. Adding Items: Use a barcode scanner (Instant) or press 'F2' to search by name. For loose items (like Grains), type the exact weight (e.g., 1.5 for 1.5kg).\n2. Discounts: Apply a global discount to the entire bill or click an item to give a row-specific discount (Percent or Amount).\n3. Customer Selection: Link a customer by typing their phone number. If they have a pending balance (Udhaar), the system will alert you.\n4. Payment (F9): Choose 'Cash', 'UPI' (auto-generates a QR code), or 'Mixed' for splitting payments between methods.\n\nPRO TIP: In 'Mixed Mode', you can record a partial payment and save the rest as 'Credit/Udhaar' for the customer to pay later."
+      },
+      "inventory": {
+        "title": "Inventory Management (F3)",
+        "content": "WHY: Stockouts mean lost sales. SmartKhata's local database tracks every single unit so you know exactly what's on your shelf and what's gathering dust.\n\nFROM SCRATCH:\n1. Adding Products: Record the Product Name, Category, HSN Code, and Tax rate. Setting an accurate 'Cost Price' is essential for profit reporting.\n2. Batch & Expiry: Enable 'Batch Tracking' in Settings for medical or food items. Record expiry dates to get automatic 'Near Expiry' alerts.\n3. Low Stock Alerts: Set a 'Minimum Quantity' for each item. Products below this limit will automatically turn RED in the list.\n4. Stock Adjustment: Use the 'Plus/Minus' icons to manually correct stock if you find items damaged or returned without a bill.\n\nPRO TIP: Use the 'Stock History' icon on any product to see a complete audit trail of every unit added or sold, including the time and date."
+      },
+      "customers": {
+        "title": "Customers & Udhaar (F4)",
+        "content": "WHY: Relationship management is the secret to shop growth. Tracking 'Udhaar' (Store Credit) prevents revenue leakage and keeps your cash flow healthy.\n\nFROM SCRATCH:\n1. Quick Registration: Add customer name and mobile during billing. This builds your marketing database automatically.\n2. Ledger View: Click any customer to see their full transaction history—every bill they bought and every payment they made.\n3. Settle Balance (Got Money): When a customer returns to pay their debt, use the 'Settle' button. Choose the payment mode and the balance will update instantly.\n4. Loyalty Tracking: See 'Total Spent' and 'Visit Count' to identify your most valuable customers.\n\nPRO TIP: Tap the WhatsApp icon on the customer list to send a professional payment reminder containing their exact balance and your UPI ID."
+      },
+      "purchases": {
+        "title": "Purchases & Suppliers (F7)",
+        "content": "WHY: You can't calculate 'Profit' without knowing what you paid. Recording purchases also populates your inventory and tracks 'Input Tax Credit' (ITC).\n\nFROM SCRATCH:\n1. Supplier Profiles: Add your wholesalers, distributors, or local vendors with their GSTIN.\n2. Inward Entry: Record the Supplier's Invoice Number and the items received. This automatically increases your physical stock count.\n3. Tax Reconciliation: Ensure the GST charged by the supplier matches what you record to ensure your CA can file for tax returns correctly.\n4. Payables: Track how much money you currently owe to each supplier in the 'Accounts Payable' list.\n\nPRO TIP: Use 'Convert to Purchase' when you receive a large shipment that you previously requested via a Purchase Order."
+      },
+      "expenses": {
+        "title": "Shop Expenses (F8)",
+        "content": "WHY: Running a business has many costs beyond buying stock. Recording Rent, Staff Salaries, and Utilities is the only way to see your 'Net Profit'.\n\nFROM SCRATCH:\n1. Categories: Create specific buckets like 'Salary', 'Rent', 'Electricity', and 'Misc'.\n2. Daily Logging: Record even small expenses like cleaning supplies or chai. Use the 'Record Expense' button (F8).\n3. Payment Method: Track whether you paid the expense from the Shop Cash drawer or your UPI account.\n4. Analysis: Check the Expense tab in Reports to see your highest spending areas month-on-month.\n\nPRO TIP: Separate 'Direct Expenses' (like shipping) from 'Indirect Expenses' (like rent) to better understand your business's operating efficiency."
+      },
+      "quotations": {
+        "title": "Quotations & Estimates (F9)",
+        "content": "WHY: For bulk orders or high-value sales, customers need a professional price estimate. Quotations build trust without reducing your current stock level.\n\nFROM SCRATCH:\n1. Preparation: Add items just like a bill. You can set a 'Validity Date' (e.g., this price is valid for 7 days).\n2. Printing: Print a 2/3 inch or A4 'Estimate'. These do not have a Bill Number and are not counted in your daily sales.\n3. Sales Conversion: When the customer returns to buy, search for the Quotation and click 'Convert to Bill'. It will instantly populate the billing screen.\n4. Tracking: View 'Pending vs Converted' quotes to see your sales team's performance.\n\nPRO TIP: You can customize the 'Quotation Terms' (like '50% Advance Required') in Settings > Business Rules."
+      },
+      "barcode": {
+        "title": "Barcode Generator",
+        "content": "WHY: Scanning barcodes reduces manual errors by 99% and makes your shop look premium. If your items don't have barcodes, print them yourself.\n\nFROM SCRATCH:\n1. Item Selection: Search for any product and the number of labels you need.\n2. Label Design: Choose to include the Product Name, SKU, and your 'Offer Price' on the label.\n3. Printer Choice: Works with standard 2x1 inch sticky label rolls or 'Sheet label' printers.\n4. Alignment: Use the 'Calibration' settings if the text is printing outside the label edges.\n\nPRO TIP: Print a 'Barcode Sheet' for loose items like candy or heavy hardware and keep it at the billing counter for quick scanning."
+      },
+      "reports": {
+        "title": "Business Reports (F5)",
+        "content": "WHY: Don't guess—know. Reports provide the 'X-Ray' of your shop's health, from daily cash collection to annual tax summaries.\n\nFROM SCRATCH:\n1. Sales Summary: See 'Today's Collections' split by Cash vs. UPI. Perfect for closing the register at night.\n2. GSTR-1 Helper: Download a pre-formatted Excel file that matches government portals, saving your CA hours of work.\n3. Profit & Loss: Your (Total Revenue - Cost of Goods - Expenses) calculated instantly for any date range.\n4. Stock Aging: Identify 'Dead Stock'—items that haven't sold in 60+ days—so you can run a clearance sale.\n\nPRO TIP: Use the 'Trend Analysis' chart to see which days of the week are most profitable, and adjust your staff or inventory accordingly."
+      },
+      "shortcuts": {
+        "title": "Keyboard Shortcuts",
+        "content": "WHY: The mouse is slow. Power users navigate SmartKhata entirely via keyboard, shaving off 10-15 seconds from every customer interaction.\n\nFROM SCRATCH:\n• F2: Open Billing (Instant focus on Search).\n• F3: Open Inventory to check stock.\n• F4: View Customers and Udhaar Ledger.\n• F5: Open Reports Dashboard.\n• F9: Finalize/Pay the current bill.\n• Ctrl+K: Global Search (Find any bill, customer, or setting).\n• Esc: Close any popup or clear current search.\n\nPRO TIP: In Billing, use the Up/Down arrows to select items and the 'Delete' key to remove an accidental item from the cart."
+      },
+      "backup": {
+        "title": "Data Safety & Backup",
+        "content": "WHY: Your data is your business's heart. Computers can fail, but your records should never be lost. We prioritize multi-layer data safety.\n\nFROM SCRATCH:\n1. Automatic Backups: Enable 'Auto-Backup' in Settings. Specify how often (e.g., every 4 hours) and how many copies to keep.\n2. Cloud Sync (Google Drive): Link your Gmail account to silently copy every backup to the cloud. This protects you even if your PC is stolen.\n3. Local Export: Periodically click 'Export Data' to save a .khata file to an external pen drive.\n4. Restore: If you get a new PC, just install SmartKhata and 'Import' your latest backup file—everything comes back instantly.\n\nPRO TIP: Always take a manual backup before performing a major Windows Update or changing your shop's computer hardware."
       }
     }
   }
