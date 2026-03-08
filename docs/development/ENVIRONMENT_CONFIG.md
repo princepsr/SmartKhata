@@ -19,12 +19,14 @@ The system relies on three distinct layers of configuration:
 The application detects its state via `process.env.NODE_ENV`.
 
 ### 1. Development Mode
+
 - **Triggers**: `pnpm dev` or `NODE_ENV=development`.
 - **Renderer**: Loads from the Vite dev server at `http://localhost:5173`.
 - **Database**: Stores data in the project root: `SmartKhata/dev-data/smartkhata.db`.
 - **Features**: Auto-opens DevTools, enables Hot Module Replacement (HMR), and allows verbose logging.
 
 ### 2. Production Mode
+
 - **Triggers**: Packaged `.exe` or `NODE_ENV=production`.
 - **Renderer**: Loads the pre-built `dist/renderer/index.html` via `loadFile()`.
 - **Database**: Stores data in the official Windows app data directory: `%APPDATA%/SmartKhata/data/`.
@@ -34,12 +36,12 @@ The application detects its state via `process.env.NODE_ENV`.
 
 ## 💾 Path Resolution Table
 
-| Resource | Development Path | Production Path |
-| :--- | :--- | :--- |
-| **Database** | `dev-data/smartkhata.db` | `%APPDATA%/SmartKhata/data/` |
-| **Logs** | `logs/app_dev.log` | `%APPDATA%/SmartKhata/logs/` |
-| **Backups** | `dev-data/backups/` | `%APPDATA%/SmartKhata/backups/` |
-| **Renderer URL** | `http://localhost:5173` | `file://.../index.html` |
+| Resource         | Development Path         | Production Path                 |
+| :--------------- | :----------------------- | :------------------------------ |
+| **Database**     | `dev-data/smartkhata.db` | `%APPDATA%/SmartKhata/data/`    |
+| **Logs**         | `logs/app_dev.log`       | `%APPDATA%/SmartKhata/logs/`    |
+| **Backups**      | `dev-data/backups/`      | `%APPDATA%/SmartKhata/backups/` |
+| **Renderer URL** | `http://localhost:5173`  | `file://.../index.html`         |
 
 ---
 
@@ -54,9 +56,21 @@ To prevent plain-text `.env` files from leaking into production, SmartKhata uses
 
 ---
 
+## 📱 WhatsApp Business API
+
+To enable automated daily reports, you must configure the following in your `.env` file:
+
+- `WHATSAPP_META_TOKEN`: A permanent Graph API Access Token generated from the Meta Developer Portal.
+- `WHATSAPP_PHONE_NUMBER_ID`: The unique ID for the phone number being used for automation (found in WhatsApp > Getting Started).
+
+These keys are critical for the `WhatsAppService` to authenticate with Meta's Graph API version `v21.0`. For production, ensure these are present during the build process to be securely bundled.
+
+---
+
 ## 🛠️ Usage in Code
 
 ### Checking Environment
+
 ```typescript
 import { configManager } from './config/app-config';
 const { isDevelopment } = configManager.getConfig();
@@ -67,6 +81,7 @@ if (isDevelopment) {
 ```
 
 ### Accessing Paths
+
 Always use the `configManager` rather than hardcoding paths.
 
 ```typescript

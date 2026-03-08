@@ -207,14 +207,31 @@ export class ReportService extends BaseService {
    */
   public async generateWhatsAppSummary(startDate: string, endDate: string): Promise<string> {
     const summary = this.getDailySalesSummary(startDate, endDate);
+    const payments = this.getPaymentModeSummary(startDate, endDate);
+    const udhaar = this.reportRepo.getUdhaarSummary(startDate, endDate);
+
+    const cash = payments.find((p) => p.mode === 'cash')?.totalAmount || 0;
+    const upi = payments.find((p) => p.mode === 'upi')?.totalAmount || 0;
+    const mixed = payments.find((p) => p.mode === 'mixed')?.totalAmount || 0;
+
     const dateStr = startDate === endDate ? startDate : `${startDate} to ${endDate}`;
 
     let text = `📊 *SmartKhata Daily Sales Summary*\n`;
     text += `📅 Date: ${dateStr}\n`;
     text += `--------------------------------\n`;
     text += `💰 *Total Sales:* ₹${summary.totalSales.toLocaleString('en-IN')}\n`;
-    text += `🧾 *Net Sales:* ₹${summary.netSales.toLocaleString('en-IN')}\n`;
-    text += `💸 *Total Discount:* ₹${summary.totalDiscount.toLocaleString('en-IN')}\n`;
+    if (cash > 0) {
+      text += `💵 *Cash Collected:* ₹${cash.toLocaleString('en-IN')}\n`;
+    }
+    if (upi > 0) {
+      text += `📱 *UPI Collected:* ₹${upi.toLocaleString('en-IN')}\n`;
+    }
+    if (mixed > 0) {
+      text += `⚖️ *Mixed Payment:* ₹${mixed.toLocaleString('en-IN')}\n`;
+    }
+    text += `--------------------------------\n`;
+    text += `🤝 *Udhar Given:* ₹${udhaar.creditGiven.toLocaleString('en-IN')}\n`;
+    text += `📥 *Udhar Received:* ₹${udhaar.paymentsReceived.toLocaleString('en-IN')}\n`;
     text += `📉 *Total Expenses:* ₹${summary.totalExpenses.toLocaleString('en-IN')}\n`;
     text += `--------------------------------\n`;
     text += `✅ *Net Profit:* ₹${summary.trueNetProfit.toLocaleString('en-IN')}\n`;

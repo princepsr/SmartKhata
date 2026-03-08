@@ -47,6 +47,10 @@ export interface AppConfig {
   lastGstReminderSeen: string | null;
   language: 'en' | 'hi';
   appMode: 'GENERAL' | 'KIRANA' | 'MEDICAL';
+  whatsappAutoReportEnabled: boolean;
+  whatsappRecipientNumber: string | null;
+  whatsappReportTime: string; // HH:mm
+  lastWhatsappReportDate: string | null; // YYYY-MM-DD
   updatedAt: Date;
 }
 
@@ -107,6 +111,10 @@ export class SettingsRepository extends BaseRepository {
       last_gst_reminder_seen: string | null;
       language: string;
       app_mode: string;
+      whatsapp_auto_report_enabled: number;
+      whatsapp_recipient_number: string | null;
+      whatsapp_report_time: string | null;
+      last_whatsapp_report_date: string | null;
       updated_at: string;
     }>(sql);
 
@@ -156,6 +164,10 @@ export class SettingsRepository extends BaseRepository {
         lastGstReminderSeen: null,
         language: 'en',
         appMode: 'GENERAL',
+        whatsappAutoReportEnabled: false,
+        whatsappRecipientNumber: null,
+        whatsappReportTime: '20:00',
+        lastWhatsappReportDate: null,
         updatedAt: new Date(),
       };
     }
@@ -216,6 +228,10 @@ export class SettingsRepository extends BaseRepository {
       lastGstReminderSeen: 'last_gst_reminder_seen',
       language: 'language',
       appMode: 'app_mode',
+      whatsappAutoReportEnabled: 'whatsapp_auto_report_enabled',
+      whatsappRecipientNumber: 'whatsapp_recipient_number',
+      whatsappReportTime: 'whatsapp_report_time',
+      lastWhatsappReportDate: 'last_whatsapp_report_date',
     };
 
     Object.entries(config).forEach(([key, value]) => {
@@ -293,6 +309,10 @@ export class SettingsRepository extends BaseRepository {
     last_gst_reminder_seen: string | null;
     language: string;
     app_mode: string;
+    whatsapp_auto_report_enabled: number;
+    whatsapp_recipient_number: string | null;
+    whatsapp_report_time: string | null;
+    last_whatsapp_report_date: string | null;
     updated_at: string;
   }): AppConfig {
     return {
@@ -338,6 +358,10 @@ export class SettingsRepository extends BaseRepository {
       lastGstReminderSeen: row.last_gst_reminder_seen,
       language: (row.language as 'en' | 'hi') || 'en',
       appMode: (row.app_mode as 'GENERAL' | 'KIRANA' | 'MEDICAL') || 'GENERAL',
+      whatsappAutoReportEnabled: row.whatsapp_auto_report_enabled === 1,
+      whatsappRecipientNumber: row.whatsapp_recipient_number,
+      whatsappReportTime: row.whatsapp_report_time || '20:00',
+      lastWhatsappReportDate: row.last_whatsapp_report_date,
       updatedAt: this.parseDate(row.updated_at),
     };
   }

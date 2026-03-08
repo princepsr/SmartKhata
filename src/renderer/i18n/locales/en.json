@@ -143,7 +143,17 @@
     "licensing": "Licensing",
     "data_management": "Data Management",
     "privacy_policy": "Privacy Policy",
+    "contact_support": "Contact Support",
     "debug": "Debug",
+    "whatsapp_reports": {
+      "title": "WhatsApp Reports",
+      "enable_title": "Auto Daily Reports",
+      "enable_desc": "Automatically send daily sales summary to the recipient via WhatsApp.",
+      "recipient_title": "Recipient Number",
+      "recipient_desc": "The WhatsApp number that will receive the daily report (e.g. +919044612070).",
+      "time_title": "Report Time",
+      "time_desc": "The time of day to send the report (after shop closing)."
+    },
     "shop_name": "Shop Name *",
     "shop_name_placeholder": "Enter shop name...",
     "postal_address": "Postal Address",
@@ -1248,6 +1258,12 @@
       "backup": {
         "title": "Data Safety & Backup",
         "content": "WHY: Your data is your business's heart. Computers can fail, but your records should never be lost. We prioritize multi-layer data safety.\n\nFROM SCRATCH:\n1. Automatic Backups: Enable 'Auto-Backup' in Settings. Specify how often (e.g., every 4 hours) and how many copies to keep.\n2. Cloud Sync (Google Drive): Link your Gmail account to silently copy every backup to the cloud. This protects you even if your PC is stolen.\n3. Local Export: Periodically click 'Export Data' to save a .khata file to an external pen drive.\n4. Restore: If you get a new PC, just install SmartKhata and 'Import' your latest backup file—everything comes back instantly.\n\nPRO TIP: Always take a manual backup before performing a major Windows Update or changing your shop's computer hardware."
+      },
+      "contact_dev": {
+        "title": "Contact Developer",
+        "description": "Have a query, found a bug, or need a custom feature? Reach out to the developer directly on WhatsApp.",
+        "scan_hint": "Scan this QR code with your phone to open WhatsApp",
+        "btn_text": "Message on WhatsApp"
       }
     }
   }

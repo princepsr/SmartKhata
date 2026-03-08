@@ -568,4 +568,28 @@ export class ReportRepository extends BaseRepository {
       periods,
     };
   }
+
+  /**
+   * Get Udhaar (Credit) Summary for a date range
+   * Fetches total credit given (SALE) and total payments received (PAYMENT_IN) from customer_ledger
+   */
+  public getUdhaarSummary(
+    startDate: string,
+    endDate: string
+  ): { creditGiven: number; paymentsReceived: number } {
+    const query = `
+      SELECT 
+        COALESCE(SUM(CASE WHEN type = 'SALE' THEN amount ELSE 0 END), 0) as creditGiven,
+        COALESCE(SUM(CASE WHEN type = 'PAYMENT_IN' THEN amount ELSE 0 END), 0) as paymentsReceived
+      FROM customer_ledger
+      WHERE date(created_at, 'localtime') BETWEEN date(?) AND date(?)
+    `;
+
+    const result = this.db.prepare(query).get(startDate, endDate) as {
+      creditGiven: number;
+      paymentsReceived: number;
+    };
+
+    return result;
+  }
 }

@@ -16,6 +16,7 @@ import { StabilityService } from './services/stability-service';
 import { PrintService } from './services/print-service';
 import { UpdateService } from './services/update-service';
 import { autoBackupService } from './services/auto-backup-service';
+import { WhatsAppAutoReportService } from './services/whatsapp-auto-report-service';
 
 /**
  * Main Electron Process Entry Point
@@ -341,6 +342,13 @@ app.whenReady().then(async () => {
         autoBackupService.start();
       } catch (e) {
         logger.error('Auto-backup service start failed', e);
+      }
+    })(),
+    (async () => {
+      try {
+        WhatsAppAutoReportService.getInstance().start();
+      } catch (e) {
+        logger.error('WhatsApp auto-report service start failed', e);
       }
     })(),
   ];

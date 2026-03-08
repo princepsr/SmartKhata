@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import './HelpDrawer.css';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import ContactDeveloper from '../common/ContactDeveloper';
 
 interface HelpDrawerProps {
   isOpen: boolean;
@@ -49,6 +50,7 @@ const HelpDrawer: React.FC<HelpDrawerProps> = ({ isOpen, onClose, currentPath })
     'reports',
     'shortcuts',
     'backup',
+    'contact_dev',
   ];
 
   const toggleTopic = useCallback((topic: string) => {
@@ -234,56 +236,60 @@ const HelpDrawer: React.FC<HelpDrawerProps> = ({ isOpen, onClose, currentPath })
                   </button>
                   {expandedTopic === topic && (
                     <div className="topic-content animate-pure-fade">
-                      {(() => {
-                        const content = t(`help.topics.${topic}.content`);
-                        const sections: React.ReactNode[] = [];
+                      {topic === 'contact_dev' ? (
+                        <ContactDeveloper compact />
+                      ) : (
+                        (() => {
+                          const content = t(`help.topics.${topic}.content`);
+                          const sections: React.ReactNode[] = [];
 
-                        // Split by major headers
-                        const parts = content.split(
-                          /(WHY:|FROM SCRATCH:|शुरुआत से:|क्यों:|PRO TIP:|प्रो टिप:)/g
-                        );
+                          // Split by major headers
+                          const parts = content.split(
+                            /(WHY:|FROM SCRATCH:|शुरुआत से:|क्यों:|PRO TIP:|प्रो टिप:)/g
+                          );
 
-                        let currentLabel = '';
-                        parts.forEach((part, i) => {
-                          const trimPart = part.trim();
-                          if (!trimPart) {
-                            return;
-                          }
+                          let currentLabel = '';
+                          parts.forEach((part, i) => {
+                            const trimPart = part.trim();
+                            if (!trimPart) {
+                              return;
+                            }
 
-                          if (trimPart.match(/^(WHY:|क्यों:)$/)) {
-                            currentLabel = 'WHY';
-                          } else if (trimPart.match(/^(FROM SCRATCH:|शुरुआत से:)$/)) {
-                            currentLabel = 'HOW';
-                          } else if (trimPart.match(/^(PRO TIP:|प्रो टिप:)$/)) {
-                            currentLabel = 'TIP';
-                          } else {
-                            const labelText =
-                              currentLabel === 'WHY'
-                                ? t('common.why') || 'WHY'
-                                : currentLabel === 'HOW'
-                                  ? t('common.how') || 'HOW TO'
-                                  : t('common.tip') || 'PRO TIP';
+                            if (trimPart.match(/^(WHY:|क्यों:)$/)) {
+                              currentLabel = 'WHY';
+                            } else if (trimPart.match(/^(FROM SCRATCH:|शुरुआत से:)$/)) {
+                              currentLabel = 'HOW';
+                            } else if (trimPart.match(/^(PRO TIP:|प्रो टिप:)$/)) {
+                              currentLabel = 'TIP';
+                            } else {
+                              const labelText =
+                                currentLabel === 'WHY'
+                                  ? t('common.why') || 'WHY'
+                                  : currentLabel === 'HOW'
+                                    ? t('common.how') || 'HOW TO'
+                                    : t('common.tip') || 'PRO TIP';
 
-                            const sectionClass =
-                              currentLabel === 'WHY'
-                                ? 'help-section-why'
-                                : currentLabel === 'HOW'
-                                  ? 'help-section-how'
-                                  : 'help-section-tip';
+                              const sectionClass =
+                                currentLabel === 'WHY'
+                                  ? 'help-section-why'
+                                  : currentLabel === 'HOW'
+                                    ? 'help-section-how'
+                                    : 'help-section-tip';
 
-                            sections.push(
-                              <div key={i} className={`help-section ${sectionClass}`}>
-                                <span className="help-section-label">{labelText}</span>
-                                {trimPart.split('\n').map((line, idx) => (
-                                  <p key={idx}>{processContent(line)}</p>
-                                ))}
-                              </div>
-                            );
-                          }
-                        });
+                              sections.push(
+                                <div key={i} className={`help-section ${sectionClass}`}>
+                                  <span className="help-section-label">{labelText}</span>
+                                  {trimPart.split('\n').map((line, idx) => (
+                                    <p key={idx}>{processContent(line)}</p>
+                                  ))}
+                                </div>
+                              );
+                            }
+                          });
 
-                        return sections;
-                      })()}
+                          return sections;
+                        })()
+                      )}
 
                       <button
                         className="open-full-hub-btn"

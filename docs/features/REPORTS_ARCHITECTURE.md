@@ -45,6 +45,16 @@ The system provides a dynamic bar-graph visualization of performance metrics:
 - **Net Sales**: Final revenue received after proportional discounts and returns.
 - **True Net Profit**: `(Gross Profit - Operating Expenses)`. This requires the system to cross-reference the `expenses` table for the same date range.
 - **WhatsApp Summary**: A specialized formatter generates a markdown-optimized plain text summary for quick sharing via mobile messaging.
+- **Udhaar Insights**: Detailed tracking of credit sales (`SALE`) and payments received (`PAYMENT_IN`) from the customer ledger for same-day reporting.
+
+### C. Automated Daily Reports (Meta API)
+
+SmartKhata includes a background automation engine that delivers sales summaries directly via the WhatsApp Business API.
+
+- **Background Daemon**: `WhatsAppAutoReportService` (Main Process) checks every 30 mins for report triggers.
+- **Reporting Trigger**: Configurable "Shop Closing" time (default 20:00). If the app is offline at the trigger time, it queues the report.
+- **Resilience**: Integrated with `ConnectivityService` to automatically deliver missed reports immediately upon internet restoration.
+- **Privacy First**: Securely uses system environment variables for API authentication, ensuring sensitive tokens are never exposed in user logs or settings exports.
 
 ### B. GST Compliance (GSTR-1 Alignment)
 

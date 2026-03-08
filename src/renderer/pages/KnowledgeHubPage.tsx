@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './KnowledgeHub.css';
+import ContactDeveloper from '../components/common/ContactDeveloper';
 
 const KnowledgeHubPage: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -23,6 +24,7 @@ const KnowledgeHubPage: React.FC = () => {
       'reports',
       'shortcuts',
       'backup',
+      'contact_dev',
     ],
     []
   );
@@ -49,6 +51,13 @@ const KnowledgeHubPage: React.FC = () => {
   }, [location, topics]);
 
   const renderContent = (topic: string) => {
+    if (topic === 'contact_dev') {
+      return (
+        <div className="kh-section animate-pure-fade">
+          <ContactDeveloper />
+        </div>
+      );
+    }
     const content = t(`help.topics.${topic}.content`);
     const parts = content.split(/(WHY:|FROM SCRATCH:|शुरुआत से:|क्यों:|PRO TIP:|प्रो टिप:)/g);
 

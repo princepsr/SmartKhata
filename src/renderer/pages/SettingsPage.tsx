@@ -14,6 +14,7 @@ import LicenseSettings from '../components/Settings/LicenseSettings';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import { PrivacyPolicy } from '../components/Settings/PrivacyPolicy';
 import { UpdateSettings } from '../components/Settings/UpdateSettings';
+import ContactDeveloper from '../components/common/ContactDeveloper';
 import './SettingsPage.css';
 
 /**
@@ -23,7 +24,16 @@ import './SettingsPage.css';
  * Fully synchronized with the "Rich App" design language and structural layout.
  */
 
-type SettingsTab = 'shop' | 'inventory' | 'printing' | 'licensing' | 'data' | 'privacy' | 'debug';
+type SettingsTab =
+  | 'shop'
+  | 'inventory'
+  | 'printing'
+  | 'licensing'
+  | 'data'
+  | 'privacy'
+  | 'debug'
+  | 'whatsapp_reports'
+  | 'support';
 
 function SettingsPage() {
   const { settings, updateSettings, fetchSettings, saveSettings, resetSettings, isLoading, error } =
@@ -44,7 +54,17 @@ function SettingsPage() {
     const tab = searchParams.get('tab');
     if (
       tab &&
-      ['shop', 'inventory', 'printing', 'licensing', 'data', 'privacy', 'debug'].includes(tab)
+      [
+        'shop',
+        'inventory',
+        'printing',
+        'licensing',
+        'data',
+        'privacy',
+        'debug',
+        'whatsapp_reports',
+        'support',
+      ].includes(tab)
     ) {
       setActiveTab(tab as SettingsTab);
     }
@@ -781,6 +801,82 @@ function SettingsPage() {
     </div>
   );
 
+  const renderSupportSettings = () => (
+    <div className="tab-content-wrapper fade-in">
+      <div className="settings-section-card">
+        <div className="section-header">
+          <h2>{t('settings.contact_support')}</h2>
+        </div>
+        <p className="settings-description">{t('help.topics.contact_dev.description')}</p>
+
+        <div className="settings-form">
+          <div className="form-group full-width">
+            <ContactDeveloper />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderWhatsAppReportsTab = () => (
+    <div className="tab-content-wrapper fade-in">
+      <div className="settings-section-card">
+        <div className="section-header">
+          <h2>{t('settings.whatsapp_reports.title')}</h2>
+        </div>
+        <p className="settings-description">
+          Configure automated daily sales reports delivered directly to your WhatsApp.
+        </p>
+
+        <div className="settings-form">
+          <div className="form-group">
+            <div className="toggle-row">
+              <div className="toggle-info">
+                <label className="settings-label">
+                  {t('settings.whatsapp_reports.enable_title')}
+                </label>
+                <p className="control-description">{t('settings.whatsapp_reports.enable_desc')}</p>
+              </div>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={settings.whatsappAutoReportEnabled}
+                  onChange={(e) => updateSettings({ whatsappAutoReportEnabled: e.target.checked })}
+                />
+                <span className="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="settings-label">
+              {t('settings.whatsapp_reports.recipient_title')}
+            </label>
+            <input
+              type="text"
+              className="settings-input"
+              placeholder="+919044612070"
+              value={settings.whatsappRecipientNumber || ''}
+              onChange={(e) => updateSettings({ whatsappRecipientNumber: e.target.value })}
+            />
+            <p className="control-description">{t('settings.whatsapp_reports.recipient_desc')}</p>
+          </div>
+
+          <div className="form-group">
+            <label className="settings-label">{t('settings.whatsapp_reports.time_title')}</label>
+            <input
+              type="time"
+              className="settings-input"
+              value={settings.whatsappReportTime || '20:00'}
+              onChange={(e) => updateSettings({ whatsappReportTime: e.target.value })}
+            />
+            <p className="control-description">{t('settings.whatsapp_reports.time_desc')}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="page settings-page">
       <div className="page-content-wrapper animate-fade-in">
@@ -834,6 +930,18 @@ function SettingsPage() {
             >
               {t('settings.debug')}
             </button>
+            <button
+              className={`tab-btn ${activeTab === 'whatsapp_reports' ? 'active' : ''}`}
+              onClick={() => setActiveTab('whatsapp_reports')}
+            >
+              {t('settings.whatsapp_reports.title')}
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'support' ? 'active' : ''}`}
+              onClick={() => setActiveTab('support')}
+            >
+              {t('settings.contact_support')}
+            </button>
           </div>
         </div>
 
@@ -847,6 +955,8 @@ function SettingsPage() {
           {activeTab === 'data' && renderDataManagement()}
           {activeTab === 'privacy' && renderPrivacySettings()}
           {activeTab === 'debug' && renderSystemDebug()}
+          {activeTab === 'whatsapp_reports' && renderWhatsAppReportsTab()}
+          {activeTab === 'support' && renderSupportSettings()}
         </main>
       </div>
 

@@ -52,6 +52,10 @@ export interface AppSettings {
   placeOfSupply: string | null;
   language: 'en' | 'hi';
   appMode: 'GENERAL' | 'KIRANA' | 'MEDICAL';
+  whatsappAutoReportEnabled: boolean;
+  whatsappRecipientNumber: string | null;
+  whatsappReportTime: string;
+  lastWhatsappReportDate: string | null;
   updatedAt?: string;
 }
 
@@ -108,6 +112,10 @@ const defaultSettings: AppSettings = {
   placeOfSupply: null,
   language: 'en',
   appMode: 'GENERAL',
+  whatsappAutoReportEnabled: false,
+  whatsappRecipientNumber: null,
+  whatsappReportTime: '20:00',
+  lastWhatsappReportDate: null,
 };
 
 export const useAppSettingsStore = create<AppSettingsState>()(

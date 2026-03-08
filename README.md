@@ -178,6 +178,7 @@ SQLite Database
 - **📈 Domain Specialization**: Specific UI and Logic layers for **Medical Stores** (Batch/Expiry tracking, H-Schedule warnings, Salt/Generic Name search) and **Kirana Stores** (Weighing Scale serial-port integration).
 - **📝 Supply Chain**: Comprehensive tracking of **Purchase Orders**, Supplier Ledgers, and advanced Stock management.
 - **📊 Advanced Analytics**: Daily/Weekly/Monthly trend insights with full GST-ready reporting, including **Sales Returns (Credit Notes)** and **Input Tax Credit (ITC)** from purchases.
+- **📱 Automated WhatsApp reports**: Background delivery of daily sales metrics (Cash, UPI, Udhaar) directly to the owner's WhatsApp via the specialized **Meta Business API** integration.
 - **☁️ Cloud Sync & Backups**: Automated, configurable background database backups with seamless Google Drive synchronization to prevent data loss.
 - **📖 Knowledge Hub**: Integrated, high-density bilingual documentation system with step-by-step guides and expert tips for all modules.
 
