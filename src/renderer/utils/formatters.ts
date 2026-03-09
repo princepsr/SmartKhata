@@ -21,9 +21,9 @@ export const formatCurrency = (amountInRupees: number): string => {
  * Format Date to Locale String (IST)
  */
 export const formatDate = (dateString: string | number): string => {
-  if (!dateString) return '-';
+  if (!dateString) {return '-';}
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return '-';
+  if (isNaN(date.getTime())) {return '-';}
 
   return date.toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -37,9 +37,9 @@ export const formatDate = (dateString: string | number): string => {
  * Format Date Time (IST)
  */
 export const formatDateTime = (dateString: string | number): string => {
-  if (!dateString) return '-';
+  if (!dateString) {return '-';}
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return '-';
+  if (isNaN(date.getTime())) {return '-';}
 
   return date.toLocaleString('en-IN', {
     day: '2-digit',

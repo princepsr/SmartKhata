@@ -34,7 +34,6 @@ class SqlJsDatabase {
   }
   prepare(sql: string) {
     const stmt = this.db.prepare(sql);
-    const self = this;
     const processValue = (p: any): any => {
       if (p instanceof Date) {
         return p.toISOString();
@@ -76,11 +75,11 @@ class SqlJsDatabase {
         stmt.run(params);
         stmt.reset();
 
-        const lastIdRes = self.db.exec('SELECT last_insert_rowid() as id');
+        const lastIdRes = this.db.exec('SELECT last_insert_rowid() as id');
         const lastId = lastIdRes[0]?.values[0][0] ?? 0;
 
         return {
-          changes: self.db.getRowsModified(),
+          changes: this.db.getRowsModified(),
           lastInsertRowid: lastId,
         };
       },

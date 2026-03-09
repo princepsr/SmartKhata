@@ -46,34 +46,31 @@ describe('GoogleAuthService', () => {
     // Reset singleton
     (GoogleAuthService as any).instance = undefined;
     service = GoogleAuthService.getInstance();
+    
+    // Mock global fetch
+    global.fetch = vi.fn();
   });
 
-  it('should save tokens to disk when setCredentials is called', () => {
-    const mockTokens = { access_token: 'test-access', refresh_token: 'test-refresh' };
+  it('should save tokens to disk when internal setCredentials is used (via getToken)', async () => {
+    const mockTokens = { 
+      access_token: 'test-access', 
+      refresh_token: 'test-refresh',
+      expires_in: 3600
+    };
 
-    (service as any).setCredentials(mockTokens);
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockTokens),
+    } as Response);
+
+    // Call private getToken via any
+    await (service as any).getToken('mock-code');
 
     expect(fs.existsSync(tokenPath)).toBe(true);
     const savedData = fs.readFileSync(tokenPath).toString();
-    expect(JSON.parse(savedData)).toEqual(mockTokens);
-  });
-
-  it('should save tokens during background refresh via tokens event', () => {
-    const initialTokens = { access_token: 'old-access', refresh_token: 'test-refresh' };
-    const newTokens = { access_token: 'new-access' };
-
-    // Set initial state
-    (service as any).setCredentials(initialTokens);
-
-    // Simulate 'tokens' event from oauth2Client
-    const client = service.getClient();
-    client.emit('tokens', newTokens);
-
-    const savedData = fs.readFileSync(tokenPath).toString();
     const parsed = JSON.parse(savedData);
-
-    expect(parsed.access_token).toBe('new-access');
-    expect(parsed.refresh_token).toBe('test-refresh'); // Should preserve refresh_token
+    expect(parsed.access_token).toBe('test-access');
+    expect(parsed.refresh_token).toBe('test-refresh');
   });
 
   it('should load tokens from disk on initialization', () => {
@@ -85,7 +82,35 @@ describe('GoogleAuthService', () => {
     const newService = GoogleAuthService.getInstance();
 
     expect(newService.isAuthenticated()).toBe(true);
-    expect(newService.getClient().credentials.access_token).toBe('loaded-access');
+  });
+
+  it('should refresh access token when expired', async () => {
+    const initialTokens = { 
+      access_token: 'old-access', 
+      refresh_token: 'refresh-token',
+      expiry_date: Date.now() - 1000 // Expired
+    };
+    fs.writeFileSync(tokenPath, JSON.stringify(initialTokens));
+    
+    (GoogleAuthService as any).instance = undefined;
+    service = GoogleAuthService.getInstance();
+
+    const newTokens = { access_token: 'new-access', expires_in: 3600 };
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(newTokens),
+    } as Response);
+
+    const token = await service.getAccessToken();
+
+    expect(token).toBe('new-access');
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('oauth2.googleapis.com/token'),
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.any(Object)
+      })
+    );
   });
 
   it('should clear tokens from disk on logout', () => {

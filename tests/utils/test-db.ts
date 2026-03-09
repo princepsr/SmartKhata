@@ -1,7 +1,7 @@
 /**
  * Test Database Utilities
  *
- * Provides in-memory SQLite database for testing using better-sqlite3.
+ * Provides in-memory SQLite database for testing using sql.js.
  */
 
 import initSqlJs from 'sql.js';
@@ -35,7 +35,6 @@ class SqlJsDatabase {
   }
   prepare(sql: string) {
     const stmt = this.db.prepare(sql);
-    const self = this;
     const processValue = (p: any): any => {
       if (p instanceof Date) {
         return p.toISOString();
@@ -77,11 +76,11 @@ class SqlJsDatabase {
         stmt.run(params);
         stmt.reset();
 
-        const lastIdRes = self.db.exec('SELECT last_insert_rowid() as id');
+        const lastIdRes = this.db.exec('SELECT last_insert_rowid() as id');
         const lastId = lastIdRes[0]?.values[0][0] ?? 0;
 
         return {
-          changes: self.db.getRowsModified(),
+          changes: this.db.getRowsModified(),
           lastInsertRowid: lastId,
         };
       },
@@ -283,6 +282,7 @@ export async function createTestDatabase(): Promise<any> {
       po_number TEXT UNIQUE NOT NULL,
       supplier_id INTEGER NOT NULL,
       supplier_name_snapshot TEXT NOT NULL,
+      supplier_gstin_snapshot TEXT,
       po_date TEXT NOT NULL,
       total_taxable REAL NOT NULL DEFAULT 0,
       gst_total REAL NOT NULL DEFAULT 0,
@@ -305,6 +305,7 @@ export async function createTestDatabase(): Promise<any> {
       unit_price REAL NOT NULL,
       gst_percent REAL NOT NULL,
       line_total REAL NOT NULL,
+      salt_name TEXT,
       FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id) ON DELETE CASCADE,
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
     );
@@ -386,6 +387,7 @@ export async function createTestDatabase(): Promise<any> {
       line_sgst REAL NOT NULL DEFAULT 0,
       line_igst REAL NOT NULL DEFAULT 0,
       line_total REAL NOT NULL CHECK(line_total >= 0),
+      salt_name TEXT,
       FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE,
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
     );

@@ -426,7 +426,7 @@ function BillingPage() {
       searchInputRef.current?.focus();
     },
     [
-      settings.billingOnly,
+      billingOnly,
       searchInputRef,
       setCart,
       setAlertState,

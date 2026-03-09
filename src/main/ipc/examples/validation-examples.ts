@@ -84,7 +84,7 @@ export function registerProductHandlersWithValidation(): void {
     IPC_CHANNELS.PRODUCT_GET,
     async (id) => {
       const product = mockProducts.find((p) => p.id === id);
-      if (!product) throw new Error('Product not found');
+      if (!product) {throw new Error('Product not found');}
       return product;
     },
     {
@@ -97,7 +97,7 @@ export function registerProductHandlersWithValidation(): void {
     IPC_CHANNELS.PRODUCT_UPDATE,
     async (request) => {
       const index = mockProducts.findIndex((p) => p.id === request.id);
-      if (index === -1) throw new Error('Product not found');
+      if (index === -1) {throw new Error('Product not found');}
 
       const updatedProduct = {
         ...mockProducts[index],

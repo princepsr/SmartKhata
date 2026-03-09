@@ -1,7 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import en from './locales/en.json';
-import hi from './locales/hi.json';
+import en from './locales/en.json' assert { type: 'json' };
+import hi from './locales/hi.json' assert { type: 'json' };
 
 const resources = {
   en: {

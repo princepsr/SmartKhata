@@ -69,7 +69,7 @@ describe('Bill IPC Handlers', () => {
     registerBillHandlers();
   });
 
-  const getHandler = (channel: string): Function => {
+  const getHandler = (channel: string): ((...args: any[]) => any) => {
     const call = vi.mocked(ipcMain.handle).mock.calls.find((c) => c[0] === channel);
     if (!call) {
       throw new Error(`Handler not registered for ${channel}`);

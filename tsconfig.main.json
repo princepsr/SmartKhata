@@ -2,19 +2,12 @@
     "extends": "./tsconfig.base.json",
     "compilerOptions": {
         "composite": true,
-        /* Environment */
-        "target": "ES2020",
-        "lib": [
-            "ES2020"
-        ],
+        "outDir": "./dist/main",
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
-        /* Node.js specific */
-        "types": [
-            "node"
-        ],
-        /* Emit */
-        "outDir": "./dist/main"
+        "sourceMap": false,
+        "declaration": true,
+        "declarationMap": false
     },
     "include": [
         "src/main/**/*",

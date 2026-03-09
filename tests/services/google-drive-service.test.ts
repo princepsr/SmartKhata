@@ -1,46 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GoogleDriveService } from '../../src/main/services/google-drive-service';
-
-const { mockGoogleApiClient, mockGoogleDrive, mockGoogleOAuth2 } = vi.hoisted(() => {
-  const drive = {
-    files: {
-      list: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-      get: vi.fn(),
-    },
-  };
-  const oauth2 = {
-    userinfo: {
-      get: vi.fn(),
-    },
-  };
-  return {
-    mockGoogleDrive: drive,
-    mockGoogleOAuth2: oauth2,
-    mockGoogleApiClient: {
-      drive: vi.fn().mockReturnValue(drive),
-      oauth2: vi.fn().mockReturnValue(oauth2),
-    },
-  };
-});
-
-vi.mock('googleapis', () => ({
-  google: {
-    ...mockGoogleApiClient,
-    auth: {
-      OAuth2: vi.fn().mockImplementation(() => ({
-        setCredentials: vi.fn(),
-        credentials: {},
-      })),
-    },
-  },
-}));
+import fs from 'fs';
 
 vi.mock('../../src/main/services/google-auth-service', () => ({
   googleAuthService: {
-    isAuthenticated: vi.fn().mockReturnValue(true),
-    getClient: vi.fn().mockReturnValue({}),
+    isAuthenticated: vi.fn(),
+    getAccessToken: vi.fn(),
+    refreshAccessToken: vi.fn(),
   },
 }));
 
@@ -54,47 +20,33 @@ vi.mock('../../src/main/utils/logger', () => ({
   },
 }));
 
-// Mock fs to prevent actual file system access
-// Must use vi.hoisted() so these fns are available when vi.mock() factory runs
-const mockFsFns = vi.hoisted(() => ({
-  existsSync: vi.fn().mockReturnValue(true),
-  readFileSync: vi.fn().mockReturnValue(Buffer.from('mock-file-content')),
-  createReadStream: vi.fn().mockReturnValue({}),
-  createWriteStream: vi.fn().mockReturnValue({
-    on: vi.fn().mockReturnThis(),
-    pipe: vi.fn().mockReturnThis(),
-  }),
-  writeFileSync: vi.fn(),
-  mkdirSync: vi.fn(),
-  copyFileSync: vi.fn(),
-  renameSync: vi.fn(),
-  unlinkSync: vi.fn(),
-  statSync: vi.fn().mockReturnValue({ size: 1024 }),
-}));
-
+// Mock fs
 vi.mock('fs', () => ({
-  default: mockFsFns,
-  ...mockFsFns,
+  default: {
+    existsSync: vi.fn(),
+    readFileSync: vi.fn(),
+    writeFileSync: vi.fn(),
+  },
+  existsSync: vi.fn(),
+  readFileSync: vi.fn(),
+  writeFileSync: vi.fn(),
 }));
 
-import fs from 'fs';
+import { googleAuthService } from '../../src/main/services/google-auth-service';
 
 describe('GoogleDriveService', () => {
   let service: GoogleDriveService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset existing mock return values to safe defaults after clearAllMocks
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('mock-file-content'));
-    vi.mocked(fs.createReadStream).mockReturnValue({} as any);
-    vi.mocked(fs.createWriteStream).mockReturnValue({
-      on: vi.fn().mockReturnThis(),
-      pipe: vi.fn().mockReturnThis(),
-    } as any);
-
     (GoogleDriveService as any).instance = undefined;
     service = GoogleDriveService.getInstance();
+    
+    // Mock global fetch
+    global.fetch = vi.fn();
+    
+    vi.mocked(googleAuthService.isAuthenticated).mockReturnValue(true);
+    vi.mocked(googleAuthService.getAccessToken).mockResolvedValue('mock-token');
   });
 
   describe('syncBackup', () => {
@@ -102,56 +54,75 @@ describe('GoogleDriveService', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('mock-content'));
 
-      mockGoogleDrive.files.list.mockResolvedValue({ data: { files: [] } });
-      mockGoogleDrive.files.create.mockResolvedValue({ data: { id: 'new-id' } });
+      // Mock findExistingBackup (list files) -> empty
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ files: [] }),
+      } as Response);
+
+      // Mock create (POST)
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ id: 'new-id' }),
+      } as Response);
 
       const result = await service.syncBackup('/some/local/path.zip');
 
       expect(result.success).toBe(true);
       expect(result.fileId).toBe('new-id');
-      expect(mockGoogleDrive.files.create).toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledTimes(2);
     });
 
     it('should update existing file if backup exists on Drive', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('mock-content'));
 
-      mockGoogleDrive.files.list.mockResolvedValue({ data: { files: [{ id: 'existing-id' }] } });
-      mockGoogleDrive.files.update.mockResolvedValue({ data: { id: 'existing-id' } });
+      // Mock findExistingBackup (list files) -> exists
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ files: [{ id: 'existing-id' }] }),
+      } as Response);
+
+      // Mock update (PATCH)
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ id: 'existing-id' }),
+      } as Response);
 
       const result = await service.syncBackup('/some/local/path.zip');
 
       expect(result.success).toBe(true);
-      expect(mockGoogleDrive.files.update).toHaveBeenCalled();
+      expect(result.fileId).toBe('existing-id');
+      expect(vi.mocked(global.fetch).mock.calls[1][1]?.method).toBe('PATCH');
     });
   });
 
   describe('downloadBackup', () => {
     it('should download file if it exists on Drive', async () => {
-      mockGoogleDrive.files.list.mockResolvedValue({ data: { files: [{ id: 'drive-id' }] } });
+      // Mock findExistingBackup (list files) -> exists
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ files: [{ id: 'drive-id' }] }),
+      } as Response);
 
-      const mockStream: any = {
-        on: vi.fn((event, cb) => {
-          if (event === 'end') {
-            cb();
-          }
-          return mockStream;
-        }),
-        pipe: vi.fn().mockReturnThis(),
-      };
-
-      mockGoogleDrive.files.get.mockResolvedValue({ data: mockStream });
+      // Mock download (GET alt=media)
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(10)),
+      } as Response);
 
       const result = await service.downloadBackup('/dest/path.zip');
       expect(result.success).toBe(true);
-      expect(mockGoogleDrive.files.get).toHaveBeenCalledWith(
-        expect.objectContaining({ fileId: 'drive-id', alt: 'media' }),
-        expect.objectContaining({ responseType: 'stream' })
-      );
+      expect(fs.writeFileSync).toHaveBeenCalled();
     });
 
     it('should handle missing file on Drive', async () => {
-      mockGoogleDrive.files.list.mockResolvedValue({ data: { files: [] } });
+      // Mock findExistingBackup (list files) -> empty
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ files: [] }),
+      } as Response);
+
       const result = await service.downloadBackup('/dest/path.zip');
       expect(result.success).toBe(false);
       expect(result.error).toContain('not found');
@@ -160,9 +131,19 @@ describe('GoogleDriveService', () => {
 
   describe('getProfile', () => {
     it('should return account email on success', async () => {
-      mockGoogleOAuth2.userinfo.get.mockResolvedValue({ data: { email: 'test@gmail.com' } });
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ email: 'test@gmail.com' }),
+      } as Response);
+
       const profile = await service.getProfile();
       expect(profile).toEqual({ email: 'test@gmail.com' });
+    });
+    
+    it('should return null if not authenticated', async () => {
+      vi.mocked(googleAuthService.isAuthenticated).mockReturnValue(false);
+      const profile = await service.getProfile();
+      expect(profile).toBeNull();
     });
   });
 });

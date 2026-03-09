@@ -177,7 +177,7 @@ export class CreditNoteService extends BaseService {
     if (last) {
       const parts = last.split('-');
       const lastSeq = parseInt(parts[parts.length - 1], 10);
-      if (!isNaN(lastSeq)) seq = lastSeq + 1;
+      if (!isNaN(lastSeq)) {seq = lastSeq + 1;}
     }
 
     return `${prefix}${String(seq).padStart(4, '0')}`;

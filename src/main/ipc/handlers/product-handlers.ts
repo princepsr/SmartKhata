@@ -7,7 +7,7 @@
 
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { IPCHandler } from '../ipc-handler';
-import ExcelJS from 'exceljs';
+import * as XLSX from 'xlsx';
 import fs from 'fs';
 import {
   UpdateProductSchema,
@@ -258,39 +258,26 @@ export function registerProductHandlers(): void {
         throw new Error('File not found');
       }
 
-      const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.readFile(filePath);
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
 
-      const worksheet = workbook.worksheets[0];
       if (!worksheet) {
         throw new Error('No worksheets found in the Excel file');
       }
 
-      const headers: string[] = [];
-      const data: string[][] = [];
+      // Convert worksheet to array of arrays
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      
+      if (rows.length === 0) {
+        throw new Error('Excel file is empty');
+      }
 
-      let isFirstRow = true;
-      worksheet.eachRow({ includeEmpty: false }, (row, _rowNumber) => {
-        const rowValues: string[] = [];
-        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-          rowValues[colNumber - 1] = cell.text ? String(cell.text).trim() : '';
-        });
-
-        if (isFirstRow) {
-          // Remove empty trailing cells from headers
-          for (let i = 0; i < rowValues.length; i++) {
-            headers.push(rowValues[i] || `Column ${i + 1}`);
-          }
-          isFirstRow = false;
-        } else {
-          // Ensure data row has same length as headers
-          const paddedRow = Array.from({ length: headers.length }, (_, i) => rowValues[i] || '');
-          // Skip completely empty rows
-          if (paddedRow.some((val) => val !== '')) {
-            data.push(paddedRow);
-          }
-        }
-      });
+      const headers = (rows[0] || []).map((h, i) => (h ? String(h).trim() : `Column ${i + 1}`));
+      const data = rows.slice(1).map((row) => {
+        // Ensure data row has same length as headers
+        return Array.from({ length: headers.length }, (_, i) => (row[i] !== undefined ? String(row[i]).trim() : ''));
+      }).filter((row) => row.some((val) => val !== '')); // Skip completely empty rows
 
       return {
         headers,

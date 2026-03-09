@@ -11,7 +11,7 @@ export class BarcodeService extends BaseService {
    * Format: SKU (if exists) or ID-based padded string
    */
   public generateInternalBarcode(product: Product): string {
-    if (product.barcode) return product.barcode;
+    if (product.barcode) {return product.barcode;}
 
     // Default internal: SK-ID-RAND
     const idPart = String(product.id).padStart(5, '0');

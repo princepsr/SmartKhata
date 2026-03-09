@@ -1,5 +1,5 @@
 import './env-loader';
-import { app, BrowserWindow, dialog, globalShortcut, protocol } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, protocol, powerMonitor } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { configManager } from './config/app-config';
@@ -17,6 +17,7 @@ import { PrintService } from './services/print-service';
 import { UpdateService } from './services/update-service';
 import { autoBackupService } from './services/auto-backup-service';
 import { WhatsAppAutoReportService } from './services/whatsapp-auto-report-service';
+import { connectivityService } from './services/connectivity-service';
 
 /**
  * Main Electron Process Entry Point
@@ -432,7 +433,6 @@ app.whenReady().then(async () => {
   }
 
   // Power state monitoring
-  const { powerMonitor } = require('electron');
 
   powerMonitor.on('suspend', () => {
     logger.info('System going to sleep (suspend event)');
@@ -449,7 +449,6 @@ app.whenReady().then(async () => {
       StabilityService.getInstance().startMonitoring();
       // Allow some time for network to settle before re-checking connectivity
       setTimeout(() => {
-        const { connectivityService } = require('./services/connectivity-service');
         connectivityService.checkNow();
       }, 5000);
     } catch (e) {

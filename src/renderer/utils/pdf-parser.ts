@@ -114,10 +114,25 @@ async function performOCR(page: any, onProgress?: (msg: string) => void): Promis
 
   // 2. Initialize Tesseract Worker
   // Note: We use local assets for fully offline mode
+  const workerPath = 'libs/tesseract.worker.min.js';
+  const corePath = 'libs/tesseract-core.wasm.js';
+  const langPath = 'assets/tesseract-data';
+
+  // Check if assets are available (this is a basic check for the worker)
+  try {
+    const response = await fetch(workerPath, { method: 'HEAD' });
+    if (!response.ok) {
+      throw new Error('OCR assets not found. This feature is optional and assets were removed to save space.');
+    }
+  } catch (e) {
+    onProgress?.('OCR assets are missing. Skipping OCR...');
+    return [];
+  }
+
   const worker = await createWorker('eng', 1, {
-    workerPath: 'libs/tesseract.worker.min.js',
-    corePath: 'libs/tesseract-core.wasm.js',
-    langPath: 'assets/tesseract-data',
+    workerPath,
+    corePath,
+    langPath,
     logger: (m) => {
       if (m.status === 'recognizing text') {
         onProgress?.(`OCR Progress: ${Math.round(m.progress * 100)}%`);

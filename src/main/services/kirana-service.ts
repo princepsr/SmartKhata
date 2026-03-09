@@ -34,7 +34,7 @@ export class KiranaService extends BaseService {
     // Common protocol: "ST,GS,+  0.250kg"
     // This is a simplified regex for various Indian scales (Eagle, Phoenix, etc.)
     const weightMatch = rawData.match(/([\d.]+)\s*(kg|g)/i);
-    if (!weightMatch) return 0;
+    if (!weightMatch) {return 0;}
 
     let value = parseFloat(weightMatch[1]);
     const unit = weightMatch[2].toLowerCase();

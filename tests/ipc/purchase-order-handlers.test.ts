@@ -15,6 +15,7 @@ const mockPoService = vi.hoisted(() => ({
   list: vi.fn(),
   getById: vi.fn(),
   create: vi.fn(),
+  update: vi.fn(),
   updateStatus: vi.fn(),
 }));
 
@@ -30,7 +31,7 @@ describe('Purchase Order IPC Handlers', () => {
 
   const getHandler = (channel: string) => {
     const call = vi.mocked(ipcMain.handle).mock.calls.find((c) => c[0] === channel);
-    return call ? call[1] : null;
+    return (call ? call[1] : null) as any;
   };
 
   it('should register all PO handlers', () => {
@@ -50,8 +51,7 @@ describe('Purchase Order IPC Handlers', () => {
       const result = await handler({}, {});
 
       expect(result.success).toBe(true);
-      expect(result.data).toBe(mockResult.data);
-      expect(result.total).toBe(mockResult.total);
+      expect(result.data).toEqual(mockResult);
     });
 
     it('should return failure on error', async () => {
@@ -80,13 +80,28 @@ describe('Purchase Order IPC Handlers', () => {
   });
 
   describe('PO_UPDATE', () => {
-    it('should update PO status', async () => {
-      mockPoService.updateStatus.mockResolvedValue(true);
+    it('should update PO and return success', async () => {
+      const updatedPO = { id: 1, notes: 'Updated' };
+      mockPoService.update.mockResolvedValue(updatedPO);
 
       const handler = getHandler(IPC_CHANNELS.PO_UPDATE);
-      const result = await handler({}, { id: 1, status: 'RECEIVED' });
+      const result = await handler({}, { id: 1, data: { notes: 'Updated' } });
 
       expect(result.success).toBe(true);
+      expect(result.data).toEqual(updatedPO);
+      expect(mockPoService.update).toHaveBeenCalledWith(1, { notes: 'Updated' });
+    });
+  });
+
+  describe('PO_CONVERT', () => {
+    it('should convert PO and return success', async () => {
+      mockPoService.updateStatus.mockResolvedValue(true);
+
+      const handler = getHandler(IPC_CHANNELS.PO_CONVERT);
+      const result = await handler({}, 1);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(true);
       expect(mockPoService.updateStatus).toHaveBeenCalledWith(1, 'RECEIVED');
     });
   });

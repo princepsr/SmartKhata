@@ -5,7 +5,6 @@
  * Manages the single sync file for SmartKhata backups.
  */
 
-import { google, drive_v3 } from 'googleapis';
 import fs from 'fs';
 import { googleAuthService } from './google-auth-service';
 import { GOOGLE_CONFIG } from '@shared/constants/google-constants';
@@ -13,16 +12,8 @@ import { logger } from '../utils/logger';
 
 export class GoogleDriveService {
   private static instance: GoogleDriveService;
-  private _drive: drive_v3.Drive | null = null;
 
   private constructor() {}
-
-  private get drive(): drive_v3.Drive {
-    if (!this._drive) {
-      this._drive = google.drive({ version: 'v3', auth: googleAuthService.getClient() });
-    }
-    return this._drive;
-  }
 
   public static getInstance(): GoogleDriveService {
     if (!GoogleDriveService.instance) {
@@ -32,10 +23,32 @@ export class GoogleDriveService {
   }
 
   /**
+   * Helper to make authenticated requests to Google APIs
+   */
+  private async fetchGoogle(input: string, init?: RequestInit): Promise<Response> {
+    const accessToken = await googleAuthService.getAccessToken();
+    if (!accessToken) {
+      throw new Error('Not authenticated with Google');
+    }
+
+    const headers = new Headers(init?.headers);
+    headers.set('Authorization', `Bearer ${accessToken}`);
+
+    const response = await fetch(input, { ...init, headers });
+
+    if (response.status === 401) {
+      // Token might be expired, though getAccessToken handles most cases
+      await googleAuthService.refreshAccessToken();
+      const newAccessToken = await googleAuthService.getAccessToken();
+      headers.set('Authorization', `Bearer ${newAccessToken}`);
+      return fetch(input, { ...init, headers });
+    }
+
+    return response;
+  }
+
+  /**
    * Synchronize a local backup to Google Drive
-   *
-   * If the file exists, it updates it. Otherwise, it creates a new one.
-   * @param localFilePath - Path to the local .zip backup
    */
   public async syncBackup(
     localFilePath: string
@@ -44,75 +57,84 @@ export class GoogleDriveService {
       logger.debug('SyncBackup started', { localFilePath });
 
       if (!googleAuthService.isAuthenticated()) {
-        logger.warn('SyncBackup aborted: Not authenticated');
         throw new Error('User not authenticated with Google');
       }
 
       if (!fs.existsSync(localFilePath)) {
-        logger.error('SyncBackup aborted: Local file missing', { localFilePath });
         throw new Error('Local backup file not found');
       }
 
       // 1. Search for existing backup file
-      logger.info('Searching for existing backup on Google Drive...');
-      let existingFileId: string | null = null;
-      try {
-        existingFileId = await this.findExistingBackup();
-        logger.debug('Find existing backup result', { existingFileId });
-      } catch (listError: any) {
-        logger.error('Failed to list files on Google Drive', {
-          message: listError.message,
-          code: listError.code,
-          errors: listError.errors,
-        });
-        throw listError;
-      }
+      const existingFileId = await this.findExistingBackup();
+
+      // 2. Prepare file content
+      const fileBuffer = fs.readFileSync(localFilePath);
+      const boundary = '-------314159265358979323846';
+      const delimiter = `\r\n--${boundary}\r\n`;
+      const closeDelimiter = `\r\n--${boundary}--`;
+
+      const metadata = {
+        name: GOOGLE_CONFIG.BACKUP_FILE_NAME,
+        mimeType: GOOGLE_CONFIG.BACKUP_MIME_TYPE,
+      };
+
+      const multipartBody = Buffer.concat([
+        Buffer.from(delimiter),
+        Buffer.from('Content-Type: application/json; charset=UTF-8\r\n\r\n'),
+        Buffer.from(JSON.stringify(metadata)),
+        Buffer.from(delimiter),
+        Buffer.from(`Content-Type: ${GOOGLE_CONFIG.BACKUP_MIME_TYPE}\r\n\r\n`),
+        fileBuffer,
+        Buffer.from(closeDelimiter),
+      ]);
 
       if (existingFileId) {
-        // 2. Update existing file
+        // Update existing file
         logger.info('Updating existing backup on Google Drive', { fileId: existingFileId });
+        const response = await this.fetchGoogle(
+          `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=multipart`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': `multipart/related; boundary=${boundary}`,
+            },
+            body: multipartBody,
+          }
+        );
 
-        // Use readFileSync for smaller files to avoid stream issues in some environments
-        const fileContent = fs.readFileSync(localFilePath);
-        logger.debug('File read into buffer', { size: fileContent.length });
-
-        const _response = await this.drive.files.update({
-          fileId: existingFileId,
-          media: {
-            mimeType: GOOGLE_CONFIG.BACKUP_MIME_TYPE,
-            body: fileContent,
-          },
-        });
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`Failed to update backup: ${error}`);
+        }
 
         logger.info('Google Drive backup updated successfully');
         return { success: true, fileId: existingFileId };
       } else {
-        // 3. Create new file
+        // Create new file
         logger.info('Creating new backup on Google Drive');
-        const fileContent = fs.readFileSync(localFilePath);
+        const response = await this.fetchGoogle(
+          'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': `multipart/related; boundary=${boundary}`,
+            },
+            body: multipartBody,
+          }
+        );
 
-        const response = await this.drive.files.create({
-          requestBody: {
-            name: GOOGLE_CONFIG.BACKUP_FILE_NAME,
-            mimeType: GOOGLE_CONFIG.BACKUP_MIME_TYPE,
-          },
-          media: {
-            mimeType: GOOGLE_CONFIG.BACKUP_MIME_TYPE,
-            body: fileContent,
-          },
-        });
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`Failed to create backup: ${error}`);
+        }
 
+        const data: any = await response.json();
         logger.info('New Google Drive backup created');
-        return { success: true, fileId: response.data.id || undefined };
+        return { success: true, fileId: data.id };
       }
     } catch (error: any) {
-      const message = error.message || 'Unknown sync error';
-      logger.error('Google Drive sync fatal exception', {
-        message,
-        code: error.code,
-        stack: error.stack,
-      });
-      return { success: false, error: message };
+      logger.error('Google Drive sync error', { message: error.message });
+      return { success: false, error: error.message };
     }
   }
 
@@ -120,14 +142,18 @@ export class GoogleDriveService {
    * Find the existing backup file by name
    */
   private async findExistingBackup(): Promise<string | null> {
-    const response = await this.drive.files.list({
-      q: `name = '${GOOGLE_CONFIG.BACKUP_FILE_NAME}' and trashed = false`,
-      fields: 'files(id, name)',
-      spaces: 'drive',
-    });
+    const query = encodeURIComponent(`name = '${GOOGLE_CONFIG.BACKUP_FILE_NAME}' and trashed = false`);
+    const response = await this.fetchGoogle(
+      `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name)&spaces=drive`
+    );
 
-    const files = response.data.files || [];
-    return files.length > 0 ? (files[0].id ?? null) : null;
+    if (!response.ok) {
+      throw new Error(`Failed to list files: ${await response.text()}`);
+    }
+
+    const data: any = await response.json();
+    const files = data.files || [];
+    return files.length > 0 ? files[0].id : null;
   }
 
   /**
@@ -139,13 +165,17 @@ export class GoogleDriveService {
     modifiedTime: string;
   } | null> {
     try {
-      const response = await this.drive.files.list({
-        q: `name = '${GOOGLE_CONFIG.BACKUP_FILE_NAME}' and trashed = false`,
-        fields: 'files(id, name, size, modifiedTime)',
-        spaces: 'drive',
-      });
+      const query = encodeURIComponent(`name = '${GOOGLE_CONFIG.BACKUP_FILE_NAME}' and trashed = false`);
+      const response = await this.fetchGoogle(
+        `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,size,modifiedTime)&spaces=drive`
+      );
 
-      const files = response.data.files || [];
+      if (!response.ok) {
+        return null;
+      }
+
+      const data: any = await response.json();
+      const files = data.files || [];
       if (files.length === 0) {
         return null;
       }
@@ -157,14 +187,13 @@ export class GoogleDriveService {
         modifiedTime: file.modifiedTime || new Date().toISOString(),
       };
     } catch (error) {
-      logger.error('Failed to get Google Drive backup metadata', { error });
+      logger.error('Failed to get Google Drive metadata', error);
       return null;
     }
   }
 
   /**
    * Download the backup file from Google Drive to a local path
-   * @param localDestination - Path where the file should be saved
    */
   public async downloadBackup(
     localDestination: string
@@ -175,28 +204,22 @@ export class GoogleDriveService {
         throw new Error('Backup file not found on Google Drive');
       }
 
-      const dest = fs.createWriteStream(localDestination);
-      const response = await this.drive.files.get(
-        { fileId, alt: 'media' },
-        { responseType: 'stream' }
+      const response = await this.fetchGoogle(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
       );
 
-      return new Promise((resolve, reject) => {
-        response.data
-          .on('end', () => {
-            logger.info('Downloaded backup from Google Drive', { path: localDestination });
-            resolve({ success: true });
-          })
-          .on('error', (err) => {
-            logger.error('Error downloading from Google Drive', { error: err });
-            reject({ success: false, error: err.message });
-          })
-          .pipe(dest);
-      });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown download error';
-      logger.error('Google Drive download failed', { error });
-      return { success: false, error: message };
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${await response.text()}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      fs.writeFileSync(localDestination, Buffer.from(arrayBuffer));
+
+      logger.info('Downloaded backup from Google Drive', { path: localDestination });
+      return { success: true };
+    } catch (error: any) {
+      logger.error('Google Drive download failed', { error: error.message });
+      return { success: false, error: error.message };
     }
   }
 
@@ -209,15 +232,17 @@ export class GoogleDriveService {
         return null;
       }
 
-      const oauth2 = google.oauth2({ version: 'v2', auth: googleAuthService.getClient() });
-      const response = await oauth2.userinfo.get();
+      const response = await this.fetchGoogle('https://www.googleapis.com/oauth2/v2/userinfo');
+      if (!response.ok) {
+        return null;
+      }
+
+      const data: any = await response.json();
       return {
-        email: response.data.email || 'Unknown Account',
+        email: data.email || 'Unknown Account',
       };
-    } catch (error: unknown) {
-      // Improved error logging to capture actual message
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Failed to get Google profile', { error: errorMessage });
+    } catch (error: any) {
+      logger.error('Failed to get Google profile', { error: error.message });
       return null;
     }
   }

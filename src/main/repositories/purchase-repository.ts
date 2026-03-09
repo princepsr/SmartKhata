@@ -215,7 +215,7 @@ export class PurchaseRepository extends BaseRepository {
    */
   public findByIdWithItems(id: number): PurchaseWithItems | null {
     const row = this.queryOne<any>(`SELECT * FROM purchases WHERE id = ?`, [id]);
-    if (!row) return null;
+    if (!row) {return null;}
     const items = this.queryAll<any>(`SELECT * FROM purchase_items WHERE purchase_id = ?`, [id]);
     return {
       purchase: this._mapToPurchase(row),

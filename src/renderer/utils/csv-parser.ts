@@ -27,8 +27,8 @@ export const parseCSV = async (file: File): Promise<ParsedCSV> => {
         // 1. Detect delimiter (naive)
         const firstLine = text.split('\n')[0];
         let delimiter = ',';
-        if (firstLine.includes(';') && !firstLine.includes(',')) delimiter = ';';
-        if (firstLine.includes('\t')) delimiter = '\t';
+        if (firstLine.includes(';') && !firstLine.includes(',')) {delimiter = ';';}
+        if (firstLine.includes('\t')) {delimiter = '\t';}
 
         // 2. Split lines (handling quoted newlines is complex, using simple split for MVP)
         // For a robust implementation, we'd need a state machine or regex.

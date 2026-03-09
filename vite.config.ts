@@ -1,13 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import obfuscator from 'vite-plugin-javascript-obfuscator';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    obfuscator({
+    /* obfuscator({
       include: [/\.(js|ts|jsx|tsx)$/],
       exclude: [/node_modules/],
       options: {
@@ -18,7 +17,7 @@ export default defineConfig({
         stringArrayEncoding: ['base64'],
         stringArrayThreshold: 0.75,
       },
-    }),
+    }), */
     /**
      * Custom plugin to remove 'crossorigin' attribute from index.html
      * This fixes CORS errors when loading modules via file:// protocol in Electron production builds.

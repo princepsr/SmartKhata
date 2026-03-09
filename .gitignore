@@ -22,6 +22,10 @@ release/
 *.AppImage
 *.deb
 *.rpm
+*.asar
+resources/*.asar
+*.zip
+*.7z
 
 # Electron
 .webpack/

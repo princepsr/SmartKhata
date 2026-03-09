@@ -181,7 +181,7 @@ export class CreditNoteRepository extends BaseRepository {
        WHERE cn.id = ?`,
       [id]
     );
-    if (!cnRow) return null;
+    if (!cnRow) {return null;}
 
     const items = this.queryAll<any>(`SELECT * FROM credit_note_items WHERE credit_note_id = ?`, [
       id,
