@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
@@ -6,8 +6,8 @@ const { mockSafeStorage } = vi.hoisted(() => {
   return {
     mockSafeStorage: {
       isEncryptionAvailable: vi.fn().mockReturnValue(true),
-      encryptString: vi.fn().mockImplementation((str) => Buffer.from(str)),
-      decryptString: vi.fn().mockImplementation((buf) => buf.toString()),
+      encryptString: vi.fn().mockImplementation((str: string) => Buffer.from(str)),
+      decryptString: vi.fn().mockImplementation((buf: Buffer) => buf.toString()),
     },
   };
 });
@@ -32,8 +32,14 @@ vi.mock('../../src/main/utils/logger', () => ({
 
 import { GoogleAuthService } from '../../src/main/services/google-auth-service';
 
+interface GoogleAuthServiceWithPrivates extends GoogleAuthService {
+  instance: GoogleAuthService | undefined;
+  getToken: (code: string) => Promise<void>;
+}
+
 describe('GoogleAuthService', () => {
   let service: GoogleAuthService;
+  let servicePriv: GoogleAuthServiceWithPrivates;
   const testUserData = './test-data/userData';
   const tokenPath = path.join(testUserData, 'google_tokens.enc');
 
@@ -44,11 +50,12 @@ describe('GoogleAuthService', () => {
     fs.mkdirSync(testUserData, { recursive: true });
 
     // Reset singleton
-    (GoogleAuthService as any).instance = undefined;
+    (GoogleAuthService as unknown as GoogleAuthServiceWithPrivates).instance = undefined;
     service = GoogleAuthService.getInstance();
+    servicePriv = service as unknown as GoogleAuthServiceWithPrivates;
     
     // Mock global fetch
-    global.fetch = vi.fn();
+    global.fetch = vi.fn() as Mock;
   });
 
   it('should save tokens to disk when internal setCredentials is used (via getToken)', async () => {
@@ -58,13 +65,13 @@ describe('GoogleAuthService', () => {
       expires_in: 3600
     };
 
-    vi.mocked(global.fetch).mockResolvedValue({
+    (global.fetch as Mock).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(mockTokens),
     } as Response);
 
-    // Call private getToken via any
-    await (service as any).getToken('mock-code');
+    // Call private getToken
+    await servicePriv.getToken('mock-code');
 
     expect(fs.existsSync(tokenPath)).toBe(true);
     const savedData = fs.readFileSync(tokenPath).toString();
@@ -78,7 +85,7 @@ describe('GoogleAuthService', () => {
     fs.writeFileSync(tokenPath, JSON.stringify(mockTokens));
 
     // Force re-init to trigger loadTokens
-    (GoogleAuthService as any).instance = undefined;
+    (GoogleAuthService as unknown as GoogleAuthServiceWithPrivates).instance = undefined;
     const newService = GoogleAuthService.getInstance();
 
     expect(newService.isAuthenticated()).toBe(true);
@@ -92,11 +99,12 @@ describe('GoogleAuthService', () => {
     };
     fs.writeFileSync(tokenPath, JSON.stringify(initialTokens));
     
-    (GoogleAuthService as any).instance = undefined;
+    (GoogleAuthService as unknown as GoogleAuthServiceWithPrivates).instance = undefined;
     service = GoogleAuthService.getInstance();
+    servicePriv = service as unknown as GoogleAuthServiceWithPrivates;
 
     const newTokens = { access_token: 'new-access', expires_in: 3600 };
-    vi.mocked(global.fetch).mockResolvedValue({
+    (global.fetch as Mock).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(newTokens),
     } as Response);

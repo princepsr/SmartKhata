@@ -129,7 +129,7 @@ const LicenseActivationModal: React.FC<LicenseActivationModalProps> = ({ isOpen,
               type="button"
               className="btn-primary"
               disabled={activating || segments.join('').length !== 12}
-              onClick={(e: any) => handleActivate(e)}
+              onClick={(e: React.MouseEvent) => handleActivate(e as unknown as React.FormEvent)}
             >
               {activating ? t('license.activation.verifying') : t('license.activation.verify_btn')}
             </button>

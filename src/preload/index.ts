@@ -88,7 +88,7 @@ const api = {
   /**
    * Listen for update status changes
    */
-  onUpdateStatus: (callback: (data: any) => void) => {
+  onUpdateStatus: (callback: (data: unknown) => void) => {
     ipcRenderer.on(IPC_CHANNELS.UPDATE_STATUS, (_event, data) => callback(data));
     return () => {
       ipcRenderer.removeAllListeners(IPC_CHANNELS.UPDATE_STATUS);
@@ -98,7 +98,7 @@ const api = {
   /**
    * Listen for download progress
    */
-  onUpdateProgress: (callback: (data: any) => void) => {
+  onUpdateProgress: (callback: (data: unknown) => void) => {
     ipcRenderer.on('update:progress', (_event, data) => callback(data));
     return () => {
       ipcRenderer.removeAllListeners('update:progress');
@@ -113,11 +113,6 @@ const api = {
  */
 contextBridge.exposeInMainWorld('api', api);
 
-/**
- * Log successful preload initialization
- */
-console.log('[Preload] IPC bridge initialized');
-console.log('[Preload] Registered channels:', Object.keys(IPC_CHANNELS).length);
 
 /**
  * Export type for renderer TypeScript definitions

@@ -40,7 +40,7 @@ export class UpdateService extends BaseService {
     const settings = SettingsService.getInstance().getConfig();
 
     // Even in dev, we might want to test the IPC flow
-    (autoUpdater as any).logger = this.updateLogger;
+    (autoUpdater as unknown as { logger: unknown }).logger = this.updateLogger;
     autoUpdater.autoDownload = false;
 
     if (!isProduction) {

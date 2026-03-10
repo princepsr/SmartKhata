@@ -1,15 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createTestDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, seedTestData, getLocalToday, SqlJsDatabase } from '../utils/test-db';
 import { CreditNoteService } from '../../src/main/services/credit-note-service';
 import { BillingTransactionService } from '../../src/main/services/billing-transaction-service';
 import { SettingsService } from '../../src/main/services/settings-service';
-import { ProductRepository } from '../../src/main/repositories/product-repository';
 
 describe('CreditNoteService Integration Tests', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let creditNoteService: CreditNoteService;
   let transactionService: BillingTransactionService;
-  let productRepo: ProductRepository;
 
   beforeEach(async () => {
     db = await createTestDatabase();
@@ -21,7 +19,6 @@ describe('CreditNoteService Integration Tests', () => {
 
     creditNoteService = new CreditNoteService();
     transactionService = new BillingTransactionService();
-    productRepo = new ProductRepository();
   });
 
   describe('createCreditNote', () => {
@@ -156,7 +153,7 @@ describe('CreditNoteService Integration Tests', () => {
         reason: 'WRONG_ITEM',
       });
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalToday();
       const list = creditNoteService.listCreditNotes(today, today);
 
       expect(list.total).toBe(1);

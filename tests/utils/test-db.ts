@@ -7,13 +7,24 @@
 import initSqlJs from 'sql.js';
 import fs from 'fs';
 
-let SQL: any;
-let testDbInstance: any = null;
+/**
+ * Get local today's date in YYYY-MM-DD format
+ */
+export function getLocalToday(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+let SQL: initSqlJs.SqlJsStatic;
+let testDbInstance: SqlJsDatabase | null = null;
 
 /**
  * Initialize SQL.js
  */
-async function getSQL() {
+export async function getSQL() {
   if (!SQL) {
     SQL = await initSqlJs();
   }
@@ -23,10 +34,10 @@ async function getSQL() {
 /**
  * Compatibility wrapper for sql.js to match better-sqlite3 interface
  */
-class SqlJsDatabase {
-  private db: any;
+export class SqlJsDatabase {
+  private db: initSqlJs.Database;
 
-  constructor(db: any) {
+  constructor(db: initSqlJs.Database) {
     this.db = db;
   }
   exec(sql: string) {
@@ -35,7 +46,7 @@ class SqlJsDatabase {
   }
   prepare(sql: string) {
     const stmt = this.db.prepare(sql);
-    const processValue = (p: any): any => {
+    const processValue = (p: unknown): unknown => {
       if (p instanceof Date) {
         return p.toISOString();
       }
@@ -44,19 +55,20 @@ class SqlJsDatabase {
       }
       return p;
     };
-    const processParams = (args: any[]) => {
+    const processParams = (args: unknown[]) => {
       if (args.length === 0) {
         return [];
       }
-      let params = args[0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let params = args[0] as any;
       if (args.length > 1 || !params || typeof params !== 'object') {
         params = args;
       }
 
       if (Array.isArray(params)) {
-        return params.map(processValue);
+        return params.map(processValue) as initSqlJs.SqlValue[];
       } else if (params && typeof params === 'object') {
-        const processed: any = {};
+        const processed: Record<string, unknown> = {};
         for (const key in params) {
           const val = processValue(params[key]);
           processed[key] = val;
@@ -66,17 +78,17 @@ class SqlJsDatabase {
             processed[`$${key}`] = val;
           }
         }
-        return processed;
+        return processed as initSqlJs.BindParams;
       }
-      return params;
+      return params as initSqlJs.BindParams;
     };
     return {
-      run: (...args: any[]) => {
+      run: (...args: unknown[]) => {
         const params = processParams(args);
         stmt.run(params);
         stmt.reset();
 
-        const lastIdRes = this.db.exec('SELECT last_insert_rowid() as id');
+        const lastIdRes = this.db.exec('SELECT last_insert_rowid() as id') as unknown as { values: [[number]] }[];
         const lastId = lastIdRes[0]?.values[0][0] ?? 0;
 
         return {
@@ -84,7 +96,7 @@ class SqlJsDatabase {
           lastInsertRowid: lastId,
         };
       },
-      get: (...args: any[]) => {
+      get: (...args: unknown[]) => {
         const params = processParams(args);
         stmt.bind(params);
         const hasRow = stmt.step();
@@ -92,7 +104,7 @@ class SqlJsDatabase {
         stmt.reset();
         return res;
       },
-      all: (...args: any[]) => {
+      all: (...args: unknown[]) => {
         const params = processParams(args);
         stmt.bind(params);
         const results = [];
@@ -104,8 +116,8 @@ class SqlJsDatabase {
       },
     };
   }
-  transaction(fn: (...args: any[]) => any) {
-    return (...args: any[]) => {
+  transaction(fn: (...args: unknown[]) => unknown) {
+    return (...args: unknown[]) => {
       try {
         this.db.run('BEGIN TRANSACTION');
         const result = fn(...args);
@@ -130,7 +142,7 @@ class SqlJsDatabase {
 /**
  * Create a test database with the required schema
  */
-export async function createTestDatabase(): Promise<any> {
+export async function createTestDatabase(): Promise<SqlJsDatabase> {
   try {
     const SQL = await getSQL();
     const dbRaw = new SQL.Database();
@@ -503,19 +515,20 @@ export async function createTestDatabase(): Promise<any> {
 
     testDbInstance = db;
     return db;
-  } catch (err: any) {
-    console.error('CRITICAL: Failed to create test database:', err);
-    if (err.stack) {
-      console.error(err.stack);
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error('CRITICAL: Failed to create test database:', error.message);
+    if (error.stack) {
+      console.error(error.stack);
     }
-    throw err;
+    throw error;
   }
 }
 
 /**
  * Reset test database (clear all tables)
  */
-export function resetTestDatabase(db: any): void {
+export function resetTestDatabase(db: SqlJsDatabase): void {
   // Clear all tables in correct order (respecting foreign keys)
   try {
     db.exec(`
@@ -547,7 +560,7 @@ export function resetTestDatabase(db: any): void {
 /**
  * Get the current test database instance
  */
-export function getTestDatabase(): any {
+export function getTestDatabase(): SqlJsDatabase {
   if (!testDbInstance) {
     throw new Error('Test database not initialized. Call createTestDatabase() first.');
   }
@@ -557,7 +570,7 @@ export function getTestDatabase(): any {
 /**
  * Seed test data with sample products and customers
  */
-export function seedTestData(db: any): void {
+export function seedTestData(db: SqlJsDatabase): void {
   db.exec(`
     INSERT INTO products (barcode, sku, name, brand, category, mrp, sale_price, purchase_price, gst_percent, stock_qty, low_stock_alert, is_active, is_gst_inclusive, track_inventory, batch_number, expiry_date, salt_name, uom, is_weight_based, strip_size, drug_category, last_sale_date, variant_group_id)
     VALUES 

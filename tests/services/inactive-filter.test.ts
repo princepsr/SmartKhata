@@ -7,10 +7,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ProductService } from '../../src/main/services/product-service';
 import { CustomerService } from '../../src/main/services/customer-service';
-import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, seedTestData, SqlJsDatabase } from '../utils/test-db';
 
 describe('Inactive Visibility Filtering', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let productService: ProductService;
   let customerService: CustomerService;
 

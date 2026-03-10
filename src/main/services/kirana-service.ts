@@ -1,6 +1,5 @@
 import { BaseService } from './base-service';
 import { ProductRepository, Product } from '../repositories/product-repository';
-import { logger } from '../utils/logger';
 
 /**
  * Kirana / Grocery Specialized Service

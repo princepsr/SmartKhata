@@ -24,6 +24,13 @@ import { ProductService, AddProductInput, UpdateProductData } from '../../servic
 import { MedicalService } from '../../services/medical-service';
 import { LicenseService } from '../../services/license-service';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
+import { Product as ProductDomain } from '../../repositories/product-repository';
+import { 
+  Product,
+  ProductHistoryItem, 
+  IndianMedicine as IndianMedicineIPC 
+} from '@shared/types/ipc';
+
 
 /**
  * Register All Product Handlers
@@ -36,7 +43,7 @@ export function registerProductHandlers(): void {
   // ============================================
   IPCHandler.handle<
     { includeInactive?: boolean; page?: number; pageSize?: number },
-    { items: any[]; totalCount: number; hasMore: boolean; page: number }
+    { items: Product[]; totalCount: number; hasMore: boolean; page: number }
   >(
     IPC_CHANNELS.PRODUCT_LIST,
     async (params) => {
@@ -49,31 +56,7 @@ export function registerProductHandlers(): void {
       const hasMore = page * pageSize < totalCount;
 
       // Convert domain objects to plain objects for IPC
-      const items = result.items.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        sku: p.sku,
-        barcode: p.barcode,
-        salePrice: p.salePrice,
-        purchasePrice: p.purchasePrice,
-        gstPercent: p.gstPercent,
-        stockQty: p.stockQty,
-        lowStockAlert: p.lowStockAlert,
-        isActive: p.isActive,
-        isGstInclusive: p.isGstInclusive,
-        trackInventory: p.trackInventory,
-        hsnCode: p.hsnCode,
-        batchNumber: p.batchNumber,
-        expiryDate: p.expiryDate,
-        saltName: p.saltName,
-        uom: p.uom,
-        isWeightBased: p.isWeightBased,
-        stripSize: p.stripSize,
-        drugCategory: p.drugCategory,
-        variantGroupId: p.variantGroupId,
-        createdAt: p.createdAt.toISOString(),
-        updatedAt: p.updatedAt.toISOString(),
-      }));
+      const items = result.items.map((p: ProductDomain) => _mapToUI(p));
 
       return {
         items,
@@ -90,36 +73,11 @@ export function registerProductHandlers(): void {
   // ============================================
   // GET PRODUCT BY ID
   // ============================================
-  IPCHandler.handle<number, any>(
+  IPCHandler.handle<number, Product>(
     IPC_CHANNELS.PRODUCT_GET,
     async (productId) => {
       const product = productService.getProduct(productId);
-
-      return {
-        id: product.id,
-        name: product.name,
-        sku: product.sku,
-        barcode: product.barcode,
-        salePrice: product.salePrice,
-        purchasePrice: product.purchasePrice,
-        gstPercent: product.gstPercent,
-        stockQty: product.stockQty,
-        lowStockAlert: product.lowStockAlert,
-        isActive: product.isActive,
-        isGstInclusive: product.isGstInclusive,
-        trackInventory: product.trackInventory,
-        hsnCode: product.hsnCode,
-        batchNumber: product.batchNumber,
-        expiryDate: product.expiryDate,
-        saltName: product.saltName,
-        uom: product.uom,
-        isWeightBased: product.isWeightBased,
-        stripSize: product.stripSize,
-        drugCategory: product.drugCategory,
-        variantGroupId: product.variantGroupId,
-        createdAt: product.createdAt.toISOString(),
-        updatedAt: product.updatedAt.toISOString(),
-      };
+      return _mapToUI(product);
     },
     {
       schema: ProductIdSchema,
@@ -130,7 +88,7 @@ export function registerProductHandlers(): void {
   // ============================================
   // CREATE PRODUCT
   // ============================================
-  IPCHandler.handle<CreateProductRequest, any>(
+  IPCHandler.handle<CreateProductRequest, Product>(
     IPC_CHANNELS.PRODUCT_CREATE,
     async (request) => {
       // Polite Locking
@@ -164,31 +122,7 @@ export function registerProductHandlers(): void {
       };
 
       const product = productService.addProduct(input);
-
-      return {
-        id: product.id,
-        name: product.name,
-        sku: product.sku,
-        barcode: product.barcode,
-        salePrice: product.salePrice,
-        purchasePrice: product.purchasePrice,
-        gstPercent: product.gstPercent,
-        stockQty: product.stockQty,
-        lowStockAlert: product.lowStockAlert,
-        isActive: product.isActive,
-        trackInventory: product.trackInventory,
-        hsnCode: product.hsnCode,
-        batchNumber: product.batchNumber,
-        expiryDate: product.expiryDate,
-        saltName: product.saltName,
-        uom: product.uom,
-        isWeightBased: product.isWeightBased,
-        stripSize: product.stripSize,
-        drugCategory: product.drugCategory,
-        variantGroupId: product.variantGroupId,
-        createdAt: product.createdAt.toISOString(),
-        updatedAt: product.updatedAt.toISOString(),
-      };
+      return _mapToUI(product);
     },
     {
       schema: CreateProductSchema,
@@ -199,7 +133,7 @@ export function registerProductHandlers(): void {
   // ============================================
   // BULK IMPORT PRODUCTS
   // ============================================
-  IPCHandler.handle<CreateProductRequest[], any[]>(
+  IPCHandler.handle<CreateProductRequest[], Product[]>(
     IPC_CHANNELS.PRODUCT_IMPORT,
     async (requests) => {
       // Polite Locking
@@ -223,24 +157,7 @@ export function registerProductHandlers(): void {
       }));
 
       const products = productService.importProducts(inputs);
-
-      return products.map((product) => ({
-        id: product.id,
-        name: product.name,
-        sku: product.sku,
-        barcode: product.barcode,
-        salePrice: product.salePrice,
-        purchasePrice: product.purchasePrice,
-        gstPercent: product.gstPercent,
-        stockQty: product.stockQty,
-        lowStockAlert: product.lowStockAlert,
-        isActive: product.isActive,
-        isGstInclusive: product.isGstInclusive,
-        trackInventory: product.trackInventory,
-        hsnCode: product.hsnCode,
-        createdAt: product.createdAt.toISOString(),
-        updatedAt: product.updatedAt.toISOString(),
-      }));
+      return products.map((product) => _mapToUI(product));
     },
     {
       schema: ProductImportSchema,
@@ -267,7 +184,7 @@ export function registerProductHandlers(): void {
       }
 
       // Convert worksheet to array of arrays
-      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
       
       if (rows.length === 0) {
         throw new Error('Excel file is empty');
@@ -293,7 +210,7 @@ export function registerProductHandlers(): void {
   // ============================================
   // UPDATE PRODUCT
   // ============================================
-  IPCHandler.handle<UpdateProductRequest, any>(
+  IPCHandler.handle<UpdateProductRequest, Product>(
     IPC_CHANNELS.PRODUCT_UPDATE,
     async (request) => {
       // Polite Locking
@@ -326,31 +243,7 @@ export function registerProductHandlers(): void {
       };
 
       const product = productService.updateProduct(request.id, updates);
-
-      return {
-        id: product.id,
-        name: product.name,
-        sku: product.sku,
-        barcode: product.barcode,
-        salePrice: product.salePrice,
-        purchasePrice: product.purchasePrice,
-        gstPercent: product.gstPercent,
-        stockQty: product.stockQty,
-        lowStockAlert: product.lowStockAlert,
-        isActive: product.isActive,
-        trackInventory: product.trackInventory,
-        hsnCode: product.hsnCode,
-        batchNumber: product.batchNumber,
-        expiryDate: product.expiryDate,
-        saltName: product.saltName,
-        uom: product.uom,
-        isWeightBased: product.isWeightBased,
-        stripSize: product.stripSize,
-        drugCategory: product.drugCategory,
-        variantGroupId: product.variantGroupId,
-        createdAt: product.createdAt.toISOString(),
-        updatedAt: product.updatedAt.toISOString(),
-      };
+      return _mapToUI(product);
     },
     {
       schema: UpdateProductSchema,
@@ -363,36 +256,14 @@ export function registerProductHandlers(): void {
   // ============================================
   IPCHandler.handle<
     { query: string; includeInactive?: boolean; page?: number; pageSize?: number },
-    { items: any[]; totalCount: number; hasMore: boolean }
+    { items: Product[]; totalCount: number; hasMore: boolean }
   >(
     IPC_CHANNELS.PRODUCT_SEARCH,
     async ({ query, includeInactive, page, pageSize }) => {
       const result = productService.searchProducts(query, includeInactive, page, pageSize);
 
       return {
-        items: result.items.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          sku: p.sku,
-          barcode: p.barcode,
-          salePrice: p.salePrice,
-          purchasePrice: p.purchasePrice,
-          gstPercent: p.gstPercent,
-          stockQty: p.stockQty,
-          lowStockAlert: p.lowStockAlert,
-          isActive: p.isActive,
-          isGstInclusive: p.isGstInclusive,
-          trackInventory: p.trackInventory,
-          hsnCode: p.hsnCode,
-          batchNumber: p.batchNumber,
-          expiryDate: p.expiryDate,
-          saltName: p.saltName,
-          drugCategory: p.drugCategory,
-          uom: p.uom,
-          isWeightBased: p.isWeightBased,
-          stripSize: p.stripSize,
-          variantGroupId: p.variantGroupId,
-        })),
+        items: result.items.map((p: ProductDomain) => _mapToUI(p)),
         totalCount: result.totalCount,
         hasMore: result.hasMore,
         page: result.page,
@@ -407,7 +278,7 @@ export function registerProductHandlers(): void {
   // ============================================
   // GET LOW STOCK PRODUCTS
   // ============================================
-  IPCHandler.handle<void, any[]>(
+  IPCHandler.handle<void, Partial<Product>[]>(
     IPC_CHANNELS.PRODUCT_LOW_STOCK,
     async () => {
       const products = productService.getLowStockProducts();
@@ -449,7 +320,7 @@ export function registerProductHandlers(): void {
   // ============================================
   // GET PRODUCT HISTORY
   // ============================================
-  IPCHandler.handle<number, any[]>(
+  IPCHandler.handle<number, ProductHistoryItem[]>(
     IPC_CHANNELS.PRODUCT_HISTORY,
     async (productId) => {
       const logs = productService.getStockHistory(productId);
@@ -534,7 +405,7 @@ export function registerProductHandlers(): void {
     }
   );
 
-  IPCHandler.handle<string, any[]>(
+  IPCHandler.handle<string, IndianMedicineIPC[]>(
     IPC_CHANNELS.MEDICAL_MEDICINE_SUGGESTIONS,
     async (query) => {
       return medicalService.getMedicineSuggestions(query);
@@ -544,7 +415,7 @@ export function registerProductHandlers(): void {
     }
   );
 
-  IPCHandler.handle<{ saltName: string; excludeProductId: number }, any[]>(
+  IPCHandler.handle<{ saltName: string; excludeProductId: number }, Partial<Product>[]>(
     IPC_CHANNELS.MEDICAL_ALTERNATIVES,
     async ({ saltName, excludeProductId }) => {
       const alternatives = medicalService.getAlternativesBySalt(saltName, excludeProductId);
@@ -561,4 +432,35 @@ export function registerProductHandlers(): void {
       transformError: (err) => getUserFriendlyMessage(err),
     }
   );
+}
+
+/**
+ * Map Domain Product to UI Object
+ */
+function _mapToUI(p: ProductDomain): Product {
+  return {
+    id: p.id,
+    name: p.name,
+    sku: p.sku,
+    barcode: p.barcode,
+    salePrice: p.salePrice,
+    purchasePrice: p.purchasePrice,
+    gstPercent: p.gstPercent,
+    stockQty: p.stockQty,
+    lowStockAlert: p.lowStockAlert,
+    isActive: p.isActive,
+    isGstInclusive: p.isGstInclusive,
+    trackInventory: p.trackInventory,
+    hsnCode: p.hsnCode,
+    batchNumber: p.batchNumber,
+    expiryDate: p.expiryDate,
+    saltName: p.saltName,
+    uom: p.uom,
+    isWeightBased: p.isWeightBased,
+    stripSize: p.stripSize,
+    drugCategory: p.drugCategory,
+    variantGroupId: p.variantGroupId,
+    createdAt: p.createdAt.getTime(),
+    updatedAt: p.updatedAt.getTime(),
+  };
 }

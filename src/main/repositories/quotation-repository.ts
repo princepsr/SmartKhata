@@ -34,6 +34,41 @@ export interface QuotationItem {
 }
 
 /**
+ * Quotation Database Row
+ */
+interface QuotationRow {
+  id: number;
+  quotation_number: string;
+  customer_id: number | null;
+  customer_name_snapshot: string;
+  total_taxable: number;
+  gst_total: number;
+  grand_total: number;
+  status: 'PENDING' | 'CONVERTED' | 'EXPIRED' | 'CANCELLED';
+  expires_at: string | null;
+  notes: string | null;
+  bill_discount_value: number;
+  bill_discount_type: 'amount' | 'percent';
+  created_at: string;
+}
+
+/**
+ * Quotation Item Database Row
+ */
+interface QuotationItemRow {
+  id: number;
+  quotation_id: number;
+  product_id: number | null;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  discount_value: number;
+  discount_type: 'amount' | 'percent';
+  gst_percent: number;
+  line_total: number;
+}
+
+/**
  * Quotation Repository
  */
 export class QuotationRepository extends BaseRepository {
@@ -84,17 +119,21 @@ export class QuotationRepository extends BaseRepository {
       });
 
       logger.info('Quotation created', { id: quotationId, number: data.quotationNumber });
-      return this.findById(quotationId)!;
+      const quotation = this.findById(quotationId);
+      if (!quotation) {
+        throw new Error('Failed to retrieve created quotation');
+      }
+      return quotation;
     });
   }
 
   public findById(id: number): Quotation | null {
-    const row = this.queryOne<any>('SELECT * FROM quotations WHERE id = ?', [id]);
+    const row = this.queryOne<QuotationRow>('SELECT * FROM quotations WHERE id = ?', [id]);
     return row ? this._mapToQuotation(row) : null;
   }
 
   public findByNumber(quotationNumber: string): Quotation | null {
-    const row = this.queryOne<any>('SELECT * FROM quotations WHERE quotation_number = ?', [
+    const row = this.queryOne<QuotationRow>('SELECT * FROM quotations WHERE quotation_number = ?', [
       quotationNumber,
     ]);
     return row ? this._mapToQuotation(row) : null;
@@ -106,7 +145,7 @@ export class QuotationRepository extends BaseRepository {
       return null;
     }
 
-    const items = this.queryAll<any>('SELECT * FROM quotation_items WHERE quotation_id = ?', [id]);
+    const items = this.queryAll<QuotationItemRow>('SELECT * FROM quotation_items WHERE quotation_id = ?', [id]);
     return {
       quotation,
       items: items.map((row) => ({
@@ -128,7 +167,7 @@ export class QuotationRepository extends BaseRepository {
     const limit = 20;
     const offset = (page - 1) * limit;
     const sql = `SELECT * FROM quotations ORDER BY created_at DESC LIMIT ? OFFSET ?`;
-    return this.queryAll<any>(sql, [limit, offset]).map((row) => this._mapToQuotation(row));
+    return this.queryAll<QuotationRow>(sql, [limit, offset]).map((row) => this._mapToQuotation(row));
   }
 
   public updateStatus(id: number, status: Quotation['status']): void {
@@ -142,7 +181,7 @@ export class QuotationRepository extends BaseRepository {
     return row ? row.count : 0;
   }
 
-  private _mapToQuotation(row: any): Quotation {
+  private _mapToQuotation(row: QuotationRow): Quotation {
     return {
       id: row.id,
       quotationNumber: row.quotation_number,

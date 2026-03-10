@@ -17,6 +17,8 @@ import type {
   DateRange,
   PaginatedResult,
   TrendAnalytics,
+  ReportData,
+  StockAgingItem,
 } from '@shared/types/report.types';
 
 export const reportApi = {
@@ -94,7 +96,7 @@ export const reportApi = {
    */
   printReport: async (
     type: 'sales' | 'gst' | 'stock' | 'analytics',
-    data: any,
+    data: ReportData,
     dateRange: string
   ): Promise<boolean> => {
     const result = await ipcClient.call<boolean>(IPC_CHANNELS.REPORT_PRINT, {
@@ -110,7 +112,7 @@ export const reportApi = {
    */
   exportPdf: async (
     type: 'sales' | 'gst' | 'stock' | 'analytics',
-    data: any,
+    data: ReportData,
     dateRange: string
   ): Promise<boolean> => {
     const result = await ipcClient.call<boolean>(IPC_CHANNELS.REPORT_EXPORT_PDF, {
@@ -126,7 +128,7 @@ export const reportApi = {
    */
   exportExcel: async (
     type: 'sales' | 'gst' | 'stock' | 'analytics',
-    data: any,
+    data: ReportData,
     dateRange: string
   ): Promise<boolean> => {
     const result = await ipcClient.call<boolean>(IPC_CHANNELS.REPORT_EXPORT_EXCEL, {
@@ -148,8 +150,8 @@ export const reportApi = {
   /**
    * Get Stock Aging Report
    */
-  getStockAgingReport: async (days: number = 30): Promise<any[] | null> => {
-    const result = await ipcClient.call<any[]>(IPC_CHANNELS.REPORT_STOCK_AGING, days);
+  getStockAgingReport: async (days: number = 30): Promise<StockAgingItem[] | null> => {
+    const result = await ipcClient.call<StockAgingItem[]>(IPC_CHANNELS.REPORT_STOCK_AGING, days);
     return result.data;
   },
 

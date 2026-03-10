@@ -5,9 +5,16 @@
  */
 
 import { IPCHandler } from '../ipc-handler';
-import { PurchaseService, RecordPurchaseInput } from '../../services/purchase-service';
+import { PurchaseService } from '../../services/purchase-service';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
+import { 
+  Purchase, 
+  PurchaseWithItems, 
+  ITCSummary, 
+  PurchaseNetGstLiability,
+  RecordPurchaseInput
+} from '@shared/types/ipc';
 
 export function registerPurchaseHandlers(): void {
   const purchaseService = new PurchaseService();
@@ -15,14 +22,16 @@ export function registerPurchaseHandlers(): void {
   // ============================================
   // RECORD PURCHASE (ITC)
   // ============================================
-  IPCHandler.handle<RecordPurchaseInput, any>(
+  IPCHandler.handle<RecordPurchaseInput, PurchaseWithItems>(
     IPC_CHANNELS.PURCHASE_RECORD,
     async (input) => {
       const result = purchaseService.recordPurchase(input);
       return {
-        ...result.purchase,
-        createdAt: result.purchase.createdAt.getTime(),
-        updatedAt: result.purchase.updatedAt.getTime(),
+        purchase: {
+          ...result.purchase,
+          createdAt: result.purchase.createdAt.getTime(),
+          updatedAt: result.purchase.updatedAt.getTime(),
+        },
         items: result.items,
       };
     },
@@ -32,7 +41,7 @@ export function registerPurchaseHandlers(): void {
   // ============================================
   // LIST PURCHASES
   // ============================================
-  IPCHandler.handle<{ startDate: string; endDate: string; page?: number }, any>(
+  IPCHandler.handle<{ startDate: string; endDate: string; page?: number }, { data: Purchase[]; total: number }>(
     IPC_CHANNELS.PURCHASE_LIST,
     async ({ startDate, endDate, page = 1 }) => {
       const result = purchaseService.listPurchases(startDate, endDate, page);
@@ -51,7 +60,7 @@ export function registerPurchaseHandlers(): void {
   // ============================================
   // GET PURCHASE BY ID
   // ============================================
-  IPCHandler.handle<number, any>(
+  IPCHandler.handle<number, PurchaseWithItems>(
     IPC_CHANNELS.PURCHASE_GET_BY_ID,
     async (id) => {
       const result = purchaseService.getPurchaseById(id);
@@ -59,9 +68,11 @@ export function registerPurchaseHandlers(): void {
         throw new Error('Purchase not found');
       }
       return {
-        ...result.purchase,
-        createdAt: result.purchase.createdAt.getTime(),
-        updatedAt: result.purchase.updatedAt.getTime(),
+        purchase: {
+          ...result.purchase,
+          createdAt: result.purchase.createdAt.getTime(),
+          updatedAt: result.purchase.updatedAt.getTime(),
+        },
         items: result.items,
       };
     },
@@ -71,7 +82,7 @@ export function registerPurchaseHandlers(): void {
   // ============================================
   // GET ITC SUMMARY
   // ============================================
-  IPCHandler.handle<{ startDate: string; endDate: string }, any>(
+  IPCHandler.handle<{ startDate: string; endDate: string }, ITCSummary>(
     IPC_CHANNELS.PURCHASE_ITC_SUMMARY,
     async ({ startDate, endDate }) => {
       return purchaseService.getITCSummary(startDate, endDate);
@@ -82,7 +93,7 @@ export function registerPurchaseHandlers(): void {
   // ============================================
   // GET NET GST LIABILITY (Output - ITC)
   // ============================================
-  IPCHandler.handle<{ startDate: string; endDate: string; outputGst: number }, any>(
+  IPCHandler.handle<{ startDate: string; endDate: string; outputGst: number }, PurchaseNetGstLiability>(
     IPC_CHANNELS.PURCHASE_NET_GST_LIABILITY,
     async ({ startDate, endDate, outputGst }) => {
       return purchaseService.getNetGstLiability(startDate, endDate, outputGst);

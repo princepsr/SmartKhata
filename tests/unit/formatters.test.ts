@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   formatCurrency,
   formatDate,
-  formatDateTime,
   toLocalDateISO,
 } from '../../src/renderer/utils/formatters';
 
@@ -18,7 +17,7 @@ describe('Formatters Utility', () => {
 
     it('should return ₹ 0.00 for invalid amounts', () => {
       expect(formatCurrency(NaN)).toContain('0.00');
-      expect(formatCurrency(null as any)).toContain('0.00');
+      expect(formatCurrency(null as unknown as number)).toContain('0.00');
     });
   });
 

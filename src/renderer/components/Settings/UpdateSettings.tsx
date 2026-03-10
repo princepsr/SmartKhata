@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdateStore } from '../../store/useUpdateStore';
 import { useAppSettingsStore } from '../../store/useAppSettingsStore';
-import { UpdateStatus } from '@shared/types/update';
+import { UpdateStatus, UpdateInfo, UpdateProgress } from '@shared/types/update';
 import NoInternetModal from '../modals/NoInternetModal';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 
@@ -42,12 +42,13 @@ export function UpdateSettings() {
 
     // Listen for progress updates from main
     const unbindProgress = window.api.onUpdateProgress((data) => {
-      useUpdateStore.getState().setProgress(data);
+      useUpdateStore.getState().setProgress(data as UpdateProgress);
     });
 
     // Listen for status changes from main
     const unbindStatus = window.api.onUpdateStatus((data) => {
-      useUpdateStore.getState().setStatus(data.status, data.updateInfo);
+      const updateData = data as { status: UpdateStatus; updateInfo: UpdateInfo | null };
+      useUpdateStore.getState().setStatus(updateData.status, updateData.updateInfo);
     });
 
     return () => {

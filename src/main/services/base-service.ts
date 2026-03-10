@@ -15,7 +15,7 @@ import { logger } from '../utils/logger';
 export interface ServiceResponse<T> {
   data: T;
   warnings?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -52,7 +52,7 @@ export abstract class BaseService {
    */
   protected successWithMetadata<T>(
     data: T,
-    metadata: Record<string, any>
+    metadata: Record<string, unknown>
   ): ServiceResponse<T> {
     return { data, metadata };
   }
@@ -60,21 +60,21 @@ export abstract class BaseService {
   /**
    * Log info message
    */
-  protected logInfo(message: string, context?: Record<string, any>): void {
+  protected logInfo(message: string, context?: Record<string, unknown>): void {
     this.logger.info(message, context);
   }
 
   /**
    * Log warning message
    */
-  protected logWarning(message: string, context?: Record<string, any>): void {
+  protected logWarning(message: string, context?: Record<string, unknown>): void {
     this.logger.warn(message, context);
   }
 
   /**
    * Log error message
    */
-  protected logError(message: string, error?: any, context?: Record<string, any>): void {
+  protected logError(message: string, error?: unknown, context?: Record<string, unknown>): void {
     const errorData = {
       error,
       ...context

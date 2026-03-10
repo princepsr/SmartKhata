@@ -54,6 +54,36 @@ export interface UpdateSupplierInput {
 }
 
 /**
+ * Supplier Database Row
+ */
+interface SupplierRow {
+  id: number;
+  name: string;
+  phone: string | null;
+  gstin: string | null;
+  address: string | null;
+  email: string | null;
+  balance_due: number;
+  is_active: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Supplier Ledger Database Row
+ */
+interface SupplierLedgerRow {
+  id: number;
+  supplier_id: number;
+  amount: number;
+  type: 'PURCHASE' | 'PAYMENT_OUT' | 'PAYMENT_IN' | 'OPENING_BALANCE';
+  reference_id: number | null;
+  reference_number: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+/**
  * Supplier Repository
  */
 export class SupplierRepository extends BaseRepository {
@@ -85,13 +115,17 @@ export class SupplierRepository extends BaseRepository {
       }
 
       logger.info('Supplier created', { id: supplierId, name: data.name });
-      return this.findById(supplierId)!;
+      const supplier = this.findById(supplierId);
+      if (!supplier) {
+        throw new Error('Failed to retrieve created supplier');
+      }
+      return supplier;
     });
   }
 
   public update(id: number, data: UpdateSupplierInput): Supplier {
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -115,16 +149,20 @@ export class SupplierRepository extends BaseRepository {
     values.push(id);
     this.execute(sql, values);
 
-    return this.findById(id)!;
+    const supplier = this.findById(id);
+    if (!supplier) {
+      throw new Error('Failed to retrieve updated supplier');
+    }
+    return supplier;
   }
 
   public findById(id: number): Supplier | null {
-    const row = this.queryOne<any>('SELECT * FROM suppliers WHERE id = ?', [id]);
+    const row = this.queryOne<SupplierRow>('SELECT * FROM suppliers WHERE id = ?', [id]);
     return row ? this._mapToSupplier(row) : null;
   }
 
   public findByPhone(phone: string): Supplier | null {
-    const row = this.queryOne<any>('SELECT * FROM suppliers WHERE phone = ? AND is_active = 1', [
+    const row = this.queryOne<SupplierRow>('SELECT * FROM suppliers WHERE phone = ? AND is_active = 1', [
       phone,
     ]);
     return row ? this._mapToSupplier(row) : null;
@@ -132,7 +170,7 @@ export class SupplierRepository extends BaseRepository {
 
   public findAll(includeInactive = false): Supplier[] {
     const sql = `SELECT * FROM suppliers ${includeInactive ? '' : 'WHERE is_active = 1'} ORDER BY name ASC`;
-    return this.queryAll<any>(sql).map((row) => this._mapToSupplier(row));
+    return this.queryAll<SupplierRow>(sql).map((row) => this._mapToSupplier(row));
   }
 
   public search(query: string): Supplier[] {
@@ -143,7 +181,7 @@ export class SupplierRepository extends BaseRepository {
       ORDER BY name ASC
     `;
     const pattern = `%${query}%`;
-    return this.queryAll<any>(sql, [pattern, pattern, pattern]).map((row) =>
+    return this.queryAll<SupplierRow>(sql, [pattern, pattern, pattern]).map((row) =>
       this._mapToSupplier(row)
     );
   }
@@ -209,20 +247,20 @@ export class SupplierRepository extends BaseRepository {
       WHERE sl.supplier_id = ?
       ORDER BY sl.created_at DESC, sl.id DESC
     `;
-    const rows = this.queryAll<any>(sql, [supplierId]);
+    const rows = this.queryAll<SupplierLedgerRow>(sql, [supplierId]);
     return rows.map((row) => ({
       id: row.id,
       supplierId: row.supplier_id,
       amount: row.amount,
       type: row.type,
-      referenceId: row.reference_id,
-      referenceNumber: row.reference_number,
-      notes: row.notes,
+      referenceId: row.reference_id === null ? undefined : row.reference_id,
+      referenceNumber: row.reference_number === null ? undefined : row.reference_number,
+      notes: row.notes === null ? undefined : row.notes,
       createdAt: this.parseDate(row.created_at),
     }));
   }
 
-  private _mapToSupplier(row: any): Supplier {
+  private _mapToSupplier(row: SupplierRow): Supplier {
     return {
       id: row.id,
       name: row.name,

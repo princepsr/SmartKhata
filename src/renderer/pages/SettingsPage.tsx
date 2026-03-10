@@ -14,6 +14,7 @@ import LicenseSettings from '../components/Settings/LicenseSettings';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import { PrivacyPolicy } from '../components/Settings/PrivacyPolicy';
 import { UpdateSettings } from '../components/Settings/UpdateSettings';
+import type { PrinterInfo } from '@shared/types/ipc';
 import ContactDeveloper from '../components/common/ContactDeveloper';
 import './SettingsPage.css';
 
@@ -45,7 +46,7 @@ function SettingsPage() {
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
-  const [printerList, setPrinterList] = useState<any[]>([]);
+  const [printerList, setPrinterList] = useState<PrinterInfo[]>([]);
   const [isTestPrinting, setIsTestPrinting] = useState(false);
   const [searchParams] = useSearchParams();
 
@@ -74,8 +75,10 @@ function SettingsPage() {
     fetchSettings(true);
     const fetchPrinters = async () => {
       try {
-        const response: any = await window.api.invoke('printer:list');
-        const printers = response.success ? response.data : [];
+        const response = await window.api.invoke<PrinterInfo[]>(
+          'printer:list'
+        );
+        const printers = response.success && response.data ? response.data : [];
         setPrinterList(printers);
       } catch (err) {
         console.error('Failed to fetch printers:', err);
@@ -668,10 +671,13 @@ function SettingsPage() {
                 onClick={async () => {
                   setIsTestPrinting(true);
                   try {
-                    const result: any = await window.api.invoke('settings:testPrint', {
-                      printerName: settings.printerName,
-                      paperSize: settings.paperSize,
-                    });
+                    const result = await window.api.invoke<{ success: boolean; message?: string }>(
+                      'settings:testPrint',
+                      {
+                        printerName: settings.printerName,
+                        paperSize: settings.paperSize,
+                      }
+                    );
                     if (!result?.success && !result) {
                       throw new Error('Printer might be offline or unavailable.');
                     }
@@ -680,10 +686,11 @@ function SettingsPage() {
                       message: 'Test print sent successfully!',
                       type: 'info',
                     });
-                  } catch (err: any) {
+                  } catch (err: unknown) {
+                    const message = err instanceof Error ? err.message : String(err);
                     await alert({
                       title: 'Print Error',
-                      message: `Print Error: ${err.message || 'Unknown error'}`,
+                      message: `Print Error: ${message || 'Unknown error'}`,
                       type: 'danger',
                     });
                   } finally {

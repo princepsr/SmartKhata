@@ -34,7 +34,9 @@ export interface PurchaseItem {
   lineCgst: number;
   lineSgst: number;
   lineIgst: number;
-  lineTotal: number; saltName: string | null; }
+  lineTotal: number;
+  saltName: string | null;
+}
 
 export interface PurchaseWithItems {
   purchase: Purchase;
@@ -70,7 +72,9 @@ export interface CreatePurchaseItemInput {
   lineCgst: number;
   lineSgst: number;
   lineIgst: number;
-  lineTotal: number; saltName: string | null; }
+  lineTotal: number;
+  saltName: string | null;
+}
 
 export interface ITCSummary {
   totalTaxable: number;
@@ -79,6 +83,49 @@ export interface ITCSummary {
   igstPaid: number;
   totalItc: number; // Total ITC available (cgst + sgst + igst)
   purchaseCount: number;
+}
+
+/**
+ * Purchase Database Row
+ */
+interface PurchaseRow {
+  id: number;
+  purchase_number: string;
+  supplier_name: string;
+  supplier_gstin: string | null;
+  invoice_number: string | null;
+  invoice_date: string;
+  total_taxable: number;
+  cgst_amount: number;
+  sgst_amount: number;
+  igst_amount: number;
+  gst_total: number;
+  grand_total: number;
+  notes: string | null;
+  payment_status: 'PENDING' | 'PAID' | 'PARTIAL';
+  amount_paid: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Purchase Item Database Row
+ */
+interface PurchaseItemRow {
+  id: number;
+  purchase_id: number;
+  product_id: number | null;
+  product_name: string;
+  hsn_code: string | null;
+  quantity: number;
+  unit_price: number;
+  gst_percent: number;
+  line_taxable: number;
+  line_cgst: number;
+  line_sgst: number;
+  line_igst: number;
+  line_total: number;
+  salt_name: string | null;
 }
 
 export class PurchaseRepository extends BaseRepository {
@@ -177,7 +224,7 @@ export class PurchaseRepository extends BaseRepository {
           gstTotal: data.gstTotal,
           grandTotal: data.grandTotal,
           notes: data.notes ?? null,
-          paymentStatus: (data.paymentStatus as any) || 'PENDING',
+          paymentStatus: data.paymentStatus || 'PENDING',
           amountPaid: data.amountPaid || 0,
           createdAt: now,
           updatedAt: now,
@@ -214,9 +261,9 @@ export class PurchaseRepository extends BaseRepository {
    * Find purchase by ID with items
    */
   public findByIdWithItems(id: number): PurchaseWithItems | null {
-    const row = this.queryOne<any>(`SELECT * FROM purchases WHERE id = ?`, [id]);
+    const row = this.queryOne<PurchaseRow>(`SELECT * FROM purchases WHERE id = ?`, [id]);
     if (!row) {return null;}
-    const items = this.queryAll<any>(`SELECT * FROM purchase_items WHERE purchase_id = ?`, [id]);
+    const items = this.queryAll<PurchaseItemRow>(`SELECT * FROM purchase_items WHERE purchase_id = ?`, [id]);
     return {
       purchase: this._mapToPurchase(row),
       items: items.map((r) => this._mapToItem(r)),
@@ -239,7 +286,7 @@ export class PurchaseRepository extends BaseRepository {
       ) ?? { c: 0 }
     ).c;
 
-    const rows = this.queryAll<any>(
+    const rows = this.queryAll<PurchaseRow>(
       `SELECT * FROM purchases
        WHERE date(invoice_date) BETWEEN date(?) AND date(?)
        ORDER BY invoice_date DESC, created_at DESC
@@ -297,7 +344,7 @@ export class PurchaseRepository extends BaseRepository {
     return row ? row.purchase_number : null;
   }
 
-  private _mapToPurchase(row: any): Purchase {
+  private _mapToPurchase(row: PurchaseRow): Purchase {
     return {
       id: row.id,
       purchaseNumber: row.purchase_number,
@@ -319,7 +366,7 @@ export class PurchaseRepository extends BaseRepository {
     };
   }
 
-  private _mapToItem(row: any): PurchaseItem {
+  private _mapToItem(row: PurchaseItemRow): PurchaseItem {
     return {
       id: row.id,
       purchaseId: row.purchase_id,

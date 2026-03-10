@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
@@ -72,8 +72,14 @@ import { backupService } from '../../src/main/services/backup-service';
 import { googleDriveService } from '../../src/main/services/google-drive-service';
 import { googleAuthService } from '../../src/main/services/google-auth-service';
 
+interface AutoBackupServiceWithPrivates extends AutoBackupService {
+  instance: AutoBackupService | undefined;
+  checkAndPerformBackup: () => Promise<void>;
+}
+
 describe('AutoBackupService', () => {
   let service: AutoBackupService;
+  let servicePriv: AutoBackupServiceWithPrivates;
   const testUserData = './test-data/userData';
   const backupDir = path.join(testUserData, 'autobackups');
 
@@ -95,14 +101,16 @@ describe('AutoBackupService', () => {
     });
 
     // Mock createBackup to create file
-    (backupService.createBackup as any).mockImplementation(async (dir: string) => {
+    const createBackupMock = backupService.createBackup as Mock<[string], Promise<string>>;
+    createBackupMock.mockImplementation(async (dir: string) => {
       const filePath = path.join(dir, 'test-backup.zip');
       fs.writeFileSync(filePath, 'data');
       return filePath;
     });
 
-    (AutoBackupService as any).instance = undefined;
+    (AutoBackupService as unknown as AutoBackupServiceWithPrivates).instance = undefined;
     service = AutoBackupService.getInstance();
+    servicePriv = service as unknown as AutoBackupServiceWithPrivates;
   });
 
   afterEach(() => {
@@ -121,7 +129,7 @@ describe('AutoBackupService', () => {
       lastAutoBackup: twoDaysAgo.toISOString(),
     });
 
-    await (service as any).checkAndPerformBackup();
+    await servicePriv.checkAndPerformBackup();
     expect(backupService.createBackup).toHaveBeenCalled();
   });
 
@@ -136,7 +144,7 @@ describe('AutoBackupService', () => {
       lastAutoBackup: threeHoursAgo.toISOString(),
     });
 
-    await (service as any).checkAndPerformBackup();
+    await servicePriv.checkAndPerformBackup();
     expect(backupService.createBackup).toHaveBeenCalled();
   });
 
@@ -147,9 +155,10 @@ describe('AutoBackupService', () => {
       lastAutoBackup: null,
     });
 
-    (googleAuthService.isAuthenticated as any).mockReturnValue(true);
+    const isAuthMock = googleAuthService.isAuthenticated as Mock<[], boolean>;
+    isAuthMock.mockReturnValue(true);
 
-    await (service as any).checkAndPerformBackup();
+    await servicePriv.checkAndPerformBackup();
     expect(googleDriveService.syncBackup).toHaveBeenCalled();
   });
 
@@ -162,14 +171,12 @@ describe('AutoBackupService', () => {
       lastAutoBackup: justNow,
     });
 
-    await (service as any).checkAndPerformBackup();
+    await servicePriv.checkAndPerformBackup();
     expect(backupService.createBackup).not.toHaveBeenCalled();
   });
 
   it('should trigger backup check when settings change', async () => {
     // The start method registers the listener AND immediately calls checkAndPerformBackup()
-    // We must wait for that first call to finish before testing onChange, otherwise
-    // the isProcessing flag blocks the second call.
     service.start();
 
     expect(mockSettingsInstance.onChange).toHaveBeenCalled();
@@ -178,10 +185,12 @@ describe('AutoBackupService', () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Simulate settings change
-    const [callback] = mockSettingsInstance.onChange.mock.calls[0];
+    const onMock = mockSettingsInstance.onChange as Mock;
+    const [callback] = onMock.mock.calls[0];
 
     // Reset createBackup call count (may have been called by the initial check in start())
-    (backupService.createBackup as any).mockClear();
+    const createBackupMock = backupService.createBackup as Mock;
+    createBackupMock.mockClear();
 
     // Set up mock to trigger backup
     mockSettingsInstance.getConfig.mockReturnValue({
@@ -190,8 +199,6 @@ describe('AutoBackupService', () => {
     });
 
     // To trigger checkAndPerformBackup, the newConfig must DIFFER from what start() saw
-    // (start() reads getConfig() which returns { autoBackupIntervalDays: 1, autoBackupEnabled: true, ... })
-    // We change autoBackupIntervalDays from 1 to 2 so intervalChanged=true fires the backup check
     const newConfig = {
       autoBackupEnabled: true,
       autoBackupIntervalDays: 2, // Different from initial (1) to trigger intervalChanged

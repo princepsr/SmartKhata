@@ -4,19 +4,31 @@ import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { PrintService } from '../../services/print-service';
 import { ExportService } from '../../services/export-service';
+import { 
+  DailySalesSummary, 
+  PaymentModeSummary, 
+  GstReport, 
+  StockSummary, 
+  BillSummary, 
+  PaginatedResult, 
+  TrendAnalytics, 
+  StockAgingItem, 
+  StockItem,
+  ReportData
+} from '../../../shared/types/report.types';
 
 /**
  * Register All Report Handlers
  */
 export function registerReportHandlers(): void {
   const reportService = new ReportService();
-  const printService = new PrintService();
+  const printService = PrintService.getInstance();
   const exportService = new ExportService();
 
   // ============================================
   // DAILY SALES SUMMARY
   // ============================================
-  IPCHandler.handle<{ startDate: string; endDate: string }, any>(
+  IPCHandler.handle<{ startDate: string; endDate: string }, DailySalesSummary>(
     IPC_CHANNELS.REPORT_DAILY_SALES,
     async ({ startDate, endDate }) => {
       return reportService.getDailySalesSummary(startDate, endDate);
@@ -29,7 +41,7 @@ export function registerReportHandlers(): void {
   // ============================================
   // PAYMENT MODE SUMMARY
   // ============================================
-  IPCHandler.handle<{ startDate: string; endDate: string }, any>(
+  IPCHandler.handle<{ startDate: string; endDate: string }, PaymentModeSummary[]>(
     IPC_CHANNELS.REPORT_PAYMENT_MODE,
     async ({ startDate, endDate }) => {
       return reportService.getPaymentModeSummary(startDate, endDate);
@@ -42,7 +54,7 @@ export function registerReportHandlers(): void {
   // ============================================
   // GST SUMMARY
   // ============================================
-  IPCHandler.handle<{ startDate: string; endDate: string }, any>(
+  IPCHandler.handle<{ startDate: string; endDate: string }, GstReport>(
     IPC_CHANNELS.REPORT_GST,
     async (dateRange) => {
       return reportService.getGstSummary(dateRange);
@@ -55,7 +67,7 @@ export function registerReportHandlers(): void {
   // ============================================
   // STOCK SUMMARY
   // ============================================
-  IPCHandler.handle<'all' | 'low_stock', any>(
+  IPCHandler.handle<'all' | 'low_stock', StockSummary>(
     IPC_CHANNELS.REPORT_STOCK,
     async (filter) => {
       return reportService.getStockSummary(filter);
@@ -68,7 +80,10 @@ export function registerReportHandlers(): void {
   // ============================================
   // BILL-WISE SALES
   // ============================================
-  IPCHandler.handle<{ startDate: string; endDate: string; page?: number; limit?: number }, any>(
+  IPCHandler.handle<
+    { startDate: string; endDate: string; page?: number; limit?: number },
+    PaginatedResult<BillSummary>
+  >(
     IPC_CHANNELS.REPORT_BILL_WISE,
     async ({ startDate, endDate, page, limit }) => {
       return reportService.getBillwiseSales(startDate, endDate, page, limit);
@@ -81,7 +96,10 @@ export function registerReportHandlers(): void {
   // ============================================
   // PRINT REPORT
   // ============================================
-  IPCHandler.handle<{ type: 'sales' | 'gst' | 'stock'; data: any; dateRange: string }, boolean>(
+  IPCHandler.handle<
+    { type: 'sales' | 'gst' | 'stock'; data: ReportData; dateRange: string },
+    boolean
+  >(
     IPC_CHANNELS.REPORT_PRINT,
     async ({ type, data, dateRange }) => {
       return printService.printReport(type, data, dateRange);
@@ -94,7 +112,10 @@ export function registerReportHandlers(): void {
   // ============================================
   // EXPORT PDF
   // ============================================
-  IPCHandler.handle<{ type: 'sales' | 'gst' | 'stock'; data: any; dateRange: string }, boolean>(
+  IPCHandler.handle<
+    { type: 'sales' | 'gst' | 'stock'; data: ReportData; dateRange: string },
+    boolean
+  >(
     IPC_CHANNELS.REPORT_EXPORT_PDF,
     async ({ type, data, dateRange }) => {
       return printService.exportReportPdf(type, data, dateRange);
@@ -107,7 +128,10 @@ export function registerReportHandlers(): void {
   // ============================================
   // EXPORT EXCEL (CSV)
   // ============================================
-  IPCHandler.handle<{ type: 'sales' | 'gst' | 'stock'; data: any; dateRange: string }, boolean>(
+  IPCHandler.handle<
+    { type: 'sales' | 'gst' | 'stock'; data: ReportData; dateRange: string },
+    boolean
+  >(
     IPC_CHANNELS.REPORT_EXPORT_EXCEL,
     async ({ type, data, dateRange }) => {
       return exportService.exportToExcel(type, data, dateRange);
@@ -122,7 +146,7 @@ export function registerReportHandlers(): void {
   // ============================================
   IPCHandler.handle<
     { startDate: string; endDate: string; granularity: 'day' | 'week' | 'month' },
-    any
+    TrendAnalytics
   >(
     IPC_CHANNELS.REPORT_ANALYTICS,
     async ({ startDate, endDate, granularity }) => {
@@ -149,7 +173,7 @@ export function registerReportHandlers(): void {
   // ============================================
   // STOCK AGING
   // ============================================
-  IPCHandler.handle<number, any[]>(
+  IPCHandler.handle<number, StockAgingItem[]>(
     IPC_CHANNELS.REPORT_STOCK_AGING,
     async (days) => {
       return reportService.getStockAgingReport(days);
@@ -162,7 +186,7 @@ export function registerReportHandlers(): void {
   // ============================================
   // NEAR EXPIRY
   // ============================================
-  IPCHandler.handle<number, any[]>(
+  IPCHandler.handle<number, StockItem[]>(
     IPC_CHANNELS.REPORT_NEAR_EXPIRY,
     async (days) => {
       return reportService.getNearExpiryReport(days);

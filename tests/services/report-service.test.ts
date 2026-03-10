@@ -5,10 +5,10 @@ import { SettingsService } from '../../src/main/services/settings-service';
 import { CreditNoteService } from '../../src/main/services/credit-note-service';
 import { PurchaseService } from '../../src/main/services/purchase-service';
 
-import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, seedTestData, getLocalToday, SqlJsDatabase } from '../utils/test-db';
 
 describe('ReportService Integration Tests', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let reportService: ReportService;
   let billingService: BillingService;
 
@@ -40,7 +40,7 @@ describe('ReportService Integration Tests', () => {
       discountAmount: discount,
     });
 
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    const targetDate = date || getLocalToday();
     db.exec(`UPDATE bills SET created_at = '${targetDate} 12:00:00' WHERE id = ${result.bill.id}`);
 
     return result;
@@ -53,7 +53,7 @@ describe('ReportService Integration Tests', () => {
     // Bill 2: 2 Lays (20, 12% GST excl = 22.4 each = 44.8 total). Discount 4.80. Net = 40.0.
     await generateBill([{ productId: 2, quantity: 2 }], 'cash', 4.8);
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     const summary = reportService.getDailySalesSummary(today, today);
 
     expect(summary).toBeDefined();
@@ -76,7 +76,7 @@ describe('ReportService Integration Tests', () => {
     await generateBill([{ productId: 1, quantity: 1 }], 'cash'); // 42.00
     await generateBill([{ productId: 2, quantity: 1 }], 'upi'); // 22.40
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     const modes = reportService.getPaymentModeSummary(today, today);
 
     expect(modes).toHaveLength(2);
@@ -100,7 +100,7 @@ describe('ReportService Integration Tests', () => {
     // Bill 2: 12% item (10 Lays = 10*20=200 taxable, 10*2.4=24 GST, 10*22.4=224 total)
     await generateBill([{ productId: 2, quantity: 10 }], 'cash');
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     const report = reportService.getGstSummary({ startDate: today, endDate: today });
 
     expect(report.totalTaxable).toBeCloseTo(600.0, 2); // 400.00 + 200.00
@@ -140,7 +140,7 @@ describe('ReportService Integration Tests', () => {
   });
 
   it('should calculate profit and coverage accurately', () => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalToday();
 
     db.exec(`
       INSERT INTO bills (bill_number, subtotal, gst_total, discount_amount, grand_total, payment_mode, created_at)
@@ -164,7 +164,7 @@ describe('ReportService Integration Tests', () => {
   });
 
   it('should maintain historical cost integrity', () => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalToday();
     const initialSummary = reportService.getDailySalesSummary(todayStr, todayStr);
     const initialProfit = initialSummary.totalProfit || 0;
     db.exec('UPDATE products SET purchase_price = 100 WHERE id = 1');
@@ -173,7 +173,7 @@ describe('ReportService Integration Tests', () => {
   });
 
   it('should calculate profit correctly for bills with zero GST', () => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalToday();
     db.exec(`
       INSERT INTO bills (bill_number, subtotal, gst_total, discount_amount, grand_total, payment_mode, created_at)
       VALUES ('GST-ZERO-1', 42, 0, 0, 42, 'cash', '${todayStr}')
@@ -192,7 +192,7 @@ describe('ReportService Integration Tests', () => {
 });
 
 describe('ReportService New API Tests', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let reportService: ReportService;
   let billingService: BillingService;
 
@@ -221,14 +221,14 @@ describe('ReportService New API Tests', () => {
       paymentMode: mode,
       discountAmount: discount,
     });
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     db.exec(`UPDATE bills SET created_at = '${today} 12:00:00' WHERE id = ${result.bill.id}`);
     return result;
   };
 
   it('getSalesSummary should accept DateRange object', async () => {
     await generateBill([{ productId: 1, quantity: 1 }], 'cash');
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     const summary = reportService.getSalesSummary({ startDate: today, endDate: today });
     expect(summary).toBeDefined();
     expect(summary.billCount).toBeGreaterThan(0);
@@ -236,7 +236,7 @@ describe('ReportService New API Tests', () => {
 
   it('getBills should return list of bills for DateRange', async () => {
     const result = await generateBill([{ productId: 1, quantity: 1 }], 'cash');
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
 
     const billList = reportService.getBills({ startDate: today, endDate: today });
     expect(billList.data).toHaveLength(1);
@@ -248,7 +248,7 @@ describe('ReportService New API Tests', () => {
 
   it('getGstSummary should accept DateRange object', async () => {
     await generateBill([{ productId: 1, quantity: 1 }], 'cash');
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     const report = reportService.getGstSummary({ startDate: today, endDate: today });
     expect(report).toBeDefined();
     expect(report.totalTaxable).toBeGreaterThan(0);
@@ -258,7 +258,7 @@ describe('ReportService New API Tests', () => {
     for (let i = 1; i <= 5; i++) {
       await generateBill([{ productId: 1, quantity: 1 }], 'cash');
     }
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
 
     const page1 = reportService.getBills({ startDate: today, endDate: today }, 1, 2);
     expect(page1.data).toHaveLength(2);
@@ -273,7 +273,7 @@ describe('ReportService New API Tests', () => {
   });
 
   it('should validate date range', () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
     expect(() => reportService.getDailySalesSummary(today, yesterday)).toThrow(
@@ -286,7 +286,7 @@ describe('ReportService New API Tests', () => {
 });
 
 describe('ReportService Trend Analytics', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let reportService: ReportService;
   let billingService: BillingService;
 
@@ -320,7 +320,7 @@ describe('ReportService Trend Analytics', () => {
   };
 
   it('should return trend analytics with day granularity', async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
     await generateBillOnDate([{ productId: 1, quantity: 1 }], 'cash', yesterday);
@@ -337,7 +337,7 @@ describe('ReportService Trend Analytics', () => {
   });
 
   it('should return trend analytics with month granularity', async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     const lastMonth = new Date();
     lastMonth.setMonth(lastMonth.getMonth() - 1);
     const lastMonthStr = lastMonth.toISOString().split('T')[0];
@@ -354,7 +354,7 @@ describe('ReportService Trend Analytics', () => {
   });
 
   it('should calculate previous period comparison correctly in getDailySalesSummary', async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
     // Current period: today. 2 Coke bills.
@@ -380,8 +380,8 @@ describe('ReportService Trend Analytics', () => {
     });
 
     const summary = reportService.getDailySalesSummary(
-      new Date().toISOString().split('T')[0],
-      new Date().toISOString().split('T')[0]
+      getLocalToday(),
+      getLocalToday()
     );
 
     expect(summary.totalProfit).toBeLessThan(0);
@@ -401,7 +401,7 @@ describe('ReportService Trend Analytics', () => {
 });
 
 describe('ReportService GST Robustness', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let reportService: ReportService;
   let billingService: BillingService;
   let creditNoteService: CreditNoteService;
@@ -419,7 +419,7 @@ describe('ReportService GST Robustness', () => {
   });
 
   it('should calculate accurate net payable GST with returns and ITC', async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
 
     // 1. Sale: 10 Coke (400 base + 20 GST = 420 total)
     const sale = await billingService.finalizeBill({
@@ -456,7 +456,7 @@ describe('ReportService GST Robustness', () => {
   });
 
   it('should calculate net payable when Output > (Returns + ITC)', async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
 
     // Sale: 20 Coke (800 base + 40 GST = 840)
     await billingService.finalizeBill({

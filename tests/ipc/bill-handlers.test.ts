@@ -1,7 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { ipcMain } from 'electron';
+import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { registerBillHandlers } from '../../src/main/ipc/handlers/bill-handlers';
-import { IPC_CHANNELS } from '../../src/shared/ipc/channels';
 
 // Mock Electron
 vi.mock('electron', () => ({
@@ -61,6 +60,8 @@ vi.mock('../../src/main/repositories/bill-repository', () => ({
   BillRepository: vi.fn().mockImplementation(() => mockBillRepo),
 }));
 
+type HandlerFn = (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<unknown> | unknown;
+
 describe('Bill IPC Handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,15 +70,15 @@ describe('Bill IPC Handlers', () => {
     registerBillHandlers();
   });
 
-  const getHandler = (channel: string): ((...args: any[]) => any) => {
+  const getHandler = (channel: string): HandlerFn => {
     const call = vi.mocked(ipcMain.handle).mock.calls.find((c) => c[0] === channel);
     if (!call) {
       throw new Error(`Handler not registered for ${channel}`);
     }
-    return call[1];
+    return call[1] as HandlerFn;
   };
 
-  const mockEvent = {} as any;
+  const mockEvent = {} as IpcMainInvokeEvent;
 
   it('should register core billing handlers', () => {
     expect(ipcMain.handle).toHaveBeenCalledWith('bill:create', expect.any(Function));
@@ -94,7 +95,7 @@ describe('Bill IPC Handlers', () => {
       mockBillingService.finalizeBill.mockResolvedValue(mockResult);
 
       const handler = getHandler('bill:create');
-      const result = await handler(mockEvent, { items: [] });
+      const result = await handler(mockEvent, { items: [] }) as { success: boolean, data: { bill: { id: number } } };
 
       expect(result.success).toBe(true);
       expect(result.data.bill.id).toBe(1);
@@ -105,7 +106,7 @@ describe('Bill IPC Handlers', () => {
       mockLicenseService.getLicenseStatus.mockReturnValue({ isLocked: true });
 
       const handler = getHandler('bill:create');
-      const result = await handler(mockEvent, { items: [] });
+      const result = await handler(mockEvent, { items: [] }) as { success: boolean, error: string };
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('expired');
@@ -121,7 +122,7 @@ describe('Bill IPC Handlers', () => {
       mockBillRepo.findByBillNumberWithItems.mockReturnValue(mockBill);
 
       const handler = getHandler('bill:get');
-      const result = await handler(mockEvent, 'B1');
+      const result = await handler(mockEvent, 'B1') as { success: boolean, data: { bill: { billNumber: string } } };
 
       expect(result.success).toBe(true);
       expect(result.data.bill.billNumber).toBe('B1');
@@ -131,7 +132,7 @@ describe('Bill IPC Handlers', () => {
       mockBillRepo.findByBillNumberWithItems.mockReturnValue(null);
 
       const handler = getHandler('bill:get');
-      const result = await handler(mockEvent, 'B1');
+      const result = await handler(mockEvent, 'B1') as { success: boolean, error: string };
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Bill not found');

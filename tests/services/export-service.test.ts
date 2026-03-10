@@ -4,10 +4,11 @@
  * Verifies CSV generation and file export logic.
  */
 
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest';
 import { ExportService } from '../../src/main/services/export-service';
-import { dialog } from 'electron';
+import { dialog, type SaveDialogReturnValue } from 'electron';
 import fs from 'fs';
+import { ReportData } from '@shared/types/report.types';
 
 // Mock Electron
 vi.mock('electron', () => ({
@@ -33,17 +34,23 @@ vi.mock('../../src/main/utils/logger', () => ({
   },
 }));
 
+interface ExportServiceWithPrivates extends ExportService {
+  generateCsvContent: (type: string, data: ReportData, dateRange: string) => string;
+}
+
 describe('ExportService', () => {
   let service: ExportService;
+  let servicePriv: ExportServiceWithPrivates;
 
   beforeEach(() => {
     vi.clearAllMocks();
     service = new ExportService();
+    servicePriv = service as unknown as ExportServiceWithPrivates;
   });
 
   describe('CSV Generation', () => {
     it('should generate valid Sales CSV', () => {
-      const data = {
+      const data: ReportData = {
         summary: {
           billCount: 5,
           totalSales: 1000.5,
@@ -56,7 +63,7 @@ describe('ExportService', () => {
         ],
       };
 
-      const csv = (service as any).generateCsvContent('sales', data, '2023-01-01 to 2023-01-31');
+      const csv = servicePriv.generateCsvContent('sales', data, '2023-01-01 to 2023-01-31');
       expect(csv).toContain('SALES OVERVIEW');
       expect(csv).toContain('Total Sales,1000.50');
       expect(csv).toContain('CASH,3,600.50');
@@ -64,9 +71,7 @@ describe('ExportService', () => {
     });
 
     it('should generate valid GST CSV', () => {
-      // Must match full GstReport shape including cgstAmount, sgstAmount, igstAmount in slabs
-      // and totalCgst, totalSgst, totalIgst in root
-      const data = {
+      const data: ReportData = {
         supplyType: 'intrastate',
         slabs: [
           {
@@ -94,29 +99,29 @@ describe('ExportService', () => {
         totalIgst: 0,
         totalGst: 41,
         totalAmount: 341,
-      };
+        month: 'January',
+        year: 2023,
+      } as unknown as ReportData;
 
-      const csv = (service as any).generateCsvContent('gst', data, '2023-01-01');
+      const csv = servicePriv.generateCsvContent('gst', data, '2023-01-01');
       expect(csv).toContain('GST SUMMARY');
-      // Row format: gstPercent, taxableAmount, cgstAmount, sgstAmount, igstAmount, gstAmount, totalAmount
       expect(csv).toContain('5,100.00,2.50,2.50,0.00,5.00,105.00');
       expect(csv).toContain('18,200.00,18.00,18.00,0.00,36.00,236.00');
-      // Totals row
       expect(csv).toContain('TOTALS,300.00,20.50,20.50,0.00,41.00,341.00');
     });
 
     it('should generate valid Stock CSV', () => {
-      const data = {
+      const data: ReportData = {
         totalItems: 2,
         totalStockValue: 500.5,
         lowStockCount: 1,
         items: [
-          { sku: 'S001', name: 'Product A', stockQty: 10, lowStockAlert: 5, salePrice: 100 },
-          { sku: 'S002', name: 'Product B', stockQty: 2, lowStockAlert: 5, salePrice: 200 },
+          { sku: 'S001', name: 'Product A', stockQty: 10, lowStockAlert: 5, salePrice: 100, id: 1, categoryId: 1, gstPercent: 18, isService: false, isActive: true },
+          { sku: 'S002', name: 'Product B', stockQty: 2, lowStockAlert: 5, salePrice: 200, id: 2, categoryId: 1, gstPercent: 18, isService: false, isActive: true },
         ],
-      };
+      } as unknown as ReportData;
 
-      const csv = (service as any).generateCsvContent('stock', data, 'All');
+      const csv = servicePriv.generateCsvContent('stock', data, 'All');
       expect(csv).toContain('STOCK SUMMARY');
       expect(csv).toContain('Total Items,2');
       expect(csv).toContain('S001,Product A,10,5,100.00');
@@ -124,7 +129,7 @@ describe('ExportService', () => {
     });
 
     it('should escape commas and quotes in CSV values', () => {
-      const data = {
+      const data: ReportData = {
         totalItems: 1,
         totalStockValue: 100,
         lowStockCount: 0,
@@ -137,23 +142,23 @@ describe('ExportService', () => {
             salePrice: 100,
           },
         ],
-      };
+      } as unknown as ReportData;
 
-      const csv = (service as any).generateCsvContent('stock', data, 'All');
+      const csv = servicePriv.generateCsvContent('stock', data, 'All');
       expect(csv).toContain('"Product, with comma ""and quotes"""');
     });
   });
 
   describe('exportToExcel', () => {
     it('should write file if user selects a path', async () => {
-      const data = {
+      const data: ReportData = {
         summary: { billCount: 0, totalSales: 0, totalDiscount: 0, netSales: 0 },
         modes: [],
       };
-      vi.mocked(dialog.showSaveDialog).mockResolvedValue({
+      (dialog.showSaveDialog as Mock).mockResolvedValue({
         filePath: 'C:/test.csv',
         canceled: false,
-      } as any);
+      } as SaveDialogReturnValue);
 
       const result = await service.exportToExcel('sales', data, 'Today');
 
@@ -162,11 +167,11 @@ describe('ExportService', () => {
     });
 
     it('should return false if user cancels dialog', async () => {
-      const data = {
+      const data: ReportData = {
         summary: { billCount: 0, totalSales: 0, totalDiscount: 0, netSales: 0 },
         modes: [],
       };
-      vi.mocked(dialog.showSaveDialog).mockResolvedValue({ filePath: '', canceled: true } as any);
+      (dialog.showSaveDialog as Mock).mockResolvedValue({ filePath: '', canceled: true } as SaveDialogReturnValue);
 
       const result = await service.exportToExcel('sales', data, 'Today');
 

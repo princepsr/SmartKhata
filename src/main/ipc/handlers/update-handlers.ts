@@ -1,6 +1,7 @@
 import { UpdateService } from '../../services/update-service';
 import { IPCHandler } from '../ipc-handler';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
+import { GetUpdateStatusResponse } from '@shared/types/update';
 
 /**
  * Register Update Handlers
@@ -24,7 +25,7 @@ export function registerUpdateHandlers(): void {
   });
 
   // Get current status
-  IPCHandler.handle<void, any>(IPC_CHANNELS.UPDATE_STATUS, () => {
+  IPCHandler.handle<void, GetUpdateStatusResponse>(IPC_CHANNELS.UPDATE_STATUS, () => {
     return updateService.getStatusInfo();
   });
 }

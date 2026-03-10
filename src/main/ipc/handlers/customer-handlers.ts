@@ -11,7 +11,6 @@ import {
   CustomerService,
   CreateOrGetCustomerInput,
   UpdateCustomerData,
-  CustomerHistory,
 } from '../../services/customer-service';
 import { Customer } from '../../repositories/customer-repository';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
@@ -29,6 +28,14 @@ interface CustomerUI {
   updatedAt: number;
 }
 
+interface CustomerHistoryUI {
+  customer: CustomerUI;
+  bills: unknown[]; // Or properly typed if needed
+  ledger: unknown[];
+  totalPurchases: number;
+  currentBalance: number;
+}
+
 /**
  * Register All Customer Handlers
  */
@@ -44,7 +51,7 @@ export function registerCustomerHandlers(): void {
   >(
     IPC_CHANNELS.CUSTOMER_LIST,
     async (payload) => {
-      const options = (payload && typeof payload === 'object' ? payload : {}) as any;
+      const options = payload || {};
       const includeInactive = !!options.includeInactive;
       const showDuesOnly = !!options.showDuesOnly;
       const page = options.page ?? 1;
@@ -159,7 +166,7 @@ export function registerCustomerHandlers(): void {
   // ============================================
   // GET CUSTOMER HISTORY (Ledger & Bills)
   // ============================================
-  IPCHandler.handle<number, CustomerHistory>(
+  IPCHandler.handle<number, CustomerHistoryUI>(
     IPC_CHANNELS.CUSTOMER_HISTORY,
     async (id) => {
       // NOTE: CustomerHistory contains the raw domain objects from repo.

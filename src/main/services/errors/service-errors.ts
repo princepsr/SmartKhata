@@ -39,9 +39,9 @@ export abstract class ServiceError extends Error {
  */
 export class ValidationError extends ServiceError {
   public readonly field?: string;
-  public readonly value?: any;
+  public readonly value?: unknown;
 
-  constructor(message: string, field?: string, value?: any) {
+  constructor(message: string, field?: string, value?: unknown) {
     super(message, 'VALIDATION_ERROR');
     this.field = field;
     this.value = value;
@@ -62,9 +62,9 @@ export class ValidationError extends ServiceError {
  * Examples: insufficient stock, credit limit exceeded, duplicate entry
  */
 export class BusinessError extends ServiceError {
-  public readonly context?: Record<string, any>;
+  public readonly context?: Record<string, unknown>;
 
-  constructor(message: string, code: string, context?: Record<string, any>) {
+  constructor(message: string, code: string, context?: Record<string, unknown>) {
     super(message, code);
     this.context = context;
   }
@@ -125,9 +125,9 @@ export class InsufficientStockError extends BusinessError {
  */
 export class DuplicateEntryError extends BusinessError {
   public readonly field: string;
-  public readonly value: any;
+  public readonly value: unknown;
 
-  constructor(entityType: string, field: string, value: any) {
+  constructor(entityType: string, field: string, value: unknown) {
     super(`${entityType} with ${field} '${value}' already exists`, 'DUPLICATE_ENTRY', {
       entityType,
       field,
@@ -242,14 +242,14 @@ export class PrinterError extends BusinessError {
 /**
  * Check if error is a service error
  */
-export function isServiceError(error: any): error is ServiceError {
+export function isServiceError(error: unknown): error is ServiceError {
   return error instanceof ServiceError;
 }
 
 /**
  * Get user-friendly message from any error
  */
-export function getUserFriendlyMessage(error: any): string {
+export function getUserFriendlyMessage(error: unknown): string {
   if (isServiceError(error)) {
     return error.getUserMessage();
   }

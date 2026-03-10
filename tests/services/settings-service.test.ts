@@ -34,7 +34,7 @@ describe('SettingsService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (SettingsService as any).instance = undefined;
+    (SettingsService as unknown as { instance: unknown }).instance = undefined;
     service = SettingsService.getInstance();
   });
 

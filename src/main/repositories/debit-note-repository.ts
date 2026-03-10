@@ -24,6 +24,21 @@ export interface DebitNoteItem {
   lineTotal: number;
 }
 
+/**
+ * Debit Note Database Row
+ */
+interface DebitNoteRow {
+  id: number;
+  debit_note_number: string;
+  purchase_id: number | null;
+  supplier_id: number;
+  total_taxable: number;
+  gst_total: number;
+  grand_total: number;
+  reason: string | null;
+  created_at: string;
+}
+
 export class DebitNoteRepository extends BaseRepository {
   public createWithItems(
     data: Omit<DebitNote, 'id' | 'createdAt'>,
@@ -68,12 +83,12 @@ export class DebitNoteRepository extends BaseRepository {
   }
 
   public findById(id: number): DebitNote | null {
-    const row = this.queryOne<any>('SELECT * FROM debit_notes WHERE id = ?', [id]);
+    const row = this.queryOne<DebitNoteRow>('SELECT * FROM debit_notes WHERE id = ?', [id]);
     return row ? this._mapToDebitNote(row) : null;
   }
 
   public findByNumber(number: string): DebitNote | null {
-    const row = this.queryOne<any>('SELECT * FROM debit_notes WHERE debit_note_number = ?', [
+    const row = this.queryOne<DebitNoteRow>('SELECT * FROM debit_notes WHERE debit_note_number = ?', [
       number,
     ]);
     return row ? this._mapToDebitNote(row) : null;
@@ -81,7 +96,7 @@ export class DebitNoteRepository extends BaseRepository {
 
   public findBySupplier(supplierId: number): DebitNote[] {
     const sql = `SELECT * FROM debit_notes WHERE supplier_id = ? ORDER BY created_at DESC`;
-    return this.queryAll<any>(sql, [supplierId]).map((row) => this._mapToDebitNote(row));
+    return this.queryAll<DebitNoteRow>(sql, [supplierId]).map((row) => this._mapToDebitNote(row));
   }
 
   public generateNumber(): string {
@@ -99,7 +114,7 @@ export class DebitNoteRepository extends BaseRepository {
     return `${prefix}${String(seq).padStart(3, '0')}`;
   }
 
-  private _mapToDebitNote(row: any): DebitNote {
+  private _mapToDebitNote(row: DebitNoteRow): DebitNote {
     return {
       id: row.id,
       debitNoteNumber: row.debit_note_number,

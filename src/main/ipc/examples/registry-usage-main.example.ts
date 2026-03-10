@@ -67,7 +67,7 @@ export function exampleHandlerWithParams(): void {
  */
 export function exampleMultipleHandlers(): void {
   // Register all product handlers
-  const productHandlers: Partial<Record<IPCChannel, () => Promise<any>>> = {
+  const productHandlers: Partial<Record<IPCChannel, () => Promise<unknown>>> = {
     [IPC_CHANNELS.PRODUCT_LIST]: async () => {
       return { success: true, data: [] };
     },
@@ -81,7 +81,7 @@ export function exampleMultipleHandlers(): void {
 
   // Register all handlers
   Object.entries(productHandlers).forEach(([channel, handler]) => {
-    ipcMain.handle(channel, async (_event, ...args) => {
+    ipcMain.handle(channel, async (_event, ...args: unknown[]) => {
       logger.debug(`IPC Request: ${channel}`, { args });
       return handler();
     });

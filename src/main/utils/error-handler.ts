@@ -28,11 +28,12 @@ interface ErrorDetails {
 /**
  * Format error for logging with system context
  */
-function formatError(error: Error | any, type: ErrorDetails['type']): ErrorDetails {
+function formatError(error: unknown, type: ErrorDetails['type']): ErrorDetails {
+  const err = error instanceof Error ? error : null;
   const config = configManager.getConfig();
   return {
-    message: error?.message || String(error),
-    stack: error?.stack,
+    message: err?.message || String(error),
+    stack: err?.stack,
     timestamp: new Date().toISOString(),
     type,
     system: {
@@ -87,7 +88,7 @@ Would you like to restart the application?`;
 /**
  * Generic error handler that ensures data safety before dialog
  */
-async function processError(error: any, type: ErrorDetails['type']): Promise<void> {
+async function processError(error: unknown, type: ErrorDetails['type']): Promise<void> {
   const errorDetails = formatError(error, type);
 
   logger.error(`=== ${type.toUpperCase()} ===`, errorDetails);
@@ -121,7 +122,7 @@ export function handleUncaughtException(error: Error): void {
 /**
  * Handle unhandled promise rejection
  */
-export function handleUnhandledRejection(reason: any): void {
+export function handleUnhandledRejection(reason: unknown): void {
   processError(reason, 'unhandledRejection');
 }
 

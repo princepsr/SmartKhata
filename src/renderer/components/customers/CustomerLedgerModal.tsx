@@ -186,7 +186,11 @@ export const CustomerLedgerModal: React.FC<CustomerLedgerModalProps> = ({
                             {entry.referenceNumber ? (
                               <button
                                 className="bill-link-btn"
-                                onClick={() => setSelectedBillId(entry.referenceNumber!)}
+                                onClick={() => {
+                        if (entry.referenceNumber) {
+                          setSelectedBillId(entry.referenceNumber);
+                        }
+                      }}
                                 title={t('common.view_details')}
                               >
                                 {entry.referenceNumber}

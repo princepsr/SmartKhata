@@ -10,6 +10,7 @@ import {
   DateRange,
   PaginatedResult,
   TrendAnalytics,
+  StockAgingItem,
 } from '../../shared/types/report.types';
 import { ValidationError } from './errors/service-errors';
 import { ExpenseRepository } from '../repositories/expense-repository';
@@ -245,7 +246,7 @@ export class ReportService extends BaseService {
   /**
    * Get Stock Aging Report (Items not sold in N days)
    */
-  public getStockAgingReport(days: number = 30): any[] {
+  public getStockAgingReport(days: number = 30): StockAgingItem[] {
     const products = this.productRepo.findAll(false);
     const now = new Date();
     const thresholdDate = new Date();

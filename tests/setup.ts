@@ -6,130 +6,17 @@
 
 import { vi, beforeAll } from 'vitest';
 import path from 'path';
-import fs from 'fs';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-import initSqlJs from 'sql.js';
-
-let SQL: any;
-async function getSQL() {
-  if (!SQL) {
-    SQL = await initSqlJs();
-  }
-  return SQL;
-}
-
-/**
- * Compatibility wrapper for sql.js to match better-sqlite3 interface
- */
-class SqlJsDatabase {
-  private db: any;
-
-  constructor(db: any) {
-    this.db = db;
-  }
-  exec(sql: string) {
-    this.db.run(sql);
-    return this;
-  }
-  prepare(sql: string) {
-    const stmt = this.db.prepare(sql);
-    const processValue = (p: any): any => {
-      if (p instanceof Date) {
-        return p.toISOString();
-      }
-      if (p !== null && typeof p === 'object' && !Array.isArray(p)) {
-        return JSON.stringify(p);
-      }
-      return p;
-    };
-    const processParams = (args: any[]) => {
-      if (args.length === 0) {
-        return [];
-      }
-      let params = args[0];
-      if (args.length > 1 || !params || typeof params !== 'object') {
-        params = args;
-      }
-
-      if (Array.isArray(params)) {
-        return params.map(processValue);
-      } else if (params && typeof params === 'object') {
-        const processed: any = {};
-        for (const key in params) {
-          const val = processValue(params[key]);
-          processed[key] = val;
-          if (!key.startsWith('@') && !key.startsWith(':') && !key.startsWith('$')) {
-            processed[`@${key}`] = val;
-            processed[`:${key}`] = val;
-            processed[`$${key}`] = val;
-          }
-        }
-        return processed;
-      }
-      return params;
-    };
-    return {
-      run: (...args: any[]) => {
-        const params = processParams(args);
-        stmt.run(params);
-        stmt.reset();
-
-        const lastIdRes = this.db.exec('SELECT last_insert_rowid() as id');
-        const lastId = lastIdRes[0]?.values[0][0] ?? 0;
-
-        return {
-          changes: this.db.getRowsModified(),
-          lastInsertRowid: lastId,
-        };
-      },
-      get: (...args: any[]) => {
-        const params = processParams(args);
-        stmt.bind(params);
-        const hasRow = stmt.step();
-        const res = hasRow ? stmt.getAsObject() : undefined;
-        stmt.reset();
-        return res;
-      },
-      all: (...args: any[]) => {
-        const params = processParams(args);
-        stmt.bind(params);
-        const results = [];
-        while (stmt.step()) {
-          results.push(stmt.getAsObject());
-        }
-        stmt.reset();
-        return results;
-      },
-    };
-  }
-  transaction(fn: (...args: any[]) => any) {
-    return (...args: any[]) => {
-      try {
-        this.db.run('BEGIN TRANSACTION');
-        const result = fn(...args);
-        this.db.run('COMMIT');
-        return result;
-      } catch (error) {
-        this.db.run('ROLLBACK');
-        throw error;
-      }
-    };
-  }
-  backup(path: string) {
-    const data = this.db.export();
-    fs.writeFileSync(path, Buffer.from(data));
-    return Promise.resolve();
-  }
-  close() {
-    this.db.close();
-  }
-}
+import { createTestDatabase, getTestDatabase, SqlJsDatabase, getSQL } from './utils/test-db';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { Database } from 'better-sqlite3';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { SettingsService } from '../src/main/services/settings-service';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { migrationRunner } from '../src/main/database/migrations';
 
 console.error('DEBUG: Vitest Node Version:', process.version);
 console.error('DEBUG: Vitest Modules Version:', process.versions.modules);
 
-import { createTestDatabase, getTestDatabase } from './utils/test-db';
 
 // Global environment variables for testing
 process.env.GOOGLE_CLIENT_ID = 'test-client-id';

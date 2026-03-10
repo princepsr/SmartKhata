@@ -8,11 +8,11 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { InventoryService } from '../../src/main/services/inventory-service';
 import { InventoryRepository } from '../../src/main/repositories/inventory-repository';
 import { ProductRepository } from '../../src/main/repositories/product-repository';
-import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, seedTestData, SqlJsDatabase } from '../utils/test-db';
 import { NotFoundError } from '../../src/main/services/errors/service-errors';
 
 describe('InventoryService Integration Tests', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let inventoryService: InventoryService;
   let productRepo: ProductRepository;
   let inventoryRepo: InventoryRepository;

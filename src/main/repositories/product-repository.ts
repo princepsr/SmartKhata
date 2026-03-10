@@ -87,6 +87,36 @@ export interface UpdateProductInput {
 }
 
 /**
+ * Product Database Row
+ */
+interface ProductRow {
+  id: number;
+  name: string;
+  sku: string | null;
+  barcode: string | null;
+  sale_price: number;
+  purchase_price: number | null;
+  gst_percent: number;
+  hsn_code: string | null;
+  stock_qty: number;
+  low_stock_alert: number | null;
+  is_active: number;
+  is_gst_inclusive: number;
+  track_inventory: number;
+  batch_number: string | null;
+  expiry_date: string | null;
+  salt_name: string | null;
+  uom: string | null;
+  is_weight_based: number;
+  strip_size: number | null;
+  drug_category: string | null;
+  last_sale_date: string | null;
+  variant_group_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * Product Repository
  *
  * Handles all database operations for products.
@@ -280,7 +310,7 @@ export class ProductRepository extends BaseRepository {
    */
   public findById(id: number): Product | null {
     const sql = `SELECT * FROM products WHERE id = ?`;
-    const row = this.queryOne<any>(sql, [id]);
+    const row = this.queryOne<ProductRow>(sql, [id]);
     return row ? this._mapToProduct(row) : null;
   }
 
@@ -293,7 +323,7 @@ export class ProductRepository extends BaseRepository {
     }
     const placeholders = ids.map(() => '?').join(',');
     const sql = `SELECT * FROM products WHERE id IN (${placeholders})`;
-    const rows = this.queryAll<any>(sql, ids);
+    const rows = this.queryAll<ProductRow>(sql, ids);
     return rows.map((row) => this._mapToProduct(row));
   }
 
@@ -307,7 +337,7 @@ export class ProductRepository extends BaseRepository {
       ORDER BY name ASC
     `;
 
-    const params: any[] = [];
+    const params: unknown[] = [];
     if (limit !== undefined) {
       sql += ` LIMIT ?`;
       params.push(limit);
@@ -317,7 +347,7 @@ export class ProductRepository extends BaseRepository {
       params.push(offset);
     }
 
-    const rows = this.queryAll<any>(sql, params);
+    const rows = this.queryAll<ProductRow>(sql, params);
     return rows.map((row) => this._mapToProduct(row));
   }
 
@@ -350,7 +380,7 @@ export class ProductRepository extends BaseRepository {
     `;
 
     const searchPattern = `%${query}%`;
-    const params: any[] = [searchPattern, searchPattern, searchPattern, searchPattern];
+    const params: unknown[] = [searchPattern, searchPattern, searchPattern, searchPattern];
 
     if (limit !== undefined) {
       sql += ` LIMIT ?`;
@@ -361,7 +391,7 @@ export class ProductRepository extends BaseRepository {
       params.push(offset);
     }
 
-    const rows = this.queryAll<any>(sql, params);
+    const rows = this.queryAll<ProductRow>(sql, params);
     return rows.map((row) => this._mapToProduct(row));
   }
 
@@ -397,7 +427,7 @@ export class ProductRepository extends BaseRepository {
    */
   public searchBySalt(query: string): Product[] {
     const sql = `SELECT * FROM products WHERE salt_name LIKE ? AND is_active = 1 ORDER BY name ASC`;
-    const rows = this.queryAll<any>(sql, [`%${query}%`]);
+    const rows = this.queryAll<ProductRow>(sql, [`%${query}%`]);
     return rows.map((row) => this._mapToProduct(row));
   }
 
@@ -415,7 +445,7 @@ export class ProductRepository extends BaseRepository {
     const params = salts.map((salt) => `%${salt}%`);
 
     const sql = `SELECT * FROM products WHERE is_active = 1 AND (${conditions}) ORDER BY name ASC`;
-    const rows = this.queryAll<any>(sql, params);
+    const rows = this.queryAll<ProductRow>(sql, params);
     return rows.map((row) => this._mapToProduct(row));
   }
 
@@ -443,7 +473,7 @@ export class ProductRepository extends BaseRepository {
       SELECT * FROM products
       WHERE barcode = ? ${includeInactive ? '' : 'AND is_active = 1'}
     `;
-    const row = this.queryOne<any>(sql, [barcode]);
+    const row = this.queryOne<ProductRow>(sql, [barcode]);
     return row ? this._mapToProduct(row) : null;
   }
 
@@ -455,7 +485,7 @@ export class ProductRepository extends BaseRepository {
       SELECT * FROM products
       WHERE sku = ? ${includeInactive ? '' : 'AND is_active = 1'}
     `;
-    const row = this.queryOne<any>(sql, [sku]);
+    const row = this.queryOne<ProductRow>(sql, [sku]);
     return row ? this._mapToProduct(row) : null;
   }
 
@@ -512,7 +542,7 @@ export class ProductRepository extends BaseRepository {
         AND stock_qty <= low_stock_alert
       ORDER BY stock_qty ASC
     `;
-    const rows = this.queryAll<any>(sql);
+    const rows = this.queryAll<ProductRow>(sql);
     return rows.map((row) => this._mapToProduct(row));
   }
 
@@ -544,7 +574,7 @@ export class ProductRepository extends BaseRepository {
    * - INTEGER 0/1 → boolean
    * - TEXT ISO 8601 → Date
    */
-  private _mapToProduct(row: any): Product {
+  private _mapToProduct(row: ProductRow): Product {
     return {
       id: row.id,
       name: row.name,

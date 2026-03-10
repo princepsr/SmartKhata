@@ -26,6 +26,22 @@ export interface CreateExpenseInput {
 }
 
 /**
+ * Expense Database Row
+ */
+interface ExpenseRow {
+  id: number;
+  category: string;
+  amount: number;
+  date: string;
+  payment_mode: string;
+  notes: string | null;
+  created_at: string;
+  // Computed fields
+  total?: number;
+  periodId?: string;
+}
+
+/**
  * Expense Repository
  */
 export class ExpenseRepository extends BaseRepository {
@@ -47,11 +63,15 @@ export class ExpenseRepository extends BaseRepository {
       category: data.category,
       amount: data.amount,
     });
-    return this.findById(Number(result.lastInsertRowid))!;
+    const expense = this.findById(Number(result.lastInsertRowid));
+    if (!expense) {
+      throw new Error('Failed to retrieve recorded expense');
+    }
+    return expense;
   }
 
   public findById(id: number): Expense | null {
-    const row = this.queryOne<any>('SELECT * FROM expenses WHERE id = ?', [id]);
+    const row = this.queryOne<ExpenseRow>('SELECT * FROM expenses WHERE id = ?', [id]);
     return row ? this._mapToExpense(row) : null;
   }
 
@@ -62,7 +82,7 @@ export class ExpenseRepository extends BaseRepository {
       WHERE date BETWEEN ? AND ? 
       ORDER BY date DESC, id DESC
     `;
-    return this.queryAll<any>(sql, [startDate, end]).map((row) => this._mapToExpense(row));
+    return this.queryAll<ExpenseRow>(sql, [startDate, end]).map((row) => this._mapToExpense(row));
   }
 
   public getSummaryByCategory(
@@ -76,7 +96,7 @@ export class ExpenseRepository extends BaseRepository {
       GROUP BY category 
       ORDER BY total DESC
     `;
-    return this.queryAll<any>(sql, [startDate, endDate]);
+    return this.queryAll<{ category: string; total: number }>(sql, [startDate, endDate]);
   }
 
   public getTotalExpenses(startDate: string, endDate: string): number {
@@ -98,10 +118,10 @@ export class ExpenseRepository extends BaseRepository {
       WHERE date BETWEEN ? AND ?
       GROUP BY periodId
     `;
-    return this.queryAll<any>(sql, [startDate, end]);
+    return this.queryAll<{ periodId: string; total: number }>(sql, [startDate, end]);
   }
 
-  private _mapToExpense(row: any): Expense {
+  private _mapToExpense(row: ExpenseRow): Expense {
     return {
       id: row.id,
       category: row.category,

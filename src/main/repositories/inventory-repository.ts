@@ -27,6 +27,23 @@ export interface CreateInventoryLogInput {
 }
 
 /**
+ * Inventory Database Row
+ */
+interface InventoryLogRow {
+  id: number;
+  product_id: number;
+  change_qty: number;
+  reason: 'SALE' | 'MANUAL' | 'ADJUSTMENT';
+  reference_id: number | null;
+  bill_number: string | null;
+  notes: string | null;
+  created_at: string;
+  // Computed fields for summary queries
+  total_changes?: number;
+  net_quantity?: number;
+}
+
+/**
  * Inventory Repository
  *
  * Handles all database operations for inventory logs.
@@ -78,7 +95,7 @@ export class InventoryRepository extends BaseRepository {
    */
   public findById(id: number): InventoryLog | null {
     const sql = `SELECT * FROM inventory_logs WHERE id = ?`;
-    const row = this.queryOne<any>(sql, [id]);
+    const row = this.queryOne<InventoryLogRow>(sql, [id]);
     return row ? this._mapToInventoryLog(row) : null;
   }
 
@@ -97,7 +114,7 @@ export class InventoryRepository extends BaseRepository {
       ORDER BY il.created_at DESC
     `;
 
-    const rows = this.queryAll<any>(sql, [productId]);
+    const rows = this.queryAll<InventoryLogRow>(sql, [productId]);
     return rows.map((row) => this._mapToInventoryLog(row));
   }
 
@@ -111,7 +128,7 @@ export class InventoryRepository extends BaseRepository {
       ORDER BY created_at DESC
     `;
 
-    const rows = this.queryAll<any>(sql, [reason]);
+    const rows = this.queryAll<InventoryLogRow>(sql, [reason]);
     return rows.map((row) => this._mapToInventoryLog(row));
   }
 
@@ -125,7 +142,7 @@ export class InventoryRepository extends BaseRepository {
       ORDER BY created_at ASC
     `;
 
-    const rows = this.queryAll<any>(sql, [billId]);
+    const rows = this.queryAll<InventoryLogRow>(sql, [billId]);
     return rows.map((row) => this._mapToInventoryLog(row));
   }
 
@@ -139,7 +156,7 @@ export class InventoryRepository extends BaseRepository {
       ORDER BY created_at DESC
     `;
 
-    const rows = this.queryAll<any>(sql, [
+    const rows = this.queryAll<InventoryLogRow>(sql, [
       this.formatDateForSql(fromDate),
       this.formatDateForSql(toDate),
     ]);
@@ -157,7 +174,7 @@ export class InventoryRepository extends BaseRepository {
       LIMIT ?
     `;
 
-    const rows = this.queryAll<any>(sql, [limit]);
+    const rows = this.queryAll<InventoryLogRow>(sql, [limit]);
     return rows.map((row) => this._mapToInventoryLog(row));
   }
 
@@ -200,22 +217,22 @@ export class InventoryRepository extends BaseRepository {
       ORDER BY reason
     `;
 
-    const rows = this.queryAll<any>(sql, [
+    const rows = this.queryAll<InventoryLogRow>(sql, [
       this.formatDateForSql(fromDate),
       this.formatDateForSql(toDate),
     ]);
 
     return rows.map((row) => ({
       reason: row.reason,
-      totalChanges: row.total_changes,
-      netQuantity: row.net_quantity,
+      totalChanges: row.total_changes || 0,
+      netQuantity: row.net_quantity || 0,
     }));
   }
 
   /**
    * Map database row to InventoryLog domain object
    */
-  private _mapToInventoryLog(row: any): InventoryLog {
+  private _mapToInventoryLog(row: InventoryLogRow): InventoryLog {
     return {
       id: row.id,
       productId: row.product_id,

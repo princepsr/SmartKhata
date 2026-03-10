@@ -12,7 +12,8 @@ describe('SettingsRepository Persistence', () => {
     seedTestData(db);
 
     // Custom mock for databaseManager to return the real test DB
-    vi.mocked(databaseManager.getDatabase).mockReturnValue(db as any);
+    // We cast to unknown then to specific mock return type to avoid 'any'
+    vi.mocked(databaseManager.getDatabase).mockReturnValue(db as unknown as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
     repository = new SettingsRepository();
   });

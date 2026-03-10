@@ -164,7 +164,7 @@ export abstract class BaseRepository {
    */
   private handleError(error: unknown, operation: string): Error {
     // If it's already a structured error (BusinessError, DatabaseError) we want to preserve, re-throw as Error
-    if (error instanceof Error && (error as any).code) {
+    if (error instanceof Error && 'code' in error) {
       return error;
     }
 

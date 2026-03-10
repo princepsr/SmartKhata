@@ -68,6 +68,45 @@ export interface CreateCreditNoteItemInput {
   lineTotal: number;
 }
 
+/**
+ * Credit Note Database Row
+ */
+interface CreditNoteRow {
+  id: number;
+  credit_note_number: string;
+  original_bill_id: number | null;
+  original_bill_number: string | null;
+  customer_id: number | null;
+  reason: string;
+  refund_amount: number;
+  taxable_amount: number;
+  cgst_amount: number;
+  sgst_amount: number;
+  igst_amount: number;
+  gst_total: number;
+  notes: string | null;
+  created_at: string;
+}
+
+/**
+ * Credit Note Item Database Row
+ */
+interface CreditNoteItemRow {
+  id: number;
+  credit_note_id: number;
+  product_id: number;
+  product_name_snapshot: string;
+  hsn_code: string | null;
+  quantity: number;
+  unit_price: number;
+  gst_percent: number;
+  line_taxable: number;
+  line_cgst: number;
+  line_sgst: number;
+  line_igst: number;
+  line_total: number;
+}
+
 export class CreditNoteRepository extends BaseRepository {
   /**
    * Create a credit note with items (ATOMIC)
@@ -174,18 +213,15 @@ export class CreditNoteRepository extends BaseRepository {
    * Find credit note by ID with items
    */
   public findByIdWithItems(id: number): CreditNoteWithItems | null {
-    const cnRow = this.queryOne<any>(
-      `SELECT cn.*, b.bill_number as original_bill_number
-       FROM credit_notes cn
-       LEFT JOIN bills b ON cn.original_bill_id = b.id
-       WHERE cn.id = ?`,
+    const cnRow = this.queryOne<CreditNoteRow>(`SELECT * FROM credit_notes WHERE id = ?`, [id]);
+    if (!cnRow) {
+      return null;
+    }
+
+    const items = this.queryAll<CreditNoteItemRow>(
+      `SELECT * FROM credit_note_items WHERE credit_note_id = ?`,
       [id]
     );
-    if (!cnRow) {return null;}
-
-    const items = this.queryAll<any>(`SELECT * FROM credit_note_items WHERE credit_note_id = ?`, [
-      id,
-    ]);
 
     return {
       creditNote: this._mapToCreditNote(cnRow),
@@ -209,7 +245,7 @@ export class CreditNoteRepository extends BaseRepository {
       ) ?? { c: 0 }
     ).c;
 
-    const rows = this.queryAll<any>(
+    const rows = this.queryAll<CreditNoteRow>(
       `SELECT cn.*, b.bill_number as original_bill_number
        FROM credit_notes cn
        LEFT JOIN bills b ON cn.original_bill_id = b.id
@@ -234,7 +270,7 @@ export class CreditNoteRepository extends BaseRepository {
     return row ? row.credit_note_number : null;
   }
 
-  private _mapToCreditNote(row: any): CreditNote {
+  private _mapToCreditNote(row: CreditNoteRow): CreditNote {
     return {
       id: row.id,
       creditNoteNumber: row.credit_note_number,
@@ -253,7 +289,7 @@ export class CreditNoteRepository extends BaseRepository {
     };
   }
 
-  private _mapToItem(row: any): CreditNoteItem {
+  private _mapToItem(row: CreditNoteItemRow): CreditNoteItem {
     return {
       id: row.id,
       creditNoteId: row.credit_note_id,

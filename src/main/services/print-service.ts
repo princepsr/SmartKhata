@@ -1,4 +1,4 @@
-﻿import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
@@ -178,7 +178,7 @@ export class PrintService extends BaseService {
             }
 
             await new Promise<void>((resolveCopy, rejectCopy) => {
-              const printOptions: any = {
+              const printOptions: Electron.WebContentsPrintOptions = {
                 silent: true,
                 printBackground: true,
                 deviceName: targetPrinter,
@@ -324,7 +324,7 @@ export class PrintService extends BaseService {
             }
 
             await new Promise<void>((resolveCopy, rejectCopy) => {
-              const printOptions: any = {
+              const printOptions: Electron.WebContentsPrintOptions = {
                 silent: true,
                 printBackground: true,
                 deviceName: targetPrinter,
@@ -480,7 +480,7 @@ export class PrintService extends BaseService {
   async printBarcodes(
     product: Product,
     count: number,
-    options: { showBrand?: boolean; showPrice?: boolean } = {}
+    _options: { showBrand?: boolean; showPrice?: boolean } = {}
   ): Promise<boolean> {
     const config = SettingsService.getInstance().getConfig();
     const targetPrinter = config.printerName || '';
@@ -497,7 +497,7 @@ export class PrintService extends BaseService {
     const printWindow: BrowserWindow = this._getPrintWindow();
 
     try {
-      const htmlContent = this.generateBarcodeHtml(product, count, options);
+      const htmlContent = this.generateBarcodeHtml(product, count, _options);
 
       await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
 

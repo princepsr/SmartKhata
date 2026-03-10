@@ -34,7 +34,7 @@ class BackupService {
    * Useful for Windows where file locks might not be released immediately.
    */
   private executeWithRetry(operation: () => void, maxRetries = 8, delayMs = 300): void {
-    let lastError: any;
+    let lastError: unknown;
     for (let i = 0; i < maxRetries; i++) {
       try {
         operation();

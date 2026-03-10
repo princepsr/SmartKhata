@@ -11,8 +11,9 @@ import {
   CreateCustomerInput,
   UpdateCustomerInput,
   CustomerLedgerEntry,
+  Customer,
 } from '../repositories/customer-repository';
-import { BillRepository } from '../repositories/bill-repository';
+import { BillRepository, Bill } from '../repositories/bill-repository';
 import {
   ValidationError,
   NotFoundError,
@@ -46,8 +47,8 @@ export interface UpdateCustomerData {
  * Customer History (bills + balance)
  */
 export interface CustomerHistory {
-  customer: any;
-  bills: any[];
+  customer: Customer;
+  bills: Bill[];
   ledger: CustomerLedgerEntry[];
   totalPurchases: number;
   currentBalance: number;
@@ -72,7 +73,7 @@ export class CustomerService extends BaseService {
    * If phone is provided and customer exists, return existing customer.
    * Otherwise, create new customer.
    */
-  public createOrGetCustomer(input: CreateOrGetCustomerInput): any {
+  public createOrGetCustomer(input: CreateOrGetCustomerInput): Customer {
     // 1. Validate input
     this._validateCustomerInput(input);
 
@@ -112,7 +113,7 @@ export class CustomerService extends BaseService {
   /**
    * Get customer by ID
    */
-  public getCustomer(id: number): any {
+  public getCustomer(id: number): Customer {
     const customer = this.customerRepo.findById(id);
     if (!customer) {
       throw new NotFoundError('Customer', id);
@@ -123,7 +124,7 @@ export class CustomerService extends BaseService {
   /**
    * Get customer by phone
    */
-  public getCustomerByPhone(phone: string): any | null {
+  public getCustomerByPhone(phone: string): Customer | null {
     this._validatePhone(phone);
     return this.customerRepo.findByPhone(phone);
   }
@@ -131,7 +132,7 @@ export class CustomerService extends BaseService {
   /**
    * Update customer details
    */
-  public updateCustomer(id: number, updates: UpdateCustomerData): any {
+  public updateCustomer(id: number, updates: UpdateCustomerData): Customer {
     // 1. Check customer exists
     const customer = this.customerRepo.findById(id);
     if (!customer) {
@@ -296,7 +297,7 @@ export class CustomerService extends BaseService {
     showDuesOnly: boolean = false,
     page: number = 1,
     limit: number = 100
-  ): { items: any[]; page: number } {
+  ): { items: Customer[]; page: number } {
     const offset = (page - 1) * limit;
     this.logInfo('Fetching customers list', { includeInactive, showDuesOnly, page, limit });
     return {
@@ -321,7 +322,7 @@ export class CustomerService extends BaseService {
     showDuesOnly: boolean = false,
     page: number = 1,
     limit: number = 100
-  ): { items: any[]; totalCount: number; hasMore: boolean; page: number } {
+  ): { items: Customer[]; totalCount: number; hasMore: boolean; page: number } {
     if (!query || query.trim() === '') {
       throw new ValidationError('Search query cannot be empty', 'query');
     }
@@ -351,14 +352,14 @@ export class CustomerService extends BaseService {
   /**
    * Get customers with outstanding balance (udhaar)
    */
-  public getCustomersWithBalance(): any[] {
+  public getCustomersWithBalance(): Customer[] {
     return this.customerRepo.getCustomersWithBalance();
   }
 
   /**
    * Get customers with advance payment
    */
-  public getCustomersWithAdvance(): any[] {
+  public getCustomersWithAdvance(): Customer[] {
     return this.customerRepo.getCustomersWithAdvance();
   }
 

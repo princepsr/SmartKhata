@@ -8,9 +8,17 @@
 import { IPCHandler } from '../ipc-handler';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { BillingService } from '../../services/billing-service';
-import { FinalizeBillInput, BillItemInput } from '@shared/types/ipc';
+import { 
+  FinalizeBillInput, 
+  BillItemInput, 
+  BillCalculation, 
+  BillWithItems, 
+  PrinterInfo, 
+  SalesSummary, 
+  Bill,
+} from '@shared/types/ipc';
 import { BillRepository } from '../../repositories/bill-repository';
-import { PrintService } from '../../services/print-service'; // Import
+import { PrintService } from '../../services/print-service';
 import { LicenseService } from '../../services/license-service';
 import { SettingsService } from '../../services/settings-service';
 import { logger } from '../../utils/logger';
@@ -27,7 +35,7 @@ export function registerBillHandlers(): void {
   // ============================================
   // CALCULATE BILL (PREVIEW)
   // ============================================
-  IPCHandler.handle<{ items: BillItemInput[]; discountAmount?: number }, any>(
+  IPCHandler.handle<{ items: BillItemInput[]; discountAmount?: number }, BillCalculation>(
     'bill:calculate',
     // ... existing implementation ...
     async ({ items, discountAmount }) => {
@@ -64,7 +72,7 @@ export function registerBillHandlers(): void {
   // ============================================
   // CREATE BILL (FINALIZE SALE)
   // ============================================
-  IPCHandler.handle<FinalizeBillInput, any>(
+  IPCHandler.handle<FinalizeBillInput, BillWithItems>(
     'bill:create',
     async (billInput) => {
       // Polite Locking: Check if license is valid before creating bill
@@ -150,19 +158,17 @@ export function registerBillHandlers(): void {
   // ============================================
   // GET PRINTERS
   // ============================================
-  IPCHandler.handle<void, any[]>(
+  IPCHandler.handle<void, PrinterInfo[]>(
     'printer:list',
     async () => {
       const printers = await printService.getPrinters();
-      // Electron PrinterInfo has 'isDefault' on most platforms.
-      // We map it to ensure consistent output for the UI.
       return printers.map((p) => ({
         name: p.name,
         displayName: p.displayName || p.name,
         description: p.description || '',
         status: p.status,
         isDefault: p.isDefault,
-        options: p.options,
+        options: p.options as Record<string, string>,
       }));
     },
     {
@@ -210,7 +216,7 @@ export function registerBillHandlers(): void {
   // ============================================
   // GET BILL BY NUMBER
   // ============================================
-  IPCHandler.handle<string, any>(
+  IPCHandler.handle<string, BillWithItems>(
     'bill:get',
     async (billNumber) => {
       const result = billRepo.findByBillNumberWithItems(billNumber);
@@ -227,9 +233,13 @@ export function registerBillHandlers(): void {
           customerName: result.bill.customerName,
           subtotal: result.bill.subtotal,
           gstTotal: result.bill.gstTotal,
+          cgstAmount: result.bill.cgstAmount,
+          sgstAmount: result.bill.sgstAmount,
+          igstAmount: result.bill.igstAmount,
           discountAmount: result.bill.discountAmount,
           grandTotal: result.bill.grandTotal,
           paymentMode: result.bill.paymentMode,
+          isPrinted: result.bill.isPrinted,
           createdAt: result.bill.createdAt.getTime(),
         },
         items: result.items.map((item) => ({
@@ -254,7 +264,7 @@ export function registerBillHandlers(): void {
   // ============================================
   // LIST BILLS BY DATE RANGE
   // ============================================
-  IPCHandler.handle<{ fromDate: string; toDate: string }, any[]>(
+  IPCHandler.handle<{ fromDate: string; toDate: string }, Bill[]>(
     'bill:listByDateRange',
     async ({ fromDate, toDate }) => {
       const bills = billRepo.findByDateRange(new Date(fromDate), new Date(toDate));
@@ -266,9 +276,13 @@ export function registerBillHandlers(): void {
         customerName: bill.customerName,
         subtotal: bill.subtotal,
         gstTotal: bill.gstTotal,
+        cgstAmount: bill.cgstAmount,
+        sgstAmount: bill.sgstAmount,
+        igstAmount: bill.igstAmount,
         discountAmount: bill.discountAmount,
         grandTotal: bill.grandTotal,
         paymentMode: bill.paymentMode,
+        isPrinted: bill.isPrinted,
         createdAt: bill.createdAt.getTime(),
       }));
     },
@@ -280,7 +294,7 @@ export function registerBillHandlers(): void {
   // ============================================
   // GET TODAY'S BILLS
   // ============================================
-  IPCHandler.handle<void, any[]>(
+  IPCHandler.handle<void, Bill[]>(
     'bill:today',
     async () => {
       const bills = billRepo.findToday();
@@ -290,8 +304,15 @@ export function registerBillHandlers(): void {
         billNumber: bill.billNumber,
         customerId: bill.customerId,
         customerName: bill.customerName,
+        subtotal: bill.subtotal,
+        gstTotal: bill.gstTotal,
+        cgstAmount: bill.cgstAmount,
+        sgstAmount: bill.sgstAmount,
+        igstAmount: bill.igstAmount,
+        discountAmount: bill.discountAmount,
         grandTotal: bill.grandTotal,
         paymentMode: bill.paymentMode,
+        isPrinted: bill.isPrinted,
         createdAt: bill.createdAt.getTime(),
       }));
     },
@@ -303,10 +324,16 @@ export function registerBillHandlers(): void {
   // ============================================
   // GET SALES SUMMARY
   // ============================================
-  IPCHandler.handle<{ fromDate: string; toDate: string }, any>(
+  IPCHandler.handle<{ fromDate: string; toDate: string }, SalesSummary>(
     'bill:salesSummary',
     async ({ fromDate, toDate }) => {
-      return billRepo.getSalesSummary(new Date(fromDate), new Date(toDate));
+      const res = billRepo.getSalesSummary(new Date(fromDate), new Date(toDate));
+      return {
+        totalBills: res.totalBills,
+        totalSales: res.totalSales,
+        totalGst: res.totalGst,
+        totalDiscount: res.totalDiscount,
+      };
     },
     {
       transformError: (err) => getUserFriendlyMessage(err),

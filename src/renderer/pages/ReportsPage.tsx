@@ -10,6 +10,7 @@ import {
   GstReport,
   StockSummary,
   StockItem,
+  StockAgingItem,
   BillSummary,
   TrendAnalytics,
   AnalyticsPeriod,
@@ -23,15 +24,6 @@ import { useAppSettingsStore } from '../store';
 
 type Tab = 'sales' | 'gst' | 'stock' | 'analytics';
 
-interface StockAgingItem {
-  id: number;
-  name: string;
-  sku: string | null;
-  stockQty: number;
-  lastSaleDate: string;
-  idleDays: number;
-  stockValue: number;
-}
 
 interface ITCTransaction {
   id: number;
@@ -442,7 +434,7 @@ const StockAgingView: React.FC<{ data: StockAgingItem[] | null; loading: boolean
                 <td>{item.name}</td>
                 <td>{item.sku || '-'}</td>
                 <td className="text-right">{item.stockQty}</td>
-                <td className="text-right">{formatDate(item.lastSaleDate)}</td>
+                <td className="text-right">{formatDate(item.lastActionDate)}</td>
                 <td className="text-right">
                   <span
                     className={`badge ${item.idleDays > 60 ? 'badge-danger' : 'badge-warning'}`}
@@ -672,8 +664,9 @@ const ReportsPage: React.FC = () => {
           if (itc.success && itc.data) {
             setItcSummary(itc.data);
           }
-        } catch (e) {
-          console.error('Failed to fetch ITC data:', e);
+        } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : String(e);
+          console.error('Failed to fetch ITC data:', message);
         }
       } else if (activeTab === 'stock') {
         const stock = await reportApi.getStockSummary(stockFilter);

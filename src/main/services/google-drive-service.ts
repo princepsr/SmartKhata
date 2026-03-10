@@ -128,13 +128,14 @@ export class GoogleDriveService {
           throw new Error(`Failed to create backup: ${error}`);
         }
 
-        const data: any = await response.json();
+        const data = (await response.json()) as { id: string };
         logger.info('New Google Drive backup created');
         return { success: true, fileId: data.id };
       }
-    } catch (error: any) {
-      logger.error('Google Drive sync error', { message: error.message });
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('Google Drive sync error', { message });
+      return { success: false, error: message };
     }
   }
 
@@ -151,7 +152,7 @@ export class GoogleDriveService {
       throw new Error(`Failed to list files: ${await response.text()}`);
     }
 
-    const data: any = await response.json();
+    const data = (await response.json()) as { files?: Array<{ id: string; name: string }> };
     const files = data.files || [];
     return files.length > 0 ? files[0].id : null;
   }
@@ -174,7 +175,9 @@ export class GoogleDriveService {
         return null;
       }
 
-      const data: any = await response.json();
+      const data = (await response.json()) as {
+        files?: Array<{ id: string; name: string; size?: string; modifiedTime?: string }>;
+      };
       const files = data.files || [];
       if (files.length === 0) {
         return null;
@@ -217,9 +220,10 @@ export class GoogleDriveService {
 
       logger.info('Downloaded backup from Google Drive', { path: localDestination });
       return { success: true };
-    } catch (error: any) {
-      logger.error('Google Drive download failed', { error: error.message });
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('Google Drive download failed', { message });
+      return { success: false, error: message };
     }
   }
 
@@ -237,12 +241,13 @@ export class GoogleDriveService {
         return null;
       }
 
-      const data: any = await response.json();
+      const data = (await response.json()) as { email?: string };
       return {
         email: data.email || 'Unknown Account',
       };
-    } catch (error: any) {
-      logger.error('Failed to get Google profile', { error: error.message });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get Google profile', { message });
       return null;
     }
   }

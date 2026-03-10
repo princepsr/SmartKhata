@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createTestDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, seedTestData, SqlJsDatabase } from '../utils/test-db';
 import { PurchaseOrderService } from '../../src/main/services/purchase-order-service';
 import { SettingsService } from '../../src/main/services/settings-service';
 
 describe('PurchaseOrderService Integration Tests', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let poService: PurchaseOrderService;
 
   beforeEach(async () => {

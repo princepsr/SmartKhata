@@ -6,7 +6,7 @@ import { SettingsService } from '../../src/main/services/settings-service';
 import { backupService } from '../../src/main/services/backup-service';
 import { UpdateStatus } from '../../src/shared/types/update';
 
-// Mock electron-updater - providing a more complete mock to satisfy vitest
+// Mock electron-updater
 vi.mock('electron-updater', () => {
   const mockUpdater = {
     checkForUpdates: vi.fn().mockResolvedValue({}),
@@ -35,13 +35,17 @@ vi.mock('../../src/main/services/backup-service', () => ({
   },
 }));
 
+interface UpdateServiceWithPrivates extends UpdateService {
+  instance: UpdateService | undefined;
+}
+
 describe('UpdateService', () => {
   let service: UpdateService;
-  let mockSettings: any;
+  let mockSettings: { autoUpdateEnabled: boolean };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (UpdateService as any).instance = undefined;
+    (UpdateService as unknown as UpdateServiceWithPrivates).instance = undefined;
 
     mockSettings = { autoUpdateEnabled: true };
     const settingsServiceInstance = {
@@ -49,7 +53,7 @@ describe('UpdateService', () => {
     };
     (SettingsService.getInstance as Mock).mockReturnValue(settingsServiceInstance);
 
-    // Initial mock for BrowserWindow (handled by setup.ts and overridable)
+    // Initial mock for BrowserWindow
     vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([]);
 
     service = UpdateService.getInstance();
@@ -58,8 +62,8 @@ describe('UpdateService', () => {
   describe('initialize', () => {
     it('should NOT check for updates if autoUpdateEnabled is false in production', () => {
       mockSettings.autoUpdateEnabled = false;
-      const appMock = vi.mocked(app);
-      (appMock as any).isPackaged = true;
+      const appMock = vi.mocked(app) as unknown as { isPackaged: boolean };
+      appMock.isPackaged = true;
 
       service.initialize();
 
@@ -68,8 +72,8 @@ describe('UpdateService', () => {
 
     it('should check for updates if autoUpdateEnabled is true in production', () => {
       mockSettings.autoUpdateEnabled = true;
-      const appMock = vi.mocked(app);
-      (appMock as any).isPackaged = true;
+      const appMock = vi.mocked(app) as unknown as { isPackaged: boolean };
+      appMock.isPackaged = true;
 
       service.initialize();
 
@@ -79,8 +83,8 @@ describe('UpdateService', () => {
 
   describe('checkForUpdates', () => {
     it('should simulate NOT_AVAILABLE update in development mode', async () => {
-      const appMock = vi.mocked(app);
-      (appMock as any).isPackaged = false;
+      const appMock = vi.mocked(app) as unknown as { isPackaged: boolean };
+      appMock.isPackaged = false;
       process.env.NODE_ENV = 'development';
 
       const mockWin = {
@@ -88,8 +92,8 @@ describe('UpdateService', () => {
         webContents: {
           send: vi.fn(),
         },
-      };
-      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([mockWin as any]);
+      } as unknown as BrowserWindow;
+      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([mockWin]);
 
       await service.checkForUpdates();
 
@@ -136,8 +140,8 @@ describe('UpdateService', () => {
         webContents: {
           send: vi.fn(),
         },
-      };
-      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([mockWin as any]);
+      } as unknown as BrowserWindow;
+      vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([mockWin]);
 
       listener(mockUpdateInfo);
 

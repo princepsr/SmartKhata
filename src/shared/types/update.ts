@@ -30,3 +30,11 @@ export interface UpdateProgress {
   transferred: number;
   bytesPerSecond: number;
 }
+
+/**
+ * IPC Response for Update Status
+ */
+export interface GetUpdateStatusResponse {
+  status: UpdateStatus;
+  updateInfo: UpdateInfo | null;
+}

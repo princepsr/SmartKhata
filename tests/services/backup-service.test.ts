@@ -8,11 +8,11 @@ import AdmZip from 'adm-zip';
 import { backupService } from '../../src/main/services/backup-service';
 import { databaseManager } from '../../src/main/database';
 import { migrationRunner } from '../../src/main/database/migrations';
-import { createTestDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, seedTestData, SqlJsDatabase } from '../utils/test-db';
 import { SettingsService } from '../../src/main/services/settings-service';
 
 describe('BackupService', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   const testBackupPath = path.resolve(process.cwd(), 'test-data', 'test_backup.zip');
   const activeDbPath = path.resolve(process.cwd(), 'test-data', 'active.sqlite');
   const tempDir = path.resolve(process.cwd(), 'test-data', 'temp');
@@ -80,7 +80,8 @@ describe('BackupService', () => {
 
     // Mock integrity check success
     const mockPragma = vi.fn().mockReturnValue([{ integrity_check: 'ok' }]);
-    db.pragma = mockPragma;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (db as any).pragma = mockPragma;
 
     await backupService.restoreFromBackup(testBackupPath);
 
@@ -97,7 +98,8 @@ describe('BackupService', () => {
 
     // Mock integrity check FAILURE
     const mockPragma = vi.fn().mockReturnValue([{ integrity_check: 'corrupt' }]);
-    db.pragma = mockPragma;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (db as any).pragma = mockPragma;
 
     await expect(backupService.restoreFromBackup(testBackupPath)).rejects.toThrow(
       'The restored database appears to be corrupted'
@@ -292,7 +294,8 @@ describe('BackupService', () => {
 
       // 2. Mock restore environment
       const mockPragma = vi.fn().mockReturnValue([{ integrity_check: 'ok' }]);
-      db.pragma = mockPragma;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (db as any).pragma = mockPragma;
 
       // Mock renameSync and copyFileSync to avoid OS-level file locking issues in this test
       const _subRenameSpy = vi.spyOn(fs, 'renameSync').mockImplementation(() => {});

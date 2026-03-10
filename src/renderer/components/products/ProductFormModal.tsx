@@ -5,6 +5,8 @@ import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { useAppSettingsStore } from '../../store';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import { medicalApi } from '../../services/medical-api';
+import type { IndianMedicine } from '@shared/types/ipc';
+import type { CreateProductRequest, UpdateProductRequest } from '@shared/validation/schemas';
 import './ProductFormModal.css';
 
 interface Product {
@@ -92,7 +94,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [formData, setFormData] = useState<FormData>(INITIAL_STATE);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [saltSuggestions, setSaltSuggestions] = useState<string[]>([]);
-  const [medicineSuggestions, setMedicineSuggestions] = useState<any[]>([]);
+  const [medicineSuggestions, setMedicineSuggestions] = useState<IndianMedicine[]>([]);
   const firstInputRef = useRef<HTMLInputElement>(null);
   const { settings } = useAppSettingsStore();
 
@@ -103,13 +105,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     execute: createProduct,
     loading: creating,
     error: createError,
-  } = useIPCMutation(IPC_CHANNELS.PRODUCT_CREATE);
+  } = useIPCMutation<CreateProductRequest, Product>(IPC_CHANNELS.PRODUCT_CREATE);
 
   const {
     execute: updateProduct,
     loading: updating,
     error: updateError,
-  } = useIPCMutation(IPC_CHANNELS.PRODUCT_UPDATE);
+  } = useIPCMutation<UpdateProductRequest, Product>(IPC_CHANNELS.PRODUCT_UPDATE);
 
   // Parse server errors for field highlighting
   useEffect(() => {

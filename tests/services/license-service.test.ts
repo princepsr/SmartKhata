@@ -6,7 +6,7 @@
 
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { LicenseService } from '../../src/main/services/license-service';
-import { createTestDatabase, resetTestDatabase } from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, SqlJsDatabase } from '../utils/test-db';
 import { LicenseError, ValidationError } from '../../src/main/services/errors/service-errors';
 import fs from 'fs';
 import { execSync } from 'child_process';
@@ -15,7 +15,7 @@ vi.mock('fs');
 vi.mock('child_process');
 
 describe('LicenseService - Trial License', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let licenseService: LicenseService;
 
   beforeEach(async () => {
@@ -71,7 +71,7 @@ describe('LicenseService - Trial License', () => {
 });
 
 describe('LicenseService - Validation', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let licenseService: LicenseService;
 
   beforeEach(async () => {
@@ -129,7 +129,7 @@ describe('LicenseService - Validation', () => {
 });
 
 describe('LicenseService - Machine Fingerprint', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let licenseService: LicenseService;
 
   beforeEach(async () => {
@@ -161,13 +161,17 @@ describe('LicenseService - Machine Fingerprint', () => {
 
   it('should validate and activate short KRN key', () => {
     // 1. Get local device ID
-    const deviceId = (licenseService as any)._getMachineFingerprint();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const deviceId = (licenseService as any)._getMachineFingerprint() as string;
     const expiryDays = 365; // ~1 year from 2026-01-01
 
     // 2. Mock generation logic (same as in generator script)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const deviceHashID = (licenseService as any)._getTruncatedHash(deviceId, 22);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const signature = (licenseService as any)._generateShortSignature(expiryDays, deviceHashID);
     const bits = (BigInt(expiryDays) << 46n) | (BigInt(deviceHashID) << 24n) | BigInt(signature);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawKey = (licenseService as any)._encodeBase32(bits, 12);
     const key = `KRN-${rawKey.substring(0, 4)}-${rawKey.substring(4, 8)}-${rawKey.substring(8, 12)}`;
 
@@ -221,13 +225,13 @@ describe('LicenseService - Machine Fingerprint', () => {
 
     const status = licenseService.getLicenseStatus();
     // Trial expiry should be Jan 2026 + 30 days, which is long past current date
-    expect(status.expiresOn! < new Date()).toBe(true);
+    expect(status.expiresOn && new Date(status.expiresOn) < new Date()).toBe(true);
     expect(status.isExpired).toBe(true);
   });
 });
 
 describe('LicenseService - Customer ID Generation', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let licenseService: LicenseService;
 
   beforeEach(async () => {

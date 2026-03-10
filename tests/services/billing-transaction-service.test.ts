@@ -9,10 +9,10 @@ import { BillingTransactionService } from '../../src/main/services/billing-trans
 import { ProductRepository } from '../../src/main/repositories/product-repository';
 import { CustomerRepository } from '../../src/main/repositories/customer-repository';
 import { SettingsService } from '../../src/main/services/settings-service';
-import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, seedTestData, SqlJsDatabase } from '../utils/test-db';
 
 describe('BillingTransactionService - Atomic Sales', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let transactionService: BillingTransactionService;
   let productRepo: ProductRepository;
   let customerRepo: CustomerRepository;
@@ -57,7 +57,7 @@ describe('BillingTransactionService - Atomic Sales', () => {
     expect(productRepo.findById(2)?.stockQty).toBe(49);
 
     // 3. Verify bill exists in DB
-    const bill = db.prepare('SELECT * FROM bills WHERE id = ?').get(result.id) as any;
+    const bill = db.prepare('SELECT * FROM bills WHERE id = ?').get(result.id) as { id: number; bill_number: string };
     expect(bill).toBeDefined();
 
     // 4. Verify Customer Balance (inclusive: 40+20=60, paid 40, owes 20)
@@ -79,7 +79,7 @@ describe('BillingTransactionService - Atomic Sales', () => {
       paymentMode: 'cash' as const,
     };
 
-    let caughtError: any = null;
+    let caughtError: unknown = null;
     try {
       await transactionService.createSale(saleData);
     } catch (err) {
@@ -87,11 +87,12 @@ describe('BillingTransactionService - Atomic Sales', () => {
     }
 
     expect(caughtError).not.toBeNull();
+    const error1 = caughtError as { code?: string; name?: string; message?: string };
     // Check error type by code or name (more resilient than instanceof across module boundaries)
     expect(
-      caughtError?.code === 'INSUFFICIENT_STOCK' ||
-        caughtError?.name === 'InsufficientStockError' ||
-        (caughtError?.message || '').match(/Insufficient/i)
+      error1?.code === 'INSUFFICIENT_STOCK' ||
+        error1?.name === 'InsufficientStockError' ||
+        (error1?.message || '').match(/Insufficient/i)
     ).toBeTruthy();
 
     // Verify Rollbacks
@@ -112,7 +113,7 @@ describe('BillingTransactionService - Atomic Sales', () => {
       paymentMode: 'cash' as const,
     };
 
-    let caughtError: any = null;
+    let caughtError: unknown = null;
     try {
       await transactionService.createSale(saleData);
     } catch (err) {
@@ -120,10 +121,11 @@ describe('BillingTransactionService - Atomic Sales', () => {
     }
 
     expect(caughtError).not.toBeNull();
+    const error2 = caughtError as { code?: string; name?: string; message?: string };
     expect(
-      caughtError?.code === 'NOT_FOUND' ||
-        caughtError?.name === 'NotFoundError' ||
-        (caughtError?.message || '').match(/not found/i)
+      error2?.code === 'NOT_FOUND' ||
+        error2?.name === 'NotFoundError' ||
+        (error2?.message || '').match(/not found/i)
     ).toBeTruthy();
 
     const bills = db.prepare('SELECT COUNT(*) as count FROM bills').get() as { count: number };

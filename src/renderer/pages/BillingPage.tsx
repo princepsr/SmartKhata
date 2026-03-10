@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import type { Product, Quotation, CreateQuotationInput } from '@shared/types/ipc';
+import type { Product, Quotation, CreateQuotationInput, QuotationWithItems, QuotationItem, Customer } from '@shared/types/ipc';
 import { BillItemList } from '../components/billing/BillItemList';
 import { PaymentModeSelector, type PaymentMode } from '../components/billing/PaymentModeSelector';
 import { BillHistoryModal } from '../components/billing/BillHistoryModal';
@@ -62,14 +62,6 @@ interface CartItem {
   quantity: number;
   discountValue?: number;
   discountType?: 'amount' | 'percent';
-}
-
-// Customer Type
-interface Customer {
-  id: number;
-  name: string;
-  phone: string;
-  balanceDue: number;
 }
 
 function BillingPage() {
@@ -155,7 +147,7 @@ function BillingPage() {
   const [todaySummary, setTodaySummary] = useState<DailySalesSummary | null>(null);
 
   // Medical Alternatives State
-  const [saltAlternatives, setSaltAlternatives] = useState<Product[]>([]);
+  const [saltAlternatives, setSaltAlternatives] = useState<Partial<Product>[]>([]);
 
   // Alert State (for custom styled alerts)
   const [alertState, setAlertState] = useState<{
@@ -196,17 +188,17 @@ function BillingPage() {
 
   // Handle Quotation Conversion
   const quotationId = searchParams.get('quotationId');
-  const { execute: getQuotationWithItems } = useIPCMutation(IPC_CHANNELS.QUOTATION_GET_WITH_ITEMS);
-  const { execute: getCustomer } = useIPCMutation(IPC_CHANNELS.CUSTOMER_GET);
+  const { execute: getQuotationWithItems } = useIPCMutation<number, QuotationWithItems>(IPC_CHANNELS.QUOTATION_GET_WITH_ITEMS);
+  const { execute: getCustomer } = useIPCMutation<number, Customer>(IPC_CHANNELS.CUSTOMER_GET);
 
   useEffect(() => {
     if (quotationId) {
       const loadQuotation = async () => {
         try {
-          const result = (await getQuotationWithItems(Number(quotationId))) as any;
+          const result = await getQuotationWithItems(Number(quotationId));
           if (result && result.quotation) {
             // Map items to cart
-            const newCart = result.items.map((item: any) => ({
+            const newCart = result.items.map((item: QuotationItem) => ({
               product: {
                 id: item.productId,
                 name: item.productName,
@@ -235,9 +227,9 @@ function BillingPage() {
 
             // Set customer if exists
             if (result.quotation.customerId) {
-              const customerResult = (await getCustomer(result.quotation.customerId)) as any;
+              const customerResult = await getCustomer(result.quotation.customerId);
               if (customerResult) {
-                setSelectedCustomer(customerResult);
+                setSelectedCustomer(customerResult as unknown as Customer);
               }
             }
 
@@ -432,6 +424,7 @@ function BillingPage() {
       setAlertState,
       setSearchQuery,
       setSelectedResultIndex,
+      t,
     ]
   );
 
@@ -865,7 +858,7 @@ function BillingPage() {
                           <div
                             key={alt.id}
                             className="product-item alt"
-                            onClick={() => addToCart(alt)}
+                            onClick={() => addToCart(alt as Product)}
                           >
                             <span className="product-name">{alt.name}</span>
                             <span className="product-meta">

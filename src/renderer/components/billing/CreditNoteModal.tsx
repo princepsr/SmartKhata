@@ -41,6 +41,16 @@ interface ReturnItem {
   gstPercent: number;
 }
 
+interface CreateCreditNoteRequest {
+  billId: number;
+  reason: string;
+  notes?: string;
+  items: {
+    billItemId: number;
+    quantity: number;
+  }[];
+}
+
 export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
   isOpen,
   onClose,
@@ -54,7 +64,7 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
     execute: createCreditNote,
     loading,
     error,
-  } = useIPCMutation<any, any>(IPC_CHANNELS.CREDIT_NOTE_CREATE);
+  } = useIPCMutation<CreateCreditNoteRequest, boolean>(IPC_CHANNELS.CREDIT_NOTE_CREATE);
   const { alert } = useConfirm();
 
   useEffect(() => {

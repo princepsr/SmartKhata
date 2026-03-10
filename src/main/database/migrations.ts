@@ -155,7 +155,7 @@ export class MigrationRunner {
       `);
 
       return stmt.all() as AppliedMigration[];
-    } catch (error) {
+    } catch {
       // Table might not exist yet
       return [];
     }
@@ -257,7 +257,7 @@ export class MigrationRunner {
       const stmt = db.prepare('SELECT MAX(version) as version FROM schema_migrations');
       const result = stmt.get() as { version: number | null };
       return result.version || 0;
-    } catch (error) {
+    } catch {
       return 0;
     }
   }

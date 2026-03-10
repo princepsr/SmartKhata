@@ -3,14 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { useIPC } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { formatCurrency } from '../../utils/formatters';
+import { Supplier } from '@shared/types/ipc';
 import { SupplierSettleBalanceModal } from './SupplierSettleBalanceModal';
 import './SupplierLedgerModal.css';
 
-interface Supplier {
-  id: number;
-  name: string;
-  phone: string | null;
-}
 
 interface SupplierLedgerEntry {
   id: number;
@@ -263,8 +259,9 @@ export const SupplierLedgerModal: React.FC<SupplierLedgerModalProps> = ({
                 name: history.supplier.name,
                 balanceDue: history.supplier.balanceDue,
                 phone: supplier.phone,
-              } as any)
-            : (supplier as any)
+                isActive: true, // Placeholder for required field
+              } as Supplier)
+            : (supplier as Supplier)
         }
       />
     </div>

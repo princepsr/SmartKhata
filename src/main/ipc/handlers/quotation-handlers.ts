@@ -1,7 +1,13 @@
 import { IPCHandler } from '../ipc-handler';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { QuotationService, CreateQuotationInput } from '../../services/quotation-service';
-import { Quotation } from '../../repositories/quotation-repository';
+import { 
+  Quotation as QuotationIPC, 
+  QuotationWithItems 
+} from '@shared/types/ipc';
+import { 
+  Quotation as QuotationDomain 
+} from '../../repositories/quotation-repository';
 import { logger } from '../../utils/logger';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 import { PrintService } from '../../services/print-service';
@@ -12,10 +18,11 @@ export function registerQuotationHandlers() {
   logger.info('Registering Quotation handlers');
 
   // Create Quotation
-  IPCHandler.handle<CreateQuotationInput, Quotation>(
+  IPCHandler.handle<CreateQuotationInput, QuotationIPC>(
     IPC_CHANNELS.QUOTATION_CREATE,
     async (input) => {
-      return await quotationService.createQuotation(input);
+      const quotation = await quotationService.createQuotation(input);
+      return _mapToUI(quotation);
     },
     {
       transformError: (err) => getUserFriendlyMessage(err),
@@ -23,10 +30,11 @@ export function registerQuotationHandlers() {
   );
 
   // List Quotations
-  IPCHandler.handle<number, Quotation[]>(
+  IPCHandler.handle<number, QuotationIPC[]>(
     IPC_CHANNELS.QUOTATION_LIST,
     async (page) => {
-      return await quotationService.listQuotations(page);
+      const items = await quotationService.listQuotations(page);
+      return items.map((q: QuotationDomain) => _mapToUI(q));
     },
     {
       transformError: (err) => getUserFriendlyMessage(err),
@@ -34,10 +42,11 @@ export function registerQuotationHandlers() {
   );
 
   // Get Quotation
-  IPCHandler.handle<number, Quotation | null>(
+  IPCHandler.handle<number, QuotationIPC | null>(
     IPC_CHANNELS.QUOTATION_GET,
     async (id) => {
-      return await quotationService.getQuotationById(id);
+      const quotation = await quotationService.getQuotationById(id);
+      return quotation ? _mapToUI(quotation) : null;
     },
     {
       transformError: (err) => (err instanceof Error ? err.message : String(err)),
@@ -47,7 +56,7 @@ export function registerQuotationHandlers() {
   // ============================================
   // GET QUOTATION WITH ITEMS
   // ============================================
-  IPCHandler.handle<number, any>(
+  IPCHandler.handle<number, QuotationWithItems>(
     IPC_CHANNELS.QUOTATION_GET_WITH_ITEMS,
     async (id) => {
       const result = await quotationService.getQuotationWithItems(id);
@@ -55,7 +64,7 @@ export function registerQuotationHandlers() {
         throw new Error('Quotation not found');
       }
       return {
-        quotation: result.quotation,
+        quotation: _mapToUI(result.quotation),
         items: result.items,
       };
     },
@@ -67,7 +76,7 @@ export function registerQuotationHandlers() {
   // ============================================
   // UPDATE QUOTATION STATUS
   // ============================================
-  IPCHandler.handle<{ id: number; status: Quotation['status'] }, void>(
+  IPCHandler.handle<{ id: number; status: QuotationIPC['status'] }, void>(
     IPC_CHANNELS.QUOTATION_UPDATE_STATUS,
     async ({ id, status }) => {
       await quotationService.updateQuotationStatus(id, status);
@@ -90,4 +99,14 @@ export function registerQuotationHandlers() {
       transformError: (err) => (err instanceof Error ? err.message : String(err)),
     }
   );
+}
+
+/**
+ * Map Quotation Domain to IPC Object
+ */
+function _mapToUI(q: QuotationDomain): QuotationIPC {
+  return {
+    ...q,
+    createdAt: q.createdAt.getTime(),
+  };
 }

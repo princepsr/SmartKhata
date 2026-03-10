@@ -1,6 +1,44 @@
 import { BaseRepository } from './base-repository';
 import { PurchaseOrder } from '@shared/types/ipc';
 
+/**
+ * Purchase Order Database Row
+ */
+interface PurchaseOrderRow {
+  id: number;
+  po_number: string;
+  supplier_id: number;
+  supplier_name_snapshot: string;
+  supplier_gstin_snapshot: string | null;
+  po_date: string;
+  total_taxable: number;
+  gst_total: number;
+  grand_total: number;
+  status: 'PENDING' | 'RECEIVED' | 'CANCELLED';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  supplier_name?: string;
+  supplier_gstin?: string;
+}
+
+/**
+ * Purchase Order Item Database Row
+ */
+interface PurchaseOrderItemRow {
+  id: number;
+  purchase_order_id: number;
+  product_id: number | null;
+  product_name: string;
+  hsn_code: string | null;
+  quantity: number;
+  unit_price: number;
+  gst_percent: number;
+  line_total: number;
+  salt_name: string | null;
+}
+
 export class PurchaseOrderRepository extends BaseRepository {
   /**
    * List all purchase orders
@@ -18,7 +56,7 @@ export class PurchaseOrderRepository extends BaseRepository {
       LEFT JOIN suppliers s ON po.supplier_id = s.id
     `;
 
-    const params: any[] = [];
+    const params: unknown[] = [];
     if (options?.startDate && options?.endDate) {
       query += ` WHERE po.po_date BETWEEN ? AND ? `;
       params.push(options.startDate, options.endDate);
@@ -26,7 +64,7 @@ export class PurchaseOrderRepository extends BaseRepository {
 
     query += ` ORDER BY po.po_date DESC, po.created_at DESC `;
 
-    const rows = this.db.prepare(query).all(...params) as any[];
+    const rows = this.db.prepare(query).all(...params) as PurchaseOrderRow[];
     return rows.map((row) => this.mapDbToPurchaseOrder(row));
   }
 
@@ -43,7 +81,7 @@ export class PurchaseOrderRepository extends BaseRepository {
       LEFT JOIN suppliers s ON po.supplier_id = s.id
       WHERE po.id = ?
     `;
-    const row = this.db.prepare(query).get(id) as any;
+    const row = this.db.prepare(query).get(id) as PurchaseOrderRow;
     if (!row) {
       return null;
     }
@@ -51,7 +89,7 @@ export class PurchaseOrderRepository extends BaseRepository {
     const itemsQuery = `
       SELECT * FROM purchase_order_items WHERE purchase_order_id = ?
     `;
-    const items = this.db.prepare(itemsQuery).all(id) as any[];
+    const items = this.db.prepare(itemsQuery).all(id) as PurchaseOrderItemRow[];
 
     const po = this.mapDbToPurchaseOrder(row);
     po.items = items.map((item) => ({
@@ -89,7 +127,7 @@ export class PurchaseOrderRepository extends BaseRepository {
         quantity, unit_price, gst_percent, line_total, salt_name) VALUES (@poId, @productId, @productName, @hsnCode, @quantity, @unitPrice, @gstPercent, @lineTotal, @saltName)
     `);
 
-    const transaction = this.db.transaction((poData: any) => {
+    const transaction = this.db.transaction((poData: Partial<PurchaseOrder>) => {
       // 1. Generate PO Number if empty
       const prefix = 'PO-';
       const year = new Date().getFullYear();
@@ -119,7 +157,7 @@ export class PurchaseOrderRepository extends BaseRepository {
       const result = insertPO.run({
         poNumber: newPoNumber,
         supplierId: poData.supplierId,
-        supplierNameSnapshot: poData.supplierNameSnapshot || 'Unknown',
+        supplierNameSnapshot: poData.supplierName || 'Unknown',
         supplierGstinSnapshot: poData.supplierGstin || null,
         poDate: poData.poDate || new Date().toISOString().split('T')[0],
         totalTaxable: poData.totalTaxable || 0,
@@ -203,13 +241,13 @@ export class PurchaseOrderRepository extends BaseRepository {
         quantity, unit_price, gst_percent, line_total, salt_name) VALUES (@poId, @productId, @productName, @hsnCode, @quantity, @unitPrice, @gstPercent, @lineTotal, @saltName)
     `);
 
-    const transaction = this.db.transaction((poData: any) => {
+    const transaction = this.db.transaction((poData: Partial<PurchaseOrder>) => {
       // 1. Update PO Header
       updatePO.run({
         id,
         poNumber: poData.poNumber,
         supplierId: poData.supplierId,
-        supplierNameSnapshot: poData.supplierNameSnapshot || 'Unknown',
+        supplierNameSnapshot: poData.supplierName || 'Unknown',
         supplierGstinSnapshot: poData.supplierGstin || null,
         poDate: poData.poDate,
         totalTaxable: poData.totalTaxable || 0,
@@ -250,7 +288,7 @@ export class PurchaseOrderRepository extends BaseRepository {
   /**
    * Map DB row to PurchaseOrder entity
    */
-  private mapDbToPurchaseOrder(row: any): PurchaseOrder {
+  private mapDbToPurchaseOrder(row: PurchaseOrderRow): PurchaseOrder {
     return {
       id: row.id,
       poNumber: row.po_number,
@@ -263,8 +301,8 @@ export class PurchaseOrderRepository extends BaseRepository {
       grandTotal: row.grand_total,
       status: row.status,
       notes: row.notes,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
     };
   }
 }

@@ -10,8 +10,9 @@ import {
   ProductRepository,
   CreateProductInput,
   UpdateProductInput,
+  Product,
 } from '../repositories/product-repository';
-import { InventoryRepository } from '../repositories/inventory-repository';
+import { InventoryRepository, InventoryLog } from '../repositories/inventory-repository';
 import { SettingsService } from './settings-service';
 import {
   ValidationError,
@@ -101,7 +102,7 @@ export class ProductService extends BaseService {
   /**
    * Add a new product with validation
    */
-  public addProduct(input: AddProductInput): any {
+  public addProduct(input: AddProductInput): Product {
     // 1. Validate input
     this._validateProductInput(input);
 
@@ -167,13 +168,15 @@ export class ProductService extends BaseService {
   /**
    * Bulk import products
    */
-  public importProducts(inputs: AddProductInput[]): any[] {
+  public importProducts(inputs: AddProductInput[]): Product[] {
     // 1. Validate all inputs first
     inputs.forEach((input, index) => {
       try {
         this._validateProductInput(input);
-      } catch (err: any) {
-        throw new ValidationError(`Row ${index + 1}: ${err.message}`, err.field);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        const field = (err && typeof err === 'object' && 'field' in err) ? (err as { field: string }).field : undefined;
+        throw new ValidationError(`Row ${index + 1}: ${message}`, field);
       }
     });
 
@@ -212,7 +215,7 @@ export class ProductService extends BaseService {
   /**
    * Update product with validation
    */
-  public updateProduct(id: number, updates: UpdateProductData): any {
+  public updateProduct(id: number, updates: UpdateProductData): Product {
     // 1. Check product exists
     const product = this.productRepo.findById(id);
     if (!product) {
@@ -349,7 +352,7 @@ export class ProductService extends BaseService {
     includeInactive: boolean = false,
     page: number = 1,
     limit: number = 100
-  ): { items: any[]; totalCount: number; hasMore: boolean; page: number } {
+  ): { items: Product[]; totalCount: number; hasMore: boolean; page: number } {
     if (!query || query.trim() === '') {
       throw new ValidationError('Search query cannot be empty', 'query');
     }
@@ -374,7 +377,7 @@ export class ProductService extends BaseService {
   /**
    * Get product by ID
    */
-  public getProduct(id: number): any {
+  public getProduct(id: number): Product {
     const product = this.productRepo.findById(id);
     if (!product) {
       throw new NotFoundError('Product', id);
@@ -389,7 +392,7 @@ export class ProductService extends BaseService {
     includeInactive: boolean = false,
     page: number = 1,
     limit: number = 100
-  ): { items: any[]; page: number } {
+  ): { items: Product[]; page: number } {
     const offset = (page - 1) * limit;
     return {
       items: this.productRepo.findAll(includeInactive, limit, offset),
@@ -407,7 +410,7 @@ export class ProductService extends BaseService {
   /**
    * Get low stock products
    */
-  public getLowStockProducts(): any[] {
+  public getLowStockProducts(): Product[] {
     return this.productRepo.getLowStock();
   }
 
@@ -506,7 +509,7 @@ export class ProductService extends BaseService {
   /**
    * Get stock history for a product
    */
-  public getStockHistory(productId: number): any[] {
+  public getStockHistory(productId: number): InventoryLog[] {
     return this.inventoryRepo.getStockHistory(productId);
   }
 }

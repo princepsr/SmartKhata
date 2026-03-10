@@ -1,9 +1,25 @@
 import { createWorker } from 'tesseract.js';
 
+// Basic types for PDF.js items and pages
+interface PDFItem {
+  str: string;
+  transform: number[];
+  width?: number;
+}
+
+interface PDFPageProxy {
+  getViewport: (options: { scale: number }) => { width: number; height: number };
+  getTextContent: () => Promise<{ items: unknown[] }>;
+  render: (options: { canvasContext: CanvasRenderingContext2D; viewport: unknown }) => { promise: Promise<void> };
+}
+
 // Declare global types for PDF.js
 declare global {
   interface Window {
-    pdfjsLib: any;
+    pdfjsLib: {
+      GlobalWorkerOptions: { workerSrc: string };
+      getDocument: (options: { data: ArrayBuffer }) => { promise: Promise<{ numPages: number; getPage: (i: number) => Promise<PDFPageProxy> }> };
+    };
   }
 }
 
@@ -11,10 +27,10 @@ declare global {
  * Group physical items into rows based on Y coordinate
  */
 export const groupItemsIntoPhysicalRows = (
-  items: any[],
+  items: PDFItem[],
   tolerance: number = 4
-): { y: number; items: any[] }[] => {
-  const physicalRows: { y: number; items: any[] }[] = [];
+): { y: number; items: PDFItem[] }[] => {
+  const physicalRows: { y: number; items: PDFItem[] }[] = [];
 
   items.forEach((item) => {
     const y = item.transform[5];
@@ -32,7 +48,7 @@ export const groupItemsIntoPhysicalRows = (
 /**
  * Group row items into columns based on X coordinate
  */
-export const groupRowIntoColumns = (items: any[], colTolerance: number = 10): string[] => {
+export const groupRowIntoColumns = (items: PDFItem[], colTolerance: number = 10): string[] => {
   const sortedItems = [...items].sort((a, b) => a.transform[4] - b.transform[4]);
   const cells: string[] = [];
   let currentCell = '';
@@ -76,7 +92,7 @@ export const parsePDF = async (
     onProgress?.(`Processing Page ${i}/${numPages}...`);
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
-    const items = textContent.items as any[];
+    const items = textContent.items as unknown as PDFItem[];
 
     if (items.length === 0) {
       onProgress?.(`No text found on Page ${i}. Initializing OCR...`);
@@ -98,7 +114,7 @@ export const parsePDF = async (
 /**
  * OCR Fallback using Tesseract.js (Offline compatible)
  */
-async function performOCR(page: any, onProgress?: (msg: string) => void): Promise<string[][]> {
+async function performOCR(page: PDFPageProxy, onProgress?: (msg: string) => void): Promise<string[][]> {
   // 1. Render page to canvas
   const viewport = page.getViewport({ scale: 2.0 }); // Upscale for better OCR
   const canvas = document.createElement('canvas');
@@ -124,7 +140,7 @@ async function performOCR(page: any, onProgress?: (msg: string) => void): Promis
     if (!response.ok) {
       throw new Error('OCR assets not found. This feature is optional and assets were removed to save space.');
     }
-  } catch (e) {
+  } catch {
     onProgress?.('OCR assets are missing. Skipping OCR...');
     return [];
   }

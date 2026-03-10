@@ -58,7 +58,7 @@ export class WhatsAppService {
         }),
       });
 
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as { error?: { message?: string } };
 
       if (response.ok) {
         whatsappLogger.info(`Daily report sent successfully to ${cleanRecipient}`);

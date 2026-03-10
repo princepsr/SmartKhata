@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { ipcMain } from 'electron';
+import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { registerProductHandlers } from '../../src/main/ipc/handlers/product-handlers';
 import { IPC_CHANNELS } from '../../src/shared/ipc/channels';
 
@@ -47,6 +47,8 @@ vi.mock('../../src/main/services/license-service', () => ({
   LicenseService: vi.fn().mockImplementation(() => mockLicenseService),
 }));
 
+type HandlerFn = (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<{ success: boolean; data?: unknown; error?: string }>;
+
 describe('Product IPC Handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -54,15 +56,15 @@ describe('Product IPC Handlers', () => {
     registerProductHandlers();
   });
 
-  const getHandler = (channel: string): ((...args: any[]) => any) => {
+  const getHandler = (channel: string): HandlerFn => {
     const call = vi.mocked(ipcMain.handle).mock.calls.find((c) => c[0] === channel);
     if (!call) {
       throw new Error(`Handler not registered for ${channel}`);
     }
-    return call[1];
+    return call[1] as HandlerFn;
   };
 
-  const mockEvent = {} as any;
+  const mockEvent = {} as IpcMainInvokeEvent;
 
   it('should register product management handlers', () => {
     expect(ipcMain.handle).toHaveBeenCalledWith(IPC_CHANNELS.PRODUCT_LIST, expect.any(Function));
@@ -79,7 +81,7 @@ describe('Product IPC Handlers', () => {
       const result = await handler(mockEvent, { page: 1, pageSize: 10 });
 
       expect(result.success).toBe(true);
-      expect(result.data.items).toEqual([]);
+      expect((result.data as { items: unknown[] }).items).toEqual([]);
       expect(mockProductService.getAllProducts).toHaveBeenCalledWith(false, 1, 10);
     });
   });
@@ -108,7 +110,7 @@ describe('Product IPC Handlers', () => {
       const result = await handler(mockEvent, { name: 'Test', salePrice: 10 });
 
       expect(result.success).toBe(true);
-      expect(result.data.id).toBe(1);
+      expect((result.data as { id: number }).id).toBe(1);
     });
 
     it('should fail if license is locked', async () => {

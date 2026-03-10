@@ -17,7 +17,7 @@ export function exampleBasicAPI(): void {
       // ✅ GOOD: Use registry constants
       list: () => ipcRenderer.invoke(IPC_CHANNELS.PRODUCT_LIST),
       get: (id: number) => ipcRenderer.invoke(IPC_CHANNELS.PRODUCT_GET, id),
-      create: (data: any) => ipcRenderer.invoke(IPC_CHANNELS.PRODUCT_CREATE, data),
+      create: (data: unknown) => ipcRenderer.invoke(IPC_CHANNELS.PRODUCT_CREATE, data),
     },
   };
 
@@ -64,7 +64,7 @@ export function exampleTypedAPI(): void {
  */
 export function exampleValidation(): void {
   // Optional: Generic invoke with validation
-  const safeInvoke = (channel: string, ...args: any[]) => {
+  const safeInvoke = (channel: string, ...args: unknown[]) => {
     if (!isValidChannel(channel)) {
       console.error(`Invalid IPC channel: ${channel}`);
       throw new Error(`Invalid IPC channel: ${channel}`);
@@ -87,7 +87,7 @@ export function exampleValidation(): void {
  */
 export function exampleLogging(): void {
   // Log all registered channels on startup
-  console.log('Registered IPC Channels:', getAllChannels());
+  console.warn('Registered IPC Channels:', getAllChannels());
   
   // Output:
   // [
@@ -108,8 +108,8 @@ export function exampleOrganizedAPI(): void {
     products: {
       list: () => ipcRenderer.invoke(IPC_CHANNELS.PRODUCT_LIST),
       get: (id: number) => ipcRenderer.invoke(IPC_CHANNELS.PRODUCT_GET, id),
-      create: (data: any) => ipcRenderer.invoke(IPC_CHANNELS.PRODUCT_CREATE, data),
-      update: (id: number, data: any) => 
+      create: (data: unknown) => ipcRenderer.invoke(IPC_CHANNELS.PRODUCT_CREATE, data),
+      update: (id: number, data: unknown) => 
         ipcRenderer.invoke(IPC_CHANNELS.PRODUCT_UPDATE, id, data),
       delete: (id: number) => ipcRenderer.invoke(IPC_CHANNELS.PRODUCT_DELETE, id),
       search: (query: string) => ipcRenderer.invoke(IPC_CHANNELS.PRODUCT_SEARCH, query),
@@ -117,7 +117,7 @@ export function exampleOrganizedAPI(): void {
 
     // Sale module
     sales: {
-      create: (data: any) => ipcRenderer.invoke(IPC_CHANNELS.SALE_CREATE, data),
+      create: (data: unknown) => ipcRenderer.invoke(IPC_CHANNELS.SALE_CREATE, data),
       list: () => ipcRenderer.invoke(IPC_CHANNELS.SALE_LIST),
       get: (id: number) => ipcRenderer.invoke(IPC_CHANNELS.SALE_GET, id),
     },
@@ -126,7 +126,7 @@ export function exampleOrganizedAPI(): void {
     customers: {
       list: () => ipcRenderer.invoke(IPC_CHANNELS.CUSTOMER_LIST),
       get: (id: number) => ipcRenderer.invoke(IPC_CHANNELS.CUSTOMER_GET, id),
-      create: (data: any) => ipcRenderer.invoke(IPC_CHANNELS.CUSTOMER_CREATE, data),
+      create: (data: unknown) => ipcRenderer.invoke(IPC_CHANNELS.CUSTOMER_CREATE, data),
     },
 
     // App module
@@ -139,6 +139,7 @@ export function exampleOrganizedAPI(): void {
   contextBridge.exposeInMainWorld('electron', electronAPI);
 
   // Export type for renderer
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   type ElectronAPI = typeof electronAPI;
 }
 
@@ -148,11 +149,11 @@ export function exampleOrganizedAPI(): void {
 export function exampleRuntimeValidation(): void {
   // Intercept all IPC calls for logging/validation
   const createValidatedAPI = () => {
-    return new Proxy({} as any, {
+    return new Proxy({} as Record<string, unknown>, {
       get: (_target, module: string) => {
         return new Proxy({}, {
-          get: (_, action: string) => {
-            return (...args: any[]) => {
+          get: (__, action: string) => {
+            return (...args: unknown[]) => {
               const channel = `${module}:${action}`;
               
               if (!isValidChannel(channel)) {
@@ -160,7 +161,7 @@ export function exampleRuntimeValidation(): void {
                 throw new Error(`Invalid IPC channel: ${channel}`);
               }
               
-              console.log(`IPC Call: ${channel}`, args);
+              console.warn(`IPC Call: ${channel}`, args);
               return ipcRenderer.invoke(channel, ...args);
             };
           },

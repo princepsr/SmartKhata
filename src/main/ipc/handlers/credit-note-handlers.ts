@@ -11,6 +11,7 @@ import {
 } from '../../services/credit-note-service';
 import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
+import { CreditNote, CreditNoteWithItems } from '@shared/types/ipc';
 
 export function registerCreditNoteHandlers(): void {
   const creditNoteService = new CreditNoteService();
@@ -18,7 +19,7 @@ export function registerCreditNoteHandlers(): void {
   // ============================================
   // CREATE CREDIT NOTE
   // ============================================
-  IPCHandler.handle<CreateCreditNoteServiceInput, any>(
+  IPCHandler.handle<CreateCreditNoteServiceInput, CreditNoteWithItems>(
     IPC_CHANNELS.CREDIT_NOTE_CREATE,
     async (input) => {
       const result = creditNoteService.createCreditNote(input);
@@ -47,7 +48,10 @@ export function registerCreditNoteHandlers(): void {
   // ============================================
   // LIST CREDIT NOTES
   // ============================================
-  IPCHandler.handle<{ startDate: string; endDate: string; page?: number }, any>(
+  IPCHandler.handle<
+    { startDate: string; endDate: string; page?: number },
+    { data: CreditNote[]; total: number }
+  >(
     IPC_CHANNELS.CREDIT_NOTE_LIST,
     async ({ startDate, endDate, page = 1 }) => {
       const result = creditNoteService.listCreditNotes(startDate, endDate, page);
@@ -65,7 +69,7 @@ export function registerCreditNoteHandlers(): void {
   // ============================================
   // GET CREDIT NOTE BY ID
   // ============================================
-  IPCHandler.handle<number, any>(
+  IPCHandler.handle<number, CreditNoteWithItems>(
     IPC_CHANNELS.CREDIT_NOTE_GET_BY_ID,
     async (id) => {
       const result = creditNoteService.getCreditNoteById(id);

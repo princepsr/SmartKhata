@@ -29,7 +29,7 @@ interface PopupStore extends PopupState {
   closePopup: () => void;
 }
 
-export const usePopupStore = create<PopupStore>((set, get) => ({
+export const usePopupStore = create<PopupStore>((set) => ({
   isOpen: false,
   title: '',
   message: '',

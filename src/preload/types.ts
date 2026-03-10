@@ -7,7 +7,7 @@
 
 export interface ElectronAPI {
   // Generic IPC invoke
-  invoke: (channel: string, ...args: any[]) => Promise<any>;
+  invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
 
   // Products API
   products: {

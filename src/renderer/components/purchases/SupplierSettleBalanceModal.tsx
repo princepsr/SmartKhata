@@ -78,8 +78,9 @@ export const SupplierSettleBalanceModal: React.FC<SupplierSettleBalanceModalProp
       });
 
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || t('procurement.settle.error_fail'));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || t('procurement.settle.error_fail'));
     }
   };
 

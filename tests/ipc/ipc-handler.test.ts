@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { ipcMain } from 'electron';
+import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { IPCHandler } from '../../src/main/ipc/ipc-handler';
 import { IPC_CHANNELS } from '../../src/shared/ipc/channels';
 
@@ -9,6 +9,8 @@ vi.mock('electron', () => ({
     handle: vi.fn(),
   },
 }));
+
+type HandlerFn = (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<{ success: boolean; error?: string }>;
 
 describe('IPCHandler - Timeout', () => {
   beforeEach(() => {
@@ -26,10 +28,11 @@ describe('IPCHandler - Timeout', () => {
     IPCHandler.handle(IPC_CHANNELS.APP_VERSION, slowHandler, { timeout: 100 });
 
     // 2. Get the registered wrapper
-    const registeredWrapper = (vi.mocked(ipcMain.handle).mock.calls[0] as any[])[1];
+    const calls = vi.mocked(ipcMain.handle).mock.calls;
+    const registeredWrapper = calls[0][1] as HandlerFn;
 
     // 3. Execute wrapper (simulate IPC call)
-    const response = await (registeredWrapper as any)({}, {});
+    const response = await registeredWrapper({} as IpcMainInvokeEvent, {});
 
     expect(response.success).toBe(false);
     expect(response.error).toContain('timeout');
@@ -40,8 +43,9 @@ describe('IPCHandler - Timeout', () => {
 
     IPCHandler.handle(IPC_CHANNELS.APP_VERSION, fastHandler, { timeout: 1000 });
 
-    const registeredWrapper = (vi.mocked(ipcMain.handle).mock.calls[0] as any[])[1];
-    const response = await (registeredWrapper as any)({}, {});
+    const calls = vi.mocked(ipcMain.handle).mock.calls;
+    const registeredWrapper = calls[0][1] as HandlerFn;
+    const response = await registeredWrapper({} as IpcMainInvokeEvent, {});
 
     expect(response.success).toBe(true);
   });

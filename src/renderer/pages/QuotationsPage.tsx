@@ -174,9 +174,9 @@ function QuotationsPage() {
                   <div className="col-qtn quote-number">{quote.quotationNumber}</div>
                   <div className="col-date">
                     {formatDateTime(
-                      typeof quote.createdAt === 'string'
+                      typeof quote.createdAt === 'string' || typeof quote.createdAt === 'number'
                         ? quote.createdAt
-                        : quote.createdAt.getTime()
+                        : (quote.createdAt as Date).getTime()
                     )}
                   </div>
                   <div className="col-customer">

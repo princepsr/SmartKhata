@@ -10,14 +10,13 @@ import { ProductRepository } from '../../src/main/repositories/product-repositor
 import { CustomerRepository } from '../../src/main/repositories/customer-repository';
 import { BillRepository } from '../../src/main/repositories/bill-repository';
 import { SettingsService } from '../../src/main/services/settings-service';
-import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, seedTestData, SqlJsDatabase } from '../utils/test-db';
 import {
   ValidationError,
-  DuplicateEntryError,
 } from '../../src/main/services/errors/service-errors';
 
 describe('BillingService - Calculations', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let billingService: BillingService;
 
   beforeEach(async () => {
@@ -175,7 +174,7 @@ describe('BillingService - Calculations', () => {
 });
 
 describe('BillingService - Finalize Bill', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let billingService: BillingService;
   let productRepo: ProductRepository;
   let billRepo: BillRepository;
@@ -305,6 +304,7 @@ describe('BillingService - Finalize Bill', () => {
 
     const billItem = db
       .prepare('SELECT * FROM bill_items WHERE bill_id = ?')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .get(result.bill.id) as any;
     expect(billItem).toBeDefined();
     // purchase_price is snapshotted from seed data
@@ -315,6 +315,7 @@ describe('BillingService - Finalize Bill', () => {
 
     const freshBillItem = db
       .prepare('SELECT * FROM bill_items WHERE bill_id = ?')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .get(result.bill.id) as any;
     expect(freshBillItem.purchase_price).toBe(30); // Still 30
   });

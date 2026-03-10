@@ -25,6 +25,14 @@ export interface ComparisonTrend {
   trend: 'up' | 'down' | 'neutral';
 }
 
+export type ReportData =
+  | { summary: DailySalesSummary; modes: PaymentModeSummary[] }
+  | GstReport
+  | StockSummary
+  | TrendAnalytics
+  | StockAgingItem[]
+  | StockItem[];
+
 // 1. Daily Sales Summary
 export interface DailySalesSummary {
   date: string;
@@ -137,4 +145,14 @@ export interface TrendAnalytics {
   totalProfit: number;
   totalBills: number;
   periods: AnalyticsPeriod[];
+}
+
+export interface StockAgingItem {
+  id: number;
+  name: string;
+  sku: string | null;
+  stockQty: number;
+  lastActionDate: string;
+  idleDays: number;
+  stockValue: number;
 }

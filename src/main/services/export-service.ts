@@ -24,13 +24,13 @@ export class ExportService {
    */
   async exportToExcel(
     type: 'sales' | 'gst' | 'stock' | 'analytics',
-    data: ExportData | any,
+    data: ExportData | unknown,
     dateRange: string
   ): Promise<boolean> {
     logger.info(`Starting excel export for report: ${type}`);
 
     try {
-      const csvContent = this.generateCsvContent(type, data, dateRange);
+      const csvContent = this.generateCsvContent(type, data as ExportData, dateRange);
 
       const localDate = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
       const { filePath } = await dialog.showSaveDialog({

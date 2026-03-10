@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { ipcMain } from 'electron';
+import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { registerPurchaseOrderHandlers } from '../../src/main/ipc/handlers/purchase-order-handlers';
 import { IPC_CHANNELS } from '../../src/shared/ipc/channels';
 
@@ -23,16 +23,23 @@ vi.mock('../../src/main/services/purchase-order-service', () => ({
   PurchaseOrderService: vi.fn().mockImplementation(() => mockPoService),
 }));
 
+type HandlerFn = (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<{ success: boolean; data?: unknown; error?: string }>;
+
 describe('Purchase Order IPC Handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     registerPurchaseOrderHandlers();
   });
 
-  const getHandler = (channel: string) => {
+  const getHandler = (channel: string): HandlerFn => {
     const call = vi.mocked(ipcMain.handle).mock.calls.find((c) => c[0] === channel);
-    return (call ? call[1] : null) as any;
+    if (!call) {
+      throw new Error(`Handler not registered for ${channel}`);
+    }
+    return call[1] as HandlerFn;
   };
+
+  const mockEvent = {} as IpcMainInvokeEvent;
 
   it('should register all PO handlers', () => {
     expect(ipcMain.handle).toHaveBeenCalledWith(IPC_CHANNELS.PO_LIST, expect.any(Function));
@@ -48,7 +55,7 @@ describe('Purchase Order IPC Handlers', () => {
       mockPoService.list.mockResolvedValue(mockResult);
 
       const handler = getHandler(IPC_CHANNELS.PO_LIST);
-      const result = await handler({}, {});
+      const result = await handler(mockEvent, {});
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockResult);
@@ -58,7 +65,7 @@ describe('Purchase Order IPC Handlers', () => {
       mockPoService.list.mockRejectedValue(new Error('DB Error'));
 
       const handler = getHandler(IPC_CHANNELS.PO_LIST);
-      const result = await handler({}, {});
+      const result = await handler(mockEvent, {});
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('DB Error');
@@ -71,7 +78,7 @@ describe('Purchase Order IPC Handlers', () => {
       mockPoService.create.mockResolvedValue(mockPO);
 
       const handler = getHandler(IPC_CHANNELS.PO_CREATE);
-      const result = await handler({}, { supplierId: 1 });
+      const result = await handler(mockEvent, { supplierId: 1 });
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockPO);
@@ -85,7 +92,7 @@ describe('Purchase Order IPC Handlers', () => {
       mockPoService.update.mockResolvedValue(updatedPO);
 
       const handler = getHandler(IPC_CHANNELS.PO_UPDATE);
-      const result = await handler({}, { id: 1, data: { notes: 'Updated' } });
+      const result = await handler(mockEvent, { id: 1, data: { notes: 'Updated' } });
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual(updatedPO);
@@ -98,7 +105,7 @@ describe('Purchase Order IPC Handlers', () => {
       mockPoService.updateStatus.mockResolvedValue(true);
 
       const handler = getHandler(IPC_CHANNELS.PO_CONVERT);
-      const result = await handler({}, 1);
+      const result = await handler(mockEvent, 1);
 
       expect(result.success).toBe(true);
       expect(result.data).toBe(true);

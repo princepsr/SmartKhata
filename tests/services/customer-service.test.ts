@@ -130,9 +130,9 @@ describe('CustomerService - Balance Management', () => {
     expect(customer?.balanceDue).toBe(1500);
 
     // Verify ledger entry
-    const ledger = (db as any)
+    const ledger = db
       .prepare('SELECT * FROM customer_ledger WHERE customer_id = ?')
-      .get(1);
+      .get(1) as { amount: number; type: string; notes: string };
     expect(ledger).toBeDefined();
     expect(ledger.amount).toBe(1500);
     expect(ledger.type).toBe('SALE');

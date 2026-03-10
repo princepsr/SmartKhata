@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createTestDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, seedTestData, SqlJsDatabase } from '../utils/test-db';
 import { MedicalService } from '../../src/main/services/medical-service';
 
 describe('MedicalService Integration Tests', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let medicalService: MedicalService;
 
   beforeEach(async () => {
@@ -31,7 +31,7 @@ describe('MedicalService Integration Tests', () => {
     it('should identify expired products', () => {
       const expired = medicalService.getExpiredProducts();
       expect(expired.some((p) => p.name === 'Expired Med')).toBe(true);
-      expect(expired.every((p) => new Date(p.expiryDate!) <= new Date())).toBe(true);
+      expect(expired.every((p) => p.expiryDate && new Date(p.expiryDate) <= new Date())).toBe(true);
     });
 
     it('should identify products expiring soon', () => {
@@ -45,16 +45,22 @@ describe('MedicalService Integration Tests', () => {
     it('should find alternatives with the same salt', () => {
       const dolo = medicalService.searchBySalt('Paracetamol').find((p) => p.name === 'Dolo 650');
       expect(dolo).toBeDefined();
+      if (!dolo) {
+        return;
+      }
 
-      const alternatives = medicalService.getAlternativesBySalt('Paracetamol', dolo!.id);
+      const alternatives = medicalService.getAlternativesBySalt('Paracetamol', dolo.id);
       expect(alternatives.length).toBeGreaterThan(0);
-      expect(alternatives.every((p) => p.id !== dolo!.id)).toBe(true);
+      expect(alternatives.every((p) => p.id !== dolo.id)).toBe(true);
       expect(alternatives.some((p) => p.saltName === 'Paracetamol')).toBe(true);
     });
 
     it('should return drug warnings correctly', () => {
       const dolo = medicalService.searchBySalt('Paracetamol').find((p) => p.name === 'Dolo 650');
-      const warning = medicalService.getDrugWarning(dolo!);
+      if (!dolo) {
+        return;
+      }
+      const warning = medicalService.getDrugWarning(dolo);
       expect(warning).toContain('Schedule H');
     });
 

@@ -3,8 +3,19 @@ import {
   SupplierRepository,
   CreateSupplierInput,
   UpdateSupplierInput,
+  Supplier,
+  SupplierLedgerEntry,
 } from '../repositories/supplier-repository';
 import { ValidationError, NotFoundError, DuplicateEntryError } from './errors/service-errors';
+
+export interface SupplierHistory {
+  supplier: {
+    id: number;
+    name: string;
+    balanceDue: number;
+  };
+  ledger: SupplierLedgerEntry[];
+}
 
 export class SupplierService extends BaseService {
   private supplierRepo: SupplierRepository;
@@ -14,7 +25,7 @@ export class SupplierService extends BaseService {
     this.supplierRepo = new SupplierRepository();
   }
 
-  public createSupplier(input: CreateSupplierInput): any {
+  public createSupplier(input: CreateSupplierInput): Supplier {
     this._validateSupplierInput(input);
 
     if (input.phone) {
@@ -27,7 +38,7 @@ export class SupplierService extends BaseService {
     return this.supplierRepo.create(input);
   }
 
-  public updateSupplier(id: number, input: UpdateSupplierInput): any {
+  public updateSupplier(id: number, input: UpdateSupplierInput): Supplier {
     const existing = this.supplierRepo.findById(id);
     if (!existing) {
       throw new NotFoundError('Supplier', id);
@@ -49,7 +60,7 @@ export class SupplierService extends BaseService {
     return this.supplierRepo.update(id, input);
   }
 
-  public getSupplier(id: number): any {
+  public getSupplier(id: number): Supplier {
     const supplier = this.supplierRepo.findById(id);
     if (!supplier) {
       throw new NotFoundError('Supplier', id);
@@ -57,18 +68,18 @@ export class SupplierService extends BaseService {
     return supplier;
   }
 
-  public getAllSuppliers(includeInactive = false): any[] {
+  public getAllSuppliers(includeInactive = false): Supplier[] {
     return this.supplierRepo.findAll(includeInactive);
   }
 
-  public searchSuppliers(query: string): any[] {
+  public searchSuppliers(query: string): Supplier[] {
     if (!query.trim()) {
       return [];
     }
     return this.supplierRepo.search(query);
   }
 
-  public getSupplierHistory(id: number): any {
+  public getSupplierHistory(id: number): SupplierHistory {
     const supplier = this.supplierRepo.findById(id);
     if (!supplier) {
       throw new NotFoundError('Supplier', id);

@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
+import type { CreateProductRequest } from '@shared/validation/schemas';
 import { parseCSV, ParsedCSV } from '../../utils/csv-parser';
 import { parsePDF } from '../../utils/pdf-parser';
 import './BulkImportModal.css';
@@ -74,7 +75,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
     execute: importProducts,
     loading,
     error: ipcError,
-  } = useIPCMutation(IPC_CHANNELS.PRODUCT_IMPORT);
+  } = useIPCMutation<CreateProductRequest[], boolean>(IPC_CHANNELS.PRODUCT_IMPORT);
 
   const { execute: parseExcelFile } = useIPCMutation<string, ParsedCSV>(
     IPC_CHANNELS.PRODUCT_PARSE_EXCEL
@@ -192,15 +193,15 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
 
     // transform all data
     const productsToImport = parsedData.data.map((row) => {
-      const p: any = {};
+      const p: Partial<CreateProductRequest> = {};
       SYSTEM_FIELDS.forEach((field) => {
         const colIdx = parseInt(mapping[field.key]);
         if (!isNaN(colIdx) && row[colIdx] !== undefined) {
-          let value: any = row[colIdx];
+          let value: string | number | boolean = row[colIdx];
 
           // Convert Price fields (Ensure valid number)
           if (field.key === 'salePrice' || field.key === 'purchasePrice') {
-            const floatVal = parseFloat(value);
+            const floatVal = parseFloat(value as string);
             if (!isNaN(floatVal)) {
               value = floatVal;
             }
@@ -221,10 +222,10 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClos
             }
           }
 
-          p[field.key] = value;
+          (p as Record<string, string | number | boolean | undefined>)[field.key] = value;
         }
       });
-      return p;
+      return p as CreateProductRequest;
     });
 
     // Simple validation

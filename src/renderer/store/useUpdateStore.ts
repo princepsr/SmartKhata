@@ -86,7 +86,7 @@ export const useUpdateStore = create<UpdateState>()(
       checkForUpdates: async () => {
         const online = await get().checkConnectivity();
         if (!online) {
-          set({ error: 'Internet connection required to check for updates.' });
+          get().setError('Internet connection required to check for updates.');
           return;
         }
         set({ status: UpdateStatus.CHECKING, error: null });
@@ -96,7 +96,7 @@ export const useUpdateStore = create<UpdateState>()(
       downloadUpdate: async () => {
         const online = await get().checkConnectivity();
         if (!online) {
-          set({ error: 'Internet connection required to download update.' });
+          get().setError('Internet connection required to download update.');
           return;
         }
         set({ status: UpdateStatus.DOWNLOADING, error: null });

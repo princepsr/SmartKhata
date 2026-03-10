@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useIPC, useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import { PurchaseOrder, Product } from '@shared/types/ipc';
+import { PurchaseOrder, Product, PurchaseOrderItem as PurchaseOrderItemIPC, IndianMedicine } from '@shared/types/ipc';
 import { formatCurrency } from '../../utils/formatters';
 import SearchableSelect from '../ui/SearchableSelect';
 import { useAppSettingsStore } from '../../store';
@@ -17,6 +17,16 @@ interface PurchaseItem {
   gstPercent: number;
   lineTotal: number;
   saltName?: string;
+}
+
+interface MedicineSuggestion {
+  name: string;
+  saltName?: string;
+  isLocal: boolean;
+  id?: number;
+  gstPercent?: number;
+  purchasePrice?: number;
+  hsnCode?: string;
 }
 
 interface PurchaseOrderFormModalProps {
@@ -50,7 +60,7 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
     { productName: '', quantity: 1, unitPrice: 0, gstPercent: 0, lineTotal: 0 },
   ]);
 
-  const [medicineSuggestions, setMedicineSuggestions] = useState<any[]>([]);
+  const [medicineSuggestions, setMedicineSuggestions] = useState<MedicineSuggestion[]>([]);
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const { settings } = useAppSettingsStore();
 
@@ -86,7 +96,7 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
       });
       if (poDetails.items && poDetails.items.length > 0) {
         setItems(
-          poDetails.items.map((i: any) => ({
+          poDetails.items.map((i: PurchaseOrderItemIPC) => ({
             productId: i.productId,
             productName: i.productName,
             hsnCode: i.hsnCode,
@@ -180,12 +190,16 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
         // 2. Get global medicine database matches
         medicalApi.getMedicineSuggestions(valStr).then((globalMatches) => {
           const localNames = new Set(localMatches.map((p) => p.name.toLowerCase()));
-          const uniqueGlobal = globalMatches
-            .filter((g) => !localNames.has(g.name.toLowerCase()))
-            .map((g) => ({ ...g, isLocal: false }))
+          const uniqueGlobal: MedicineSuggestion[] = globalMatches
+            .filter((g: IndianMedicine) => !localNames.has(g.name.toLowerCase()))
+            .map((g: IndianMedicine) => ({ 
+              name: g.name, 
+              saltName: g.saltName, 
+              isLocal: false 
+            }))
             .slice(0, 10);
 
-          setMedicineSuggestions([...localMatches, ...uniqueGlobal]);
+          setMedicineSuggestions([...(localMatches as unknown as MedicineSuggestion[]), ...uniqueGlobal]);
         });
       } else {
         setMedicineSuggestions([]);

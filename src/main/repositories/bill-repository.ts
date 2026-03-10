@@ -94,6 +94,55 @@ export interface CreateBillItemInput {
 }
 
 /**
+ * Bill Database Row
+ */
+interface BillRow {
+  id: number;
+  bill_number: string;
+  customer_id: number | null;
+  customer_name?: string | null;
+  subtotal: number;
+  gst_total: number;
+  cgst_amount: number;
+  sgst_amount: number;
+  igst_amount: number;
+  discount_amount: number;
+  grand_total: number;
+  payment_mode: 'cash' | 'upi' | 'mixed';
+  customer_gstin_snapshot: string | null;
+  billing_address_snapshot: string | null;
+  shipping_address_snapshot: string | null;
+  is_printed: number;
+  created_at: string;
+  // Computed fields
+  total_bills?: number;
+  total_sales?: number;
+  total_gst?: number;
+  total_discount?: number;
+}
+
+/**
+ * Bill Item Database Row
+ */
+interface BillItemRow {
+  id: number;
+  bill_id: number;
+  product_id: number;
+  product_name_snapshot: string;
+  quantity: number;
+  unit_price: number;
+  gst_percent: number;
+  hsn_snapshot: string | null;
+  purchase_price: number | null;
+  line_subtotal: number;
+  line_gst: number;
+  line_cgst: number;
+  line_sgst: number;
+  line_igst: number;
+  line_total: number;
+}
+
+/**
  * Bill Repository
  *
  * Handles all database operations for bills and bill items.
@@ -259,7 +308,7 @@ export class BillRepository extends BaseRepository {
       LEFT JOIN customers c ON b.customer_id = c.id
       WHERE b.id = ?
     `;
-    const row = this.queryOne<any>(sql, [id]);
+    const row = this.queryOne<BillRow>(sql, [id]);
     return row ? this._mapToBill(row) : null;
   }
 
@@ -273,7 +322,7 @@ export class BillRepository extends BaseRepository {
       LEFT JOIN customers c ON b.customer_id = c.id
       WHERE b.bill_number = ?
     `;
-    const row = this.queryOne<any>(sql, [billNumber]);
+    const row = this.queryOne<BillRow>(sql, [billNumber]);
     return row ? this._mapToBill(row) : null;
   }
 
@@ -327,7 +376,7 @@ export class BillRepository extends BaseRepository {
       return null;
     }
 
-    const bill = this._mapToBill(row);
+    const bill = this._mapToBill(row as BillRow);
     const items = this.findItemsByBillId(bill.id);
     return { bill, items };
   }
@@ -346,7 +395,7 @@ export class BillRepository extends BaseRepository {
       ORDER BY b.created_at DESC
     `;
 
-    const rows = this.queryAll<any>(sql, [
+    const rows = this.queryAll<BillRow>(sql, [
       this.formatDateForSql(fromDate),
       this.formatDateForSql(toDate),
     ]);
@@ -364,7 +413,7 @@ export class BillRepository extends BaseRepository {
       ORDER BY created_at DESC
     `;
 
-    const rows = this.queryAll<any>(sql, [customerId]);
+    const rows = this.queryAll<BillRow>(sql, [customerId]);
     return rows.map((row) => this._mapToBill(row));
   }
 
@@ -378,7 +427,7 @@ export class BillRepository extends BaseRepository {
       LIMIT ? OFFSET ?
     `;
 
-    const rows = this.queryAll<any>(sql, [limit, offset]);
+    const rows = this.queryAll<BillRow>(sql, [limit, offset]);
     return rows.map((row) => this._mapToBill(row));
   }
 
@@ -401,7 +450,7 @@ export class BillRepository extends BaseRepository {
       ORDER BY id ASC
     `;
 
-    const rows = this.queryAll<any>(sql, [billId]);
+    const rows = this.queryAll<BillItemRow>(sql, [billId]);
     return rows.map((row) => this._mapToBillItem(row));
   }
 
@@ -440,7 +489,7 @@ export class BillRepository extends BaseRepository {
       WHERE created_at >= ? AND created_at <= ?
     `;
 
-    const result = this.queryOne<any>(sql, [
+    const result = this.queryOne<BillRow>(sql, [
       this.formatDateForSql(fromDate),
       this.formatDateForSql(toDate),
     ]);
@@ -493,7 +542,7 @@ export class BillRepository extends BaseRepository {
   /**
    * Map database row to Bill domain object
    */
-  private _mapToBill(row: any): Bill {
+  private _mapToBill(row: BillRow): Bill {
     return {
       id: row.id,
       billNumber: row.bill_number,
@@ -518,7 +567,7 @@ export class BillRepository extends BaseRepository {
   /**
    * Map database row to BillItem domain object
    */
-  private _mapToBillItem(row: any): BillItem {
+  private _mapToBillItem(row: BillItemRow): BillItem {
     return {
       id: row.id,
       billId: row.bill_id,

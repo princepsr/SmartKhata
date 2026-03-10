@@ -5,7 +5,14 @@ import { useConfirm } from '../hooks/useConfirm';
 import { useSearchParams } from 'react-router-dom';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import { Purchase, Supplier, PurchaseOrder, Product } from '@shared/types/ipc';
+import { 
+  Purchase, 
+  Supplier, 
+  PurchaseOrder, 
+  Product, 
+  RecordPurchaseInput, 
+  PurchaseWithItems 
+} from '@shared/types/ipc';
 import { formatCurrency } from '../utils/formatters';
 import { useAppSettingsStore } from '../store';
 import EmptyState from '../components/common/EmptyState';
@@ -397,7 +404,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
     execute: recordPurchase,
     loading: modalLoading,
     error: modalError,
-  } = useIPCMutation<any, Purchase>(IPC_CHANNELS.PURCHASE_RECORD);
+  } = useIPCMutation<RecordPurchaseInput, PurchaseWithItems>(IPC_CHANNELS.PURCHASE_RECORD);
 
   const addItem = () => {
     setItems([

@@ -35,6 +35,21 @@ export interface LicenseValidationResult {
 }
 
 /**
+ * License Database Row
+ */
+interface LicenseRow {
+  id: number;
+  license_key: string;
+  activated_on: string;
+  expires_on: string;
+  device_id: string;
+  trial_started_on: string | null;
+  is_trial: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * License Repository
  *
  * Handles database operations for the license table.
@@ -85,7 +100,7 @@ export class LicenseRepository extends BaseRepository {
    */
   public get(): License | null {
     const sql = `SELECT * FROM license WHERE id = 1`;
-    const row = this.queryOne<any>(sql);
+    const row = this.queryOne<LicenseRow>(sql);
     return row ? this._mapToLicense(row) : null;
   }
 
@@ -223,7 +238,7 @@ export class LicenseRepository extends BaseRepository {
   /**
    * Map database row to License domain object
    */
-  private _mapToLicense(row: any): License {
+  private _mapToLicense(row: LicenseRow): License {
     return {
       id: row.id,
       licenseKey: row.license_key,

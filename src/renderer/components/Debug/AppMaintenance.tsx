@@ -4,6 +4,15 @@ import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { useConfirm } from '../../hooks/useConfirm';
 
 /**
+ * Non-standard Performance.memory interface (Chrome/Electron)
+ */
+interface PerformanceMemory {
+  usedJSHeapSize: number;
+  jsHeapSizeLimit: number;
+  totalJSHeapSize: number;
+}
+
+/**
  * App Maintenance Utility Component
  *
  * Provides advanced controls for application lifecycle and data access.
@@ -17,8 +26,9 @@ export function AppMaintenance() {
     // Simple mock for memory usage since we don't have a direct IPC for it yet
     // In a real app, this would come from process.getProcessMemoryInfo() in main
     const updateMemory = () => {
-      if ((window as any).performance?.memory) {
-        const mem = (window as any).performance.memory;
+      const perf = window.performance as unknown as { memory?: PerformanceMemory };
+      if (perf.memory) {
+        const mem = perf.memory;
         setMemory({
           used: `${Math.round(mem.usedJSHeapSize / 1024 / 1024)} MB`,
           total: `${Math.round(mem.jsHeapSizeLimit / 1024 / 1024)} MB`,

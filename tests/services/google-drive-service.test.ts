@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { GoogleDriveService } from '../../src/main/services/google-drive-service';
 import fs from 'fs';
 
@@ -34,16 +34,20 @@ vi.mock('fs', () => ({
 
 import { googleAuthService } from '../../src/main/services/google-auth-service';
 
+interface GoogleDriveServiceWithPrivates extends GoogleDriveService {
+  instance: GoogleDriveService | undefined;
+}
+
 describe('GoogleDriveService', () => {
   let service: GoogleDriveService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (GoogleDriveService as any).instance = undefined;
+    (GoogleDriveService as unknown as GoogleDriveServiceWithPrivates).instance = undefined;
     service = GoogleDriveService.getInstance();
     
     // Mock global fetch
-    global.fetch = vi.fn();
+    global.fetch = vi.fn() as Mock;
     
     vi.mocked(googleAuthService.isAuthenticated).mockReturnValue(true);
     vi.mocked(googleAuthService.getAccessToken).mockResolvedValue('mock-token');
@@ -55,13 +59,13 @@ describe('GoogleDriveService', () => {
       vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('mock-content'));
 
       // Mock findExistingBackup (list files) -> empty
-      vi.mocked(global.fetch).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ files: [] }),
       } as Response);
 
       // Mock create (POST)
-      vi.mocked(global.fetch).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ id: 'new-id' }),
       } as Response);
@@ -78,13 +82,13 @@ describe('GoogleDriveService', () => {
       vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('mock-content'));
 
       // Mock findExistingBackup (list files) -> exists
-      vi.mocked(global.fetch).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ files: [{ id: 'existing-id' }] }),
       } as Response);
 
       // Mock update (PATCH)
-      vi.mocked(global.fetch).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ id: 'existing-id' }),
       } as Response);
@@ -100,13 +104,13 @@ describe('GoogleDriveService', () => {
   describe('downloadBackup', () => {
     it('should download file if it exists on Drive', async () => {
       // Mock findExistingBackup (list files) -> exists
-      vi.mocked(global.fetch).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ files: [{ id: 'drive-id' }] }),
       } as Response);
 
       // Mock download (GET alt=media)
-      vi.mocked(global.fetch).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         arrayBuffer: () => Promise.resolve(new ArrayBuffer(10)),
       } as Response);
@@ -118,7 +122,7 @@ describe('GoogleDriveService', () => {
 
     it('should handle missing file on Drive', async () => {
       // Mock findExistingBackup (list files) -> empty
-      vi.mocked(global.fetch).mockResolvedValueOnce({
+      (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ files: [] }),
       } as Response);
@@ -131,7 +135,7 @@ describe('GoogleDriveService', () => {
 
   describe('getProfile', () => {
     it('should return account email on success', async () => {
-      vi.mocked(global.fetch).mockResolvedValue({
+      (global.fetch as Mock).mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ email: 'test@gmail.com' }),
       } as Response);

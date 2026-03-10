@@ -64,6 +64,38 @@ export interface UpdateCustomerInput {
 }
 
 /**
+ * Customer Database Row
+ */
+interface CustomerRow {
+  id: number;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  gstin: string | null;
+  billing_address: string | null;
+  shipping_address: string | null;
+  balance_due: number;
+  is_active: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Customer Ledger Database Row
+ */
+interface CustomerLedgerRow {
+  id: number;
+  customer_id: number;
+  amount: number;
+  type: 'SALE' | 'PAYMENT_IN' | 'PAYMENT_OUT' | 'OPENING_BALANCE';
+  reference_id: number | null;
+  reference_number: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+/**
  * Customer Repository
  *
  * Handles all database operations for customers.
@@ -193,7 +225,7 @@ export class CustomerRepository extends BaseRepository {
    */
   public findById(id: number): Customer | null {
     const sql = `SELECT * FROM customers WHERE id = ?`;
-    const row = this.queryOne<any>(sql, [id]);
+    const row = this.queryOne<CustomerRow>(sql, [id]);
     return row ? this._mapToCustomer(row) : null;
   }
 
@@ -206,7 +238,7 @@ export class CustomerRepository extends BaseRepository {
       SELECT * FROM customers
       WHERE phone = ? ${statusFilter}
     `;
-    const row = this.queryOne<any>(sql, [phone]);
+    const row = this.queryOne<CustomerRow>(sql, [phone]);
     return row ? this._mapToCustomer(row) : null;
   }
 
@@ -235,7 +267,7 @@ export class CustomerRepository extends BaseRepository {
       ORDER BY name ASC
     `;
 
-    const params: any[] = [];
+    const params: unknown[] = [];
     if (limit !== undefined) {
       sql += ` LIMIT ?`;
       params.push(limit);
@@ -245,7 +277,7 @@ export class CustomerRepository extends BaseRepository {
       params.push(offset);
     }
 
-    const rows = this.queryAll<any>(sql, params);
+    const rows = this.queryAll<CustomerRow>(sql, params);
     return rows.map((row) => this._mapToCustomer(row));
   }
 
@@ -296,7 +328,7 @@ export class CustomerRepository extends BaseRepository {
     `;
 
     const searchPattern = `%${query}%`;
-    const params: any[] = [searchPattern, searchPattern];
+    const params: unknown[] = [searchPattern, searchPattern];
 
     if (limit !== undefined) {
       sql += ` LIMIT ?`;
@@ -307,7 +339,7 @@ export class CustomerRepository extends BaseRepository {
       params.push(offset);
     }
 
-    const rows = this.queryAll<any>(sql, params);
+    const rows = this.queryAll<CustomerRow>(sql, params);
     return rows.map((row) => this._mapToCustomer(row));
   }
 
@@ -369,7 +401,7 @@ export class CustomerRepository extends BaseRepository {
       WHERE is_active = 1 AND balance_due > 0
       ORDER BY balance_due DESC
     `;
-    const rows = this.queryAll<any>(sql);
+    const rows = this.queryAll<CustomerRow>(sql);
     return rows.map((row) => this._mapToCustomer(row));
   }
 
@@ -382,7 +414,7 @@ export class CustomerRepository extends BaseRepository {
       WHERE is_active = 1 AND balance_due < 0
       ORDER BY balance_due ASC
     `;
-    const rows = this.queryAll<any>(sql);
+    const rows = this.queryAll<CustomerRow>(sql);
     return rows.map((row) => this._mapToCustomer(row));
   }
 
@@ -441,15 +473,15 @@ export class CustomerRepository extends BaseRepository {
       WHERE cl.customer_id = ?
       ORDER BY cl.created_at DESC, cl.id DESC
     `;
-    const rows = this.queryAll<any>(sql, [customerId]);
+    const rows = this.queryAll<CustomerLedgerRow>(sql, [customerId]);
     return rows.map((row) => ({
       id: row.id,
       customerId: row.customer_id,
       amount: row.amount, // Direct rupees
       type: row.type,
-      referenceId: row.reference_id,
-      referenceNumber: row.reference_number,
-      notes: row.notes,
+      referenceId: row.reference_id === null ? undefined : row.reference_id,
+      referenceNumber: row.reference_number === null ? undefined : row.reference_number,
+      notes: row.notes === null ? undefined : row.notes,
       createdAt: this.parseDate(row.created_at),
     }));
   }
@@ -462,7 +494,7 @@ export class CustomerRepository extends BaseRepository {
    * - INTEGER 0/1 → boolean
    * - TEXT ISO 8601 → Date
    */
-  private _mapToCustomer(row: any): Customer {
+  private _mapToCustomer(row: CustomerRow): Customer {
     return {
       id: row.id,
       name: row.name,

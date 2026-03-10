@@ -110,6 +110,7 @@ class IPCClient {
 
     // Log call in development
     if (log) {
+      // eslint-disable-next-line no-console
       console.log(`[IPC] Calling: ${channel}`, payload);
     }
 
@@ -148,6 +149,7 @@ class IPCClient {
 
       // Success
       if (log) {
+        // eslint-disable-next-line no-console
         console.log(`[IPC] Success: ${channel}`, response.data);
       }
 

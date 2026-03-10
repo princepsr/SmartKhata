@@ -17,29 +17,7 @@ import { SupplierRepository } from '../repositories/supplier-repository';
 import { SettingsService } from './settings-service';
 import { ValidationError } from './errors/service-errors';
 import { logger } from '../utils/logger';
-
-export interface PurchaseItemServiceInput {
-  productId?: number;
-  productName: string;
-  hsnCode?: string;
-  quantity: number;
-  unitPrice: number;
-  gstPercent: number; // e.g. 12 for 12%
-  saltName?: string;
-}
-
-export interface RecordPurchaseInput {
-  supplierName: string;
-  supplierGstin?: string;
-  invoiceNumber?: string;
-  invoiceDate: string; // YYYY-MM-DD
-  items: PurchaseItemServiceInput[];
-  notes?: string;
-  updateInventory?: boolean; // Default true in Pro
-  supplierId?: number; // Optional: link to supplier table
-  paymentStatus?: 'PENDING' | 'PAID' | 'PARTIAL';
-  amountPaid?: number;
-}
+import { RecordPurchaseInput } from '@shared/types/ipc';
 
 export interface PurchaseNetGstLiability {
   outputGst: number; // GST collected from sales

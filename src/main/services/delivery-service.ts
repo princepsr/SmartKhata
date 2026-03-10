@@ -19,7 +19,7 @@ export class DeliveryService extends BaseService {
    * For this MVP Pro version, we provide the service logic.
    */
   public createDeliveryRequest(order: DeliveryOrder) {
-    logger.info('Creating delivery request', order as any);
+    logger.info('Creating delivery request', order as unknown as Record<string, unknown>);
     // Logic to save to a deliveries table would go here
     return { ...order, id: Date.now() };
   }

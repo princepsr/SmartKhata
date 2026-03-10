@@ -80,8 +80,9 @@ export const SettleBalanceModal: React.FC<SettleBalanceModalProps> = ({
       });
 
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || t('customers.settle.errors.fail'));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || t('customers.settle.errors.fail'));
     }
   };
 

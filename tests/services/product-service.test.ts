@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ProductService } from '../../src/main/services/product-service';
 import { ProductRepository } from '../../src/main/repositories/product-repository';
 import { InventoryRepository } from '../../src/main/repositories/inventory-repository';
-import { createTestDatabase, resetTestDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, resetTestDatabase, seedTestData, SqlJsDatabase } from '../utils/test-db';
 import {
   ValidationError,
   DuplicateEntryError,
@@ -17,7 +17,7 @@ import {
 import { SettingsService } from '../../src/main/services/settings-service';
 
 describe('ProductService - Add Product', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let productService: ProductService;
 
   beforeEach(async () => {
@@ -158,7 +158,7 @@ describe('ProductService - Add Product', () => {
 });
 
 describe('ProductService - Stock Adjustment', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let productService: ProductService;
   let productRepo: ProductRepository;
   let inventoryRepo: InventoryRepository;
@@ -324,16 +324,16 @@ describe('ProductService - Stock Adjustment', () => {
     productService.deactivateProduct(1);
 
     const activeProducts = productService.getAllProducts(false);
-    expect(activeProducts.items.find((p: any) => p.id === 1)).toBeUndefined();
+    expect(activeProducts.items.find((p: { id: number }) => p.id === 1)).toBeUndefined();
 
     const allProducts = productService.getAllProducts(true);
-    expect(allProducts.items.find((p: any) => p.id === 1)).toBeDefined();
-    expect(allProducts.items.find((p: any) => p.id === 1).isActive).toBeFalsy();
+    expect(allProducts.items.find((p: { id: number }) => p.id === 1)).toBeDefined();
+    expect(allProducts.items.find((p: { id: number; isActive?: boolean }) => p.id === 1)?.isActive).toBeFalsy();
   });
 });
 
 describe('ProductService - Search and Query', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let productService: ProductService;
 
   beforeEach(async () => {
@@ -384,7 +384,7 @@ describe('ProductService - Search and Query', () => {
 
     // Page 1, Limit 3 -> 3 items, hasMore = true
     const p1 = productService.getAllProducts(false, 1, 3);
-    const count = productService.getProductCount();
+    productService.getProductCount();
     expect(p1.items).toHaveLength(3);
     // hasMore logic in service: page * limit < totalCount. 1 * 3 < 8 is true.
     // Wait, getAllProducts returns { items, page }. It doesn't return hasMore?

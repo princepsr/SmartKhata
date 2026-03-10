@@ -36,8 +36,8 @@ export class BarcodeService extends BaseService {
   /**
    * Mock for Thermal Print
    */
-  public async printLabels(payload: any): Promise<boolean> {
-    logger.info('Printing barcode labels', payload);
+  public async printLabels(payload: unknown): Promise<boolean> {
+    logger.info('Printing barcode labels', payload as Record<string, unknown>);
     // Real implementation would interface with print-service.ts using ESC/POS
     return true;
   }

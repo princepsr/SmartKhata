@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach, type Mock } from 'vitest';
 import { StabilityService } from '../../src/main/services/stability-service';
 import { BrowserWindow } from 'electron';
 
@@ -39,14 +39,23 @@ vi.mock('../utils/shutdown-manager', () => ({
   },
 }));
 
+interface StabilityServiceWithPrivates extends StabilityService {
+  instance: StabilityService | undefined;
+  monitorInterval: NodeJS.Timeout | null;
+  trackedWindows: Set<BrowserWindow>;
+  cleanup: () => void;
+}
+
 describe('StabilityService', () => {
   let service: StabilityService;
+  let servicePriv: StabilityServiceWithPrivates;
 
   beforeEach(() => {
     vi.useFakeTimers();
     // Reset singleton for testing
-    (StabilityService as any).instance = undefined;
+    (StabilityService as unknown as StabilityServiceWithPrivates).instance = undefined;
     service = StabilityService.getInstance();
+    servicePriv = service as unknown as StabilityServiceWithPrivates;
   });
 
   afterEach(() => {
@@ -56,14 +65,14 @@ describe('StabilityService', () => {
 
   it('should start and stop monitoring', () => {
     service.startMonitoring(1000);
-    expect((service as any).monitorInterval).toBeDefined();
+    expect(servicePriv.monitorInterval).toBeDefined();
 
     service.stopMonitoring();
-    expect((service as any).monitorInterval).toBeNull();
+    expect(servicePriv.monitorInterval).toBeNull();
   });
 
   it('should log health stats periodically', () => {
-    const logSpy = vi.spyOn(service, 'logHealthStats');
+    const logSpy = vi.spyOn(service, 'logHealthStats' as never);
 
     service.startMonitoring(1000);
 
@@ -76,16 +85,22 @@ describe('StabilityService', () => {
       on: vi.fn(),
       isDestroyed: vi.fn(() => false),
       destroy: vi.fn(),
-    } as any;
+    } as unknown as BrowserWindow;
 
     service.trackWindow(mockWindow);
-    expect((service as any).trackedWindows.has(mockWindow)).toBe(true);
+    expect(servicePriv.trackedWindows.has(mockWindow)).toBe(true);
 
     // Simulate window close
-    const closeCallback = mockWindow.on.mock.calls.find((call: any) => call[0] === 'closed')[1];
-    closeCallback();
+    const onMock = mockWindow.on as unknown as Mock<[string, () => void], void>;
+    const closeCall = onMock.mock.calls.find(
+      (call: [string, () => void]) => call[0] === 'closed'
+    );
+    const closeCallback = closeCall?.[1];
+    if (closeCallback) {
+      closeCallback();
+    }
 
-    expect((service as any).trackedWindows.has(mockWindow)).toBe(false);
+    expect(servicePriv.trackedWindows.has(mockWindow)).toBe(false);
   });
 
   it('should cleanup tracked windows on shutdown', async () => {
@@ -93,12 +108,12 @@ describe('StabilityService', () => {
       on: vi.fn(),
       isDestroyed: vi.fn(() => false),
       destroy: vi.fn(),
-    } as any;
+    } as unknown as BrowserWindow;
 
     service.trackWindow(mockWindow);
 
-    // Call private cleanup via any
-    (service as any).cleanup();
+    // Call private cleanup
+    servicePriv.cleanup();
 
     expect(mockWindow.destroy).toHaveBeenCalled();
   });

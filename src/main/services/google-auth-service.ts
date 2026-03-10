@@ -131,12 +131,13 @@ export class GoogleAuthService {
 
       this.activeServer = server;
 
-      server.on('error', (err: any) => {
-        if (err.code === 'EADDRINUSE') {
+      server.on('error', (err: unknown) => {
+        const error = err as { code?: string; message?: string };
+        if (error.code === 'EADDRINUSE') {
           logger.error(`Port ${GOOGLE_CONFIG.REDIRECT_PORT} is already in use. Auth failed.`);
           reject(new Error(`Port ${GOOGLE_CONFIG.REDIRECT_PORT} is already in use.`));
         } else {
-          logger.error('Auth callback server error', { error: err });
+          logger.error('Auth callback server error', { error });
           reject(err);
         }
         this.cancelAuthenticate();
@@ -190,7 +191,7 @@ export class GoogleAuthService {
       throw new Error(`Failed to exchange code: ${error}`);
     }
 
-    const data: any = await response.json();
+    const data = (await response.json()) as GoogleTokens & { expires_in?: number };
     this.setCredentials({
       ...data,
       expiry_date: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
@@ -222,7 +223,7 @@ export class GoogleAuthService {
       throw new Error(`Failed to refresh token: ${error}`);
     }
 
-    const data: any = await response.json();
+    const data = (await response.json()) as GoogleTokens & { expires_in?: number };
     this.setCredentials({
       ...this.tokens,
       ...data,
@@ -251,8 +252,9 @@ export class GoogleAuthService {
         fs.writeFileSync(this.tokenPath, tokenStr);
         logger.warn('Encryption not available, saving tokens in plain text');
       }
-    } catch (error: any) {
-      logger.error('Failed to save Google tokens', { message: error.message });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to save Google tokens', { message });
     }
   }
 
@@ -279,8 +281,9 @@ export class GoogleAuthService {
         this.tokens = JSON.parse(tokenStr);
         logger.debug('Google tokens loaded successfully');
       }
-    } catch (error: any) {
-      logger.error('Failed to load Google tokens', { message: error.message });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to load Google tokens', { message });
     }
   }
 

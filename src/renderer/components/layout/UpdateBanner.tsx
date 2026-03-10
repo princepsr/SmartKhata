@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUpdateStore } from '../../store/useUpdateStore';
-import { UpdateStatus } from '@shared/types/update';
+import { UpdateStatus, UpdateInfo } from '@shared/types/update';
 import './UpdateBanner.css';
 
 /**
@@ -36,7 +36,8 @@ const UpdateBanner: React.FC = () => {
 
     // Listen for status changes from main process (e.g. startup auto-check)
     const unbindStatus = window.api.onUpdateStatus((data) => {
-      useUpdateStore.getState().setStatus(data.status, data.updateInfo);
+      const updateData = data as { status: UpdateStatus; updateInfo: UpdateInfo | null };
+      useUpdateStore.getState().setStatus(updateData.status, updateData.updateInfo);
     });
 
     return () => {

@@ -188,8 +188,8 @@ class DatabaseManager {
       const pragma = this.wasCrashDetected ? 'integrity_check' : 'quick_check';
       const result = this.db.pragma(pragma) as Array<{ [key: string]: string }>;
 
-      const status =
-        result[0][pragma] || (result[0] as any).integrity_check || (result[0] as any).quick_check;
+      const firstRow = result[0] || {};
+      const status = firstRow[pragma] || firstRow['integrity_check'] || firstRow['quick_check'];
 
       if (status === 'ok') {
         dbLogger.info(`Database ${pragma} passed`);

@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createTestDatabase, seedTestData } from '../utils/test-db';
+import { createTestDatabase, seedTestData, SqlJsDatabase } from '../utils/test-db';
 import { SupplierService } from '../../src/main/services/supplier-service';
 
 describe('SupplierService Integration Tests', () => {
-  let db: any;
+  let db: SqlJsDatabase;
   let supplierService: SupplierService;
 
   beforeEach(async () => {
