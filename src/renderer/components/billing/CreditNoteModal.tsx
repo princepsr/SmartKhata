@@ -153,12 +153,13 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
           </button>
         </div>
         <div className="modal-body">
-          <div className="bill-ref">
-            Ref Bill: <strong>{billDetail.bill.billNumber}</strong>
-          </div>
+          <div className="credit-note-scroll-area">
+            <div className="bill-meta">
+              <span>Ref Bill: <strong>{billDetail.bill.billNumber}</strong></span>
+              <span>Date: <strong>{new Date().toLocaleDateString('en-IN')}</strong></span>
+            </div>
 
-          <div className="return-items-list">
-            <table>
+            <table className="items-table">
               <thead>
                 <tr>
                   <th>Product</th>
@@ -193,50 +194,52 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
                 ))}
               </tbody>
             </table>
-          </div>
 
-          <div className="cn-form">
-            <div className="form-group">
-              <label>Reason for Return</label>
-              <select value={reason} onChange={(e) => setReason(e.target.value)}>
-                <option value="Sales Return">Sales Return</option>
-                <option value="Damaged Goods">Damaged Goods</option>
-                <option value="Wrong Item">Wrong Item</option>
-                <option value="Other">Other</option>
-              </select>
+            <div className="cn-form">
+              <div className="cn-group">
+                <label>Reason for Return</label>
+                <select value={reason} onChange={(e) => setReason(e.target.value)}>
+                  <option value="Sales Return">Sales Return</option>
+                  <option value="Damaged Goods">Damaged Goods</option>
+                  <option value="Wrong Item">Wrong Item</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="cn-group">
+                <label>Notes</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Additional remarks..."
+                />
+              </div>
             </div>
-            <div className="form-group">
-              <label>Notes</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Additional remarks..."
-              />
-            </div>
-          </div>
 
-          <div className="refund-summary">
-            <div className="summary-row">
-              <span>Taxable Refund:</span>
-              <span>{formatCurrency(refundSummary.taxable)}</span>
+            <div className="refund-summary-box">
+              <div className="summary-card">
+                <div className="summary-item">
+                  <span>Taxable Refund:</span>
+                  <span>{formatCurrency(refundSummary.taxable)}</span>
+                </div>
+                <div className="summary-item">
+                  <span>GST to Reverse:</span>
+                  <span>{formatCurrency(refundSummary.gst)}</span>
+                </div>
+                <div className="summary-item total">
+                  <span>Total Refund:</span>
+                  <span>{formatCurrency(refundSummary.total)}</span>
+                </div>
+              </div>
             </div>
-            <div className="summary-row">
-              <span>GST to Reverse:</span>
-              <span>{formatCurrency(refundSummary.gst)}</span>
-            </div>
-            <div className="summary-row grand-refund">
-              <span>Total Refund Amount:</span>
-              <span>{formatCurrency(refundSummary.total)}</span>
-            </div>
+            {error && <div className="error-message">{error}</div>}
           </div>
-          {error && <div className="error-message">{error}</div>}
         </div>
         <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose}>
             Cancel
           </button>
           <button
-            className="btn-primary btn-danger"
+            className="btn-danger-primary"
             onClick={handleSubmit}
             disabled={loading || refundSummary.total <= 0}
           >

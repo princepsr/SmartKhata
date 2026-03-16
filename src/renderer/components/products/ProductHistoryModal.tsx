@@ -86,13 +86,21 @@ export const ProductHistoryModal: React.FC<ProductHistoryModalProps> = ({
                     {history.map((log) => (
                       <tr key={log.id}>
                         <td className="col-date">
-                          {new Date(log.date).toLocaleString(t('common.locale') || 'en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {(() => {
+                            const date = new Date(log.date);
+                            const localeTag = t('common.locale');
+                            // If key is missing, i18next returns the key string "common.locale"
+                            // which is not a valid locale tag and causes RangeError.
+                            const safeLocale =
+                              localeTag && localeTag !== 'common.locale' ? localeTag : undefined;
+                            return date.toLocaleString(safeLocale, {
+                              day: '2-digit',
+                              month: 'short',
+                              year: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            });
+                          })()}
                         </td>
                         <td className={`col-qty ${log.changeQty >= 0 ? 'positive' : 'negative'}`}>
                           {log.changeQty > 0 ? '+' : ''}

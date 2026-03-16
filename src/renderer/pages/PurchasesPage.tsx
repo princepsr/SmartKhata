@@ -756,7 +756,7 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
                 ))}
               </datalist>
               <button type="button" className="btn-outline" onClick={addItem}>
-                + Add Item
+                {t('procurement.form.add_item')}
               </button>
             </div>
 

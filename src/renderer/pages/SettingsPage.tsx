@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useConfirm } from '../hooks/useConfirm';
@@ -25,59 +25,131 @@ import './SettingsPage.css';
  * Fully synchronized with the "Rich App" design language and structural layout.
  */
 
-type SettingsTab =
-  | 'shop'
-  | 'inventory'
-  | 'printing'
-  | 'licensing'
-  | 'data'
-  | 'privacy'
-  | 'debug'
-  | 'whatsapp_reports'
-  | 'support';
+type SettingsTab = 'store' | 'operations' | 'account' | 'support';
 
 function SettingsPage() {
-  const { settings, updateSettings, fetchSettings, saveSettings, resetSettings, isLoading, error } =
+  const { settings, updateSettings, fetchSettings, saveSettings, isLoading, error } =
     useAppSettingsStore();
   const { alert } = useConfirm();
   const { refresh } = useLicense();
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<SettingsTab>('shop');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('store');
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [printerList, setPrinterList] = useState<PrinterInfo[]>([]);
   const [isTestPrinting, setIsTestPrinting] = useState(false);
   const [searchParams] = useSearchParams();
+  const [isHydrated, setIsHydrated] = useState(false);
+  const lastPersistedSettingsJSON = useRef<string | null>(null);
+
+  // Move handleSave and validate above useEffect to avoid temporal dead zone
+  const validate = React.useCallback(() => {
+    const currentSettings = useAppSettingsStore.getState().settings;
+    const errors: Record<string, string> = {};
+    if (!currentSettings.shopName.trim()) {
+      errors.shopName = t('settings.validation.shop_name');
+    }
+    if (currentSettings.gstEnabled) {
+      if (!currentSettings.address?.trim()) {
+        errors.address = t('settings.validation.address_gst');
+      }
+      if (!currentSettings.gstNumber?.trim()) {
+        errors.gstNumber = t('settings.validation.gstin_required');
+      } else if (!/^[0-9A-Z]{15}$/.test(currentSettings.gstNumber)) {
+        errors.gstNumber = t('settings.validation.gstin_invalid');
+      }
+      if (!currentSettings.stateCode?.trim()) {
+        errors.stateCode = t('settings.validation.state_code_required');
+      }
+      if (!currentSettings.placeOfSupply?.trim()) {
+        errors.placeOfSupply = t('settings.validation.pos_required');
+      }
+    }
+
+    if (currentSettings.phone && !/^\d{10}$/.test(currentSettings.phone.replace(/[\s-()]/g, ''))) {
+      errors.phone = t('settings.validation.phone_invalid');
+    }
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [t]);
+
+  const handleSave = React.useCallback(async () => {
+    if (!validate()) {
+      return;
+    }
+
+    const currentSettings = useAppSettingsStore.getState().settings;
+    setSaveStatus('saving');
+    const result = await saveSettings(currentSettings);
+    if (result.success) {
+      lastPersistedSettingsJSON.current = JSON.stringify(currentSettings);
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } else {
+      setSaveStatus('error');
+    }
+  }, [validate, saveSettings]);
+
+  // Auto-Save Effect
+  useEffect(() => {
+    // Only save after initial hydration is complete
+    if (!isHydrated) {
+      return () => {};
+    }
+
+    const currentSettingsJSON = JSON.stringify(settings);
+
+    // Initialize ref once we're hydrated and have settings
+    if (lastPersistedSettingsJSON.current === null) {
+      lastPersistedSettingsJSON.current = currentSettingsJSON;
+      return () => {};
+    }
+
+    // Skip if nothing changed
+    if (currentSettingsJSON === lastPersistedSettingsJSON.current) {
+      return () => {};
+    }
+
+    const timer = setTimeout(() => {
+      handleSave();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [settings, handleSave, isHydrated]);
 
   // Handle global tab switching
   useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (
-      tab &&
-      [
-        'shop',
-        'inventory',
-        'printing',
-        'licensing',
-        'data',
-        'privacy',
-        'debug',
-        'whatsapp_reports',
-        'support',
-      ].includes(tab)
-    ) {
-      setActiveTab(tab as SettingsTab);
+    const tab = searchParams.get('tab') as SettingsTab | null;
+    if (tab && ['store', 'operations', 'account', 'support'].includes(tab)) {
+      setActiveTab(tab);
+    } else if (tab) {
+      // Compatibility for legacy deep links
+      if (['shop', 'regional', 'payment'].includes(tab)) {
+        setActiveTab('store');
+      }
+      if (['inventory', 'printing', 'whatsapp_reports'].includes(tab)) {
+        setActiveTab('operations');
+      }
+      if (['licensing', 'data'].includes(tab)) {
+        setActiveTab('account');
+      }
+      if (['privacy', 'debug', 'support'].includes(tab)) {
+        setActiveTab('support');
+      }
     }
   }, [searchParams]);
 
   React.useEffect(() => {
-    fetchSettings(true);
+    const init = async () => {
+      await fetchSettings(true);
+      setIsHydrated(true);
+    };
+    init();
+
     const fetchPrinters = async () => {
       try {
-        const response = await window.api.invoke<PrinterInfo[]>(
-          'printer:list'
-        );
+        const response = await window.api.invoke<PrinterInfo[]>('printer:list');
         const printers = response.success && response.data ? response.data : [];
         setPrinterList(printers);
       } catch (err) {
@@ -87,56 +159,13 @@ function SettingsPage() {
     fetchPrinters();
   }, [fetchSettings]);
 
-  const validate = () => {
-    const errors: Record<string, string> = {};
-    if (!settings.shopName.trim()) {
-      errors.shopName = t('settings.validation.shop_name');
-    }
-    if (settings.gstEnabled) {
-      if (!settings.address?.trim()) {
-        errors.address = t('settings.validation.address_gst');
-      }
-      if (!settings.gstNumber?.trim()) {
-        errors.gstNumber = t('settings.validation.gstin_required');
-      } else if (!/^[0-9A-Z]{15}$/.test(settings.gstNumber)) {
-        errors.gstNumber = t('settings.validation.gstin_invalid');
-      }
-      if (!settings.stateCode?.trim()) {
-        errors.stateCode = t('settings.validation.state_code_required');
-      }
-      if (!settings.placeOfSupply?.trim()) {
-        errors.placeOfSupply = t('settings.validation.pos_required');
-      }
-    }
-
-    if (settings.phone && !/^\d{10}$/.test(settings.phone.replace(/[\s-()]/g, ''))) {
-      errors.phone = t('settings.validation.phone_invalid');
-    }
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!validate()) {
-      return;
-    }
-
-    setSaveStatus('saving');
-    const result = await saveSettings(settings);
-    if (result.success) {
-      setSaveStatus('success');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } else {
-      setSaveStatus('error');
-    }
-  };
-
-  const renderShopInfo = () => (
+  const renderStoreTab = () => (
     <div className="tab-content-wrapper fade-in">
       <div className="settings-section-card">
         <div className="section-header">
           <h2>{t('settings.shop_info')}</h2>
           <div className="status-indicator">
+            {saveStatus === 'saving' && <span className="status-msg saving">Saving...</span>}
             {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
             {saveStatus === 'error' && (
               <span className="status-msg error">{error || 'Save failed'}</span>
@@ -147,14 +176,14 @@ function SettingsPage() {
 
         <div className="settings-form">
           <div className="form-group full-width">
-            <label htmlFor="shopName">Shop Name *</label>
+            <label htmlFor="shopName">{t('settings.shop_name')}</label>
             <input
               id="shopName"
               type="text"
               value={settings.shopName}
               onChange={(e) => updateSettings({ shopName: e.target.value })}
               className={`form-input ${validationErrors.shopName ? 'error' : ''}`}
-              placeholder="Enter shop name..."
+              placeholder={t('settings.shop_name_placeholder')}
             />
             {validationErrors.shopName && (
               <span className="error-text">{validationErrors.shopName}</span>
@@ -318,199 +347,161 @@ function SettingsPage() {
             <p className="help-text">{t('settings.payee_name_help')}</p>
           </div>
         </div>
+      </div>
+    </div>
+  );
 
-        <div className="settings-footer">
-          <button
-            type="button"
-            onClick={resetSettings}
-            className="btn btn-secondary"
-            disabled={isLoading}
-          >
-            Reset
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="btn btn-primary"
-            disabled={isLoading}
-          >
-            {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
-          </button>
+  const renderInventorySettingsCard = () => (
+    <div className="settings-section-card">
+      <div className="section-header">
+        <h2>{t('settings.business_rules')}</h2>
+        <div className="status-indicator">
+          {saveStatus === 'saving' && <span className="status-msg saving">Saving...</span>}
+          {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
+        </div>
+      </div>
+      <p className="settings-description">{t('settings.business_description')}</p>
+
+      <div className="settings-form">
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={settings.billingOnly}
+              onChange={(e) => updateSettings({ billingOnly: e.target.checked })}
+            />
+            {t('settings.business.billing_only')}
+          </label>
+          <p className="help-text">{t('settings.business.billing_only_help')}</p>
+        </div>
+
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={settings.roundOffEnabled}
+              onChange={(e) => updateSettings({ roundOffEnabled: e.target.checked })}
+            />
+            {t('settings.business.rounding')}
+          </label>
+          <p className="help-text">{t('settings.business.rounding_help')}</p>
+        </div>
+
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={settings.customersEnabled}
+              onChange={(e) => updateSettings({ customersEnabled: e.target.checked })}
+            />
+            {t('settings.business.customers')}
+          </label>
+          <p className="help-text">{t('settings.business.customers_help')}</p>
+        </div>
+
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={settings.gstEnabled}
+              onChange={(e) => updateSettings({ gstEnabled: e.target.checked })}
+            />
+            {t('settings.business.gst_calc')}
+          </label>
+          <p className="help-text">{t('settings.business.gst_calc_help')}</p>
+        </div>
+
+        {settings.gstEnabled && (
+          <div className="form-group">
+            <label htmlFor="gstPercentage">{t('settings.business.gst_rate')}</label>
+            <select
+              id="gstPercentage"
+              value={settings.gstPercentage}
+              onChange={(e) => updateSettings({ gstPercentage: parseInt(e.target.value, 10) })}
+              className="form-input"
+            >
+              {APP_CONSTANTS.BUSINESS.GST_RATES.map((rate) => (
+                <option key={rate.value} value={rate.value}>
+                  {rate.label}
+                </option>
+              ))}
+            </select>
+            <p className="help-text">{t('settings.business.gst_rate_help')}</p>
+          </div>
+        )}
+
+        {settings.gstEnabled && (
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.gstExclusiveMode}
+                onChange={(e) => updateSettings({ gstExclusiveMode: e.target.checked })}
+              />
+              {t('settings.business.gst_exclusive')}
+            </label>
+            <p className="help-text">{t('settings.business.gst_exclusive_help')}</p>
+          </div>
+        )}
+
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={settings.enableBatchTracking}
+              onChange={(e) => updateSettings({ enableBatchTracking: e.target.checked })}
+            />
+            {t('settings.business.batch_tracking')}
+          </label>
+          <p className="help-text">{t('settings.business.batch_tracking_help')}</p>
+        </div>
+
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={settings.expensesEnabled}
+              onChange={(e) => updateSettings({ expensesEnabled: e.target.checked })}
+            />
+            {t('settings.business.expenses')}
+          </label>
+          <p className="help-text">{t('settings.business.expenses_help')}</p>
+        </div>
+
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={settings.quotationsEnabled}
+              onChange={(e) => updateSettings({ quotationsEnabled: e.target.checked })}
+            />
+            {t('settings.business.quotations')}
+          </label>
+          <p className="help-text">{t('settings.business.quotations_help')}</p>
+        </div>
+
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={settings.barcodeGenEnabled}
+              onChange={(e) => updateSettings({ barcodeGenEnabled: e.target.checked })}
+            />
+            {t('settings.business.barcode_gen')}
+          </label>
+          <p className="help-text">{t('settings.business.barcode_gen_help')}</p>
         </div>
       </div>
     </div>
   );
 
-  const renderInventorySettings = () => (
-    <div className="tab-content-wrapper fade-in">
-      <div className="settings-section-card">
-        <div className="section-header">
-          <h2>{t('settings.business_rules')}</h2>
-          <div className="status-indicator">
-            {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
-          </div>
-        </div>
-        <p className="settings-description">{t('settings.business_description')}</p>
-
-        <div className="settings-form">
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.billingOnly}
-                onChange={(e) => updateSettings({ billingOnly: e.target.checked })}
-              />
-              {t('settings.business.billing_only')}
-            </label>
-            <p className="help-text">{t('settings.business.billing_only_help')}</p>
-          </div>
-
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.roundOffEnabled}
-                onChange={(e) => updateSettings({ roundOffEnabled: e.target.checked })}
-              />
-              {t('settings.business.rounding')}
-            </label>
-            <p className="help-text">{t('settings.business.rounding_help')}</p>
-          </div>
-
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.customersEnabled}
-                onChange={(e) => updateSettings({ customersEnabled: e.target.checked })}
-              />
-              {t('settings.business.customers')}
-            </label>
-            <p className="help-text">{t('settings.business.customers_help')}</p>
-          </div>
-
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.gstEnabled}
-                onChange={(e) => updateSettings({ gstEnabled: e.target.checked })}
-              />
-              {t('settings.business.gst_calc')}
-            </label>
-            <p className="help-text">{t('settings.business.gst_calc_help')}</p>
-          </div>
-
-          {settings.gstEnabled && (
-            <div className="form-group">
-              <label htmlFor="gstPercentage">{t('settings.business.gst_rate')}</label>
-              <select
-                id="gstPercentage"
-                value={settings.gstPercentage}
-                onChange={(e) => updateSettings({ gstPercentage: parseInt(e.target.value, 10) })}
-                className="form-input"
-              >
-                {APP_CONSTANTS.BUSINESS.GST_RATES.map((rate) => (
-                  <option key={rate.value} value={rate.value}>
-                    {rate.label}
-                  </option>
-                ))}
-              </select>
-              <p className="help-text">{t('settings.business.gst_rate_help')}</p>
-            </div>
-          )}
-
-          {settings.gstEnabled && (
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={settings.gstExclusiveMode}
-                  onChange={(e) => updateSettings({ gstExclusiveMode: e.target.checked })}
-                />
-                {t('settings.business.gst_exclusive')}
-              </label>
-              <p className="help-text">{t('settings.business.gst_exclusive_help')}</p>
-            </div>
-          )}
-
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.enableBatchTracking}
-                onChange={(e) => updateSettings({ enableBatchTracking: e.target.checked })}
-              />
-              {t('settings.business.batch_tracking')}
-            </label>
-            <p className="help-text">{t('settings.business.batch_tracking_help')}</p>
-          </div>
-
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.expensesEnabled}
-                onChange={(e) => updateSettings({ expensesEnabled: e.target.checked })}
-              />
-              {t('settings.business.expenses')}
-            </label>
-            <p className="help-text">{t('settings.business.expenses_help')}</p>
-          </div>
-
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.quotationsEnabled}
-                onChange={(e) => updateSettings({ quotationsEnabled: e.target.checked })}
-              />
-              {t('settings.business.quotations')}
-            </label>
-            <p className="help-text">{t('settings.business.quotations_help')}</p>
-          </div>
-
-          <div className="form-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={settings.barcodeGenEnabled}
-                onChange={(e) => updateSettings({ barcodeGenEnabled: e.target.checked })}
-              />
-              {t('settings.business.barcode_gen')}
-            </label>
-            <p className="help-text">{t('settings.business.barcode_gen_help')}</p>
-          </div>
-        </div>
-
-        <div className="settings-footer">
-          <button
-            type="button"
-            onClick={resetSettings}
-            className="btn btn-secondary"
-            disabled={isLoading}
-          >
-            {t('settings.reset')}
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="btn btn-primary"
-            disabled={isLoading}
-          >
-            {saveStatus === 'saving' ? t('settings.saving') : t('settings.save')}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderPrintingSettings = () => (
-    <div className="tab-content-wrapper fade-in">
+  const renderPrintingSettingsCards = () => (
+    <>
       <div className="settings-section-card">
         <div className="section-header">
           <h2>{t('settings.printer.title')}</h2>
           <div className="status-indicator">
+            {saveStatus === 'saving' && <span className="status-msg saving">Saving...</span>}
             {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
           </div>
         </div>
@@ -722,74 +713,78 @@ function SettingsPage() {
             <p className="help-text">{t('settings.printer.footer_msg_help')}</p>
           </div>
         </div>
+      </div>
+    </>
+  );
 
-        <div className="settings-footer">
-          <button
-            type="button"
-            onClick={resetSettings}
-            className="btn btn-secondary"
-            disabled={isLoading}
-          >
-            Reset
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="btn btn-primary"
-            disabled={isLoading}
-          >
-            {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
-          </button>
+  const renderOperationsTab = () => (
+    <div className="tab-content-wrapper fade-in">
+      {renderInventorySettingsCard()}
+      {renderPrintingSettingsCards()}
+      <div className="settings-section-card">
+        <div className="section-header">
+          <h2>{t('settings.whatsapp_reports.title')}</h2>
+          <div className="status-indicator">
+            {saveStatus === 'saving' && <span className="status-msg saving">Saving...</span>}
+            {saveStatus === 'success' && <span className="status-msg success">Saved!</span>}
+          </div>
+        </div>
+        <p className="settings-description">
+          Configure automated daily sales reports delivered directly to your WhatsApp.
+        </p>
+
+        <div className="settings-form">
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.whatsappAutoReportEnabled}
+                onChange={(e) => updateSettings({ whatsappAutoReportEnabled: e.target.checked })}
+              />
+              {t('settings.whatsapp_reports.enable_title')}
+            </label>
+            <p className="help-text">{t('settings.whatsapp_reports.enable_desc')}</p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="whatsappRecipientNumber">
+              {t('settings.whatsapp_reports.recipient_title')}
+            </label>
+            <input
+              id="whatsappRecipientNumber"
+              type="text"
+              className="form-input"
+              placeholder="+919876543210"
+              value={settings.whatsappRecipientNumber || ''}
+              onChange={(e) => updateSettings({ whatsappRecipientNumber: e.target.value })}
+            />
+            <p className="help-text">{t('settings.whatsapp_reports.recipient_desc')}</p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="whatsappReportTime">{t('settings.whatsapp_reports.time_title')}</label>
+            <input
+              id="whatsappReportTime"
+              type="time"
+              className="form-input"
+              value={settings.whatsappReportTime || '20:00'}
+              onChange={(e) => updateSettings({ whatsappReportTime: e.target.value })}
+            />
+            <p className="help-text">{t('settings.whatsapp_reports.time_desc')}</p>
+          </div>
         </div>
       </div>
     </div>
   );
 
-  const renderDataManagement = () => (
+  const renderAccountTab = () => (
     <div className="tab-content-wrapper fade-in">
+      <LicenseSettings onActivate={() => setShowLicenseModal(true)} />
       <DataManagement />
     </div>
   );
 
-  const renderSystemDebug = () => (
-    <div className="tab-content-wrapper fade-in debug-section">
-      <div className="settings-section-card debug-card">
-        <div className="section-header">
-          <h2>Application Lifecycle</h2>
-        </div>
-        <UpdateSettings />
-      </div>
-
-      <div className="settings-section-card debug-card">
-        <div className="section-header">
-          <h2>Communication Bridge</h2>
-        </div>
-        <IPCPoc />
-      </div>
-
-      <div className="settings-section-card debug-card">
-        <div className="section-header">
-          <h2>Cloud Health</h2>
-        </div>
-        <CloudHealth />
-      </div>
-
-      <div className="settings-section-card debug-card">
-        <div className="section-header">
-          <h2>Storage Health</h2>
-        </div>
-        <DatabaseStatus />
-      </div>
-      <div className="settings-section-card debug-card">
-        <div className="section-header">
-          <h2>Maintenance & Utilities</h2>
-        </div>
-        <AppMaintenance />
-      </div>
-    </div>
-  );
-
-  const renderPrivacySettings = () => (
+  const renderSupportTab = () => (
     <div className="tab-content-wrapper fade-in">
       <div className="settings-section-card">
         <div className="section-header">
@@ -798,87 +793,58 @@ function SettingsPage() {
         <p className="settings-description">
           Review our commitment to your data privacy and security.
         </p>
-
         <div className="settings-form">
           <div className="form-group full-width">
             <PrivacyPolicy showTitle={false} />
           </div>
         </div>
       </div>
-    </div>
-  );
 
-  const renderSupportSettings = () => (
-    <div className="tab-content-wrapper fade-in">
       <div className="settings-section-card">
         <div className="section-header">
           <h2>{t('settings.contact_support')}</h2>
         </div>
         <p className="settings-description">{t('help.topics.contact_dev.description')}</p>
-
         <div className="settings-form">
           <div className="form-group full-width">
             <ContactDeveloper />
           </div>
         </div>
       </div>
-    </div>
-  );
 
-  const renderWhatsAppReportsTab = () => (
-    <div className="tab-content-wrapper fade-in">
-      <div className="settings-section-card">
-        <div className="section-header">
-          <h2>{t('settings.whatsapp_reports.title')}</h2>
+      <div className="debug-section">
+        <div className="settings-section-card debug-card">
+          <div className="section-header">
+            <h2>Application Lifecycle</h2>
+          </div>
+          <UpdateSettings />
         </div>
-        <p className="settings-description">
-          Configure automated daily sales reports delivered directly to your WhatsApp.
-        </p>
 
-        <div className="settings-form">
-          <div className="form-group">
-            <div className="toggle-row">
-              <div className="toggle-info">
-                <label className="settings-label">
-                  {t('settings.whatsapp_reports.enable_title')}
-                </label>
-                <p className="control-description">{t('settings.whatsapp_reports.enable_desc')}</p>
-              </div>
-              <label className="switch">
-                <input
-                  type="checkbox"
-                  checked={settings.whatsappAutoReportEnabled}
-                  onChange={(e) => updateSettings({ whatsappAutoReportEnabled: e.target.checked })}
-                />
-                <span className="slider round"></span>
-              </label>
-            </div>
+        <div className="settings-section-card debug-card">
+          <div className="section-header">
+            <h2>Communication Bridge</h2>
           </div>
+          <IPCPoc />
+        </div>
 
-          <div className="form-group">
-            <label className="settings-label">
-              {t('settings.whatsapp_reports.recipient_title')}
-            </label>
-            <input
-              type="text"
-              className="settings-input"
-              placeholder="+919044612070"
-              value={settings.whatsappRecipientNumber || ''}
-              onChange={(e) => updateSettings({ whatsappRecipientNumber: e.target.value })}
-            />
-            <p className="control-description">{t('settings.whatsapp_reports.recipient_desc')}</p>
+        <div className="settings-section-card debug-card">
+          <div className="section-header">
+            <h2>Cloud Health</h2>
           </div>
+          <CloudHealth />
+        </div>
 
-          <div className="form-group">
-            <label className="settings-label">{t('settings.whatsapp_reports.time_title')}</label>
-            <input
-              type="time"
-              className="settings-input"
-              value={settings.whatsappReportTime || '20:00'}
-              onChange={(e) => updateSettings({ whatsappReportTime: e.target.value })}
-            />
-            <p className="control-description">{t('settings.whatsapp_reports.time_desc')}</p>
+        <div className="settings-section-card debug-card">
+          <div className="section-header">
+            <h2>Storage Health</h2>
           </div>
+          <DatabaseStatus />
+        </div>
+        <div className="settings-section-card debug-card">
+          <div className="section-header">
+            <h2>Maintenance & Utilities</h2>
+          </div>
+          <AppMaintenance />
         </div>
       </div>
     </div>
@@ -896,74 +862,37 @@ function SettingsPage() {
         <div className="settings-toolbar">
           <div className="settings-tabs">
             <button
-              className={`tab-btn ${activeTab === 'shop' ? 'active' : ''}`}
-              onClick={() => setActiveTab('shop')}
+              className={`tab-btn ${activeTab === 'store' ? 'active' : ''}`}
+              onClick={() => setActiveTab('store')}
             >
-              {t('settings.shop_info')}
+              {t('settings.tab_store')}
             </button>
             <button
-              className={`tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
-              onClick={() => setActiveTab('inventory')}
+              className={`tab-btn ${activeTab === 'operations' ? 'active' : ''}`}
+              onClick={() => setActiveTab('operations')}
             >
-              {t('settings.business_rules')}
+              {t('settings.tab_operations')}
             </button>
             <button
-              className={`tab-btn ${activeTab === 'printing' ? 'active' : ''}`}
-              onClick={() => setActiveTab('printing')}
+              className={`tab-btn ${activeTab === 'account' ? 'active' : ''}`}
+              onClick={() => setActiveTab('account')}
             >
-              {t('settings.printing')}
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'licensing' ? 'active' : ''}`}
-              onClick={() => setActiveTab('licensing')}
-            >
-              {t('settings.licensing')}
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'data' ? 'active' : ''}`}
-              onClick={() => setActiveTab('data')}
-            >
-              {t('settings.data_management')}
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'privacy' ? 'active' : ''}`}
-              onClick={() => setActiveTab('privacy')}
-            >
-              {t('settings.privacy_policy')}
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'debug' ? 'active' : ''}`}
-              onClick={() => setActiveTab('debug')}
-            >
-              {t('settings.debug')}
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'whatsapp_reports' ? 'active' : ''}`}
-              onClick={() => setActiveTab('whatsapp_reports')}
-            >
-              {t('settings.whatsapp_reports.title')}
+              {t('settings.tab_account')}
             </button>
             <button
               className={`tab-btn ${activeTab === 'support' ? 'active' : ''}`}
               onClick={() => setActiveTab('support')}
             >
-              {t('settings.contact_support')}
+              {t('settings.tab_support')}
             </button>
           </div>
         </div>
 
         <main className="settings-content">
-          {activeTab === 'shop' && renderShopInfo()}
-          {activeTab === 'inventory' && renderInventorySettings()}
-          {activeTab === 'printing' && renderPrintingSettings()}
-          {activeTab === 'licensing' && (
-            <LicenseSettings onActivate={() => setShowLicenseModal(true)} />
-          )}
-          {activeTab === 'data' && renderDataManagement()}
-          {activeTab === 'privacy' && renderPrivacySettings()}
-          {activeTab === 'debug' && renderSystemDebug()}
-          {activeTab === 'whatsapp_reports' && renderWhatsAppReportsTab()}
-          {activeTab === 'support' && renderSupportSettings()}
+          {activeTab === 'store' && renderStoreTab()}
+          {activeTab === 'operations' && renderOperationsTab()}
+          {activeTab === 'account' && renderAccountTab()}
+          {activeTab === 'support' && renderSupportTab()}
         </main>
       </div>
 

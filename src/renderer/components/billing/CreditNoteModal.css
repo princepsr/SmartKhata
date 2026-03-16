@@ -1,101 +1,215 @@
 /* CreditNoteModal.css */
 .credit-note-modal {
-  width: 750px !important;
+  width: 800px;
 }
 
-.bill-ref {
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-  border-left: 4px solid var(--primary-color);
-}
-
-.return-items-list {
-  margin-bottom: 2rem;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.return-items-list table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.return-items-list th {
-  text-align: left;
-  padding: 10px;
-  border-bottom: 2px solid #eee;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.return-items-list td {
-  padding: 12px 10px;
-  border-bottom: 1px solid #f1f1f1;
-}
-
-.qty-input {
-  width: 70px;
-  padding: 6px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  text-align: center;
-}
-
-.cn-form {
-  display: flex;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.cn-form .form-group {
+/* Use product-standard body padding and scrolling */
+.credit-note-modal .modal-body {
+  padding: 0 !important;
+  overflow: hidden;
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.cn-form select,
-.cn-form textarea {
-  width: 100%;
-  padding: 0.7rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
+.credit-note-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  position: relative;
 }
 
-.cn-form textarea {
-  height: 80px;
-  resize: none;
-}
-
-.refund-summary {
-  background: #fff9db;
-  padding: 1.5rem;
-  border-radius: 10px;
-  border: 1px solid #ffe066;
-}
-
-.refund-summary .summary-row {
+/* Re-use bill-meta pattern */
+.credit-note-modal .bill-meta {
   display: flex;
   justify-content: space-between;
-  padding: 4px 0;
-  color: #666;
+  align-items: center;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
-.grand-refund {
-  margin-top: 10px;
-  padding-top: 10px !important;
-  border-top: 1px solid #ffe066;
-  font-size: 1.2rem;
+/* Standard items-table styling */
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+}
+
+.items-table th {
+  text-align: left;
+  padding: 1rem;
+  border-bottom: 2px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: var(--color-bg) !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 1px 0 var(--color-border);
+}
+
+.items-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.95rem;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+/* Specific alignments */
+.text-right {
+  text-align: right !important;
+}
+.text-center {
+  text-align: center !important;
+}
+
+/* Refined input that doesn't break table flow */
+.qty-input {
+  width: 70px;
+  padding: 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+  background: white;
+  transition: all 0.2s;
+  color: var(--color-primary);
+}
+
+.qty-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+/* Hide spin buttons */
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.qty-input[type='number'] {
+  appearance: textfield;
+}
+
+/* Form refinement */
+.cn-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.cn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cn-group label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
+.cn-group select,
+.cn-group textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  background-color: #fff;
+  color: var(--color-text);
+  min-height: 50px;
+}
+
+.cn-group textarea {
+  height: 52px;
+  resize: vertical;
+  min-height: 52px;
+}
+
+/* Premium summary box - aligned right like BillDetail */
+.refund-summary-box {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.refund-summary-box .summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  background-color: #fffbeb; /* Matches yellow theme but subtly */
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-md);
+  width: 350px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  color: #92400e;
+}
+
+.summary-item.total {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #fbd38d;
   font-weight: 800;
-  color: #e67700;
+  font-size: 1.5rem;
+  color: #92400e;
 }
 
-.btn-danger {
-  background-color: #dc3545 !important;
-  border-color: #dc3545 !important;
+.error-message {
+  color: var(--color-error);
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: var(--radius-md);
+  margin-top: 1rem;
+  font-weight: 600;
+}
+/* Solid primary-style danger button */
+.btn-danger-primary {
+  background-color: #e03131 !important;
+  border: 1px solid #c92a2a !important;
   color: #fff !important;
+  padding: 0.6rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-danger:hover {
-  background-color: #c82333 !important;
-  color: #fff !important;
+.btn-danger-primary:hover:not(:disabled) {
+  background-color: #c92a2a !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn-danger-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f87171 !important;
+  border-color: #f87171 !important;
 }

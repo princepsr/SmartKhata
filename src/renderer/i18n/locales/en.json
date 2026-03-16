@@ -59,7 +59,8 @@
     "why": "Purpose",
     "how": "Workflow",
     "tip": "Expert Tip",
-    "read_more": "Read Full Guide"
+    "read_more": "Read Full Guide",
+    "locale": "en-IN"
   },
   "billing": {
     "title": "New Sale / Billing",
@@ -130,6 +131,10 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Configure your POS system preferences",
+    "tab_store": "Store Profile",
+    "tab_operations": "Operations",
+    "tab_account": "Account & Data",
+    "tab_support": "Help & System",
     "language": "Language",
     "english": "English",
     "hindi": "Hindi",
@@ -150,7 +155,7 @@
       "enable_title": "Auto Daily Reports",
       "enable_desc": "Automatically send daily sales summary to the recipient via WhatsApp.",
       "recipient_title": "Recipient Number",
-      "recipient_desc": "The WhatsApp number that will receive the daily report (e.g. +919044612070).",
+      "recipient_desc": "The WhatsApp number that will receive the daily report (e.g. +919876543210).",
       "time_title": "Report Time",
       "time_desc": "The time of day to send the report (after shop closing)."
     },
@@ -673,6 +678,12 @@
       "select_supplier": "Select Supplier",
       "item_placeholder": "Item name",
       "add_item": "+ Add Item",
+      "item_name_label": "Item Name",
+      "hsn_label": "HSN",
+      "qty_label": "Qty",
+      "unit_price_label": "Unit Price",
+      "gst_label": "GST",
+      "total_label": "Total",
       "loading_details": "Loading details...",
       "errors": {
         "missing_info": "Missing Information",
@@ -1046,6 +1057,7 @@
       "days": "Day(s)",
       "hours": "Hour(s)",
       "keep_n": "Keep Last N Backups",
+      "keep_n_help": "Automatic system will delete older backups to save disk space once this limit is reached.",
       "files": "Files",
       "last_auto": "Last Auto-Backup:",
       "never_performed": "Never performed yet",

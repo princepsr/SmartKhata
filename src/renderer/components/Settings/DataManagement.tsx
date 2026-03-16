@@ -14,12 +14,7 @@ import { RestoreSuccessModal } from './RestoreSuccessModal';
  * Includes safety confirmations for high-risk operations.
  */
 export function DataManagement() {
-  const {
-    settings,
-    updateSettings,
-    saveSettings,
-    isLoading: settingsLoading,
-  } = useAppSettingsStore();
+  const { settings, updateSettings, saveSettings } = useAppSettingsStore();
   const { confirm, alert } = useConfirm();
   const { t } = useTranslation();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -448,6 +443,7 @@ export function DataManagement() {
             style={{
               opacity: settings.autoBackupEnabled ? 1 : 0.5,
               pointerEvents: settings.autoBackupEnabled ? 'all' : 'none',
+              gridColumn: '1 / -1',
             }}
           >
             <label htmlFor="retainCount">{t('settings_tabs.backup.keep_n')}</label>
@@ -478,6 +474,7 @@ export function DataManagement() {
                 {t('settings_tabs.backup.files')}
               </span>
             </div>
+            <p className="help-text">{t('settings_tabs.backup.keep_n_help')}</p>
           </div>
 
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -491,22 +488,6 @@ export function DataManagement() {
                 : t('settings_tabs.backup.never_performed')}
             </div>
           </div>
-        </div>
-
-        <div
-          className="settings-footer"
-          style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}
-        >
-          <button
-            type="button"
-            onClick={() => saveSettings(settings)}
-            className="btn btn-primary"
-            disabled={settingsLoading}
-          >
-            {settingsLoading
-              ? t('settings_tabs.backup.saving')
-              : t('settings_tabs.backup.save_backup')}
-          </button>
         </div>
       </div>
 
@@ -648,22 +629,6 @@ export function DataManagement() {
             </div>
           </div>
         )}
-
-        <div
-          className="settings-footer"
-          style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}
-        >
-          <button
-            type="button"
-            onClick={() => saveSettings(settings)}
-            className="btn btn-primary"
-            disabled={settingsLoading}
-          >
-            {settingsLoading
-              ? t('settings_tabs.backup.saving')
-              : t('settings_tabs.backup.save_cloud')}
-          </button>
-        </div>
       </div>
 
       {lastAction && (
