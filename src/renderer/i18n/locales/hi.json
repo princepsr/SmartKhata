@@ -61,6 +61,7 @@
     "how": "कैसे करें",
     "tip": "काम की टिप",
     "read_more": "पूरी जानकारी पढ़ें",
+    "returned": "वापस",
     "locale": "hi-IN"
   },
   "billing": {
@@ -625,6 +626,10 @@
     }
   },
   "procurement": {
+    "issue_debit_note": "डेबिट नोट बनाएं",
+    "debit_note_title": "खरीद वापसी (डेबिट नोट)",
+    "debit_note_created": "डेबिट नोट सफलतापूर्वक जारी किया गया",
+    "debit_note_failed": "डेबिट नोट जारी करने में विफल",
     "title": "खरीद (Purchases)",
     "tabs": {
       "purchases": "खरीद और बिल",
@@ -699,6 +704,7 @@
       "product": "प्रोडक्ट",
       "hsn": "HSN",
       "qty": "मात्र",
+      "returned": "वापस",
       "rate": "दर",
       "gst_percent": "GST %"
     },

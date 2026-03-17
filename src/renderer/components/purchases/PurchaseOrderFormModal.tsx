@@ -19,7 +19,7 @@ interface PurchaseItem {
   saltName?: string;
 }
 
-interface MedicineSuggestion {
+interface ProductSuggestion {
   name: string;
   saltName?: string;
   isLocal: boolean;
@@ -60,7 +60,7 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
     { productName: '', quantity: 1, unitPrice: 0, gstPercent: 0, lineTotal: 0 },
   ]);
 
-  const [medicineSuggestions, setMedicineSuggestions] = useState<MedicineSuggestion[]>([]);
+  const [productSuggestions, setProductSuggestions] = useState<ProductSuggestion[]>([]);
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const { settings } = useAppSettingsStore();
 
@@ -141,9 +141,9 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
     }
   };
 
-  const updateItem = (index: number, field: keyof PurchaseItem, value: string | number) => {
+  const updateItem = (index: number, field: keyof PurchaseItem, value: string | number, extraFields?: Partial<PurchaseItem>) => {
     const newItems = [...items];
-    const item = { ...newItems[index] };
+    const item = { ...newItems[index], ...extraFields };
 
     if (field === 'productName') {
       item.productName = String(value);
@@ -180,29 +180,33 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
       const valStr = String(value).trim().toLowerCase();
       setActiveRowIndex(index);
 
-      if (settings.appMode === 'MEDICAL' && valStr.length >= 2) {
+      if (valStr.length >= 2) {
         // 1. Get internal inventory matches
         const localMatches = (productsData?.items || [])
           .filter((p) => p.name.toLowerCase().includes(valStr))
           .map((p) => ({ ...p, isLocal: true }))
           .slice(0, 5);
 
-        // 2. Get global medicine database matches
-        medicalApi.getMedicineSuggestions(valStr).then((globalMatches) => {
-          const localNames = new Set(localMatches.map((p) => p.name.toLowerCase()));
-          const uniqueGlobal: MedicineSuggestion[] = globalMatches
-            .filter((g: IndianMedicine) => !localNames.has(g.name.toLowerCase()))
-            .map((g: IndianMedicine) => ({ 
-              name: g.name, 
-              saltName: g.saltName, 
-              isLocal: false 
-            }))
-            .slice(0, 10);
+        if (settings.appMode === 'MEDICAL') {
+          // 2. Get global medicine database matches
+          medicalApi.getMedicineSuggestions(valStr).then((globalMatches) => {
+            const localNames = new Set(localMatches.map((p) => p.name.toLowerCase()));
+            const uniqueGlobal: ProductSuggestion[] = globalMatches
+              .filter((g: IndianMedicine) => !localNames.has(g.name.toLowerCase()))
+              .map((g: IndianMedicine) => ({ 
+                name: g.name, 
+                saltName: g.saltName, 
+                isLocal: false 
+              }))
+              .slice(0, 10);
 
-          setMedicineSuggestions([...(localMatches as unknown as MedicineSuggestion[]), ...uniqueGlobal]);
-        });
+            setProductSuggestions([...(localMatches as unknown as ProductSuggestion[]), ...uniqueGlobal]);
+          });
+        } else {
+          setProductSuggestions(localMatches as unknown as ProductSuggestion[]);
+        }
       } else {
-        setMedicineSuggestions([]);
+        setProductSuggestions([]);
       }
 
       const match = productsData?.items?.find((p) => p.name.trim().toLowerCase() === valStr);
@@ -371,7 +375,7 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
                           // Tiny delay to allow onClick to fire on suggestions
                           setTimeout(() => {
                             if (activeRowIndex === index) {
-                              setMedicineSuggestions([]);
+                              setProductSuggestions([]);
                               setActiveRowIndex(null);
                             }
                           }, 200);
@@ -380,17 +384,16 @@ const PurchaseOrderFormModal: React.FC<PurchaseOrderFormModalProps> = ({
                         required
                         autoComplete="off"
                       />
-                      {activeRowIndex === index && medicineSuggestions.length > 0 && (
+                      {activeRowIndex === index && productSuggestions.length > 0 && (
                         <div className="items-suggestions-dropdown">
-                          {medicineSuggestions.map((suggestion, sIdx) => (
+                          {productSuggestions.map((suggestion, sIdx) => (
                             <div
                               key={`${suggestion.name}-${sIdx}`}
                               className="items-suggestion-item"
                               onMouseDown={(e) => {
                                 e.preventDefault(); // Prevent input onBlur
-                                updateItem(index, 'productName', suggestion.name);
-                                updateItem(index, 'saltName', suggestion.saltName);
-                                setMedicineSuggestions([]);
+                                updateItem(index, 'productName', suggestion.name, { saltName: suggestion.saltName || '' });
+                                setProductSuggestions([]);
                                 setActiveRowIndex(null);
                               }}
                             >

@@ -9,11 +9,13 @@ import './BillDetailModal.css';
 
 interface BillItem {
   id: number;
+  productId: number;
   productNameSnapshot: string;
   quantity: number;
   unitPrice: number;
   gstPercent: number;
   lineTotal: number;
+  returnedQuantity: number;
 }
 
 interface BillDetail {
@@ -128,7 +130,14 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
                   <tbody>
                     {data.items.map((item) => (
                       <tr key={item.id}>
-                        <td>{item.productNameSnapshot}</td>
+                        <td>
+                          {item.productNameSnapshot}
+                          {item.returnedQuantity > 0 && (
+                            <span className="returned-badge">
+                              ({t('common.returned')}: {item.returnedQuantity})
+                            </span>
+                          )}
+                        </td>
                         <td className="text-right">{item.quantity}</td>
                         <td className="text-right">{formatCurrency(item.unitPrice)}</td>
                         <td className="text-right">{formatCurrency(item.lineTotal)}</td>
@@ -194,7 +203,11 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
 
         <div className="modal-footer">
           {settings.gstEnabled && (
-            <button className="btn-outline-danger" onClick={() => setIsCreditNoteModalOpen(true)}>
+            <button
+              className="btn-outline-danger"
+              onClick={() => setIsCreditNoteModalOpen(true)}
+              disabled={!data || data.items.every((i) => i.returnedQuantity >= i.quantity)}
+            >
               {t('billing.issue_credit_note')}
             </button>
           )}

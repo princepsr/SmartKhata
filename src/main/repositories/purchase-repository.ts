@@ -35,6 +35,7 @@ export interface PurchaseItem {
   lineSgst: number;
   lineIgst: number;
   lineTotal: number;
+  returnedQuantity: number;
   saltName: string | null;
 }
 
@@ -126,6 +127,7 @@ interface PurchaseItemRow {
   line_igst: number;
   line_total: number;
   salt_name: string | null;
+  returned_quantity: number;
 }
 
 export class PurchaseRepository extends BaseRepository {
@@ -200,7 +202,10 @@ export class PurchaseRepository extends BaseRepository {
           lineCgst: item.lineCgst,
           lineSgst: item.lineSgst,
           lineIgst: item.lineIgst,
-          lineTotal: item.lineTotal, saltName: item.saltName || null });
+          lineTotal: item.lineTotal,
+          returnedQuantity: 0,
+          saltName: item.saltName || null
+        });
       }
 
       logger.info('Purchase recorded', {
@@ -263,11 +268,30 @@ export class PurchaseRepository extends BaseRepository {
   public findByIdWithItems(id: number): PurchaseWithItems | null {
     const row = this.queryOne<PurchaseRow>(`SELECT * FROM purchases WHERE id = ?`, [id]);
     if (!row) {return null;}
-    const items = this.queryAll<PurchaseItemRow>(`SELECT * FROM purchase_items WHERE purchase_id = ?`, [id]);
+    const items = this.findItemsByPurchaseId(id);
     return {
       purchase: this._mapToPurchase(row),
-      items: items.map((r) => this._mapToItem(r)),
+      items: items,
     };
+  }
+
+  /**
+   * Find all items for a given purchase ID, including returned quantity.
+   */
+  public findItemsByPurchaseId(purchaseId: number): PurchaseItem[] {
+    const sql = `
+      SELECT pi.*,
+             COALESCE((SELECT SUM(dni.quantity)
+                       FROM debit_note_items dni
+                       JOIN debit_notes dn ON dni.debit_note_id = dn.id
+                       WHERE dn.purchase_id = pi.purchase_id
+                         AND dni.product_id = pi.product_id), 0) as returned_quantity
+      FROM purchase_items pi
+      WHERE pi.purchase_id = ?
+      ORDER BY pi.id ASC
+    `;
+    const rows = this.queryAll<PurchaseItemRow>(sql, [purchaseId]);
+    return rows.map((row) => this._mapToItem(row));
   }
 
   /**
@@ -380,7 +404,9 @@ export class PurchaseRepository extends BaseRepository {
       lineCgst: row.line_cgst,
       lineSgst: row.line_sgst,
       lineIgst: row.line_igst,
-      lineTotal: row.line_total, saltName: row.salt_name };
+      lineTotal: row.line_total,
+      saltName: row.salt_name,
+      returnedQuantity: row.returned_quantity,
+    };
   }
 }
-

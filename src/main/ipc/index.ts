@@ -23,6 +23,7 @@ import { registerPurchaseOrderHandlers } from './handlers/purchase-order-handler
 import { registerQuotationHandlers } from './handlers/quotation-handlers';
 import { registerUtilityHandlers } from './handlers/utility-handlers';
 import { registerExpenseHandlers } from './handlers/expense-handlers';
+import { registerDebitNoteHandlers } from './handlers/debit-note-handlers';
 
 /**
  * Register all IPC handlers
@@ -50,6 +51,7 @@ export function registerIPCHandlers(): void {
     registerQuotationHandlers();
     registerUtilityHandlers();
     registerExpenseHandlers();
+    registerDebitNoteHandlers();
     // registerSaleHandlers();      // TODO: Implement if needed (Bill handles most sales)
 
     logger.info('=== IPC Handlers Registered Successfully ===');

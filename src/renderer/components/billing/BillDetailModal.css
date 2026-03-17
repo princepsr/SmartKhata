@@ -151,3 +151,14 @@
   background-color: #f8fafc;
   border-top: 1px solid #e2e8f0;
 }
+
+.returned-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}

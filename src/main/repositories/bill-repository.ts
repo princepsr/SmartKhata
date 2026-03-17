@@ -44,6 +44,7 @@ export interface BillItem {
   lineSgst: number;
   lineIgst: number;
   lineTotal: number; // In rupees
+  returnedQuantity: number;
 }
 
 /**
@@ -140,6 +141,7 @@ interface BillItemRow {
   line_sgst: number;
   line_igst: number;
   line_total: number;
+  returned_quantity: number;
 }
 
 /**
@@ -247,6 +249,7 @@ export class BillRepository extends BaseRepository {
           lineSgst: item.lineSgst,
           lineIgst: item.lineIgst,
           lineTotal: item.lineTotal,
+          returnedQuantity: 0,
         });
       }
 
@@ -445,9 +448,15 @@ export class BillRepository extends BaseRepository {
    */
   public findItemsByBillId(billId: number): BillItem[] {
     const sql = `
-      SELECT * FROM bill_items
-      WHERE bill_id = ?
-      ORDER BY id ASC
+      SELECT bi.*, 
+             COALESCE((SELECT SUM(cni.quantity) 
+                       FROM credit_note_items cni 
+                       JOIN credit_notes cn ON cni.credit_note_id = cn.id 
+                       WHERE cn.original_bill_id = bi.bill_id 
+                         AND cni.product_id = bi.product_id), 0) as returned_quantity
+      FROM bill_items bi
+      WHERE bi.bill_id = ?
+      ORDER BY bi.id ASC
     `;
 
     const rows = this.queryAll<BillItemRow>(sql, [billId]);
@@ -584,6 +593,7 @@ export class BillRepository extends BaseRepository {
       lineSgst: row.line_sgst || 0,
       lineIgst: row.line_igst || 0,
       lineTotal: row.line_total, // Direct Rupees
+      returnedQuantity: row.returned_quantity || 0,
     };
   }
 }

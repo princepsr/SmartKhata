@@ -60,6 +60,7 @@
     "how": "Workflow",
     "tip": "Expert Tip",
     "read_more": "Read Full Guide",
+    "returned": "Returned",
     "locale": "en-IN"
   },
   "billing": {
@@ -625,6 +626,10 @@
     }
   },
   "procurement": {
+    "issue_debit_note": "Issue Debit Note",
+    "debit_note_title": "Purchase Return (Debit Note)",
+    "debit_note_created": "Debit Note issued successfully",
+    "debit_note_failed": "Failed to issue Debit Note",
     "title": "Procurement",
     "tabs": {
       "purchases": "Purchases & Invoices",
@@ -699,6 +704,7 @@
       "product": "Product",
       "hsn": "HSN",
       "qty": "Qty",
+      "returned": "Returned",
       "rate": "Rate",
       "gst_percent": "GST %"
     },

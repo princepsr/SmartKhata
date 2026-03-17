@@ -113,7 +113,7 @@ export abstract class BaseRepository {
    * @param fn - Function to execute
    * @returns Result of the function
    */
-  protected transaction<T>(fn: () => T): T {
+  public transaction<T>(fn: () => T): T {
     try {
       const result = databaseManager.transaction(fn);
       return result;

@@ -11,14 +11,27 @@ import {
   PurchaseOrder, 
   Product, 
   RecordPurchaseInput, 
-  PurchaseWithItems 
+  PurchaseWithItems,
+  IndianMedicine
 } from '@shared/types/ipc';
 import { formatCurrency } from '../utils/formatters';
 import { useAppSettingsStore } from '../store';
+import { medicalApi } from '../services/medical-api';
+
+interface ProductSuggestion {
+  name: string;
+  saltName?: string;
+  isLocal: boolean;
+  id?: number;
+  gstPercent?: number;
+  purchasePrice?: number;
+  hsnCode?: string;
+}
 import EmptyState from '../components/common/EmptyState';
 import SuppliersPage, { SuppliersPageHandle } from './SuppliersPage';
 import PurchaseOrdersTab from '../components/purchases/PurchaseOrdersTab';
 import PurchaseOrderFormModal from '../components/purchases/PurchaseOrderFormModal';
+import { DebitNoteModal } from '../components/purchases/DebitNoteModal';
 import SearchableSelect from '../components/ui/SearchableSelect';
 import './PurchasesPage.css';
 
@@ -361,6 +374,10 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const { alert } = useConfirm();
+  const { settings } = useAppSettingsStore();
+  
+  const [productSuggestions, setProductSuggestions] = useState<ProductSuggestion[]>([]);
+  const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     supplierId: initialPoData?.supplierId || (undefined as number | undefined),
     supplierName: initialPoData?.supplierName || '',
@@ -419,9 +436,9 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
     }
   };
 
-  const updateItem = (index: number, field: keyof PurchaseItem, value: string | number) => {
+  const updateItem = (index: number, field: keyof PurchaseItem, value: string | number, extraFields?: Partial<PurchaseItem>) => {
     const newItems = [...items];
-    const item = { ...newItems[index] };
+    const item = { ...newItems[index], ...extraFields };
 
     // Set the basic value
     if (field === 'productName') {
@@ -455,6 +472,37 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
 
     if (field === 'productName') {
       const valStr = String(value).trim().toLowerCase();
+      setActiveRowIndex(index);
+
+      if (valStr.length >= 2) {
+        // 1. Get internal inventory matches
+        const localMatches = (productsData?.items || [])
+          .filter((p) => p.name.toLowerCase().includes(valStr))
+          .map((p) => ({ ...p, isLocal: true }))
+          .slice(0, 5);
+
+        if (settings.appMode === 'MEDICAL') {
+          // 2. Get global medicine database matches
+          medicalApi.getMedicineSuggestions(valStr).then((globalMatches) => {
+            const localNames = new Set(localMatches.map((p) => p.name.toLowerCase()));
+            const uniqueGlobal: ProductSuggestion[] = globalMatches
+              .filter((g: IndianMedicine) => !localNames.has(g.name.toLowerCase()))
+              .map((g: IndianMedicine) => ({ 
+                name: g.name, 
+                saltName: g.saltName, 
+                isLocal: false 
+              }))
+              .slice(0, 10);
+
+            setProductSuggestions([...(localMatches as unknown as ProductSuggestion[]), ...uniqueGlobal]);
+          });
+        } else {
+          setProductSuggestions(localMatches as unknown as ProductSuggestion[]);
+        }
+      } else {
+        setProductSuggestions([]);
+      }
+
       const match = productsData?.items?.find((p) => p.name.trim().toLowerCase() === valStr);
       if (match) {
         item.productId = match.id;
@@ -682,14 +730,50 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
                   {items.map((item, index) => (
                     <tr key={index}>
                       <td>
-                        <input
-                          type="text"
-                          list="purchase-products-datalist"
-                          value={item.productName}
-                          onChange={(e) => updateItem(index, 'productName', e.target.value)}
-                          placeholder={t('procurement.form.item_placeholder')}
-                          required
-                        />
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type="text"
+                            value={item.productName}
+                            onChange={(e) => updateItem(index, 'productName', e.target.value)}
+                            onBlur={() => {
+                              setTimeout(() => {
+                                if (activeRowIndex === index) {
+                                  setProductSuggestions([]);
+                                  setActiveRowIndex(null);
+                                }
+                              }, 200);
+                            }}
+                            placeholder={t('procurement.form.item_placeholder')}
+                            required
+                            autoComplete="off"
+                          />
+                          {activeRowIndex === index && productSuggestions.length > 0 && (
+                            <div className="items-suggestions-dropdown">
+                              {productSuggestions.map((suggestion, sIdx) => (
+                                <div
+                                  key={`${suggestion.name}-${sIdx}`}
+                                  className="items-suggestion-item"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    updateItem(index, 'productName', suggestion.name, { saltName: suggestion.saltName || '' });
+                                    setProductSuggestions([]);
+                                    setActiveRowIndex(null);
+                                  }}
+                                >
+                                  <div className="brand-name">{suggestion.name}</div>
+                                  <div className="salt-name">{suggestion.saltName}</div>
+                                  {suggestion.isLocal ? (
+                                    <span className="inventory-tag">
+                                      {t('billing.stock_prefix')} {t('common.active')}
+                                    </span>
+                                  ) : (
+                                    <span className="global-tag">New Global Medicine</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <input
@@ -750,11 +834,6 @@ const PurchaseFormModal: React.FC<PurchaseFormModalProps> = ({
                   ))}
                 </tbody>
               </table>
-              <datalist id="purchase-products-datalist">
-                {productsData?.items?.map((p) => (
-                  <option key={p.id} value={p.name} />
-                ))}
-              </datalist>
               <button type="button" className="btn-outline" onClick={addItem}>
                 {t('procurement.form.add_item')}
               </button>
@@ -811,28 +890,14 @@ interface PurchaseDetailsModalProps {
   onClose: () => void;
 }
 
-interface DetailedPurchase extends Purchase {
-  items?: {
-    productName: string;
-    quantity: number;
-    unitPrice: number;
-    gstPercent: number;
-    lineTotal: number;
-    hsnCode?: string;
-  }[];
-  totalTaxable: number;
-  cgstAmount: number;
-  sgstAmount: number;
-  igstAmount: number;
-}
-
 const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId, onClose }) => {
   const { t } = useTranslation();
   const {
-    data: purchase,
+    data: purchaseData,
     loading,
     execute: fetchPurchase,
-  } = useIPC<DetailedPurchase>(IPC_CHANNELS.PURCHASE_GET_BY_ID);
+  } = useIPC<PurchaseWithItems>(IPC_CHANNELS.PURCHASE_GET_BY_ID);
+  const [showDebitNoteModal, setShowDebitNoteModal] = useState(false);
 
   useEffect(() => {
     fetchPurchase(purchaseId);
@@ -849,7 +914,7 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
     return () => window.removeEventListener('keydown', handleEsc);
   }, [onClose]);
 
-  if (loading || !purchase) {
+  if (loading || !purchaseData) {
     return (
       <div className="modal-overlay" onClick={onClose}>
         <div
@@ -862,6 +927,8 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
       </div>
     );
   }
+
+  const { purchase, items } = purchaseData;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -925,28 +992,23 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
                 <th>{t('procurement.details.product')}</th>
                 <th>{t('procurement.form.hsn_label')}</th>
                 <th className="text-right">{t('procurement.details.qty')}</th>
+                <th className="text-right">{t('procurement.details.returned') || 'Returned'}</th>
                 <th className="text-right">{t('procurement.details.rate')}</th>
                 <th className="text-right">{t('procurement.form.gst_label')} %</th>
                 <th className="text-right">{t('procurement.form.total_label')}</th>
               </tr>
             </thead>
             <tbody>
-              {purchase.items?.map(
+              {items?.map(
                 (
-                  item: {
-                    productName: string;
-                    quantity: number;
-                    unitPrice: number;
-                    gstPercent: number;
-                    lineTotal: number;
-                    hsnCode?: string;
-                  },
+                  item,
                   idx: number
                 ) => (
                   <tr key={idx}>
                     <td>{item.productName}</td>
                     <td>{item.hsnCode || '-'}</td>
                     <td className="text-right">{item.quantity}</td>
+                    <td className="text-right text-danger">{item.returnedQuantity || 0}</td>
                     <td className="text-right">{formatCurrency(item.unitPrice)}</td>
                     <td className="text-right">{item.gstPercent}%</td>
                     <td className="text-right">{formatCurrency(item.lineTotal)}</td>
@@ -1015,10 +1077,29 @@ const PurchaseDetailsModal: React.FC<PurchaseDetailsModalProps> = ({ purchaseId,
         </div>
 
         <div className="modal-footer">
+          <button
+            className="btn-danger-primary"
+            onClick={() => setShowDebitNoteModal(true)}
+          >
+            {t('procurement.issue_debit_note')}
+          </button>
           <button className="btn-secondary" onClick={onClose}>
             {t('common.close')}
           </button>
         </div>
+
+        {showDebitNoteModal && purchase && (
+          <DebitNoteModal
+            isOpen={showDebitNoteModal}
+            onClose={() => setShowDebitNoteModal(false)}
+            purchase={purchase}
+            items={items}
+            onSuccess={() => {
+              setShowDebitNoteModal(false);
+              onClose();
+            }}
+          />
+        )}
       </div>
     </div>
   );

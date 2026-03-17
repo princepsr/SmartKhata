@@ -633,7 +633,7 @@
   gap: 0.5rem;
 }
 
-.summary-row {
+.billing-page .summary-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -641,25 +641,25 @@
   color: var(--text-secondary);
 }
 
-.summary-row span:last-child {
+.billing-page .summary-row span:last-child {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 1.125rem;
 }
 
-.summary-row.grand-total {
+.billing-page .summary-row.grand-total {
   margin-top: auto;
   padding-top: 1rem;
   border-top: 2px dashed var(--border-color);
 }
 
-.summary-row.grand-total span:first-child {
+.billing-page .summary-row.grand-total span:first-child {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.summary-row.grand-total span:last-child {
+.billing-page .summary-row.grand-total span:last-child {
   font-size: 1.75rem;
   font-weight: 800;
   color: var(--color-primary);

@@ -14,6 +14,7 @@ import {
 import { BillRepository } from '../repositories/bill-repository';
 import { ProductRepository } from '../repositories/product-repository';
 import { SettingsService } from './settings-service';
+import { CustomerRepository } from '../repositories/customer-repository';
 import { NotFoundError, ValidationError } from './errors/service-errors';
 import { logger } from '../utils/logger';
 
@@ -36,114 +37,149 @@ export class CreditNoteService extends BaseService {
   private creditNoteRepo: CreditNoteRepository;
   private billRepo: BillRepository;
   private productRepo: ProductRepository;
+  private customerRepo: CustomerRepository;
 
   constructor() {
     super();
     this.creditNoteRepo = new CreditNoteRepository();
     this.billRepo = new BillRepository();
     this.productRepo = new ProductRepository();
+    this.customerRepo = new CustomerRepository();
   }
 
   /**
    * Create a credit note for a full or partial return
    */
   public createCreditNote(input: CreateCreditNoteServiceInput): CreditNoteWithItems {
-    // 1. Validate the original bill exists
-    const originalBill = this.billRepo.findByIdWithItems(input.originalBillId);
-    if (!originalBill) {
-      throw new NotFoundError('Bill', input.originalBillId);
-    }
-
-    if (input.items.length === 0) {
-      throw new ValidationError('At least one item must be returned', 'items');
-    }
-
-    const config = SettingsService.getInstance().getConfig();
-    const isIntrastate = config.supplyType !== 'interstate';
-
-    // 2. Calculate totals for returned items
-    let totalTaxable = 0;
-    let totalCgst = 0;
-    let totalSgst = 0;
-    let totalIgst = 0;
-    let totalRefund = 0;
-
-    const cnItems: CreateCreditNoteItemInput[] = input.items.map((item) => {
-      const lineTotal = Math.round(item.unitPrice * item.quantity * 100) / 100;
-      let lineTaxable: number;
-      let lineCgst = 0;
-      let lineSgst = 0;
-      let lineIgst = 0;
-
-      if (item.gstPercent > 0 && config.gstEnabled) {
-        // Reverse-calculate taxable from GST-inclusive line total
-        lineTaxable = Math.round((lineTotal / (1 + item.gstPercent / 100)) * 100) / 100;
-        const lineGst = Math.round((lineTotal - lineTaxable) * 100) / 100;
-
-        if (isIntrastate) {
-          lineCgst = Math.round((lineGst / 2) * 100) / 100;
-          lineSgst = Math.round((lineGst - lineCgst) * 100) / 100;
-        } else {
-          lineIgst = lineGst;
-        }
-      } else {
-        lineTaxable = lineTotal;
+    return this.creditNoteRepo.transaction(() => {
+      // 1. Validate the original bill exists
+      const originalBill = this.billRepo.findByIdWithItems(input.originalBillId);
+      if (!originalBill) {
+        throw new NotFoundError('Bill', input.originalBillId);
       }
 
-      totalTaxable = Math.round((totalTaxable + lineTaxable) * 100) / 100;
-      totalCgst = Math.round((totalCgst + lineCgst) * 100) / 100;
-      totalSgst = Math.round((totalSgst + lineSgst) * 100) / 100;
-      totalIgst = Math.round((totalIgst + lineIgst) * 100) / 100;
-      totalRefund = Math.round((totalRefund + lineTotal) * 100) / 100;
+      if (input.items.length === 0) {
+        throw new ValidationError('At least one item must be returned', 'items');
+      }
 
-      return {
-        productId: item.productId,
-        productNameSnapshot: (() => {
-          const p = this.productRepo.findById(item.productId);
-          return p ? p.name : `Product #${item.productId}`;
-        })(),
-        hsnCode: item.hsnCode,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        gstPercent: item.gstPercent,
-        lineTaxable,
-        lineCgst,
-        lineSgst,
-        lineIgst,
-        lineTotal,
-      };
-    });
+      const config = SettingsService.getInstance().getConfig();
+      const isIntrastate = config.supplyType !== 'interstate';
 
-    const gstTotal = Math.round((totalCgst + totalSgst + totalIgst) * 100) / 100;
+      // 2. Prepare validation map for already returned items
+      const billItemsMap: Record<number, { available: number; name: string }> = {};
+      originalBill.items.forEach(item => {
+        billItemsMap[item.productId] = {
+          available: (billItemsMap[item.productId]?.available || 0) + (item.quantity - item.returnedQuantity),
+          name: item.productNameSnapshot
+        };
+      });
 
-    // 3. Generate credit note number
-    const creditNoteNumber = this.generateCreditNoteNumber();
+      // 3. Calculate totals and validate quantities
+      let totalTaxable = 0;
+      let totalCgst = 0;
+      let totalSgst = 0;
+      let totalIgst = 0;
+      let totalRefund = 0;
 
-    logger.info('Creating credit note', {
-      creditNoteNumber,
-      originalBillId: input.originalBillId,
-      refundAmount: totalRefund,
-      gstReversed: gstTotal,
-    });
+      const cnItems: CreateCreditNoteItemInput[] = input.items.map((item) => {
+        // Validation check
+        const info = billItemsMap[item.productId];
+        if (!info || item.quantity > info.available) {
+          throw new ValidationError(
+            `Cannot return ${item.quantity} of '${info?.name || 'unknown product'}'. Only ${info?.available || 0} units available for return.`,
+            'items'
+          );
+        }
 
-    // 4. Persist
-    return this.creditNoteRepo.createCreditNoteWithItems(
-      {
+        const lineTotal = Math.round(item.unitPrice * item.quantity * 100) / 100;
+        let lineTaxable: number;
+        let lineCgst = 0;
+        let lineSgst = 0;
+        let lineIgst = 0;
+
+        if (item.gstPercent > 0 && config.gstEnabled) {
+          lineTaxable = Math.round((lineTotal / (1 + item.gstPercent / 100)) * 100) / 100;
+          const lineGst = Math.round((lineTotal - lineTaxable) * 100) / 100;
+
+          if (isIntrastate) {
+            lineCgst = Math.round((lineGst / 2) * 100) / 100;
+            lineSgst = Math.round((lineGst - lineCgst) * 100) / 100;
+          } else {
+            lineIgst = lineGst;
+          }
+        } else {
+          lineTaxable = lineTotal;
+        }
+
+        totalTaxable = Math.round((totalTaxable + lineTaxable) * 100) / 100;
+        totalCgst = Math.round((totalCgst + lineCgst) * 100) / 100;
+        totalSgst = Math.round((totalSgst + lineSgst) * 100) / 100;
+        totalIgst = Math.round((totalIgst + lineIgst) * 100) / 100;
+        totalRefund = Math.round((totalRefund + lineTotal) * 100) / 100;
+
+        return {
+          productId: item.productId,
+          productNameSnapshot: info.name,
+          hsnCode: item.hsnCode,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          gstPercent: item.gstPercent,
+          lineTaxable,
+          lineCgst,
+          lineSgst,
+          lineIgst,
+          lineTotal,
+        };
+      });
+
+      const gstTotal = Math.round((totalCgst + totalSgst + totalIgst) * 100) / 100;
+      const creditNoteNumber = this.generateCreditNoteNumber();
+
+      logger.info('Creating credit note', {
         creditNoteNumber,
         originalBillId: input.originalBillId,
-        originalBillNumber: originalBill.bill.billNumber,
-        customerId: originalBill.bill.customerId ?? undefined,
-        reason: input.reason,
         refundAmount: totalRefund,
-        taxableAmount: totalTaxable,
-        cgstAmount: totalCgst,
-        sgstAmount: totalSgst,
-        igstAmount: totalIgst,
-        gstTotal,
-        notes: input.notes,
-      },
-      cnItems
-    );
+      });
+
+      // 4. Persist Credit Note
+      const result = this.creditNoteRepo.createCreditNoteWithItems(
+        {
+          creditNoteNumber,
+          originalBillId: input.originalBillId,
+          originalBillNumber: originalBill.bill.billNumber,
+          customerId: originalBill.bill.customerId ?? undefined,
+          reason: input.reason,
+          refundAmount: totalRefund,
+          taxableAmount: totalTaxable,
+          cgstAmount: totalCgst,
+          sgstAmount: totalSgst,
+          igstAmount: totalIgst,
+          gstTotal,
+          notes: input.notes,
+        },
+        cnItems
+      );
+
+      // 5. Restore stock to inventory
+      input.items.forEach(item => {
+        this.productRepo.updateStock(item.productId, item.quantity);
+        logger.debug('Restored stock for sales return', { productId: item.productId, qty: item.quantity });
+      });
+
+      // 6. Update Customer Balance & Ledger (if applicable)
+      if (originalBill.bill.customerId) {
+        this.customerRepo.updateBalance(originalBill.bill.customerId, -totalRefund);
+        this.customerRepo.addLedgerEntry({
+          customerId: originalBill.bill.customerId,
+          amount: totalRefund,
+          type: 'PAYMENT_IN', // Refund acts as a payment into the customer's favor (reducing debt)
+          referenceId: result.creditNote.id,
+          notes: `Credit Note: ${creditNoteNumber} (Against Bill #${originalBill.bill.billNumber})`,
+        });
+      }
+
+      return result;
+    });
   }
 
   /**

@@ -168,6 +168,13 @@ export class SupplierRepository extends BaseRepository {
     return row ? this._mapToSupplier(row) : null;
   }
 
+  public findByName(name: string): Supplier | null {
+    const row = this.queryOne<SupplierRow>('SELECT * FROM suppliers WHERE name = ? AND is_active = 1', [
+      name,
+    ]);
+    return row ? this._mapToSupplier(row) : null;
+  }
+
   public findAll(includeInactive = false): Supplier[] {
     const sql = `SELECT * FROM suppliers ${includeInactive ? '' : 'WHERE is_active = 1'} ORDER BY name ASC`;
     return this.queryAll<SupplierRow>(sql).map((row) => this._mapToSupplier(row));

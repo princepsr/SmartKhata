@@ -7,11 +7,13 @@ import './CreditNoteModal.css';
 
 interface BillItem {
   id: number;
+  productId: number;
   productNameSnapshot: string;
   quantity: number;
   unitPrice: number;
   gstPercent: number;
   lineTotal: number;
+  returnedQuantity: number;
 }
 
 interface BillDetail {
@@ -34,20 +36,24 @@ interface CreditNoteModalProps {
 
 interface ReturnItem {
   billItemId: number;
+  productId: number;
   productName: string;
   originalQty: number;
   returnQty: number;
   unitPrice: number;
   gstPercent: number;
+  returnedQuantity: number;
 }
 
 interface CreateCreditNoteRequest {
-  billId: number;
+  originalBillId: number;
   reason: string;
   notes?: string;
   items: {
-    billItemId: number;
+    productId: number;
     quantity: number;
+    unitPrice: number;
+    gstPercent: number;
   }[];
 }
 
@@ -72,11 +78,13 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
       setReturnItems(
         billDetail.items.map((item) => ({
           billItemId: item.id,
+          productId: item.productId,
           productName: item.productNameSnapshot,
           originalQty: item.quantity,
           returnQty: 0,
           unitPrice: item.unitPrice,
           gstPercent: item.gstPercent,
+          returnedQuantity: item.returnedQuantity,
         }))
       );
     }
@@ -90,7 +98,7 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
     setReturnItems((items) =>
       items.map((item) =>
         item.billItemId === billItemId
-          ? { ...item, returnQty: Math.min(qty, item.originalQty) }
+          ? { ...item, returnQty: Math.min(qty, item.originalQty - item.returnedQuantity) }
           : item
       )
     );
@@ -99,12 +107,14 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
   const calculateRefund = () => {
     return returnItems.reduce(
       (acc, item) => {
-        const taxable = item.returnQty * item.unitPrice;
-        const gst = (taxable * item.gstPercent) / 100;
+        const lineTotal = item.returnQty * item.unitPrice;
+        const rate = item.gstPercent / 100;
+        const taxable = lineTotal / (1 + rate);
+        const gst = lineTotal - taxable;
         return {
           taxable: acc.taxable + taxable,
           gst: acc.gst + gst,
-          total: acc.total + taxable + gst,
+          total: acc.total + lineTotal,
         };
       },
       { taxable: 0, gst: 0, total: 0 }
@@ -124,12 +134,14 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
 
     try {
       const response = await createCreditNote({
-        billId: billDetail.bill.id,
-        reason,
+        originalBillId: billDetail.bill.id,
+        reason: reason as any,
         notes,
         items: itemsToReturn.map((i) => ({
-          billItemId: i.billItemId,
+          productId: i.productId,
           quantity: i.returnQty,
+          unitPrice: i.unitPrice,
+          gstPercent: i.gstPercent,
         })),
       });
 
@@ -163,7 +175,8 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
               <thead>
                 <tr>
                   <th>Product</th>
-                  <th className="text-right">Original Qty</th>
+                  <th className="text-right">Sold Qty</th>
+                  <th className="text-right">Returned</th>
                   <th className="text-center">Return Qty</th>
                   <th className="text-right">Refund Amount</th>
                 </tr>
@@ -173,12 +186,16 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
                   <tr key={item.billItemId}>
                     <td>{item.productName}</td>
                     <td className="text-right">{item.originalQty}</td>
+                    <td className="text-right text-danger">
+                      {item.returnedQuantity > 0 ? item.returnedQuantity : '-'}
+                    </td>
                     <td className="text-center">
                       <input
                         type="number"
                         min="0"
-                        max={item.originalQty}
+                        max={item.originalQty - item.returnedQuantity}
                         value={item.returnQty}
+                        disabled={item.originalQty - item.returnedQuantity <= 0}
                         onChange={(e) =>
                           handleReturnQtyChange(item.billItemId, Number(e.target.value))
                         }
@@ -186,9 +203,7 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
                       />
                     </td>
                     <td className="text-right">
-                      {formatCurrency(
-                        item.returnQty * item.unitPrice * (1 + item.gstPercent / 100)
-                      )}
+                      {formatCurrency(item.returnQty * item.unitPrice)}
                     </td>
                   </tr>
                 ))}
@@ -199,10 +214,10 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
               <div className="cn-group">
                 <label>Reason for Return</label>
                 <select value={reason} onChange={(e) => setReason(e.target.value)}>
-                  <option value="Sales Return">Sales Return</option>
-                  <option value="Damaged Goods">Damaged Goods</option>
-                  <option value="Wrong Item">Wrong Item</option>
-                  <option value="Other">Other</option>
+                  <option value="OTHER">Sales Return</option>
+                  <option value="DEFECTIVE">Damaged Goods</option>
+                  <option value="WRONG_ITEM">Wrong Item</option>
+                  <option value="EXCESS">Excess/Other</option>
                 </select>
               </div>
               <div className="cn-group">

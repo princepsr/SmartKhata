@@ -78,6 +78,7 @@ export interface BillItem {
   unitPrice: number;
   gstPercent: number;
   lineTotal: number;
+  returnedQuantity: number;
 }
 
 export interface BillWithItems {
@@ -124,6 +125,7 @@ export interface PurchaseItem {
   lineIgst: number;
   lineTotal: number;
   saltName: string | null;
+  returnedQuantity: number;
 }
 
 export interface PurchaseWithItems {
@@ -474,5 +476,52 @@ export interface RecordPurchaseInput {
   supplierId?: number;
   paymentStatus?: 'PENDING' | 'PAID' | 'PARTIAL';
   amountPaid?: number;
+}
+
+/**
+ * Return/Debit Note Inputs
+ */
+export interface RecordReturnInput {
+  purchaseId?: number;
+  supplierId: number;
+  items: {
+    productId: number;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    gstPercent: number;
+  }[];
+  reason?: string;
+}
+
+/**
+ * Debit Note Entity
+ */
+export interface DebitNote {
+  id: number;
+  debitNoteNumber: string;
+  purchaseId: number | null;
+  supplierId: number;
+  totalTaxable: number;
+  gstTotal: number;
+  grandTotal: number;
+  reason: string | null;
+  createdAt: number | Date;
+}
+
+export interface DebitNoteItem {
+  id: number;
+  debitNoteId: number;
+  productId: number | null;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  gstPercent: number;
+  lineTotal: number;
+}
+
+export interface DebitNoteWithItems {
+  debitNote: DebitNote;
+  items: DebitNoteItem[];
 }
 
