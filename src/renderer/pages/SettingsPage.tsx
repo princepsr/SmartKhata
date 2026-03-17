@@ -14,7 +14,8 @@ import LicenseSettings from '../components/Settings/LicenseSettings';
 import { APP_CONSTANTS } from '@shared/constants/app-constants';
 import { PrivacyPolicy } from '../components/Settings/PrivacyPolicy';
 import { UpdateSettings } from '../components/Settings/UpdateSettings';
-import type { PrinterInfo } from '@shared/types/ipc';
+import { SeedManagement } from '../components/Debug/SeedManagement';
+import { PrinterInfo } from '@shared/types/ipc';
 import ContactDeveloper from '../components/common/ContactDeveloper';
 import './SettingsPage.css';
 
@@ -839,6 +840,12 @@ function SettingsPage() {
             <h2>Storage Health</h2>
           </div>
           <DatabaseStatus />
+        </div>
+        <div className="settings-section-card debug-card">
+          <div className="section-header">
+            <h2>Data Seeding</h2>
+          </div>
+          <SeedManagement />
         </div>
         <div className="settings-section-card debug-card">
           <div className="section-header">

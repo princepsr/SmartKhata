@@ -250,6 +250,7 @@
   "inventory": {
     "title": "Products & Inventory",
     "add_product": "Add Product",
+    "add_btn": "Add Product",
     "import_csv": "Import CSV",
     "search_placeholder_long": "Search Product (F2) - Name / SKU / Barcode",
     "filter_category": "All Categories",

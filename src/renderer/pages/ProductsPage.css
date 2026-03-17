@@ -1,4 +1,4 @@
-﻿.products-page {
+.products-page {
   /* Inherits .page from index.css */
   background-color: var(--color-bg);
   color: var(--color-text);
@@ -405,19 +405,32 @@
   font-style: italic;
 }
 
-.products-page .loading-more,
-.products-page .end-of-list {
-  padding: 2rem;
+.table-footer-status {
+  padding: 1.5rem;
   text-align: center;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-bg-secondary);
   color: var(--color-text-secondary);
   font-style: italic;
-  font-size: 0.9rem;
-  border-top: 1px solid var(--color-border);
 }
 
-.products-page .loading-more {
-  background-color: var(--color-bg-secondary);
+.loading-indicator,
+.end-message,
+.scroll-tip {
+  font-size: 0.95rem;
   font-weight: 500;
+}
+
+.loading-indicator {
+  color: var(--color-primary);
+}
+
+.end-message {
+  color: var(--color-text-muted);
+}
+
+.scroll-tip {
+  color: var(--color-success);
 }
 
 /* Skeleton animation */

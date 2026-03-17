@@ -251,6 +251,7 @@
   "inventory": {
     "title": "प्रोडक्ट और स्टॉक",
     "add_product": "प्रोडक्ट जोड़ें",
+    "add_btn": "प्रोडक्ट जोड़ें",
     "import_csv": "CSV इंपोर्ट करें",
     "search_placeholder_long": "प्रोडक्ट खोजें (F2) - नाम / SKU / बारकोड",
     "filter_category": "सभी कैटेगरी",

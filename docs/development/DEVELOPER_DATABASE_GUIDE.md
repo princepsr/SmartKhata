@@ -15,14 +15,12 @@ To create a shareable state for testing or bug reporting:
 sqlite3 dev-data/smartkhata.db .dump > src/main/database/seed/dev_snapshot.sql
 ```
 
-### 2. Restoring to Baseline
+# 2. Restore from seed (Recommended)
+# Navigate to Settings > Support (Debug) in the app and select 'general.sql' or 'medicine.sql'
+# This is the enterprise-grade way to restore a robust baseline.
 
-```bash
-# 1. Kill the app and delete current DB
-rm dev-data/smartkhata.db
-
-# 2. Restore from seed
-sqlite3 dev-data/smartkhata.db < src/main/database/seed/polaris.sql
+# Manual CLI Alternative:
+sqlite3 dev-data/smartkhata.db < src/main/database/seed/general.sql
 ```
 
 ---

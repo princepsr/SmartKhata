@@ -111,6 +111,9 @@ export const IPC_CHANNELS = {
   SYSTEM_GET_APP_INFO: 'system:get-app-info',
   SYSTEM_DB_STATUS: 'system:dbStatus',
   SYSTEM_CHECK_CONNECTIVITY: 'system:check-connectivity',
+  SYSTEM_SEED_LIST: 'system:seed-list',
+  SYSTEM_SEED_RUN: 'system:seed-run',
+  SYSTEM_RESET_DB: 'system:reset-db',
 
   // ============================================
   // SETTINGS MODULE
@@ -308,6 +311,9 @@ export const CHANNEL_GROUPS = {
     IPC_CHANNELS.SYSTEM_CONNECTIVITY_CHANGE,
     IPC_CHANNELS.SYSTEM_GET_APP_INFO,
     IPC_CHANNELS.SYSTEM_DB_STATUS,
+    IPC_CHANNELS.SYSTEM_SEED_LIST,
+    IPC_CHANNELS.SYSTEM_SEED_RUN,
+    IPC_CHANNELS.SYSTEM_RESET_DB,
   ],
   SETTINGS: [
     IPC_CHANNELS.SETTINGS_GET,

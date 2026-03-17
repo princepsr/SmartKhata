@@ -659,7 +659,7 @@ const ProductsPage: React.FC = () => {
                 ))
               )}
 
-              <div className="table-footer-status">
+              <div className="table-footer-status" ref={loaderRef}>
                 {loading && <div className="loading-indicator">{t('inventory.loading_more')}</div>}
 
                 {!hasMore && products.length > 0 && totalCount > 100 && (

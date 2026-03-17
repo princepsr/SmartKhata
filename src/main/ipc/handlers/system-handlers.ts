@@ -17,9 +17,49 @@ import { googleAuthService } from '@main/services/google-auth-service';
 import { googleDriveService } from '@main/services/google-drive-service';
 import { connectivityService } from '@main/services/connectivity-service';
 import { logger } from '@main/utils/logger';
+import { SeedRunner } from '@main/database/seed-runner';
 import { BackupMeta } from '@shared/types/ipc';
 
 export function registerSystemHandlers(): void {
+  /**
+   * SEED MODULE
+   */
+
+  // List available seeds
+  IPCHandler.handle<void, string[]>(IPC_CHANNELS.SYSTEM_SEED_LIST, async () => {
+    const db = databaseManager.getDatabase();
+    const runner = new SeedRunner(db);
+    return runner.listSeeds();
+  });
+
+  // Run specific seed
+  IPCHandler.handle<{ seedFile: string; clearFirst?: boolean }, { success: boolean }>(
+    IPC_CHANNELS.SYSTEM_SEED_RUN,
+    async (params) => {
+      const { seedFile, clearFirst } = params;
+      const db = databaseManager.getDatabase();
+      const runner = new SeedRunner(db);
+
+      runner.runSeed(seedFile, !!clearFirst);
+      return { success: true };
+    }
+  );
+
+  // Reset database completely
+  IPCHandler.handle<void, { success: boolean }>(
+    IPC_CHANNELS.SYSTEM_RESET_DB,
+    async () => {
+      const db = databaseManager.getDatabase();
+      const runner = new SeedRunner(db);
+
+      db.transaction(() => {
+        runner.clearAllData();
+      })();
+      
+      return { success: true };
+    }
+  );
+
   /**
    * Ping Handler
    * Returns "pong" to verify connectivity

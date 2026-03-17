@@ -12,41 +12,29 @@ This document explains how to use seed data for **schema validation** and **test
 
 ```
 src/main/database/seed/
-├── 001_sample_data.sql       # Sample products, customers, bills
-└── validation_queries.sql    # Queries to verify schema correctness
+├── quickstart.sql            # Robust 19-table "balanced" dataset (Recommended)
+├── general.sql               # Robust 19-table general dataset (High volume)
+├── medicine.sql              # Robust 19-table medical specialized dataset
+└── audit_suite.sql           # Enterprise-grade database integrity & audit tool
 ```
 
 ---
 
-### Sample Data Contents
+### Quickstart Data Contents
 
-**Products (12 items):**
+**Products (15 items):**
+- Mixed categories: Beverages, Dairy, Groceries, Snacks, Household.
+- Standardized Rupee pricing.
 
-- Beverages: Coca Cola, Pepsi, Sprite (18% GST)
-- Dairy: Milk, Butter (0% GST)
-- Groceries: Dal, Rice, Flour (5% GST)
-- Snacks: Lays, Kurkure (12% GST)
-- Household: Surf Excel, Vim (18% GST)
+**Procurement & Sales:**
+- **Entities**: 5 Customers, 3 Suppliers.
+- **Transactions**: 5 Bills, 2 Purchases, 1 Purchase Order.
+- **Returns**: 1 Credit Note, 1 Debit Note.
+- **Professional**: 1 Quotation, 3 Expenses.
 
-**Customers (5 records):**
-
-- Ramesh Kumar (no balance)
-- Suresh Patel (₹500 owed)
-- Mahesh Shah (₹200 advance)
-- Rajesh Gupta (no balance)
-- Walk-in Customer (no phone)
-
-**Bills (3 transactions):**
-
-- Bill 1: Walk-in, cash, 2 items
-- Bill 2: Ramesh, UPI, 2 items, with discount
-- Bill 3: Suresh, mixed payment, 4 items
-
-**Inventory Logs:**
-
-- 8 sale logs (linked to bills)
-- 2 manual additions (purchases)
-- 2 adjustments (damage, correction)
+**Audit & Ledger:**
+- **Inventory Logs**: Full sale and receipt history.
+- **Ledgers**: Proper initialization of Customer and Supplier ledgers.
 
 ---
 
@@ -78,20 +66,15 @@ seeder.runSeed('001_sample_data.sql');
 seeder.runAllSeeds();
 ```
 
-### Option 3: Add to Development Startup
+### Option 4: Settings UI (Recommended)
 
-```typescript
-// In src/main/index.ts (development only)
-if (process.env.NODE_ENV === 'development') {
-  const seeder = new SeedRunner(DatabaseManager.getInstance());
+Navigate to **Settings > Support (Debug)** and look for the **Database Seeding** section.
+- **Select Seed File**: Choose from automatically discovered `.sql` files.
+- **Clear First**: Highly recommended to ensure relational integrity.
+- **Atomic Run**: The entire process is wrapped in a single database transaction.
 
-  // Clear existing data
-  seeder.clearAllData();
-
-  // Run seeds
-  seeder.runAllSeeds();
-}
-```
+> [!WARNING]
+> **No Nested Transactions**: Seed scripts MUST NOT contain `BEGIN`, `COMMIT`, or `ROLLBACK` commands. These are handled centrally by the `SeedRunner` to ensure raw SQL can be combined with centralized cleanup safely.
 
 ---
 
@@ -183,7 +166,7 @@ HAVING p.stock_qty != COALESCE(SUM(il.change_qty), 0);
 | Bills          | 3              | All with valid totals              |
 | Bill Items     | 8              | 2 + 2 + 4 items                    |
 | Inventory Logs | 12             | 8 sales + 2 manual + 2 adjustments |
-| Settings       | 8              | Shop info, GST, language           |
+| App Config     | 1              | Centralized Singleton (Updated)    |
 | License        | 1              | Valid for 30 days                  |
 
 ---
