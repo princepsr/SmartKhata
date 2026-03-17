@@ -10,16 +10,54 @@
   line-height: 1.6;
 }
 
-.policy-main-title {
-  font-size: 1.75rem;
-  font-weight: 700;
+.policy-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.policy-main-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
   color: var(--primary-color, #2563eb);
 }
 
-.policy-meta {
+.policy-toggle-tabs {
+  display: flex;
+  background: var(--bg-secondary, #f3f4f6);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.policy-tab-btn {
+  padding: 6px 16px;
   font-size: 0.875rem;
-  color: var(--text-secondary, #666);
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.policy-tab-btn:hover {
+  color: var(--text-primary, #111827);
+}
+
+.policy-tab-btn.active {
+  background: var(--bg-primary, #ffffff);
+  color: var(--primary-color, #2563eb);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.policy-meta {
+  font-size: 0.8125rem;
+  color: var(--text-secondary, #9ca3af);
   margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--border-color, #e5e7eb);
   padding-bottom: 0.5rem;
@@ -27,9 +65,44 @@
 
 .policy-content-wrapper {
   overflow-y: auto;
-  padding-right: 1rem;
+  padding-right: 1.5rem;
   scrollbar-width: thin;
   scrollbar-color: var(--primary-color, #2563eb) transparent;
+}
+
+/* Vertical Mode Styles */
+.mode-vertical {
+  background: white;
+}
+
+.vertical-policy-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.policy-document-block {
+  margin-bottom: 2rem;
+}
+
+.policy-block-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color, #2563eb);
+  margin: 0 0 0.25rem 0;
+}
+
+.policy-meta-inline {
+  font-size: 0.8125rem;
+  color: var(--text-secondary, #9ca3af);
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  padding-bottom: 0.5rem;
+}
+
+.policy-separator {
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--border-color, #e5e7eb), transparent);
+  margin: 1rem 0 3rem 0;
 }
 
 .policy-content-wrapper::-webkit-scrollbar {
@@ -53,7 +126,7 @@
 }
 
 .policy-text {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   color: var(--text-secondary, #4b5563);
-  white-space: pre-line;
+  line-height: 1.6;
 }

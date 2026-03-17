@@ -157,13 +157,14 @@ export default function OnboardingPage() {
           ) : (
             <div className="privacy-step animate-fade-in">
               <p className="intro-text">
-                Please review and accept our Privacy Policy to finish setup.
+                Please review and accept our professional Privacy Policy & Terms of Service to finish setup.
               </p>
 
-              <div className="policy-viewer">
+              <div className="policy-viewer" style={{ padding: '0.5rem 1.5rem 1.5rem' }}>
                 <PrivacyPolicy
                   showTitle={false}
-                  maxHeight="300px"
+                  maxHeight="350px"
+                  mode="vertical"
                   onScrollBottom={() => setHasReadToBottom(true)}
                 />
               </div>

@@ -28,7 +28,7 @@ import './SettingsPage.css';
 type SettingsTab = 'store' | 'operations' | 'account' | 'support';
 
 function SettingsPage() {
-  const { settings, updateSettings, fetchSettings, saveSettings, isLoading, error } =
+  const { settings, updateSettings, fetchSettings, saveSettings, error } =
     useAppSettingsStore();
   const { alert } = useConfirm();
   const { refresh } = useLicense();
@@ -734,7 +734,7 @@ function SettingsPage() {
         </p>
 
         <div className="settings-form">
-          <div className="form-group">
+          <div className="form-group full-width">
             <label className="checkbox-label">
               <input
                 type="checkbox"
@@ -788,26 +788,26 @@ function SettingsPage() {
     <div className="tab-content-wrapper fade-in">
       <div className="settings-section-card">
         <div className="section-header">
-          <h2>Privacy & Terms</h2>
-        </div>
-        <p className="settings-description">
-          Review our commitment to your data privacy and security.
-        </p>
-        <div className="settings-form">
-          <div className="form-group full-width">
-            <PrivacyPolicy showTitle={false} />
-          </div>
-        </div>
-      </div>
-
-      <div className="settings-section-card">
-        <div className="section-header">
           <h2>{t('settings.contact_support')}</h2>
         </div>
         <p className="settings-description">{t('help.topics.contact_dev.description')}</p>
         <div className="settings-form">
           <div className="form-group full-width">
             <ContactDeveloper />
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section-card">
+        <div className="section-header">
+          <h2>{t('settings.privacy_and_terms')}</h2>
+        </div>
+        <p className="settings-description">
+          Review our Professional Data Sovereignty Policy and License Terms.
+        </p>
+        <div className="settings-form">
+          <div className="form-group full-width">
+            <PrivacyPolicy showTitle={false} />
           </div>
         </div>
       </div>
