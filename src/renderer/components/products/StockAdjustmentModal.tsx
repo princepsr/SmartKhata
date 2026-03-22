@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useIPCMutation } from '../../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
+import { useAppSettingsStore } from '../../store';
 import './StockAdjustmentModal.css';
 
 interface StockAdjustmentModalProps {
@@ -28,6 +29,7 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
   product,
 }) => {
   const { t } = useTranslation();
+  const { settings } = useAppSettingsStore();
   const [adjustmentType, setAdjustmentType] = useState<AdjustmentType>('add');
   const [quantity, setQuantity] = useState<string>('');
   const [reason, setReason] = useState<ReasonType>('');
@@ -89,8 +91,11 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     const hasExpiryChanged = expiryDate !== (product.expiryDate || '');
     const hasAdjustment = quantity && parseInt(quantity, 10) > 0;
 
-    // Update product info if changed
-    if (hasTrackingChanged || hasBatchChanged || hasExpiryChanged) {
+    // Update product info if changed (only update batch/expiry if tracking enabled)
+    if (
+      hasTrackingChanged ||
+      (settings.enableBatchTracking && (hasBatchChanged || hasExpiryChanged))
+    ) {
       try {
         await updateProduct({
           id: product.id,
@@ -237,27 +242,29 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
               </div>
             </div>
 
-            <div className="form-row" style={{ gap: '1rem', marginTop: '1rem' }}>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label>{t('inventory.form.batch')}</label>
-                <input
-                  type="text"
-                  value={batchNumber}
-                  onChange={(e) => setBatchNumber(e.target.value)}
-                  placeholder={t('inventory.form.batch_placeholder')}
-                  disabled={loading}
-                />
+            {settings.enableBatchTracking && (
+              <div className="form-row" style={{ gap: '1rem', marginTop: '1rem' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>{t('inventory.form.batch')}</label>
+                  <input
+                    type="text"
+                    value={batchNumber}
+                    onChange={(e) => setBatchNumber(e.target.value)}
+                    placeholder={t('inventory.form.batch_placeholder')}
+                    disabled={loading}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>{t('inventory.form.expiry')}</label>
+                  <input
+                    type="date"
+                    value={expiryDate}
+                    onChange={(e) => setExpiryDate(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
               </div>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label>{t('inventory.form.expiry')}</label>
-                <input
-                  type="date"
-                  value={expiryDate}
-                  onChange={(e) => setExpiryDate(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
+            )}
 
             {trackInventory ? (
               <>

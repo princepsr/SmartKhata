@@ -29,8 +29,7 @@ import './SettingsPage.css';
 type SettingsTab = 'store' | 'operations' | 'account' | 'support';
 
 function SettingsPage() {
-  const { settings, updateSettings, fetchSettings, saveSettings, error } =
-    useAppSettingsStore();
+  const { settings, updateSettings, fetchSettings, saveSettings, error } = useAppSettingsStore();
   const { alert } = useConfirm();
   const { refresh } = useLicense();
   const { t } = useTranslation();
@@ -195,12 +194,11 @@ function SettingsPage() {
             <label htmlFor="shopAddress">
               {t('settings.postal_address')} {settings.gstEnabled && '*'}
             </label>
-            <textarea
+            <input
               id="shopAddress"
               value={settings.address || ''}
               onChange={(e) => updateSettings({ address: e.target.value })}
               className={`form-input ${validationErrors.address ? 'error' : ''}`}
-              rows={3}
               placeholder={t('settings.address_placeholder')}
             />
             {validationErrors.address && (

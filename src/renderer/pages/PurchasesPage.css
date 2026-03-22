@@ -4,7 +4,7 @@
   box-sizing: border-box;
 }
 
-.page-header {
+.purchases-page .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -12,7 +12,7 @@
   padding: 0 1.5rem;
 }
 
-.page-title {
+.purchases-page .page-title {
   font-size: 1.8rem;
   font-weight: 700;
   color: var(--color-text);
@@ -63,7 +63,7 @@
   box-sizing: border-box;
 }
 
-.purchases-content {
+.purchases-page .purchases-content {
   flex: 1;
   background-color: var(--color-bg);
   border-radius: var(--radius-lg);
@@ -168,7 +168,7 @@
 }
 
 /* Status Badges */
-.status-badge {
+.purchases-page .status-badge {
   padding: 0.25rem 0.6rem;
   border-radius: 99px;
   font-size: 0.8rem;
@@ -373,7 +373,7 @@
   height: 18px;
   cursor: pointer;
 }
-.items-section {
+.purchases-page .items-section {
   /* Removed background and padding to align with header */
   margin-bottom: 1.5rem;
 }
@@ -525,11 +525,11 @@
   resize: none;
 }
 
-.totals-area {
+.purchases-page .totals-area {
   width: 300px;
 }
 
-.total-row {
+.purchases-page .total-row {
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
@@ -545,7 +545,7 @@
   color: var(--primary-color);
 }
 
-.btn-outline {
+.purchases-page .btn-outline {
   background: white;
   border: 1px solid var(--color-primary); /* Changed to solid to fix animation */
   color: var(--color-primary);
@@ -561,12 +561,12 @@
   margin-top: 0.5rem;
 }
 
-.btn-outline:hover {
+.purchases-page .btn-outline:hover {
   background: rgba(30, 58, 138, 0.05); /* Subtle primary tint */
   transform: translateY(-1px);
 }
 
-.btn-outline:active {
+.purchases-page .btn-outline:active {
   transform: translateY(0);
 }
 
@@ -605,11 +605,11 @@
 }
 
 /* Medicine/Salt Suggestions Dropdown for Items Table */
-.items-table-row {
+.purchases-page .items-table-row {
   position: relative;
 }
 
-.items-suggestions-dropdown {
+.purchases-page .items-suggestions-dropdown {
   position: absolute;
   top: 100%;
   left: 0;

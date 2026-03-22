@@ -16,6 +16,7 @@ interface BillItem {
   gstPercent: number;
   lineTotal: number;
   returnedQuantity: number;
+  uomSnapshot?: string;
 }
 
 interface BillDetail {
@@ -138,7 +139,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
                             </span>
                           )}
                         </td>
-                        <td className="text-right">{item.quantity}</td>
+                        <td className="text-right">{item.quantity} {item.uomSnapshot || 'PCS'}</td>
                         <td className="text-right">{formatCurrency(item.unitPrice)}</td>
                         <td className="text-right">{formatCurrency(item.lineTotal)}</td>
                       </tr>
@@ -147,54 +148,79 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({
                 </table>
 
                 <div className="bill-summary">
-                  <div className="summary-row">
-                    <span>{t('common.subtotal')}:</span>
-                    <span>{formatCurrency(data.bill.subtotal)}</span>
-                  </div>
+                  {/* Calculate Gross Total (Sum of item prices before any discounts) */}
+                  {(() => {
+                    const grossTotal = data.items.reduce(
+                      (sum, item) => sum + item.unitPrice * item.quantity,
+                      0
+                    );
+                    const totalDiscount = data.bill.discountAmount;
 
-                  {settings.gstEnabled && (
-                    <>
-                      {data.bill.igstAmount !== undefined && data.bill.igstAmount > 0 ? (
+                    return (
+                      <>
                         <div className="summary-row">
-                          <span>IGST:</span>
-                          <span>{formatCurrency(data.bill.igstAmount)}</span>
+                          <span>{t('billing.gross_total')}:</span>
+                          <span>{formatCurrency(grossTotal)}</span>
                         </div>
-                      ) : (
-                        <>
-                          {data.bill.cgstAmount !== undefined && data.bill.cgstAmount > 0 && (
+
+                        {totalDiscount > 0 && (
+                          <div className="summary-row discount">
+                            <span>{t('billing.total_discount')}:</span>
+                            <span>-{formatCurrency(totalDiscount)}</span>
+                          </div>
+                        )}
+
+                        {/* Only show Subtotal if it's different from Grand Total (e.g. when tax exists) */}
+                        {Math.abs(data.bill.subtotal - data.bill.grandTotal) > 0.01 && (
+                          <div className="summary-row">
+                            <span>{t('common.subtotal')}:</span>
+                            <span>{formatCurrency(data.bill.subtotal)}</span>
+                          </div>
+                        )}
+
+                        {settings.gstEnabled && (
+                          <>
+                            {(data.bill.igstAmount ?? 0) > 0 ? (
+                              <div className="summary-row">
+                                <span>IGST:</span>
+                                <span>{formatCurrency(data.bill.igstAmount || 0)}</span>
+                              </div>
+                            ) : (
+                              <>
+                                {(data.bill.cgstAmount ?? 0) > 0 && (
+                                  <div className="summary-row">
+                                    <span>CGST:</span>
+                                    <span>{formatCurrency(data.bill.cgstAmount || 0)}</span>
+                                  </div>
+                                )}
+                                {(data.bill.sgstAmount ?? 0) > 0 && (
+                                  <div className="summary-row">
+                                    <span>SGST:</span>
+                                    <span>{formatCurrency(data.bill.sgstAmount || 0)}</span>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </>
+                        )}
+
+                        {/* Fallback for generic GST if enabled but breakdown missing */}
+                        {!data.bill.cgstAmount &&
+                          !data.bill.igstAmount &&
+                          (data.bill.gstTotal ?? 0) > 0 && (
                             <div className="summary-row">
-                              <span>CGST:</span>
-                              <span>{formatCurrency(data.bill.cgstAmount)}</span>
+                              <span>GST:</span>
+                              <span>{formatCurrency(data.bill.gstTotal)}</span>
                             </div>
                           )}
-                          {data.bill.sgstAmount !== undefined && data.bill.sgstAmount > 0 && (
-                            <div className="summary-row">
-                              <span>SGST:</span>
-                              <span>{formatCurrency(data.bill.sgstAmount)}</span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </>
-                  )}
 
-                  {!data.bill.cgstAmount && !data.bill.igstAmount && data.bill.gstTotal > 0 && (
-                    <div className="summary-row">
-                      <span>GST:</span>
-                      <span>{formatCurrency(data.bill.gstTotal)}</span>
-                    </div>
-                  )}
-
-                  {data.bill.discountAmount > 0 && (
-                    <div className="summary-row discount">
-                      <span>{t('common.discount')}:</span>
-                      <span>-{formatCurrency(data.bill.discountAmount)}</span>
-                    </div>
-                  )}
-                  <div className="summary-row grand-total">
-                    <span>{t('procurement.form.grand_total')}</span>
-                    <span>{formatCurrency(data.bill.grandTotal)}</span>
-                  </div>
+                        <div className="summary-row grand-total">
+                          <span>{t('procurement.form.grand_total')}</span>
+                          <span>{formatCurrency(data.bill.grandTotal)}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}

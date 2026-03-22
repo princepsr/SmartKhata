@@ -45,6 +45,9 @@ export function calculateBillPreview(
       cgstTotal: 0,
       sgstTotal: 0,
       igstTotal: 0,
+      totalItemDiscount: 0,
+      totalBillDiscount: 0,
+      totalDiscount: 0,
       discountAmount: billDiscountAmount,
       grandTotal: 0,
     };
@@ -52,7 +55,11 @@ export function calculateBillPreview(
 
   // 1. Calculate Initial Line Payables (MRP-Level for Inclusive, Base-Level for Exclusive)
   const linePayables = items.map((item) => {
-    const qty = item.quantity || 0;
+    let qty = item.quantity || 0;
+    const isWeight = item.product.isWeightBased || item.product.uom?.toLowerCase() === 'kg';
+    if (isWeight) {
+      qty = Math.round(qty * 1000) / 1000;
+    }
     const unitPrice = item.product.salePrice || 0;
     const itemGross = qty * unitPrice;
 
@@ -64,19 +71,21 @@ export function calculateBillPreview(
 
     return {
       ...item,
+      quantity: qty,
       itemGross,
       itemDisc,
       netPayable: itemGross - itemDisc, // This is the amount the customer pays for this line before bill discount
     };
   });
 
-  const totalNetPayable = linePayables.reduce((sum, lp) => sum + lp.netPayable, 0);
+  const totalItemDiscount = linePayables.reduce((sum, lp) => sum + lp.itemDisc, 0);
+  const totalGrossPayable = linePayables.reduce((sum, lp) => sum + lp.itemGross, 0);
 
   // 2. Distribute Bill Discount and Extract Taxes
   const calculatedItems = linePayables.map((lp) => {
-    // Proportional Bill Discount
+    // Proportional Bill Discount (Weighted by Gross for additive behavior)
     const distBillDiscount =
-      totalNetPayable > 0 ? (lp.netPayable / totalNetPayable) * billDiscountAmount : 0;
+      totalGrossPayable > 0 ? (lp.itemGross / totalGrossPayable) * billDiscountAmount : 0;
 
     const finalLinePayable = lp.netPayable - distBillDiscount;
     const rate = (lp.product.gstPercent || 0) / 100;
@@ -88,22 +97,16 @@ export function calculateBillPreview(
       taxable = finalLinePayable;
       gst = 0;
     } else if (isExclusive) {
-      // In exclusive mode, netPayable was based on Base Price.
-      // So finalLinePayable IS the taxable subtotal.
       taxable = finalLinePayable;
       gst = taxable * rate;
     } else {
-      // In inclusive mode, netPayable was based on MRP.
-      // So finalLinePayable IS the grand total for this line.
       taxable = finalLinePayable / (1 + rate);
       gst = finalLinePayable - taxable;
     }
 
-    // Rounding for intermediate line values
     const roundedTaxable = Math.round(taxable * 100) / 100;
     const roundedGst = Math.round(gst * 100) / 100;
 
-    // CGST/SGST/IGST Split
     let cgst = 0,
       sgst = 0,
       igst = 0;
@@ -111,7 +114,7 @@ export function calculateBillPreview(
       igst = roundedGst;
     } else {
       cgst = Math.round((roundedGst / 2) * 100) / 100;
-      sgst = Math.round((roundedGst - cgst) * 100) / 100; // 1-paisa adjustment logic helper
+      sgst = Math.round((roundedGst - cgst) * 100) / 100;
     }
 
     return {
@@ -119,6 +122,9 @@ export function calculateBillPreview(
       productName: lp.product.name,
       quantity: lp.quantity,
       unitPrice: lp.product.salePrice,
+      discountValue: lp.discountValue,
+      discountType: lp.discountType,
+      itemDiscount: Math.round(lp.itemDisc * 100) / 100,
       gstPercent: lp.product.gstPercent,
       lineSubtotal: roundedTaxable,
       lineGst: roundedGst,
@@ -128,28 +134,21 @@ export function calculateBillPreview(
       lineTotal: isExclusive
         ? roundedTaxable + roundedGst
         : Math.round(finalLinePayable * 100) / 100,
+      uom: lp.product.uom,
     };
   });
 
-  // 3. Totals Aggregation
   const subtotal = calculatedItems.reduce((sum, b) => sum + b.lineSubtotal, 0);
   const gstTotal = calculatedItems.reduce((sum, b) => sum + b.lineGst, 0);
   const cgstTotal = calculatedItems.reduce((sum, b) => sum + b.lineCgst, 0);
   const sgstTotal = calculatedItems.reduce((sum, b) => sum + b.lineSgst, 0);
   const igstTotal = calculatedItems.reduce((sum, b) => sum + b.lineIgst, 0);
 
-  // Grand Total Validation (Step 9 of Blueprint)
-  // Inclusive: sum of rounded line payables
-  // Exclusive: subtotal + gstTotal
   const grandTotal = isExclusive
     ? subtotal + gstTotal
     : calculatedItems.reduce((sum, b) => sum + b.lineTotal, 0);
 
-  // Final safeguard: reconcile against (TotalNetPayable - billDiscountAmount) in inclusive mode
-  if (!isExclusive && Math.abs(grandTotal - (totalNetPayable - billDiscountAmount)) > 0.05) {
-    // If there's a significant drift, we might need a 1-paisa adjustment here too
-    // but usually, individual line rounding sums up correctly.
-  }
+  const totalDiscount = totalItemDiscount + billDiscountAmount;
 
   return {
     items: calculatedItems,
@@ -158,7 +157,10 @@ export function calculateBillPreview(
     cgstTotal: Math.round(cgstTotal * 100) / 100,
     sgstTotal: Math.round(sgstTotal * 100) / 100,
     igstTotal: Math.round(igstTotal * 100) / 100,
-    discountAmount: billDiscountAmount,
+    totalItemDiscount: Math.round(totalItemDiscount * 100) / 100,
+    totalBillDiscount: Math.round(billDiscountAmount * 100) / 100,
+    totalDiscount: Math.round(totalDiscount * 100) / 100,
+    discountAmount: Math.round(totalDiscount * 100) / 100, // For backward compatibility
     grandTotal: Math.round(grandTotal * 100) / 100,
   };
 }

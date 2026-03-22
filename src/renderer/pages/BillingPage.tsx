@@ -3,7 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useIPC, useIPCMutation } from '../hooks/useIPC';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
-import type { Product, Quotation, CreateQuotationInput, QuotationWithItems, QuotationItem, Customer } from '@shared/types/ipc';
+import type {
+  Product,
+  Quotation,
+  CreateQuotationInput,
+  QuotationWithItems,
+  QuotationItem,
+  Customer,
+} from '@shared/types/ipc';
 import { BillItemList } from '../components/billing/BillItemList';
 import { PaymentModeSelector, type PaymentMode } from '../components/billing/PaymentModeSelector';
 import { BillHistoryModal } from '../components/billing/BillHistoryModal';
@@ -84,6 +91,10 @@ function BillingPage() {
   const [calculation, setCalculation] = useState<BillCalculation | null>(null);
   const [activeQuotationId, setActiveQuotationId] = useLocalStorage<number | null>(
     'billing_activeQuotationId',
+    null
+  );
+  const [transactionToken, setTransactionToken] = useLocalStorage<string | null>(
+    'billing_transactionToken',
     null
   );
   const { execute: updateQuotationStatus } = useIPCMutation(IPC_CHANNELS.QUOTATION_UPDATE_STATUS);
@@ -188,7 +199,9 @@ function BillingPage() {
 
   // Handle Quotation Conversion
   const quotationId = searchParams.get('quotationId');
-  const { execute: getQuotationWithItems } = useIPCMutation<number, QuotationWithItems>(IPC_CHANNELS.QUOTATION_GET_WITH_ITEMS);
+  const { execute: getQuotationWithItems } = useIPCMutation<number, QuotationWithItems>(
+    IPC_CHANNELS.QUOTATION_GET_WITH_ITEMS
+  );
   const { execute: getCustomer } = useIPCMutation<number, Customer>(IPC_CHANNELS.CUSTOMER_GET);
 
   useEffect(() => {
@@ -417,15 +430,7 @@ function BillingPage() {
       setSelectedResultIndex(-1);
       searchInputRef.current?.focus();
     },
-    [
-      billingOnly,
-      searchInputRef,
-      setCart,
-      setAlertState,
-      setSearchQuery,
-      setSelectedResultIndex,
-      t,
-    ]
+    [billingOnly, searchInputRef, setCart, setAlertState, setSearchQuery, setSelectedResultIndex, t]
   );
 
   // Search products with Debounce
@@ -512,6 +517,7 @@ function BillingPage() {
     setActiveQuotationId(null);
     setSearchQuery('');
     setSelectedResultIndex(-1);
+    setTransactionToken(null);
 
     // Simple focus is enough now since we are not leaving the window context
     // But we keep a tiny delay just to be safe with React state updates
@@ -532,6 +538,7 @@ function BillingPage() {
     setSearchQuery,
     setSelectedResultIndex,
     setActiveQuotationId,
+    setTransactionToken,
   ]);
 
   // Complete transaction
@@ -540,8 +547,16 @@ function BillingPage() {
       return;
     }
 
+    // Generate or use existing transaction token for idempotency
+    let token = transactionToken;
+    if (!token) {
+      token = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      setTransactionToken(token);
+    }
+
     const input: FinalizeBillInput = {
       customerId: selectedCustomer?.id,
+      transactionToken: token,
       items: cart.map((item) => ({
         productId: item.product.id,
         quantity: item.quantity,
@@ -624,6 +639,8 @@ function BillingPage() {
     activeQuotationId,
     updateQuotationStatus,
     setActiveQuotationId,
+    setTransactionToken,
+    transactionToken,
   ]);
 
   // Keyboard Shortcuts
@@ -717,18 +734,29 @@ function BillingPage() {
   // Recalculate bill PREVIEW instantly when cart or discount changes
   useEffect(() => {
     if (cart.length > 0) {
-      const preview = calculateBillPreview(
+      const rawDiscount = parseFloat(discountValue) || 0;
+      let absoluteBillDiscount = rawDiscount;
+
+      if (discountType === 'percent') {
+        const grossTotal = cart.reduce(
+          (sum, item) => sum + (item.product.salePrice || 0) * (item.quantity || 0),
+          0
+        );
+        absoluteBillDiscount = (grossTotal * rawDiscount) / 100;
+      }
+
+      const calc = calculateBillPreview(
         cart,
-        discountAmount,
+        absoluteBillDiscount,
         gstEnabled,
         gstExclusiveMode,
         supplyType
       );
-      setCalculation(preview);
+      setCalculation(calc);
     } else {
       setCalculation(null);
     }
-  }, [cart, discountAmount, gstEnabled, gstExclusiveMode, supplyType, setCalculation]);
+  }, [cart, discountValue, discountType, gstEnabled, gstExclusiveMode, supplyType]);
 
   return (
     <div className="page billing-page">
@@ -817,7 +845,8 @@ function BillingPage() {
                         >
                           <span className="product-name">{product.name}</span>
                           <span className="product-meta">
-                            {t('common.barcode')}: {product.sku || product.barcode || '-'}
+                            {t('common.barcode')}: {product.sku || product.barcode || '-'} |{' '}
+                            {product.uom || 'PCS'}
                           </span>
                           <div className="product-price">
                             {!billingOnly && product.trackInventory && (
@@ -862,7 +891,8 @@ function BillingPage() {
                           >
                             <span className="product-name">{alt.name}</span>
                             <span className="product-meta">
-                              {alt.sku || alt.barcode || t('billing.shared_salt')}
+                              {alt.sku || alt.barcode || t('billing.shared_salt')} |{' '}
+                              {alt.uom || 'PCS'}
                             </span>
                             <div className="product-price">
                               {!billingOnly && alt.trackInventory && (
@@ -1028,7 +1058,12 @@ function BillingPage() {
               )}
 
               <div className="summary-row discount-row">
-                <span>{t('common.discount')}</span>
+                <span>{t('billing.total_discount')}</span>
+                <span>{calculation ? formatCurrency(calculation.totalDiscount) : '₹ 0.00'}</span>
+              </div>
+
+              <div className="summary-row bill-discount-row" style={{ marginTop: '-0.25rem' }}>
+                <span>{t('billing.bill_discount')}</span>
                 <div className="discount-controls">
                   <div className="discount-toggle-group">
                     <button

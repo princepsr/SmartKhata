@@ -71,6 +71,7 @@ export class BillingTransactionService {
           productId: ci.productId,
           productNameSnapshot: ci.productName,
           hsnSnapshot: product.hsnCode,
+          uomSnapshot: product.uom,
           quantity: ci.quantity,
           unitPrice: ci.unitPrice,
           gstPercent: ci.gstPercent,
@@ -97,6 +98,7 @@ export class BillingTransactionService {
         grandTotal: calculation.grandTotal,
         paymentMode: input.paymentMode,
         paymentReceived: input.paymentReceived || 0,
+        transactionToken: input.transactionToken,
       };
 
       // B2B Snapshots
@@ -113,7 +115,7 @@ export class BillingTransactionService {
 
       // 7. Update Stock & History
       const today = new Date().toISOString().split('T')[0];
-      for (const item of input.items) {
+      for (const item of calculation.items) {
         const product = productMap.get(item.productId);
         if (!product) {
           continue;

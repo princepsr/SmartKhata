@@ -212,7 +212,7 @@ export function UpdateSettings() {
         </div>
       </div>
 
-      <div className="debug-data-grid">
+      <div className="debug-data-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         <div className="grid-item">
           <span className="label">{t('settings_tabs.debug.update.installed_ver')}</span>
           <span className="value">v{currentVersion}</span>

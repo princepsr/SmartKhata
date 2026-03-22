@@ -398,6 +398,38 @@ describe('ReportService Trend Analytics', () => {
     expect(summary.marginPercent).toBe(0);
     expect(summary.totalItemSales).toBe(0);
   });
+
+  it('should correctly compare April (30 days) with full March (31 days)', async () => {
+    // March 2026: 31 days
+    // April 2026: 30 days
+    const march1 = '2026-03-01';
+    const march31 = '2026-03-31';
+    const april1 = '2026-04-01';
+    const april30 = '2026-04-30';
+
+    // Sale on March 1st (42.0)
+    await generateBillOnDate([{ productId: 1, quantity: 1 }], 'cash', march1);
+    // Sale on March 31st (42.0)
+    await generateBillOnDate([{ productId: 1, quantity: 1 }], 'cash', march31);
+
+    // Total March Sales = 42 + 42 = 84.0
+
+    // Sale on April 15th (84.0)
+    await generateBillOnDate([{ productId: 1, quantity: 2 }], 'cash', '2026-04-15');
+
+    // Total April Sales = 84.0
+
+    const summary = reportService.getDailySalesSummary(april1, april30);
+
+    // If it correctly identifies March 1-31 as previous period:
+    // current (84) vs previous (84) = 0% change.
+    expect(summary.totalSales).toBeCloseTo(84.0, 1);
+    expect(summary.comparison?.totalSales?.change).toBe(0);
+    expect(summary.comparison?.totalSales?.trend).toBe('neutral');
+
+    // If it used fixed 30-day duration (March 2 to March 31):
+    // current (84) vs previous (42) [missed March 1] = 100% change.
+  });
 });
 
 describe('ReportService GST Robustness', () => {

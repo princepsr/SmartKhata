@@ -19,6 +19,7 @@ import { connectivityService } from '@main/services/connectivity-service';
 import { logger } from '@main/utils/logger';
 import { SeedRunner } from '@main/database/seed-runner';
 import { BackupMeta } from '@shared/types/ipc';
+import { getUserFriendlyMessage } from '../../services/errors/service-errors';
 
 export function registerSystemHandlers(): void {
   /**
@@ -132,29 +133,30 @@ export function registerSystemHandlers(): void {
    * BACKUP MODULE
    */
 
-  // Create Backup
-  IPCHandler.handle<void, { path: string }>(IPC_CHANNELS.BACKUP_CREATE, async () => {
-    const backupDir = path.join(app.getPath('userData'), 'autobackups');
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
+  // Manual Backup
+  IPCHandler.handle<void, { path: string; lastAutoBackup: string }>(
+    IPC_CHANNELS.BACKUP_CREATE,
+    async () => {
+      const folderPath = path.join(app.getPath('userData'), 'autobackups');
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+      }
 
-    const folderPath = await backupService.selectFolderForBackup(backupDir);
-    if (!folderPath) {
-      throw new Error('Backup canceled by user');
-    }
+      const backupPath = await backupService.createBackup(folderPath);
 
-    const backupPath = await backupService.createBackup(folderPath);
-
-    // 4. Trigger rotation if the backup was created in the autobackups folder
-    const autoBackupDir = path.join(app.getPath('userData'), 'autobackups');
-    if (folderPath === autoBackupDir) {
+      // 4. Trigger rotation if the backup was created in the autobackups folder
       const settings = SettingsService.getInstance().getConfig();
-      backupService.rotateBackups(autoBackupDir, settings.autoBackupRetainCount || 5);
-    }
+      backupService.rotateBackups(folderPath, settings.autoBackupRetainCount || 5);
 
-    return { path: backupPath };
-  });
+      return {
+        path: backupPath,
+        lastAutoBackup: settings.lastAutoBackup || new Date().toISOString(),
+      };
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
+    }
+  );
 
   // Get Backup Info (Combines file selection and metadata reading)
   IPCHandler.handle<void, { path: string; meta: BackupMeta } | null>(
@@ -295,29 +297,45 @@ export function registerSystemHandlers(): void {
   });
 
   // Manual Cloud Sync (Backup + Sync)
-  IPCHandler.handle<void, string>(IPC_CHANNELS.GOOGLE_SYNC_NOW, async () => {
-    logger.info('Starting manual cloud sync (Local Backup + Drive Upload)...');
+  IPCHandler.handle<void, { lastCloudSync: string; lastAutoBackup: string }>(
+    IPC_CHANNELS.GOOGLE_SYNC_NOW,
+    async () => {
+      logger.info('Starting manual cloud sync (Local Backup + Drive Upload)...');
 
-    // 1. Create Local Backup
-    const backupDir = path.join(app.getPath('userData'), 'autobackups');
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
+      const settingsService = SettingsService.getInstance();
+      const settings = settingsService.getConfig();
+
+      // 1. Create Local Backup
+      const backupDir = path.join(app.getPath('userData'), 'autobackups');
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+
+      const backupPath = await backupService.createBackup(backupDir);
+      logger.debug('Local backup created for sync', { path: backupPath });
+
+      // 1.1 Trigger rotation
+      backupService.rotateBackups(backupDir, settings.autoBackupRetainCount || 5);
+
+      // 2. Sync to Drive
+      const result = await googleDriveService.syncBackup(backupPath);
+
+      if (result.success) {
+        const syncTime = new Date().toISOString();
+        // Update cloud sync timestamp in settings
+        settingsService.updateConfig({ lastCloudSync: syncTime });
+
+        const config = settingsService.getConfig();
+        return {
+          lastCloudSync: syncTime,
+          lastAutoBackup: config.lastAutoBackup || syncTime,
+        };
+      }
+
+      throw new Error(result.error || 'Failed to sync backup to Google Drive');
+    },
+    {
+      transformError: (err) => getUserFriendlyMessage(err),
     }
-
-    const backupPath = await backupService.createBackup(backupDir);
-    logger.debug('Local backup created for sync', { path: backupPath });
-
-    // 1.1 Trigger rotation
-    const settings = SettingsService.getInstance().getConfig();
-    backupService.rotateBackups(backupDir, settings.autoBackupRetainCount || 5);
-
-    // 2. Sync to Google Drive
-    const result = await googleDriveService.syncBackup(backupPath);
-
-    if (result.success) {
-      return new Date().toISOString();
-    }
-
-    throw new Error(result.error || 'Failed to sync backup to Google Drive');
-  });
+  );
 }

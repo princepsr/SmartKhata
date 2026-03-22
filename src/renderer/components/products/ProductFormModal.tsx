@@ -355,7 +355,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     setMedicineSuggestions([]);
                   }
                 }}
-                placeholder={t('inventory.form.name_placeholder')}
+                placeholder={t(`inventory.form.name_placeholder_${settings.appMode}`)}
                 className={errors.name ? 'error' : ''}
                 autoFocus
                 disabled={isLoading}

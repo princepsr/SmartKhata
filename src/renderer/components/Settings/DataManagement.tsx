@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { IPC_CHANNELS } from '@shared/ipc/channels';
 import { BackupMeta } from '@shared/types/ipc';
 import { useConfirm } from '../../hooks/useConfirm';
-import { useAppSettingsStore } from '../../store';
+import { useAppSettingsStore, useUpdateStore } from '../../store';
 import { RestoreConfirmationModal } from './RestoreConfirmationModal';
 import { RestoreSuccessModal } from './RestoreSuccessModal';
+import NoInternetModal from '../modals/NoInternetModal';
 
 /**
  * Data Management Component
@@ -15,9 +16,11 @@ import { RestoreSuccessModal } from './RestoreSuccessModal';
  */
 export function DataManagement() {
   const { settings, updateSettings, saveSettings } = useAppSettingsStore();
+  const { checkConnectivity } = useUpdateStore();
   const { confirm, alert } = useConfirm();
   const { t } = useTranslation();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [lastAction, setLastAction] = useState<{
     type: 'backup' | 'restore';
     success: boolean;
@@ -62,6 +65,12 @@ export function DataManagement() {
 
   const handleGoogleAuth = async () => {
     try {
+      const online = await checkConnectivity();
+      if (!online) {
+        setShowOfflineModal(true);
+        return;
+      }
+
       setIsProcessing(true);
       const result = await window.api.invoke<boolean>(IPC_CHANNELS.GOOGLE_AUTHENTICATE);
 
@@ -107,20 +116,32 @@ export function DataManagement() {
 
   const handleManualCloudSync = async () => {
     try {
+      const online = await checkConnectivity();
+      if (!online) {
+        setShowOfflineModal(true);
+        return;
+      }
+
       setIsSyncing(true);
       setLastAction(null);
 
-      const response = await window.api.invoke<string>(IPC_CHANNELS.GOOGLE_SYNC_NOW);
+      const response = await window.api.invoke<{
+        lastCloudSync: string;
+        lastAutoBackup: string;
+      }>(IPC_CHANNELS.GOOGLE_SYNC_NOW);
 
       if (response.success && response.data) {
-        // Update local settings with new sync time
-        const syncTime = response.data;
-        const updated = {
-          ...settings,
-          lastCloudSync: syncTime,
-        };
-        updateSettings({ lastCloudSync: syncTime });
-        await saveSettings(updated);
+        // Update local settings with new times
+        const { lastCloudSync, lastAutoBackup } = response.data;
+
+        updateSettings({
+          lastCloudSync,
+          lastAutoBackup,
+        });
+
+        // The store's saveSettings will persist these to the DB if needed,
+        // but the backend already updated them. We just need to sync the UI store.
+        // However, saveSettings might be overkill if we just want to update local state.
 
         setLastAction({
           type: 'backup',
@@ -148,6 +169,12 @@ export function DataManagement() {
 
   const handleDriveRestore = async () => {
     try {
+      const online = await checkConnectivity();
+      if (!online) {
+        setShowOfflineModal(true);
+        return;
+      }
+
       setIsProcessing(true);
       setLastAction(null);
 
@@ -202,9 +229,13 @@ export function DataManagement() {
       setIsProcessing(true);
       setLastAction(null);
 
-      const response = await window.api.invoke<{ path: string }>(IPC_CHANNELS.BACKUP_CREATE);
+      const response = await window.api.invoke<{
+        path: string;
+        lastAutoBackup: string;
+      }>(IPC_CHANNELS.BACKUP_CREATE);
 
       if (response.success && response.data) {
+        updateSettings({ lastAutoBackup: response.data.lastAutoBackup });
         setLastAction({
           type: 'backup',
           success: true,
@@ -302,6 +333,8 @@ export function DataManagement() {
 
   return (
     <div className="data-management-wrapper">
+      <NoInternetModal isOpen={showOfflineModal} onClose={() => setShowOfflineModal(false)} />
+
       {/* 1. Manual Backup & Restore */}
       <div className="settings-section-card">
         <div className="section-header">
@@ -396,7 +429,13 @@ export function DataManagement() {
                   id="backupInterval"
                   type="number"
                   min="1"
-                  max={settings.autoBackupIntervalUnit === 'hours' ? 24 : 30}
+                  max={
+                    settings.autoBackupIntervalUnit === 'minutes'
+                      ? 60
+                      : settings.autoBackupIntervalUnit === 'hours'
+                        ? 24
+                        : 30
+                  }
                   value={intervalInput}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -418,21 +457,30 @@ export function DataManagement() {
 
               <select
                 className="form-input"
-                style={{ width: '120px' }}
+                style={{ width: '130px' }}
                 value={settings.autoBackupIntervalUnit}
                 onChange={(e) => {
-                  const unit = e.target.value as 'days' | 'hours';
+                  const unit = e.target.value as 'days' | 'hours' | 'minutes';
                   updateSettings({ autoBackupIntervalUnit: unit });
 
-                  // Cap value if unit changed to hours and current value > 24
-                  if (unit === 'hours' && settings.autoBackupIntervalDays > 24) {
-                    updateSettings({ autoBackupIntervalDays: 24 });
-                    setIntervalInput('24');
+                  // Cap value based on unit
+                  let maxVal = 30;
+                  if (unit === 'hours') {
+                    maxVal = 24;
+                  }
+                  if (unit === 'minutes') {
+                    maxVal = 60;
+                  }
+
+                  if (settings.autoBackupIntervalDays > maxVal) {
+                    updateSettings({ autoBackupIntervalDays: maxVal });
+                    setIntervalInput(maxVal.toString());
                   }
                 }}
               >
                 <option value="days">{t('settings_tabs.backup.days')}</option>
                 <option value="hours">{t('settings_tabs.backup.hours')}</option>
+                <option value="minutes">{t('settings_tabs.backup.minutes')}</option>
               </select>
             </div>
             <p className="help-text">{t('settings_tabs.backup.freq_help')}</p>

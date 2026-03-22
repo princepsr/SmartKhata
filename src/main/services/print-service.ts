@@ -1076,8 +1076,8 @@ export class PrintService extends BaseService {
 
         <div class="divider"></div>
         <div class="meta-row bold">
-          <span style="width:38%">Item</span>
-          <span style="width:12%; text-align:center">Qty</span>
+          <span style="width:35%">Item</span>
+          <span style="width:15%; text-align:center">Qty</span>
           <span style="width:25%; text-align:right; padding-right: 4px;">Rate</span>
           <span style="width:25%; text-align:right">Amt</span>
         </div>
@@ -1094,8 +1094,8 @@ export class PrintService extends BaseService {
               return `
             <div class="item-container">
               <div class="item-row">
-                <span style="width:38%">${item.productNameSnapshot}</span>
-                <span style="width:12%; text-align:center">${item.quantity}</span>
+                <span style="width:35%">${item.productNameSnapshot}</span>
+                <span style="width:15%; text-align:center">${item.quantity} ${item.uomSnapshot || 'PCS'}</span>
                 <span style="width:25%; text-align:right; padding-right: 4px;">${item.unitPrice.toFixed(2)}</span>
                 <span style="width:25%; text-align:right">${lineGross.toFixed(2)}</span>
               </div>
@@ -1443,11 +1443,11 @@ export class PrintService extends BaseService {
         }
 
         <div class="divider"></div>
-        <div class="meta-row bold">
-          <span style="width:50%">Item</span>
-          <span style="width:15%; text-align:center">Qty</span>
-          <span style="width:35%; text-align:right">Total</span>
-        </div>
+          <div class="meta-row bold">
+            <span style="width:45%">Item</span>
+            <span style="width:20%; text-align:center">Qty</span>
+            <span style="width:35%; text-align:right">Amount</span>
+          </div>
         <div class="divider"></div>
 
         ${(() => {
@@ -1464,11 +1464,11 @@ export class PrintService extends BaseService {
 
               return `
           <div style="margin-bottom: 4px;">
-            <div class="meta-row">
-              <span style="width:50%">${item.productName}</span>
-              <span style="width:15%; text-align:center">${item.quantity}</span>
-              <span style="width:35%; text-align:right">${itemNet.toFixed(2)}</span>
-            </div>
+              <div class="meta-row">
+                <span style="width:45%">${item.productName}</span>
+                <span style="width:20%; text-align:center">${item.quantity} ${item.uom || 'PCS'}</span>
+                <span style="width:35%; text-align:right">${itemNet.toFixed(2)}</span>
+              </div>
             <div style="font-size: 10px; color: #666;">
               Rate: ${item.unitPrice.toFixed(2)}
               ${(item.discountValue || 0) > 0 ? ` | Disc: ${item.discountType === 'percent' ? `${item.discountValue}%` : `₹${item.discountValue.toFixed(2)}`}` : ''}

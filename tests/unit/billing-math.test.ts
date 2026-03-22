@@ -101,5 +101,38 @@ describe('Billing Math Utilities', () => {
       // But billing math rounds to 2 decimals without clamping
       expect(result.subtotal).toBe(-100);
     });
+
+    it('should correctly round weight-based quantities to 3 decimal places', () => {
+      // 1.8927 should round to 1.893
+      // 1.8921 should round to 1.892
+      const weightProduct = mockProduct(100, 0);
+      weightProduct.isWeightBased = true;
+
+      const kgProduct = mockProduct(100, 0);
+      kgProduct.isWeightBased = false;
+      kgProduct.uom = 'KG';
+
+      const items = [
+        { product: weightProduct, quantity: 1.8927 },
+        { product: weightProduct, quantity: 1.8921 },
+        { product: kgProduct, quantity: 1.8927 },
+      ];
+
+      const result = calculateBillPreview(items, 0, true, true);
+      
+      // Item 1: 1.893 * 100 = 189.3
+      expect(result.items[0].quantity).toBe(1.893);
+      expect(result.items[0].lineTotal).toBe(189.3);
+
+      // Item 2: 1.892 * 100 = 189.2
+      expect(result.items[1].quantity).toBe(1.892);
+      expect(result.items[1].lineTotal).toBe(189.2);
+
+      // Item 3: 1.893 * 100 = 189.3 (UOM based)
+      expect(result.items[2].quantity).toBe(1.893);
+      expect(result.items[2].lineTotal).toBe(189.3);
+
+      expect(result.grandTotal).toBe(189.3 + 189.2 + 189.3);
+    });
   });
 });

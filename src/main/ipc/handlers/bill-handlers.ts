@@ -47,6 +47,9 @@ export function registerBillHandlers(): void {
           productName: item.productName,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
+          discountValue: item.discountValue,
+          discountType: item.discountType,
+          itemDiscount: item.itemDiscount,
           gstPercent: item.gstPercent,
           lineSubtotal: item.lineSubtotal,
           lineGst: item.lineGst,
@@ -60,6 +63,9 @@ export function registerBillHandlers(): void {
         cgstTotal: calculation.cgstTotal,
         sgstTotal: calculation.sgstTotal,
         igstTotal: calculation.igstTotal,
+        totalItemDiscount: calculation.totalItemDiscount,
+        totalBillDiscount: calculation.totalBillDiscount,
+        totalDiscount: calculation.totalDiscount,
         discountAmount: calculation.discountAmount,
         grandTotal: calculation.grandTotal,
       };
@@ -126,6 +132,8 @@ export function registerBillHandlers(): void {
           lineIgst: item.lineIgst,
           lineTotal: item.lineTotal,
           returnedQuantity: item.returnedQuantity || 0,
+          uomSnapshot: item.uomSnapshot,
+          hsnSnapshot: item.hsnSnapshot,
         })),
       };
     },
@@ -263,6 +271,8 @@ export function registerBillHandlers(): void {
           lineIgst: item.lineIgst,
           lineTotal: item.lineTotal,
           returnedQuantity: item.returnedQuantity || 0,
+          uomSnapshot: item.uomSnapshot,
+          hsnSnapshot: item.hsnSnapshot,
         })),
       };
     },

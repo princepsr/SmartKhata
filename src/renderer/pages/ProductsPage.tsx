@@ -462,126 +462,105 @@ const ProductsPage: React.FC = () => {
                 <div className="col-actions">{t('common.actions')}</div>
               </div>
 
-              {filteredProducts.length === 0 ? (
-                <EmptyState
-                  title={t('inventory.no_products_found')}
-                  message={
-                    searchQuery
-                      ? t('inventory.no_matching_products', { query: searchQuery })
-                      : t('inventory.get_started_message')
-                  }
-                  icon="📦"
-                  action={
-                    !searchQuery
-                      ? { label: t('inventory.add_btn'), onClick: handleAddProduct }
-                      : undefined
-                  }
-                />
-              ) : (
-                filteredProducts.map((product, index) => (
-                  <div
-                    key={product.id}
-                    className={`data-table-row ${index === selectedIndex ? 'selected' : ''} ${!product.isActive ? 'inactive-row' : ''}`}
-                    onClick={() => setSelectedIndex(index)}
-                    onDoubleClick={() => handleEditProduct(product)}
-                  >
-                    <div className="col-name">
-                      <div className="product-info-wrapper">
-                        <span className="product-display-name">{product.name}</span>
-                        {(product.batchNumber || product.expiryDate) && (
-                          <div className="product-sub-info">
-                            {product.batchNumber && (
-                              <span className="info-batch">{product.batchNumber}</span>
-                            )}
-                            {product.expiryDate && (
-                              <span className="info-expiry">{product.expiryDate}</span>
-                            )}
-                          </div>
+                {filteredProducts.length === 0 ? (
+                  <EmptyState
+                    title={t('inventory.no_products_found')}
+                    message={
+                      searchQuery
+                        ? t('inventory.no_matching_products', { query: searchQuery })
+                        : t('inventory.get_started_message')
+                    }
+                    icon="📦"
+                    action={
+                      !searchQuery
+                        ? { label: t('inventory.add_btn'), onClick: handleAddProduct }
+                        : undefined
+                    }
+                  />
+                ) : (
+                  filteredProducts.map((product, index) => (
+                    <div
+                      key={product.id}
+                      className={`data-table-row ${index === selectedIndex ? 'selected' : ''} ${!product.isActive ? 'inactive-row' : ''}`}
+                      onClick={() => setSelectedIndex(index)}
+                      onDoubleClick={() => handleEditProduct(product)}
+                    >
+                      <div className="col-name">
+                        <div className="product-info-wrapper">
+                          <span className="product-display-name">{product.name}</span>
+                          {(product.batchNumber || product.expiryDate) && (
+                            <div className="product-sub-info">
+                              {product.batchNumber && (
+                                <span className="info-batch">{product.batchNumber}</span>
+                              )}
+                              {product.expiryDate && (
+                                <span className="info-expiry">{product.expiryDate}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="col-sku">{product.sku || product.barcode || '-'}</div>
+                      <div className="col-price">
+                        {formatCurrency(product.salePrice)}
+                        {product.isGstInclusive && gstEnabled && !gstExclusiveMode && (
+                          <span
+                            className="inclusive-badge"
+                            title={t('inventory.price_inclusive_gst')}
+                            style={{
+                              fontSize: '0.7rem',
+                              padding: '2px 6px',
+                              background: '#e0e7ff',
+                              color: '#4338ca',
+                              borderRadius: '10px',
+                              marginLeft: '6px',
+                              fontWeight: '600',
+                              verticalAlign: 'middle',
+                            }}
+                          >
+                            MRP
+                          </span>
                         )}
                       </div>
-                    </div>
-                    <div className="col-sku">{product.sku || product.barcode || '-'}</div>
-                    <div className="col-price">
-                      {formatCurrency(product.salePrice)}
-                      {product.isGstInclusive && gstEnabled && !gstExclusiveMode && (
-                        <span
-                          className="inclusive-badge"
-                          title={t('inventory.price_inclusive_gst')}
-                          style={{
-                            fontSize: '0.7rem',
-                            padding: '2px 6px',
-                            background: '#e0e7ff',
-                            color: '#4338ca',
-                            borderRadius: '10px',
-                            marginLeft: '6px',
-                            fontWeight: '600',
-                            verticalAlign: 'middle',
-                          }}
-                        >
-                          MRP
+                      <div className="col-cost">
+                        {product.purchasePrice && product.purchasePrice > 0 ? (
+                          formatCurrency(product.purchasePrice)
+                        ) : (
+                          <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                            {t('common.no_sku')}
+                          </span>
+                        )}
+                      </div>
+                      <div className="col-stock">
+                        {product.trackInventory ? (
+                          <span
+                            className={
+                              product.stockQty <= 0
+                                ? 'stock-out'
+                                : product.stockQty <= (product.lowStockAlert || 0)
+                                  ? 'stock-low'
+                                  : 'stock-ok'
+                            }
+                            title={getStockStatusLabel(product)}
+                          >
+                            {product.stockQty}
+                          </span>
+                        ) : (
+                          <span className="text-muted" title={t('inventory.not_tracked')}>
+                            -
+                          </span>
+                        )}
+                      </div>
+                      <div className="col-status">
+                        <span className={`status-badge ${product.isActive ? 'active' : 'inactive'}`}>
+                          {product.isActive ? t('common.active') : t('common.inactive')}
                         </span>
-                      )}
-                    </div>
-                    <div className="col-cost">
-                      {product.purchasePrice && product.purchasePrice > 0 ? (
-                        formatCurrency(product.purchasePrice)
-                      ) : (
-                        <span className="text-muted" style={{ fontSize: '0.8rem' }}>
-                          {t('common.no_sku')}
-                        </span>
-                      )}
-                    </div>
-                    <div className="col-stock">
-                      {product.trackInventory ? (
-                        <span
-                          className={
-                            product.stockQty <= 0
-                              ? 'stock-out'
-                              : product.stockQty <= (product.lowStockAlert || 0)
-                                ? 'stock-low'
-                                : 'stock-ok'
-                          }
-                          title={getStockStatusLabel(product)}
-                        >
-                          {product.stockQty}
-                        </span>
-                      ) : (
-                        <span className="text-muted" title={t('inventory.not_tracked')}>
-                          -
-                        </span>
-                      )}
-                    </div>
-                    <div className="col-status">
-                      <span className={`status-badge ${product.isActive ? 'active' : 'inactive'}`}>
-                        {product.isActive ? t('common.active') : t('common.inactive')}
-                      </span>
-                    </div>
-                    <div className="col-actions">
-                      <button
-                        className="action-icon-btn action-edit"
-                        onClick={() => handleEditProduct(product)}
-                        title={t('inventory.tooltips.edit')}
-                      >
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-pencil"
-                        >
-                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                          <path d="m15 5 4 4" />
-                        </svg>
-                      </button>
-                      {!billingOnly && (
+                      </div>
+                      <div className="col-actions">
                         <button
-                          className="action-icon-btn action-adjust"
-                          onClick={(e) => handleAdjustStock(e, product)}
-                          title={t('inventory.tooltips.adjust_stock')}
+                          className="action-icon-btn action-edit"
+                          onClick={() => handleEditProduct(product)}
+                          title={t('inventory.tooltips.edit')}
                         >
                           <svg
                             width="18"
@@ -592,73 +571,94 @@ const ProductsPage: React.FC = () => {
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            className="lucide lucide-boxes"
+                            className="lucide lucide-pencil"
                           >
-                            <path d="M2.97 12.92A2 2 0 0 0 2 14.75v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98v-3.24a2 2 0 0 0-.97-1.83L8.14 11.3a2 2 0 0 0-1.78 0l-1.39.62Z" />
-                            <path d="M7 14.5 2.7 12.5" />
-                            <path d="m7 14.5 4.3-2" />
-                            <path d="M7 14.5v5.3" />
-                            <path d="M12.97 12.92a2 2 0 0 0-.97 1.83v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98v-3.24a2 2 0 0 0-.97-1.83L18.14 11.3a2 2 0 0 0-1.78 0l-1.39.62Z" />
-                            <path d="M17 14.5l-4.3-2" />
-                            <path d="m17 14.5 4.3-2" />
-                            <path d="M17 14.5v5.3" />
-                            <path d="M7.97 4.42A2 2 0 0 0 7 6.25v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98V6.25a2 2 0 0 0-.97-1.83L13.14 2.8a2 2 0 0 0-1.78 0l-1.39.62Z" />
-                            <path d="M12 6.5 7.7 4.5" />
-                            <path d="m12 6.5 4.3-2" />
-                            <path d="M12 6.5v5.3" />
+                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                            <path d="m15 5 4 4" />
                           </svg>
                         </button>
-                      )}
-                      <button
-                        className="action-icon-btn action-history"
-                        onClick={(e) => handleViewHistory(e, product)}
-                        title={t('inventory.tooltips.stock_history')}
-                      >
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-history"
+                        {!billingOnly && (
+                          <button
+                            className="action-icon-btn action-adjust"
+                            onClick={(e) => handleAdjustStock(e, product)}
+                            title={t('inventory.tooltips.adjust_stock')}
+                          >
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="lucide lucide-boxes"
+                            >
+                              <path d="M2.97 12.92A2 2 0 0 0 2 14.75v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98v-3.24a2 2 0 0 0-.97-1.83L8.14 11.3a2 2 0 0 0-1.78 0l-1.39.62Z" />
+                              <path d="M7 14.5 2.7 12.5" />
+                              <path d="m7 14.5 4.3-2" />
+                              <path d="M7 14.5v5.3" />
+                              <path d="M12.97 12.92a2 2 0 0 0-.97 1.83v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98v-3.24a2 2 0 0 0-.97-1.83L18.14 11.3a2 2 0 0 0-1.78 0l-1.39.62Z" />
+                              <path d="M17 14.5l-4.3-2" />
+                              <path d="m17 14.5 4.3-2" />
+                              <path d="M17 14.5v5.3" />
+                              <path d="M7.97 4.42A2 2 0 0 0 7 6.25v3.24c0 .85.47 1.62 1.2 1.98l2.91 1.43a2 2 0 0 0 1.78 0l2.91-1.43c.73-.36 1.2-1.13 1.2-1.98V6.25a2 2 0 0 0-.97-1.83L13.14 2.8a2 2 0 0 0-1.78 0l-1.39.62Z" />
+                              <path d="M12 6.5 7.7 4.5" />
+                              <path d="m12 6.5 4.3-2" />
+                              <path d="M12 6.5v5.3" />
+                            </svg>
+                          </button>
+                        )}
+                        <button
+                          className="action-icon-btn action-history"
+                          onClick={(e) => handleViewHistory(e, product)}
+                          title={t('inventory.tooltips.stock_history')}
                         >
-                          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                          <path d="M3 3v5h5" />
-                          <path d="M12 7v5l4 2" />
-                        </svg>
-                      </button>
-                      <button
-                        className={`action-icon-btn action-toggle ${product.isActive ? 'active' : 'inactive'}`}
-                        onClick={(e) => handleToggleStatus(e, product)}
-                        title={
-                          product.isActive
-                            ? t('inventory.tooltips.deactivate')
-                            : t('inventory.tooltips.activate')
-                        }
-                      >
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-power"
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-history"
+                          >
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                            <path d="M3 3v5h5" />
+                            <path d="M12 7v5l4 2" />
+                          </svg>
+                        </button>
+                        <button
+                          className={`action-icon-btn action-toggle ${product.isActive ? 'active' : 'inactive'}`}
+                          onClick={(e) => handleToggleStatus(e, product)}
+                          title={
+                            product.isActive
+                              ? t('inventory.tooltips.deactivate')
+                              : t('inventory.tooltips.activate')
+                          }
                         >
-                          <path d="M12 2v10" />
-                          <path d="M18.4 6.6a9 9 0 1 1-12.77.1" />
-                        </svg>
-                      </button>
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-power"
+                          >
+                            <path d="M12 2v10" />
+                            <path d="M18.4 6.6a9 9 0 1 1-12.77.1" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))
-              )}
-
+                  ))
+                )}
+ 
               <div className="table-footer-status" ref={loaderRef}>
                 {loading && <div className="loading-indicator">{t('inventory.loading_more')}</div>}
 

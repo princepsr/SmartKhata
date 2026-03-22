@@ -11,3 +11,4 @@ export { useCurrentBillStore } from './useCurrentBillStore';
 export type { BillItem, CurrentBill } from './useCurrentBillStore';
 
 export { useUIStore } from './useUIStore';
+export { useUpdateStore } from './useUpdateStore';

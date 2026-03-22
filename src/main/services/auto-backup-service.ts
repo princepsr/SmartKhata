@@ -61,27 +61,58 @@ export class AutoBackupService {
     // We only care about specific fields to avoid recursion when we update timestamps
     let lastKnownInterval = this.settingsService.getConfig().autoBackupIntervalDays;
     let lastKnownEnabled = this.settingsService.getConfig().autoBackupEnabled;
+    let lastKnownUnit = this.settingsService.getConfig().autoBackupIntervalUnit;
 
     this.settingsService.onChange((newConfig) => {
       const intervalChanged = newConfig.autoBackupIntervalDays !== lastKnownInterval;
       const enabledChanged = newConfig.autoBackupEnabled !== lastKnownEnabled;
+      const unitChanged = newConfig.autoBackupIntervalUnit !== lastKnownUnit;
 
-      if (intervalChanged || enabledChanged) {
+      if (intervalChanged || enabledChanged || unitChanged) {
         lastKnownInterval = newConfig.autoBackupIntervalDays;
         lastKnownEnabled = newConfig.autoBackupEnabled;
+        lastKnownUnit = newConfig.autoBackupIntervalUnit;
 
-        autoBackupLogger.info('Relevant backup settings changed, checking status');
+        autoBackupLogger.info('Relevant backup settings changed, updating frequency and checking status');
+        this.updateCheckFrequency();
         this.checkAndPerformBackup();
       }
     });
 
-    // Check every 15 minutes if a backup is due (was 1 hour)
-    this.checkInterval = setInterval(
-      () => {
-        this.checkAndPerformBackup();
-      },
-      15 * 60 * 1000
-    );
+    // Initial frequency setup
+    this.updateCheckFrequency();
+  }
+
+  /**
+   * Update the background check frequency based on the current interval unit
+   */
+  private updateCheckFrequency(): void {
+    if (this.checkInterval) {
+      clearInterval(this.checkInterval);
+    }
+
+    const settings = this.settingsService.getConfig();
+    const unit = settings.autoBackupIntervalUnit || 'days';
+
+    // Dynamic frequency logic:
+    // Minutes -> 1 minute check
+    // Hours   -> 15 minutes check
+    // Days    -> 1 hour check
+    let frequencyMs = 1 * 60 * 1000; // Default 1 min
+
+    if (unit === 'hours') {
+      frequencyMs = 15 * 60 * 1000;
+    } else if (unit === 'days') {
+      frequencyMs = 60 * 60 * 1000;
+    }
+
+    autoBackupLogger.info(`Setting auto-backup check frequency to every ${frequencyMs / 60000} minutes`, {
+      unit,
+    });
+
+    this.checkInterval = setInterval(() => {
+      this.checkAndPerformBackup();
+    }, frequencyMs);
   }
 
   /**
@@ -118,7 +149,11 @@ export class AutoBackupService {
       const unit = settings.autoBackupIntervalUnit || 'days';
 
       const intervalMs =
-        unit === 'days' ? intervalVal * 24 * 60 * 60 * 1000 : intervalVal * 60 * 60 * 1000;
+        unit === 'days'
+          ? intervalVal * 24 * 60 * 60 * 1000
+          : unit === 'hours'
+          ? intervalVal * 60 * 60 * 1000
+          : intervalVal * 60 * 1000;
 
       let shouldBackup = false;
       if (!lastBackupStr) {

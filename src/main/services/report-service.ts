@@ -85,6 +85,28 @@ export class ReportService extends BaseService {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
+    // 1. Detect if this is exactly one full calendar month
+    // (Start on 1st, End on Last day of the same month)
+    const isFirstDay = start.getDate() === 1;
+    const isLastDay =
+      new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1).getDate() === 1;
+
+    if (
+      isFirstDay &&
+      isLastDay &&
+      start.getMonth() === end.getMonth() &&
+      start.getFullYear() === end.getFullYear()
+    ) {
+      // It's a full single month. Return the entire previous month.
+      const prevMonthStart = new Date(start.getFullYear(), start.getMonth() - 1, 1);
+      const prevMonthEnd = new Date(start.getFullYear(), start.getMonth(), 0); // Last day of previous month
+      return {
+        startDate: toLocalDateString(prevMonthStart),
+        endDate: toLocalDateString(prevMonthEnd),
+      };
+    }
+
+    // 2. Default: Duration-based logic (works for days, weeks, custom ranges)
     // Calculate duration in days (inclusive)
     const durationMs = end.getTime() - start.getTime();
     const oneDayMs = 24 * 60 * 60 * 1000;

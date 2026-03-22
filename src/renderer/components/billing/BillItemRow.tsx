@@ -33,21 +33,24 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const { settings } = useAppSettingsStore();
 
+  const isWeight = item.product.isWeightBased || item.product.uom?.toLowerCase() === 'kg';
+  const step = isWeight ? 0.1 : 1;
+
   // Local state for input value to allow empty string manipulation
   const [inputValue, setInputValue] = React.useState(
-    item.product.isWeightBased
-      ? item.quantity.toFixed(3).replace(/\.?0+$/, '')
+    isWeight
+      ? item.quantity.toFixed(3)
       : item.quantity.toString()
   );
 
   // Sync local state when prop changes
   useEffect(() => {
     setInputValue(
-      item.product.isWeightBased
-        ? item.quantity.toFixed(3).replace(/\.?0+$/, '')
+      isWeight
+        ? item.quantity.toFixed(3)
         : item.quantity.toString()
     );
-  }, [item.quantity, item.product.isWeightBased]);
+  }, [item.quantity, isWeight]);
 
   const [discValueStr, setDiscValueStr] = React.useState(item.discountValue?.toString() || '');
   useEffect(() => {
@@ -74,7 +77,7 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
         setInputValue(defaultVal.toString());
       }
     } else {
-      if (item.product.isWeightBased) {
+      if (isWeight) {
         newVal = Math.round(newVal * 1000) / 1000;
         setInputValue(newVal.toString());
       }
@@ -87,13 +90,15 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    const step = item.product.isWeightBased ? 0.1 : 1;
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      onUpdateQuantity(item.product.id, item.quantity + step);
+      onUpdateQuantity(item.product.id, Math.round((item.quantity + step) * 1000) / 1000);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      onUpdateQuantity(item.product.id, Math.max(0, item.quantity - step));
+      onUpdateQuantity(
+        item.product.id,
+        Math.max(0, Math.round((item.quantity - step) * 1000) / 1000)
+      );
     } else if (e.key === 'Delete') {
       e.preventDefault();
       onRemove(item.product.id);
@@ -164,7 +169,12 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
             <div className="qty-input-group">
               <button
                 className="qty-btn minus"
-                onClick={() => onUpdateQuantity(item.product.id, Math.max(0, item.quantity - 1))}
+                onClick={() =>
+                  onUpdateQuantity(
+                    item.product.id,
+                    Math.max(0, Math.round((item.quantity - step) * 1000) / 1000)
+                  )
+                }
                 disabled={item.quantity <= 0}
               >
                 −
@@ -179,7 +189,12 @@ const BillItemRowComponent: React.FC<BillItemRowProps> = ({
               />
               <button
                 className="qty-btn plus"
-                onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
+                onClick={() =>
+                  onUpdateQuantity(
+                    item.product.id,
+                    Math.round((item.quantity + step) * 1000) / 1000
+                  )
+                }
               >
                 +
               </button>

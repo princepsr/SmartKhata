@@ -98,6 +98,7 @@
   flex: 1;
   overflow-y: auto;
   position: relative;
+  padding-bottom: 2rem;
 }
 
 .products-page .data-table-header {
@@ -406,10 +407,7 @@
 }
 
 .table-footer-status {
-  padding: 1.5rem;
   text-align: center;
-  border-top: 1px solid var(--color-border);
-  background-color: var(--color-bg-secondary);
   color: var(--color-text-secondary);
   font-style: italic;
 }
@@ -417,6 +415,7 @@
 .loading-indicator,
 .end-message,
 .scroll-tip {
+  padding: 1.5rem;
   font-size: 0.95rem;
   font-weight: 500;
 }

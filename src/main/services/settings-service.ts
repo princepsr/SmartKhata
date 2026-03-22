@@ -201,7 +201,7 @@ export class SettingsService extends BaseService {
 
     // Auto Backup Interval validation
     if (config.autoBackupIntervalUnit !== undefined) {
-      if (!['days', 'hours'].includes(config.autoBackupIntervalUnit)) {
+      if (!['days', 'hours', 'minutes'].includes(config.autoBackupIntervalUnit)) {
         throw new ValidationError('Invalid backup interval unit', 'autoBackupIntervalUnit');
       }
     }
@@ -220,7 +220,7 @@ export class SettingsService extends BaseService {
             'autoBackupIntervalDays'
           );
         }
-      } else {
+      } else if (unit === 'hours') {
         // Hours
         if (
           !Number.isInteger(config.autoBackupIntervalDays) ||
@@ -229,6 +229,18 @@ export class SettingsService extends BaseService {
         ) {
           throw new ValidationError(
             'Backup interval must be between 1 and 24 hours',
+            'autoBackupIntervalDays'
+          );
+        }
+      } else {
+        // Minutes
+        if (
+          !Number.isInteger(config.autoBackupIntervalDays) ||
+          config.autoBackupIntervalDays < 1 ||
+          config.autoBackupIntervalDays > 60
+        ) {
+          throw new ValidationError(
+            'Backup interval must be between 1 and 60 minutes',
             'autoBackupIntervalDays'
           );
         }

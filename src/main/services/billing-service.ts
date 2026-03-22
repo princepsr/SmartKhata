@@ -122,7 +122,19 @@ export class BillingService extends BaseService {
       throw new ValidationError('Payment received cannot be negative', 'paymentReceived');
     }
 
-    // 5. Execute atomic transaction
+    // 5. Check for idempotency (Transaction Token)
+    if (input.transactionToken) {
+      const existingBill = this.billRepo.findByTransactionToken(input.transactionToken);
+      if (existingBill) {
+        this.logInfo('Duplicate bill request detected, returning existing bill', {
+          token: input.transactionToken,
+          billNumber: existingBill.billNumber,
+        });
+        return this.getBillById(existingBill.id);
+      }
+    }
+
+    // 6. Execute atomic transaction
     const result = await this.transactionService.createSale(input);
 
     // 6. Fetch the full bill with items to return

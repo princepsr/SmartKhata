@@ -124,6 +124,7 @@ export class QuotationService extends BaseService {
       discountType: item.discountType,
       gstPercent: item.gstPercent,
       lineTotal: item.lineTotal,
+      uom: item.uom,
     }));
 
     return this.quotationRepo.create({ ...quotationData, status: 'PENDING' }, quotationItems);

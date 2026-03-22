@@ -35,7 +35,7 @@ export interface AppSettings {
   printCopies: number;
   autoBackupEnabled: boolean;
   autoBackupIntervalDays: number;
-  autoBackupIntervalUnit: 'days' | 'hours';
+  autoBackupIntervalUnit: 'days' | 'hours' | 'minutes';
   autoBackupRetainCount: number;
   lastAutoBackup: string | null;
   googleDriveSyncEnabled: boolean;

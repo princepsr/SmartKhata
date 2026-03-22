@@ -66,6 +66,7 @@ export interface Bill {
   grandTotal: number;
   paymentMode: string;
   isPrinted: boolean;
+  transactionToken?: string | null;
   createdAt: number | Date;
 }
 
@@ -79,6 +80,13 @@ export interface BillItem {
   gstPercent: number;
   lineTotal: number;
   returnedQuantity: number;
+  uomSnapshot?: string;
+  hsnSnapshot?: string;
+  lineSubtotal?: number;
+  lineGst?: number;
+  lineCgst?: number;
+  lineSgst?: number;
+  lineIgst?: number;
 }
 
 export interface BillWithItems {
@@ -398,6 +406,7 @@ export interface BillItemInput {
 
 export interface FinalizeBillInput {
   billNumber?: string;
+  transactionToken?: string;
   customerId?: number;
   items: BillItemInput[];
   discountAmount?: number;
@@ -432,6 +441,7 @@ export interface CalculatedLineItem {
   unitPrice: number;
   discountValue?: number;
   discountType?: 'amount' | 'percent';
+  itemDiscount: number; // Applied at line level
   gstPercent: number;
   lineSubtotal: number;
   lineGst: number;
@@ -439,6 +449,7 @@ export interface CalculatedLineItem {
   lineSgst: number;
   lineIgst: number;
   lineTotal: number;
+  uom?: string;
 }
 
 export interface BillCalculation {
@@ -448,7 +459,10 @@ export interface BillCalculation {
   cgstTotal: number;
   sgstTotal: number;
   igstTotal: number;
-  discountAmount: number;
+  totalItemDiscount: number;
+  totalBillDiscount: number;
+  totalDiscount: number;
+  discountAmount: number; // Legacy/Total for back-compat if needed
   grandTotal: number;
 }
 

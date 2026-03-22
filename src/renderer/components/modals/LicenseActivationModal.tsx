@@ -54,7 +54,10 @@ const LicenseActivationModal: React.FC<LicenseActivationModalProps> = ({ isOpen,
         text: t('license.activation.success_msg'),
         type: 'success',
       });
-      setTimeout(onClose, 2000);
+      setTimeout(() => {
+        onClose();
+        window.location.reload();
+      }, 2000);
     } else {
       setMessage({
         text: result.error || t('license.activation.error_generic'),

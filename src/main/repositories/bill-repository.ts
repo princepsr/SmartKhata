@@ -22,6 +22,7 @@ export interface Bill {
   billingAddressSnapshot?: string | null;
   shippingAddressSnapshot?: string | null;
   isPrinted: boolean; // Invoice lock: true after first print
+  transactionToken?: string | null;
   createdAt: Date;
 }
 
@@ -37,6 +38,7 @@ export interface BillItem {
   unitPrice: number; // In rupees
   gstPercent: number; // As decimal (e.g., 18.00)
   hsnSnapshot: string | null; // HSN code at time of sale
+  uomSnapshot: string | null; // Unit of measurement snapshot
   purchasePrice?: number; // Snapshot of cost
   lineSubtotal: number;
   lineGst: number;
@@ -73,6 +75,7 @@ export interface CreateBillInput {
   customerGstinSnapshot?: string | null;
   billingAddressSnapshot?: string | null;
   shippingAddressSnapshot?: string | null;
+  transactionToken?: string;
 }
 
 /**
@@ -85,6 +88,7 @@ export interface CreateBillItemInput {
   unitPrice: number; // In rupees
   gstPercent: number; // As decimal
   hsnSnapshot?: string | null;
+  uomSnapshot?: string | null;
   purchasePrice?: number; // Snapshot of cost
   lineSubtotal: number;
   lineGst: number;
@@ -114,6 +118,7 @@ interface BillRow {
   billing_address_snapshot: string | null;
   shipping_address_snapshot: string | null;
   is_printed: number;
+  transaction_token: string | null;
   created_at: string;
   // Computed fields
   total_bills?: number;
@@ -134,6 +139,7 @@ interface BillItemRow {
   unit_price: number;
   gst_percent: number;
   hsn_snapshot: string | null;
+  uom_snapshot: string | null;
   purchase_price: number | null;
   line_subtotal: number;
   line_gst: number;
@@ -180,8 +186,9 @@ export class BillRepository extends BaseRepository {
           bill_number, customer_id, subtotal, gst_total,
           cgst_amount, sgst_amount, igst_amount,
           discount_amount, grand_total, payment_mode,
-          customer_gstin_snapshot, billing_address_snapshot, shipping_address_snapshot
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          customer_gstin_snapshot, billing_address_snapshot, shipping_address_snapshot,
+          transaction_token
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const params = [
@@ -198,6 +205,7 @@ export class BillRepository extends BaseRepository {
         billData.customerGstinSnapshot || null,
         billData.billingAddressSnapshot || null,
         billData.shippingAddressSnapshot || null,
+        billData.transactionToken || null,
       ];
 
       const billResult = this.execute(billSql, params);
@@ -208,9 +216,9 @@ export class BillRepository extends BaseRepository {
       const insertItem = this.db.prepare(`
         INSERT INTO bill_items (
           bill_id, product_id, product_name_snapshot, 
-          quantity, unit_price, gst_percent, hsn_snapshot, purchase_price,
+          quantity, unit_price, gst_percent, hsn_snapshot, uom_snapshot, purchase_price,
           line_subtotal, line_gst, line_cgst, line_sgst, line_igst, line_total
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       const createdItems: BillItem[] = [];
@@ -224,6 +232,7 @@ export class BillRepository extends BaseRepository {
           item.unitPrice,
           item.gstPercent,
           item.hsnSnapshot ?? null,
+          item.uomSnapshot ?? null,
           item.purchasePrice ?? null,
           item.lineSubtotal,
           item.lineGst,
@@ -242,6 +251,7 @@ export class BillRepository extends BaseRepository {
           unitPrice: item.unitPrice,
           gstPercent: item.gstPercent,
           hsnSnapshot: item.hsnSnapshot ?? null,
+          uomSnapshot: item.uomSnapshot ?? null,
           purchasePrice: item.purchasePrice,
           lineSubtotal: item.lineSubtotal,
           lineGst: item.lineGst,
@@ -277,6 +287,7 @@ export class BillRepository extends BaseRepository {
           billingAddressSnapshot: billData.billingAddressSnapshot || null,
           shippingAddressSnapshot: billData.shippingAddressSnapshot || null,
           isPrinted: false,
+          transactionToken: billData.transactionToken || null,
           createdAt: new Date(), // Local time
         },
         items: createdItems,
@@ -312,6 +323,20 @@ export class BillRepository extends BaseRepository {
       WHERE b.id = ?
     `;
     const row = this.queryOne<BillRow>(sql, [id]);
+    return row ? this._mapToBill(row) : null;
+  }
+
+  /**
+   * Find bill by transaction token (Key for idempotency)
+   */
+  public findByTransactionToken(token: string): Bill | null {
+    const sql = `
+      SELECT b.*, c.name as customer_name 
+      FROM bills b
+      LEFT JOIN customers c ON b.customer_id = c.id
+      WHERE b.transaction_token = ?
+    `;
+    const row = this.queryOne<BillRow>(sql, [token]);
     return row ? this._mapToBill(row) : null;
   }
 
@@ -569,6 +594,7 @@ export class BillRepository extends BaseRepository {
       billingAddressSnapshot: row.billing_address_snapshot,
       shippingAddressSnapshot: row.shipping_address_snapshot,
       isPrinted: row.is_printed === 1,
+      transactionToken: row.transaction_token,
       createdAt: this.parseDate(row.created_at),
     };
   }
@@ -586,6 +612,7 @@ export class BillRepository extends BaseRepository {
       unitPrice: row.unit_price, // Direct Rupees
       gstPercent: row.gst_percent, // Direct Percent
       hsnSnapshot: row.hsn_snapshot,
+      uomSnapshot: row.uom_snapshot,
       purchasePrice: row.purchase_price, // Snapshot of cost
       lineSubtotal: row.line_subtotal || 0,
       lineGst: row.line_gst || 0,

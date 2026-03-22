@@ -172,6 +172,11 @@ class BackupService {
       // 4. Save ZIP to destination
       zip.writeZip(finalPath);
 
+      // Update last auto backup timestamp in settings
+      this.settingsService.updateConfig({ 
+        lastAutoBackup: new Date().toISOString() 
+      });
+
       backupLogger.info('Structured backup completed successfully', { destinationPath: finalPath });
       return finalPath;
     } catch (error) {

@@ -30,6 +30,7 @@ export interface QuotationItem {
   discountValue: number;
   discountType: 'amount' | 'percent';
   gstPercent: number;
+  uom: string | null;
   lineTotal: number;
 }
 
@@ -65,6 +66,7 @@ interface QuotationItemRow {
   discount_value: number;
   discount_type: 'amount' | 'percent';
   gst_percent: number;
+  uom: string | null;
   line_total: number;
 }
 
@@ -101,8 +103,8 @@ export class QuotationRepository extends BaseRepository {
       const quotationId = Number(result.lastInsertRowid);
 
       const itemSql = `
-        INSERT INTO quotation_items (quotation_id, product_id, product_name, quantity, unit_price, discount_value, discount_type, gst_percent, line_total)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO quotation_items (quotation_id, product_id, product_name, quantity, unit_price, discount_value, discount_type, gst_percent, uom, line_total)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       items.forEach((item) => {
         this.execute(itemSql, [
@@ -114,6 +116,7 @@ export class QuotationRepository extends BaseRepository {
           item.discountValue || 0,
           item.discountType || 'percent',
           item.gstPercent,
+          item.uom || 'Pcs',
           item.lineTotal,
         ]);
       });
@@ -158,6 +161,7 @@ export class QuotationRepository extends BaseRepository {
         discountValue: row.discount_value,
         discountType: row.discount_type,
         gstPercent: row.gst_percent,
+        uom: row.uom,
         lineTotal: row.line_total,
       })),
     };

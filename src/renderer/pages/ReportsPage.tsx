@@ -721,6 +721,13 @@ const ReportsPage: React.FC = () => {
     }
   }, [settings.gstEnabled, settings.billingOnly, activeTab]);
 
+  // Handle Stock sub-tab visibility reset
+  useEffect(() => {
+    if (activeStockTab === 'nearExpiry' && !settings.enableBatchTracking) {
+      setActiveStockTab('current');
+    }
+  }, [settings.enableBatchTracking, activeStockTab]);
+
   const [selectedBillNo, setSelectedBillNo] = useState<string | null>(null);
 
   const handleViewBill = (billNo: string) => {
@@ -1564,12 +1571,14 @@ const ReportsPage: React.FC = () => {
                     >
                       {t('reports.stock.aging_tab')}
                     </button>
-                    <button
-                      className={`sub-tab ${activeStockTab === 'nearExpiry' ? 'active' : ''}`}
-                      onClick={() => setActiveStockTab('nearExpiry')}
-                    >
-                      {t('reports.stock.near_expiry_tab')}
-                    </button>
+                    {settings.enableBatchTracking && (
+                      <button
+                        className={`sub-tab ${activeStockTab === 'nearExpiry' ? 'active' : ''}`}
+                        onClick={() => setActiveStockTab('nearExpiry')}
+                      >
+                        {t('reports.stock.near_expiry_tab')}
+                      </button>
+                    )}
                   </div>
 
                   {activeStockTab === 'current' ? (
@@ -1673,14 +1682,14 @@ const ReportsPage: React.FC = () => {
                     </div>
                   ) : activeStockTab === 'aging' ? (
                     <StockAgingView data={stockAgingData} loading={loading} />
-                  ) : (
+                  ) : activeStockTab === 'nearExpiry' && settings.enableBatchTracking ? (
                     <StockNearExpiryView
                       data={nearExpiryData}
                       loading={loading}
                       days={expiryDays}
                       onDaysChange={(d) => setExpiryDays(d)}
                     />
-                  )}
+                  ) : null}
                 </div>
               )}
               {activeTab === 'analytics' && <AnalyticsView data={analyticsData} />}
